@@ -1,0 +1,266 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>GCP (dagster_gcp) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Great Expectations (dagster_ge)" href="dagster_ge.html" />
+    <link rel="prev" title="dbt (dagster_dbt)" href="dagster_dbt.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_dbt.html" title="Previous document">dbt (dagster_dbt)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_ge.html" title="Next document">Great Expectations (dagster_ge)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="gcp-dagster-gcp">
+<h1>GCP (dagster_gcp)<a class="headerlink" href="#gcp-dagster-gcp" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="bigquery">
+<h2>BigQuery<a class="headerlink" href="#bigquery" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster_gcp.BigQueryError">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">BigQueryError</code><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/types.html#BigQueryError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.BigQueryError" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="data">
+<dt id="dagster_gcp.bigquery_resource">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">bigquery_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/resources.html#bigquery_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.bigquery_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="dagster_gcp.bq_create_dataset">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">bq_create_dataset</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/solids.html#bq_create_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.bq_create_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>BigQuery Create Dataset.</p>
+<p>This solid encapsulates creating a BigQuery dataset.</p>
+<p>Expects a BQ client to be provisioned in resources as context.resources.bigquery.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_gcp.bq_delete_dataset">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">bq_delete_dataset</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/solids.html#bq_delete_dataset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.bq_delete_dataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>BigQuery Delete Dataset.</p>
+<p>This solid encapsulates deleting a BigQuery dataset.</p>
+<p>Expects a BQ client to be provisioned in resources as context.resources.bigquery.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_gcp.bq_solid_for_queries">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">bq_solid_for_queries</code><span class="sig-paren">(</span><em class="sig-param">sql_queries</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/solids.html#bq_solid_for_queries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.bq_solid_for_queries" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executes BigQuery SQL queries.</p>
+<p>Expects a BQ client to be provisioned in resources as context.resources.bigquery.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_gcp.import_df_to_bq">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">import_df_to_bq</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/solids.html#import_df_to_bq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.import_df_to_bq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="dagster_gcp.import_file_to_bq">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">import_file_to_bq</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/solids.html#import_file_to_bq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.import_file_to_bq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="dagster_gcp.import_gcs_paths_to_bq">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">import_gcs_paths_to_bq</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/bigquery/solids.html#import_gcs_paths_to_bq"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.import_gcs_paths_to_bq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="dataproc">
+<h2>Dataproc<a class="headerlink" href="#dataproc" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster_gcp.dataproc_solid">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">dataproc_solid</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/dataproc/solids.html#dataproc_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.dataproc_solid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="data">
+<dt id="dagster_gcp.dataproc_resource">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">dataproc_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_gcp/dataproc/resources.html#dataproc_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.dataproc_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="gcs">
+<h2>GCS<a class="headerlink" href="#gcs" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="dagster_gcp.gcs.gcs_intermediate_storage">
+<code class="sig-prename descclassname">dagster_gcp.gcs.</code><code class="sig-name descname">gcs_intermediate_storage</code><em class="property"> IntermediateStorageDefinition</em><a class="reference internal" href="../../../../_modules/dagster_gcp/gcs/system_storage.html#gcs_intermediate_storage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.gcs.gcs_intermediate_storage" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="data">
+<dt id="dagster_gcp.gcs_resource">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">gcs_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_gcp/gcs/resources.html#gcs_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.gcs_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="dagster_gcp.GCSFileHandle">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">GCSFileHandle</code><span class="sig-paren">(</span><em class="sig-param">gcs_bucket: str</em>, <em class="sig-param">gcs_key: str</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_gcp/gcs/file_manager.html#GCSFileHandle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.GCSFileHandle" title="Permalink to this definition">¶</a></dt>
+<dd><p>A reference to a file on GCS.</p>
+<dl class="method">
+<dt id="dagster_gcp.GCSFileHandle.gcs_bucket">
+<em class="property">property </em><code class="sig-name descname">gcs_bucket</code><a class="headerlink" href="#dagster_gcp.GCSFileHandle.gcs_bucket" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the GCS bucket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_gcp.GCSFileHandle.gcs_key">
+<em class="property">property </em><code class="sig-name descname">gcs_key</code><a class="headerlink" href="#dagster_gcp.GCSFileHandle.gcs_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The GCS key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_gcp.GCSFileHandle.gcs_path">
+<em class="property">property </em><code class="sig-name descname">gcs_path</code><a class="headerlink" href="#dagster_gcp.GCSFileHandle.gcs_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>The file’s GCS URL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_gcp.GCSFileHandle.path_desc">
+<em class="property">property </em><code class="sig-name descname">path_desc</code><a class="headerlink" href="#dagster_gcp.GCSFileHandle.path_desc" title="Permalink to this definition">¶</a></dt>
+<dd><p>The file’s GCS URL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_gcp.gcs_file_manager">
+<code class="sig-prename descclassname">dagster_gcp.</code><code class="sig-name descname">gcs_file_manager</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_gcp/gcs/resources.html#gcs_file_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.gcs_file_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>FileManager that provides abstract access to GCS.</p>
+<p>Implements the <a class="reference internal" href="../internals.html#dagster.core.storage.file_manager.FileManager" title="dagster.core.storage.file_manager.FileManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">FileManager</span></code></a> API.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_gcp.gcs.gcs_pickle_io_manager">
+<code class="sig-prename descclassname">dagster_gcp.gcs.</code><code class="sig-name descname">gcs_pickle_io_manager</code><em class="property"> IOManagerDefinition</em><a class="reference internal" href="../../../../_modules/dagster_gcp/gcs/io_manager.html#gcs_pickle_io_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_gcp.gcs.gcs_pickle_io_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Persistent IO manager using GCS for storage.</p>
+<p>Serializes objects via pickling. Suitable for objects storage for distributed executors, so long
+as each execution node has network connectivity and credentials for GCS and the backing bucket.</p>
+<p>Attach this resource definition to a <a class="reference internal" href="../modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a>
+in order to make it available to your pipeline:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">ModeDefinition</span><span class="p">(</span>
+            <span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;io_manager&#39;</span><span class="p">:</span> <span class="n">gcs_pickle_io_manager</span><span class="p">,</span> <span class="s1">&#39;gcs&#39;</span><span class="p">:</span> <span class="n">gcs_resource</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+        <span class="p">),</span> <span class="o">...</span>
+    <span class="p">],</span> <span class="o">...</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>You may configure this storage as follows:</p>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="nt">resources</span><span class="p">:</span>
+    <span class="nt">io_manager</span><span class="p">:</span>
+        <span class="nt">config</span><span class="p">:</span>
+            <span class="nt">gcs_bucket</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my-cool-bucket</span>
+            <span class="nt">gcs_prefix</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">good/prefix-for-files-</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_dbt.html" title="Previous document">dbt (dagster_dbt)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_ge.html" title="Next document">Great Expectations (dagster_ge)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

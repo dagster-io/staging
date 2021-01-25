@@ -1,0 +1,160 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.init &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.init</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">IntermediateStorageDefinition</span><span class="p">,</span>
+    <span class="n">ModeDefinition</span><span class="p">,</span>
+    <span class="n">PipelineDefinition</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.type_storage</span> <span class="kn">import</span> <span class="n">TypeStoragePluginRegistry</span>
+<span class="kn">from</span> <span class="nn">dagster.core.system_config.objects</span> <span class="kn">import</span> <span class="n">EnvironmentConfig</span>
+
+
+<div class="viewcode-block" id="InitIntermediateStorageContext"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.InitIntermediateStorageContext">[docs]</a><span class="k">class</span> <span class="nc">InitIntermediateStorageContext</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;InitIntermediateStorageContext&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;pipeline_def mode_def intermediate_storage_def pipeline_run instance environment_config &quot;</span>
+            <span class="s2">&quot;type_storage_plugin_registry resources intermediate_storage_config&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Intermediate storage-specific initialization context.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        pipeline_def (PipelineDefinition): The definition of the pipeline in context.</span>
+<span class="sd">        mode_def (ModeDefinition): The definition of the mode in context.</span>
+<span class="sd">        intermediate_storage_def (IntermediateStorageDefinition): The definition of the intermediate storage to be</span>
+<span class="sd">            constructed.</span>
+<span class="sd">        pipeline_run (PipelineRun): The pipeline run in context.</span>
+<span class="sd">        instance (DagsterInstance): The instance.</span>
+<span class="sd">        environment_config (EnvironmentConfig): The environment config.</span>
+<span class="sd">        type_storage_plugin_registry (TypeStoragePluginRegistry): Registry containing custom type</span>
+<span class="sd">            storage plugins.</span>
+<span class="sd">        resources (Any): Resources available in context.</span>
+<span class="sd">        intermediate_storage_config (Dict[str, Any]): The intermediate storage-specific configuration data</span>
+<span class="sd">            provided by the environment config. The schema for this data is defined by the</span>
+<span class="sd">            ``config_schema`` argument to :py:class:`IntermediateStorageDefinition`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">pipeline_def</span><span class="p">,</span>
+        <span class="n">mode_def</span><span class="p">,</span>
+        <span class="n">intermediate_storage_def</span><span class="p">,</span>
+        <span class="n">pipeline_run</span><span class="p">,</span>
+        <span class="n">instance</span><span class="p">,</span>
+        <span class="n">environment_config</span><span class="p">,</span>
+        <span class="n">type_storage_plugin_registry</span><span class="p">,</span>
+        <span class="n">resources</span><span class="p">,</span>
+        <span class="n">intermediate_storage_config</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InitIntermediateStorageContext</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">pipeline_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="s2">&quot;pipeline_def&quot;</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">),</span>
+            <span class="n">mode_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">mode_def</span><span class="p">,</span> <span class="s2">&quot;mode_def&quot;</span><span class="p">,</span> <span class="n">ModeDefinition</span><span class="p">),</span>
+            <span class="n">intermediate_storage_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">intermediate_storage_def</span><span class="p">,</span> <span class="s2">&quot;intermediate_storage_def&quot;</span><span class="p">,</span> <span class="n">IntermediateStorageDefinition</span>
+            <span class="p">),</span>
+            <span class="n">pipeline_run</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">),</span>
+            <span class="n">instance</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">),</span>
+            <span class="n">environment_config</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">environment_config</span><span class="p">,</span> <span class="s2">&quot;environment_config&quot;</span><span class="p">,</span> <span class="n">EnvironmentConfig</span>
+            <span class="p">),</span>
+            <span class="n">type_storage_plugin_registry</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">type_storage_plugin_registry</span><span class="p">,</span>
+                <span class="s2">&quot;type_storage_plugin_registry&quot;</span><span class="p">,</span>
+                <span class="n">TypeStoragePluginRegistry</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">resources</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">not_none_param</span><span class="p">(</span><span class="n">resources</span><span class="p">,</span> <span class="s2">&quot;resources&quot;</span><span class="p">),</span>
+            <span class="n">intermediate_storage_config</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span>
+                <span class="n">intermediate_storage_config</span><span class="p">,</span> <span class="n">intermediate_storage_config</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span>
+            <span class="p">),</span>
+        <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,277 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Errors &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Execution" href="execution.html" />
+    <link rel="prev" title="Config" href="config.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="config.html" title="Previous document">Config</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="execution.html" title="Next document">Execution</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="module-dagster.core.errors">
+<span id="errors"></span><h1>Errors<a class="headerlink" href="#module-dagster.core.errors" title="Permalink to this headline">¶</a></h1>
+<p>Core Dagster error classes.</p>
+<p>All errors thrown by the Dagster framework inherit from <a class="reference internal" href="#dagster.DagsterError" title="dagster.DagsterError"><code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterError</span></code></a>. Users
+should not subclass this base class for their own exceptions.</p>
+<p>There is another exception base class, <a class="reference internal" href="#dagster.DagsterUserCodeExecutionError" title="dagster.DagsterUserCodeExecutionError"><code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterUserCodeExecutionError</span></code></a>, which is
+used by the framework in concert with the <a class="reference internal" href="internals.html#dagster.core.errors.user_code_error_boundary" title="dagster.core.errors.user_code_error_boundary"><code class="xref py py-func docutils literal notranslate"><span class="pre">user_code_error_boundary()</span></code></a>.</p>
+<p>Dagster uses this construct to wrap user code into which it calls. User code can perform arbitrary
+computations and may itself throw exceptions. The error boundary catches these user code-generated
+exceptions, and then reraises them wrapped in a subclass of
+<a class="reference internal" href="#dagster.DagsterUserCodeExecutionError" title="dagster.DagsterUserCodeExecutionError"><code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterUserCodeExecutionError</span></code></a>.</p>
+<p>The wrapped exceptions include additional context for the original exceptions, injected by the
+Dagster runtime.</p>
+<dl class="exception">
+<dt id="dagster.DagsterError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterError</code><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for all errors thrown by the Dagster framework.</p>
+<p>Users should not subclass this base class for their own exceptions.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterConfigMappingFunctionError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterConfigMappingFunctionError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterConfigMappingFunctionError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterConfigMappingFunctionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that an unexpected error occurred while executing the body of a config mapping
+function defined in a <a class="reference internal" href="solids.html#dagster.CompositeSolidDefinition" title="dagster.CompositeSolidDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">CompositeSolidDefinition</span></code></a> during config parsing.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterEventLogInvalidForRun">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterEventLogInvalidForRun</code><span class="sig-paren">(</span><em class="sig-param">run_id</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterEventLogInvalidForRun"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterEventLogInvalidForRun" title="Permalink to this definition">¶</a></dt>
+<dd><p>Raised when the event logs for a historical run are malformed or invalid.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterExecutionStepExecutionError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterExecutionStepExecutionError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterExecutionStepExecutionError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterExecutionStepExecutionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates an error occurred while executing the body of an execution step.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterExecutionStepNotFoundError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterExecutionStepNotFoundError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterExecutionStepNotFoundError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterExecutionStepNotFoundError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thrown when the user specifies execution step keys that do not exist.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterInvalidConfigError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterInvalidConfigError</code><span class="sig-paren">(</span><em class="sig-param">preamble</em>, <em class="sig-param">errors</em>, <em class="sig-param">config_value</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterInvalidConfigError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterInvalidConfigError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thrown when provided config is invalid (does not type check against the relevant config
+schema).</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterInvalidConfigDefinitionError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterInvalidConfigDefinitionError</code><span class="sig-paren">(</span><em class="sig-param">original_root</em>, <em class="sig-param">current_value</em>, <em class="sig-param">stack</em>, <em class="sig-param">reason=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterInvalidConfigDefinitionError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterInvalidConfigDefinitionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that you have attempted to construct a config with an invalid value</p>
+<dl class="simple">
+<dt>Acceptable values for config types are any of:</dt><dd><ol class="arabic simple">
+<li><dl class="simple">
+<dt>A Python primitive type that resolves to a Dagster config type</dt><dd><p>(<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">bool</span></code></a>,
+<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a>).</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>A Dagster config type: <a class="reference internal" href="types.html#dagster.Int" title="dagster.Int"><code class="xref py py-data docutils literal notranslate"><span class="pre">Int</span></code></a>, <a class="reference internal" href="types.html#dagster.Float" title="dagster.Float"><code class="xref py py-data docutils literal notranslate"><span class="pre">Float</span></code></a>,</dt><dd><p><a class="reference internal" href="types.html#dagster.Bool" title="dagster.Bool"><code class="xref py py-data docutils literal notranslate"><span class="pre">Bool</span></code></a>, <a class="reference internal" href="types.html#dagster.String" title="dagster.String"><code class="xref py py-data docutils literal notranslate"><span class="pre">String</span></code></a>,
+<a class="reference internal" href="config.html#dagster.StringSource" title="dagster.StringSource"><code class="xref py py-data docutils literal notranslate"><span class="pre">StringSource</span></code></a>, <a class="reference internal" href="types.html#dagster.Any" title="dagster.Any"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a>,
+<a class="reference internal" href="config.html#dagster.Array" title="dagster.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a>, <a class="reference internal" href="config.html#dagster.Noneable" title="dagster.Noneable"><code class="xref py py-data docutils literal notranslate"><span class="pre">Noneable</span></code></a>, <a class="reference internal" href="config.html#dagster.Enum" title="dagster.Enum"><code class="xref py py-data docutils literal notranslate"><span class="pre">Enum</span></code></a>,
+<a class="reference internal" href="config.html#dagster.Selector" title="dagster.Selector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Selector</span></code></a>, <a class="reference internal" href="config.html#dagster.Shape" title="dagster.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">Shape</span></code></a>, or
+<a class="reference internal" href="config.html#dagster.Permissive" title="dagster.Permissive"><code class="xref py py-class docutils literal notranslate"><span class="pre">Permissive</span></code></a>.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>A bare python dictionary, which will be automatically wrapped in</dt><dd><p><a class="reference internal" href="config.html#dagster.Shape" title="dagster.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">Shape</span></code></a>. Values of the dictionary are resolved recursively
+according to the same rules.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>A bare python list of length one which itself is config type.</dt><dd><p>Becomes <a class="reference internal" href="config.html#dagster.Array" title="dagster.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a> with list element as an argument.</p>
+</dd>
+</dl>
+</li>
+<li><p>An instance of <a class="reference internal" href="config.html#dagster.Field" title="dagster.Field"><code class="xref py py-class docutils literal notranslate"><span class="pre">Field</span></code></a>.</p></li>
+</ol>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterInvalidDefinitionError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterInvalidDefinitionError</code><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterInvalidDefinitionError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterInvalidDefinitionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the rules for a definition have been violated by the user.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterInvariantViolationError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterInvariantViolationError</code><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterInvariantViolationError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterInvariantViolationError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates the user has violated a well-defined invariant that can only be enforced
+at runtime.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterResourceFunctionError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterResourceFunctionError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterResourceFunctionError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterResourceFunctionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates an error occurred while executing the body of the <code class="docutils literal notranslate"><span class="pre">resource_fn</span></code> in a
+<a class="reference internal" href="modes-resources.html#dagster.ResourceDefinition" title="dagster.ResourceDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDefinition</span></code></a> during resource initialization.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterRunNotFoundError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterRunNotFoundError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterRunNotFoundError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterRunNotFoundError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thrown when a run cannot be found in run storage.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterStepOutputNotFoundError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterStepOutputNotFoundError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterStepOutputNotFoundError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterStepOutputNotFoundError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that previous step outputs required for an execution step to proceed are not
+available.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterSubprocessError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterSubprocessError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterSubprocessError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterSubprocessError" title="Permalink to this definition">¶</a></dt>
+<dd><p>An exception has occurred in one or more of the child processes dagster manages.
+This error forwards the message and stack trace for all of the collected errors.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterTypeCheckDidNotPass">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterTypeCheckDidNotPass</code><span class="sig-paren">(</span><em class="sig-param">description=None</em>, <em class="sig-param">metadata_entries=None</em>, <em class="sig-param">dagster_type=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterTypeCheckDidNotPass"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterTypeCheckDidNotPass" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that a type check failed.</p>
+<p>This is raised when <code class="docutils literal notranslate"><span class="pre">raise_on_error</span></code> is <code class="docutils literal notranslate"><span class="pre">True</span></code> in calls to the synchronous pipeline and
+solid execution APIs (<a class="reference internal" href="execution.html#dagster.execute_pipeline" title="dagster.execute_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_pipeline()</span></code></a>, <a class="reference internal" href="execution.html#dagster.execute_solid" title="dagster.execute_solid"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_solid()</span></code></a>,
+etc.), that is, typically in test, and  a <a class="reference internal" href="types.html#dagster.DagsterType" title="dagster.DagsterType"><code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterType</span></code></a>’s type check fails
+by returning either <code class="docutils literal notranslate"><span class="pre">False</span></code> or an instance of <a class="reference internal" href="solids.html#dagster.TypeCheck" title="dagster.TypeCheck"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeCheck</span></code></a> whose <code class="docutils literal notranslate"><span class="pre">success</span></code>
+member is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterTypeCheckError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterTypeCheckError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterTypeCheckError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterTypeCheckError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates an error in the solid type system at runtime. E.g. a solid receives an
+unexpected input, or produces an output that does not match the type of the output definition.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterUnknownResourceError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterUnknownResourceError</code><span class="sig-paren">(</span><em class="sig-param">resource_name</em>, <em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterUnknownResourceError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterUnknownResourceError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that an unknown resource was accessed in the body of an execution step. May often
+happen by accessing a resource in the compute function of a solid without first supplying the
+solid with the correct <cite>required_resource_keys</cite> argument.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterUnmetExecutorRequirementsError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterUnmetExecutorRequirementsError</code><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterUnmetExecutorRequirementsError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterUnmetExecutorRequirementsError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates the resolved executor is incompatible with the state of other systems
+such as the <code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterInstance</span></code> or system storage configuration.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="dagster.DagsterUserCodeExecutionError">
+<em class="property">exception </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterUserCodeExecutionError</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/errors.html#DagsterUserCodeExecutionError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterUserCodeExecutionError" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is the base class for any exception that is meant to wrap an
+<a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">Exception</span></code></a> thrown by user code. It wraps that existing user code.
+The <code class="docutils literal notranslate"><span class="pre">original_exc_info</span></code> argument to the constructor is meant to be a tuple of the type
+returned by <a class="reference external" href="https://docs.python.org/3/library/sys.html#sys.exc_info" title="(in Python v3.8)"><code class="xref py py-func docutils literal notranslate"><span class="pre">sys.exc_info</span></code></a> at the call site of the constructor.</p>
+<p>Users should not subclass this base class for their own exceptions and should instead throw
+freely from user code. User exceptions will be automatically wrapped and rethrown.</p>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="config.html" title="Previous document">Config</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="execution.html" title="Next document">Execution</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

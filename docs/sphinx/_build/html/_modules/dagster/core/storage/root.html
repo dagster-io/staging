@@ -1,0 +1,122 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.root &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.root</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">ConfigurableClass</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+
+
+<div class="viewcode-block" id="LocalArtifactStorage"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.root.LocalArtifactStorage">[docs]</a><span class="k">class</span> <span class="nc">LocalArtifactStorage</span><span class="p">(</span><span class="n">ConfigurableClass</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">,</span> <span class="n">inst_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span> <span class="o">=</span> <span class="n">base_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="s2">&quot;inst_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">inst_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">base_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span>
+
+    <span class="k">def</span> <span class="nf">file_manager_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;storage&quot;</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;files&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">intermediates_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;storage&quot;</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schedules_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;schedules&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LocalArtifactStorage.from_config_value"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.root.LocalArtifactStorage.from_config_value">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_config_value</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LocalArtifactStorage</span><span class="p">(</span><span class="n">inst_data</span><span class="o">=</span><span class="n">inst_data</span><span class="p">,</span> <span class="o">**</span><span class="n">config_value</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LocalArtifactStorage.config_type"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.root.LocalArtifactStorage.config_type">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">config_type</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">StringSource</span><span class="p">}</span></div></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

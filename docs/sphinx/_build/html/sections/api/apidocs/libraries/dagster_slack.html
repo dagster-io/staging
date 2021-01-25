@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slack (dagster_slack) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Snowflake (dagster_snowflake)" href="dagster_snowflake.html" />
+    <link rel="prev" title="Shell (dagster_shell)" href="dagster_shell.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_shell.html" title="Previous document">Shell (dagster_shell)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_snowflake.html" title="Next document">Snowflake (dagster_snowflake)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="slack-dagster-slack">
+<h1>Slack (dagster_slack)<a class="headerlink" href="#slack-dagster-slack" title="Permalink to this headline">¶</a></h1>
+<p><span class="raw-html-m2r"><img src="https://user-images.githubusercontent.com/609349/57994610-c581f680-7a72-11e9-85cd-41fd649cc26d.png" /></span></p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>This library provides an integration with Slack, to support posting messages in your company’s Slack workspace.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>Presently, it provides a thin wrapper on the Slack client API <a class="reference external" href="https://api.slack.com/methods/chat.postMessage">chat.postMessage</a>.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>To use this integration, you’ll first need to create a Slack App for it.</p>
+<ol class="arabic">
+<li><p><strong>Create App</strong>: Go to <a class="reference external" href="https://api.slack.com/apps">https://api.slack.com/apps</a> and click “Create New App”:</p>
+<p><span class="raw-html-m2r"><img width=200px src="https://user-images.githubusercontent.com/609349/57993925-d3824800-7a6f-11e9-8618-bdd1611f15a4.png" /></span></p>
+</li>
+<li><p><strong>Install App</strong>: After creating an app, on the left-hand side of the app configuration, click “Bot Users”, and then create a bot user. Then, click “Install App” on the left hand side, and finally “Install App to Workspace”.</p></li>
+<li><p><strong>Bot Token</strong>: Once finished, this will create a new bot token for your bot/workspace:</p>
+<p><span class="raw-html-m2r"><img width=600px src="https://user-images.githubusercontent.com/609349/57994422-ed248f00-7a71-11e9-9cbc-f6869ed33315.png" /></span></p>
+</li>
+</ol>
+<p>Copy this bot token and put it somewhere safe; see <a class="reference external" href="https://api.slack.com/docs/oauth-safety">Safely Storing Credentials</a> for more on this topic.</p>
+<dl class="data">
+<dt id="dagster_slack.slack_resource">
+<code class="sig-prename descclassname">dagster_slack.</code><code class="sig-name descname">slack_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_slack/resources.html#slack_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_slack.slack_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>This resource is for connecting to Slack.</p>
+<p>By configuring this Slack resource, you can post messages to Slack from any Dagster solid:</p>
+<p>Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">solid</span><span class="p">,</span> <span class="n">execute_pipeline</span><span class="p">,</span> <span class="n">ModeDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster_slack</span> <span class="kn">import</span> <span class="n">slack_resource</span>
+
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;slack&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">slack_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">slack</span><span class="o">.</span><span class="n">chat_postMessage</span><span class="p">(</span><span class="n">channel</span><span class="o">=</span><span class="s1">&#39;#noise&#39;</span><span class="p">,</span> <span class="n">text</span><span class="o">=</span><span class="s1">&#39;:wave: hey there!&#39;</span><span class="p">)</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;slack&#39;</span><span class="p">:</span> <span class="n">slack_resource</span><span class="p">})],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">slack_pipeline</span><span class="p">():</span>
+    <span class="n">slack_solid</span><span class="p">()</span>
+
+<span class="n">execute_pipeline</span><span class="p">(</span>
+    <span class="n">slack_pipeline</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;slack&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;token&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;SLACK_TOKEN&#39;</span><span class="p">)}}}}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_shell.html" title="Previous document">Shell (dagster_shell)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_snowflake.html" title="Next document">Snowflake (dagster_snowflake)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

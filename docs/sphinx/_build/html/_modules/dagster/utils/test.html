@@ -1,0 +1,504 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.utils.test &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.utils.test</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="c1"># top-level include is dangerous in terms of incurring circular deps</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DagsterInvariantViolationError</span><span class="p">,</span>
+    <span class="n">DependencyDefinition</span><span class="p">,</span>
+    <span class="n">Failure</span><span class="p">,</span>
+    <span class="n">ModeDefinition</span><span class="p">,</span>
+    <span class="n">PipelineDefinition</span><span class="p">,</span>
+    <span class="n">RepositoryDefinition</span><span class="p">,</span>
+    <span class="n">SolidInvocation</span><span class="p">,</span>
+    <span class="n">TypeCheck</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">execute_pipeline</span><span class="p">,</span>
+    <span class="n">lambda_solid</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.logger</span> <span class="kn">import</span> <span class="n">LoggerDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.pipeline_base</span> <span class="kn">import</span> <span class="n">InMemoryPipeline</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.resource</span> <span class="kn">import</span> <span class="n">ScopedResourcesBuilder</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.solid</span> <span class="kn">import</span> <span class="n">NodeDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.api</span> <span class="kn">import</span> <span class="n">create_execution_plan</span><span class="p">,</span> <span class="n">scoped_pipeline_context</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.context_creation_pipeline</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SystemPipelineExecutionContext</span><span class="p">,</span>
+    <span class="n">construct_execution_context_data</span><span class="p">,</span>
+    <span class="n">create_context_creation_data</span><span class="p">,</span>
+    <span class="n">create_executor</span><span class="p">,</span>
+    <span class="n">create_log_manager</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.scheduler</span> <span class="kn">import</span> <span class="n">Scheduler</span>
+<span class="kn">from</span> <span class="nn">dagster.core.scheduler.scheduler</span> <span class="kn">import</span> <span class="n">DagsterScheduleDoesNotExist</span><span class="p">,</span> <span class="n">DagsterSchedulerError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.snap</span> <span class="kn">import</span> <span class="n">snapshot_from_execution_plan</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.file_manager</span> <span class="kn">import</span> <span class="n">LocalFileManager</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">resolve_dagster_type</span>
+<span class="kn">from</span> <span class="nn">dagster.core.utility_solids</span> <span class="kn">import</span> <span class="n">define_stub_solid</span>
+<span class="kn">from</span> <span class="nn">dagster.core.utils</span> <span class="kn">import</span> <span class="n">make_new_run_id</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">ConfigurableClass</span>
+
+<span class="c1"># pylint: disable=unused-import</span>
+<span class="kn">from</span> <span class="nn">..temp_file</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">get_temp_dir</span><span class="p">,</span>
+    <span class="n">get_temp_file_handle</span><span class="p">,</span>
+    <span class="n">get_temp_file_handle_with_data</span><span class="p">,</span>
+    <span class="n">get_temp_file_name</span><span class="p">,</span>
+    <span class="n">get_temp_file_name_with_data</span><span class="p">,</span>
+    <span class="n">get_temp_file_names</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">..typing_api</span> <span class="kn">import</span> <span class="n">is_typing_type</span>
+
+
+<span class="k">def</span> <span class="nf">create_test_pipeline_execution_context</span><span class="p">(</span><span class="n">logger_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.storage.intermediate_storage</span> <span class="kn">import</span> <span class="n">build_in_mem_intermediates_storage</span>
+
+    <span class="n">loggers</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+        <span class="n">logger_defs</span><span class="p">,</span> <span class="s2">&quot;logger_defs&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="n">LoggerDefinition</span>
+    <span class="p">)</span>
+    <span class="n">mode_def</span> <span class="o">=</span> <span class="n">ModeDefinition</span><span class="p">(</span><span class="n">logger_defs</span><span class="o">=</span><span class="n">loggers</span><span class="p">)</span>
+    <span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;test_legacy_context&quot;</span><span class="p">,</span> <span class="n">solid_defs</span><span class="o">=</span><span class="p">[],</span> <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">mode_def</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">run_config</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;loggers&quot;</span><span class="p">:</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">loggers</span><span class="p">}}</span>
+    <span class="n">pipeline_run</span> <span class="o">=</span> <span class="n">PipelineRun</span><span class="p">(</span><span class="n">pipeline_name</span><span class="o">=</span><span class="s2">&quot;test_legacy_context&quot;</span><span class="p">,</span> <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">)</span>
+    <span class="n">instance</span> <span class="o">=</span> <span class="n">DagsterInstance</span><span class="o">.</span><span class="n">ephemeral</span><span class="p">()</span>
+    <span class="n">execution_plan</span> <span class="o">=</span> <span class="n">create_execution_plan</span><span class="p">(</span><span class="n">pipeline</span><span class="o">=</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">)</span>
+    <span class="n">creation_data</span> <span class="o">=</span> <span class="n">create_context_creation_data</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">run_config</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span>
+    <span class="n">log_manager</span> <span class="o">=</span> <span class="n">create_log_manager</span><span class="p">(</span><span class="n">creation_data</span><span class="p">)</span>
+    <span class="n">scoped_resources_builder</span> <span class="o">=</span> <span class="n">ScopedResourcesBuilder</span><span class="p">()</span>
+    <span class="n">executor</span> <span class="o">=</span> <span class="n">create_executor</span><span class="p">(</span><span class="n">creation_data</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">SystemPipelineExecutionContext</span><span class="p">(</span>
+        <span class="n">construct_execution_context_data</span><span class="p">(</span>
+            <span class="n">context_creation_data</span><span class="o">=</span><span class="n">creation_data</span><span class="p">,</span>
+            <span class="n">scoped_resources_builder</span><span class="o">=</span><span class="n">scoped_resources_builder</span><span class="p">,</span>
+            <span class="n">intermediate_storage</span><span class="o">=</span><span class="n">build_in_mem_intermediates_storage</span><span class="p">(</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">),</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="n">log_manager</span><span class="p">,</span>
+            <span class="n">retries</span><span class="o">=</span><span class="n">executor</span><span class="o">.</span><span class="n">retries</span><span class="p">,</span>
+            <span class="n">raise_on_error</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">executor</span><span class="o">=</span><span class="n">executor</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="o">=</span><span class="n">log_manager</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_dep_key_of</span><span class="p">(</span><span class="n">solid</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">SolidInvocation</span><span class="p">(</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">build_pipeline_with_input_stubs</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">inputs</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="s2">&quot;pipeline_def&quot;</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="s2">&quot;inputs&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="n">deps</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">dep_dict</span> <span class="ow">in</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">dependencies</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">dep</span> <span class="ow">in</span> <span class="n">dep_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">deps</span><span class="p">[</span><span class="n">solid_name</span><span class="p">][</span><span class="n">input_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">dep</span>
+
+    <span class="n">stub_solid_defs</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">input_dict</span> <span class="ow">in</span> <span class="n">inputs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">has_solid_named</span><span class="p">(</span><span class="n">solid_name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="s2">&quot;You are injecting an input value for solid </span><span class="si">{solid_name}</span><span class="s2"> &quot;</span>
+                    <span class="s2">&quot;into pipeline </span><span class="si">{pipeline_name}</span><span class="s2"> but that solid was not found&quot;</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">solid_name</span><span class="o">=</span><span class="n">solid_name</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">solid</span> <span class="o">=</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">solid_named</span><span class="p">(</span><span class="n">solid_name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">input_value</span> <span class="ow">in</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">stub_solid_def</span> <span class="o">=</span> <span class="n">define_stub_solid</span><span class="p">(</span>
+                <span class="s2">&quot;__stub_</span><span class="si">{solid_name}</span><span class="s2">_</span><span class="si">{input_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">solid_name</span><span class="o">=</span><span class="n">solid_name</span><span class="p">,</span> <span class="n">input_name</span><span class="o">=</span><span class="n">input_name</span>
+                <span class="p">),</span>
+                <span class="n">input_value</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">stub_solid_defs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">stub_solid_def</span><span class="p">)</span>
+            <span class="n">deps</span><span class="p">[</span><span class="n">_dep_key_of</span><span class="p">(</span><span class="n">solid</span><span class="p">)][</span><span class="n">input_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">DependencyDefinition</span><span class="p">(</span><span class="n">stub_solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_stubbed&quot;</span><span class="p">,</span>
+        <span class="n">solid_defs</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">top_level_solid_defs</span> <span class="o">+</span> <span class="n">stub_solid_defs</span><span class="p">,</span>
+        <span class="n">mode_defs</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">mode_definitions</span><span class="p">,</span>
+        <span class="n">dependencies</span><span class="o">=</span><span class="n">deps</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="execute_solids_within_pipeline"><a class="viewcode-back" href="../../../sections/api/apidocs/execution.html#dagster.execute_solids_within_pipeline">[docs]</a><span class="k">def</span> <span class="nf">execute_solids_within_pipeline</span><span class="p">(</span>
+    <span class="n">pipeline_def</span><span class="p">,</span>
+    <span class="n">solid_names</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">preset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Execute a set of solids within an existing pipeline.</span>
+
+<span class="sd">    Intended to support tests. Input values may be passed directly.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pipeline_def (PipelineDefinition): The pipeline within which to execute the solid.</span>
+<span class="sd">        solid_names (FrozenSet[str]): A set of the solid names, or the aliased solids, to execute.</span>
+<span class="sd">        inputs (Optional[Dict[str, Dict[str, Any]]]): A dict keyed on solid names, whose values are</span>
+<span class="sd">            dicts of input names to input values, used to pass input values to the solids directly.</span>
+<span class="sd">            You may also use the ``run_config`` to configure any inputs that are configurable.</span>
+<span class="sd">        run_config (Optional[dict]): The environment configuration that parameterized this</span>
+<span class="sd">            execution, as a dict.</span>
+<span class="sd">        mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``</span>
+<span class="sd">            and ``preset``.</span>
+<span class="sd">        preset (Optional[str]): The name of the pipeline preset to use. You may not set both</span>
+<span class="sd">            ``mode`` and ``preset``.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Arbitrary key-value pairs that will be added to pipeline</span>
+<span class="sd">            logs.</span>
+<span class="sd">        instance (Optional[DagsterInstance]): The instance to execute against. If this is ``None``,</span>
+<span class="sd">            an ephemeral instance will be used, and no artifacts will be persisted from the run.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Dict[str, Union[CompositeSolidExecutionResult, SolidExecutionResult]]: The results of</span>
+<span class="sd">        executing the solids, keyed by solid name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="s2">&quot;pipeline_def&quot;</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">solid_names</span><span class="p">,</span> <span class="s2">&quot;solid_names&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">inputs</span><span class="p">,</span> <span class="s2">&quot;inputs&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="n">sub_pipeline</span> <span class="o">=</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">get_pipeline_subset_def</span><span class="p">(</span><span class="n">solid_names</span><span class="p">)</span>
+    <span class="n">stubbed_pipeline</span> <span class="o">=</span> <span class="n">build_pipeline_with_input_stubs</span><span class="p">(</span><span class="n">sub_pipeline</span><span class="p">,</span> <span class="n">inputs</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_pipeline</span><span class="p">(</span>
+        <span class="n">stubbed_pipeline</span><span class="p">,</span>
+        <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="n">preset</span><span class="o">=</span><span class="n">preset</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+        <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span><span class="n">sr</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">sr</span> <span class="k">for</span> <span class="n">sr</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">solid_result_list</span><span class="p">}</span></div>
+
+
+<div class="viewcode-block" id="execute_solid_within_pipeline"><a class="viewcode-back" href="../../../sections/api/apidocs/execution.html#dagster.execute_solid_within_pipeline">[docs]</a><span class="k">def</span> <span class="nf">execute_solid_within_pipeline</span><span class="p">(</span>
+    <span class="n">pipeline_def</span><span class="p">,</span>
+    <span class="n">solid_name</span><span class="p">,</span>
+    <span class="n">inputs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">preset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Execute a single solid within an existing pipeline.</span>
+
+<span class="sd">    Intended to support tests. Input values may be passed directly.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pipeline_def (PipelineDefinition): The pipeline within which to execute the solid.</span>
+<span class="sd">        solid_name (str): The name of the solid, or the aliased solid, to execute.</span>
+<span class="sd">        inputs (Optional[Dict[str, Any]]): A dict of input names to input values, used to</span>
+<span class="sd">            pass input values to the solid directly. You may also use the ``run_config`` to</span>
+<span class="sd">            configure any inputs that are configurable.</span>
+<span class="sd">        run_config (Optional[dict]): The environment configuration that parameterized this</span>
+<span class="sd">            execution, as a dict.</span>
+<span class="sd">        mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``</span>
+<span class="sd">            and ``preset``.</span>
+<span class="sd">        preset (Optional[str]): The name of the pipeline preset to use. You may not set both</span>
+<span class="sd">            ``mode`` and ``preset``.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Arbitrary key-value pairs that will be added to pipeline</span>
+<span class="sd">            logs.</span>
+<span class="sd">        instance (Optional[DagsterInstance]): The instance to execute against. If this is ``None``,</span>
+<span class="sd">            an ephemeral instance will be used, and no artifacts will be persisted from the run.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Union[CompositeSolidExecutionResult, SolidExecutionResult]: The result of executing the</span>
+<span class="sd">        solid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">execute_solids_within_pipeline</span><span class="p">(</span>
+        <span class="n">pipeline_def</span><span class="p">,</span>
+        <span class="n">solid_names</span><span class="o">=</span><span class="p">{</span><span class="n">solid_name</span><span class="p">},</span>
+        <span class="n">inputs</span><span class="o">=</span><span class="p">{</span><span class="n">solid_name</span><span class="p">:</span> <span class="n">inputs</span><span class="p">}</span> <span class="k">if</span> <span class="n">inputs</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="n">preset</span><span class="o">=</span><span class="n">preset</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+        <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span>
+    <span class="p">)[</span><span class="n">solid_name</span><span class="p">]</span></div>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">yield_empty_pipeline_context</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">InMemoryPipeline</span><span class="p">(</span><span class="n">PipelineDefinition</span><span class="p">([]))</span>
+    <span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span>
+    <span class="n">instance</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+        <span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">DagsterInstance</span><span class="o">.</span><span class="n">ephemeral</span><span class="p">()</span>
+    <span class="p">)</span>
+
+    <span class="n">execution_plan</span> <span class="o">=</span> <span class="n">create_execution_plan</span><span class="p">(</span><span class="n">pipeline</span><span class="p">)</span>
+
+    <span class="n">pipeline_run</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">create_run</span><span class="p">(</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="s2">&quot;&lt;empty&gt;&quot;</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span>
+        <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solids_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">status</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">root_run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">parent_run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">pipeline_snapshot</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">get_pipeline_snapshot</span><span class="p">(),</span>
+        <span class="n">execution_plan_snapshot</span><span class="o">=</span><span class="n">snapshot_from_execution_plan</span><span class="p">(</span>
+            <span class="n">execution_plan</span><span class="p">,</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">get_pipeline_snapshot_id</span><span class="p">()</span>
+        <span class="p">),</span>
+        <span class="n">parent_pipeline_snapshot</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">get_parent_pipeline_snapshot</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="k">with</span> <span class="n">scoped_pipeline_context</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="p">{},</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">instance</span><span class="p">)</span> <span class="k">as</span> <span class="n">context</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">context</span>
+
+
+<div class="viewcode-block" id="execute_solid"><a class="viewcode-back" href="../../../sections/api/apidocs/execution.html#dagster.execute_solid">[docs]</a><span class="k">def</span> <span class="nf">execute_solid</span><span class="p">(</span>
+    <span class="n">solid_def</span><span class="p">,</span> <span class="n">mode_def</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">input_values</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">raise_on_error</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Execute a single solid in an ephemeral pipeline.</span>
+
+<span class="sd">    Intended to support unit tests. Input values may be passed directly, and no pipeline need be</span>
+<span class="sd">    specified -- an ephemeral pipeline will be constructed.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        solid_def (SolidDefinition): The solid to execute.</span>
+<span class="sd">        mode_def (Optional[ModeDefinition]): The mode within which to execute the solid. Use this</span>
+<span class="sd">            if, e.g., custom resources, loggers, or executors are desired.</span>
+<span class="sd">        input_values (Optional[Dict[str, Any]]): A dict of input names to input values, used to</span>
+<span class="sd">            pass inputs to the solid directly. You may also use the ``run_config`` to</span>
+<span class="sd">            configure any inputs that are configurable.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Arbitrary key-value pairs that will be added to pipeline</span>
+<span class="sd">            logs.</span>
+<span class="sd">        run_config (Optional[dict]): The environment configuration that parameterized this</span>
+<span class="sd">            execution, as a dict.</span>
+<span class="sd">        raise_on_error (Optional[bool]): Whether or not to raise exceptions when they occur.</span>
+<span class="sd">            Defaults to ``True``, since this is the most useful behavior in test.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        Union[CompositeSolidExecutionResult, SolidExecutionResult]: The result of executing the</span>
+<span class="sd">        solid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid_def</span><span class="p">,</span> <span class="s2">&quot;solid_def&quot;</span><span class="p">,</span> <span class="n">NodeDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">mode_def</span><span class="p">,</span> <span class="s2">&quot;mode_def&quot;</span><span class="p">,</span> <span class="n">ModeDefinition</span><span class="p">)</span>
+    <span class="n">input_values</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">input_values</span><span class="p">,</span> <span class="s2">&quot;input_values&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">solid_defs</span> <span class="o">=</span> <span class="p">[</span><span class="n">solid_def</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">create_value_solid</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="n">input_value</span><span class="p">):</span>
+        <span class="nd">@lambda_solid</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">input_name</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">input_solid</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">input_value</span>
+
+        <span class="k">return</span> <span class="n">input_solid</span>
+
+    <span class="n">dependencies</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">input_value</span> <span class="ow">in</span> <span class="n">input_values</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">dependencies</span><span class="p">[</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="n">input_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">DependencyDefinition</span><span class="p">(</span><span class="n">input_name</span><span class="p">)</span>
+        <span class="n">solid_defs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">create_value_solid</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="n">input_value</span><span class="p">))</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">execute_pipeline</span><span class="p">(</span>
+        <span class="n">PipelineDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ephemeral_</span><span class="si">{}</span><span class="s2">_solid_pipeline&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+            <span class="n">solid_defs</span><span class="o">=</span><span class="n">solid_defs</span><span class="p">,</span>
+            <span class="n">dependencies</span><span class="o">=</span><span class="n">dependencies</span><span class="p">,</span>
+            <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">mode_def</span><span class="p">]</span> <span class="k">if</span> <span class="n">mode_def</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">mode_def</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+        <span class="n">raise_on_error</span><span class="o">=</span><span class="n">raise_on_error</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">result_for_handle</span><span class="p">(</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="check_dagster_type"><a class="viewcode-back" href="../../../sections/api/apidocs/types.html#dagster.check_dagster_type">[docs]</a><span class="k">def</span> <span class="nf">check_dagster_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Test a custom Dagster type.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dagster_type (Any): The Dagster type to test. Should be one of the</span>
+<span class="sd">            :ref:`built-in types &lt;builtin&gt;`, a dagster type explicitly constructed with</span>
+<span class="sd">            :py:func:`as_dagster_type`, :py:func:`@usable_as_dagster_type &lt;dagster_type&gt;`, or</span>
+<span class="sd">            :py:func:`PythonObjectDagsterType`, or a Python type.</span>
+<span class="sd">        value (Any): The runtime value to test.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        TypeCheck: The result of the type check.</span>
+
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            assert check_dagster_type(Dict[Any, Any], {&#39;foo&#39;: &#39;bar&#39;}).success</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">is_typing_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;Must pass in a type from dagster module. You passed </span><span class="si">{dagster_type}</span><span class="s2"> &quot;</span>
+                <span class="s2">&quot;which is part of python&#39;s typing module.&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dagster_type</span><span class="o">=</span><span class="n">dagster_type</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">dagster_type</span> <span class="o">=</span> <span class="n">resolve_dagster_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">)</span>
+    <span class="k">with</span> <span class="n">yield_empty_pipeline_context</span><span class="p">()</span> <span class="k">as</span> <span class="n">pipeline_context</span><span class="p">:</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">pipeline_context</span><span class="o">.</span><span class="n">for_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">type_check</span> <span class="o">=</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">type_check</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">Failure</span> <span class="k">as</span> <span class="n">failure</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">failure</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">type_check</span><span class="p">,</span> <span class="n">TypeCheck</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Type checks can only return TypeCheck. Type </span><span class="si">{type_name}</span><span class="s2"> returned </span><span class="si">{value}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">type_name</span><span class="o">=</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="nb">repr</span><span class="p">(</span><span class="n">type_check</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">type_check</span></div>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">copy_directory</span><span class="p">(</span><span class="n">src</span><span class="p">):</span>
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">temp_dir</span><span class="p">:</span>
+        <span class="n">dst</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">temp_dir</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">src</span><span class="p">))</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copytree</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">dst</span>
+
+
+<span class="k">class</span> <span class="nc">FilesystemTestScheduler</span><span class="p">(</span><span class="n">Scheduler</span><span class="p">,</span> <span class="n">ConfigurableClass</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This class is used in dagster core and dagster_graphql to test the scheduler&#39;s interactions</span>
+<span class="sd">    with schedule storage, which are implemented in the methods defined on the base Scheduler class.</span>
+<span class="sd">    Therefore, the following methods used to actually schedule jobs (e.g. create and remove cron jobs</span>
+<span class="sd">    on a cron tab) are left unimplemented.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">artifacts_dir</span><span class="p">,</span> <span class="n">inst_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">artifacts_dir</span><span class="p">,</span> <span class="s2">&quot;artifacts_dir&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_artifacts_dir</span> <span class="o">=</span> <span class="n">artifacts_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span> <span class="o">=</span> <span class="n">inst_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">inst_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">config_type</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_config_value</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">FilesystemTestScheduler</span><span class="p">(</span><span class="n">artifacts_dir</span><span class="o">=</span><span class="n">config_value</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">],</span> <span class="n">inst_data</span><span class="o">=</span><span class="n">inst_data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">debug_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">start_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">external_schedule</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">stop_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">schedule_origin_id</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">running_schedule_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">schedule_origin_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">get_logs_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_instance</span><span class="p">,</span> <span class="n">schedule_origin_id</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">schedule_origin_id</span><span class="p">,</span> <span class="s2">&quot;schedule_origin_id&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_artifacts_dir</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">schedule_origin_id</span><span class="p">,</span> <span class="s2">&quot;scheduler.log&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">wipe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+        <span class="k">pass</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

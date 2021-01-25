@@ -1,0 +1,205 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>GitHub (dagster_github) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Kubernetes (dagster_k8s)" href="dagster_k8s.html" />
+    <link rel="prev" title="Great Expectations (dagster_ge)" href="dagster_ge.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_ge.html" title="Previous document">Great Expectations (dagster_ge)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_k8s.html" title="Next document">Kubernetes (dagster_k8s)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="github-dagster-github">
+<h1>GitHub (dagster_github)<a class="headerlink" href="#github-dagster-github" title="Permalink to this headline">¶</a></h1>
+<p>This library provides an integration with GitHub Apps, to support performing various automation
+operations within your github repositories and with the tighter permissions scopes that github apps
+allow for vs using a personal token.</p>
+<p>Presently, it provides a thin wrapper on the <a class="reference external" href="https://developer.github.com/v4/">github v4 graphql API</a>.</p>
+<p>To use this integration, you’ll first need to create a GitHub App for it.</p>
+<ol class="arabic simple">
+<li><p><strong>Create App</strong>: Follow the instructions in
+<a class="reference external" href="https://developer.github.com/apps/quickstart-guides/setting-up-your-development-environment/">https://developer.github.com/apps/quickstart-guides/setting-up-your-development-environment/</a>, You will end up with a private key and App ID, which will be used when configuring the
+<code class="docutils literal notranslate"><span class="pre">dagster-github</span></code> resource. <strong>Note</strong> you will need to grant your app the relevent permissions
+for the API requests you want to make, for example to post issues it will need read/write access
+for the issues repository permission, more info on GitHub application permissions can be found
+<a class="reference external" href="https://developer.github.com/v3/apps/permissions/">here</a></p></li>
+<li><p><strong>Install App</strong>: Follow the instructions in
+<a class="reference external" href="https://developer.github.com/apps/quickstart-guides/setting-up-your-development-environment/#step-7-install-the-app-on-your-account">https://developer.github.com/apps/quickstart-guides/setting-up-your-development-environment/#step-7-install-the-app-on-your-account</a></p></li>
+<li><p><strong>Find your installation_id</strong>: You can pull this from the GitHub app administration page,
+<code class="docutils literal notranslate"><span class="pre">https://github.com/apps/&lt;app-name&gt;/installations/&lt;installation_id&gt;</span></code>. <strong>Note</strong> if your app is
+installed more than once you can also programatically retrieve these IDs.</p></li>
+</ol>
+<p>Sharing your App ID and Installation ID is fine, but make sure that the Private Key for your app is
+stored securily.</p>
+</div>
+<div class="section" id="posting-issues">
+<h1>Posting Issues<a class="headerlink" href="#posting-issues" title="Permalink to this headline">¶</a></h1>
+<p>Now, you can create issues in GitHub from Dagster with the GitHub resource:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">solid</span><span class="p">,</span> <span class="n">execute_pipeline</span><span class="p">,</span> <span class="n">ModeDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster_github</span> <span class="kn">import</span> <span class="n">github_resource</span>
+
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;github&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">github_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">github</span><span class="o">.</span><span class="n">create_issue</span><span class="p">(</span>
+        <span class="n">repo_name</span><span class="o">=</span><span class="s1">&#39;dagster&#39;</span><span class="p">,</span>
+        <span class="n">repo_owner</span><span class="o">=</span><span class="s1">&#39;dagster-io&#39;</span><span class="p">,</span>
+        <span class="n">title</span><span class="o">=</span><span class="s1">&#39;Dagster</span><span class="se">\&#39;</span><span class="s1">s first github issue&#39;</span><span class="p">,</span>
+        <span class="n">body</span><span class="o">=</span><span class="s1">&#39;this open source thing seems like a pretty good idea&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;github&#39;</span><span class="p">:</span> <span class="n">github_resource</span><span class="p">})],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">github_pipeline</span><span class="p">():</span>
+    <span class="n">github_solid</span><span class="p">()</span>
+
+<span class="n">execute_pipeline</span><span class="p">(</span>
+    <span class="n">github_pipeline</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;github&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;github_app_id&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;GITHUB_APP_ID&#39;</span><span class="p">),</span>
+        <span class="s2">&quot;github_app_private_rsa_key&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;GITHUB_PRIVATE_KEY&#39;</span><span class="p">),</span>
+        <span class="s2">&quot;github_installation_id&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;GITHUB_INSTALLATION_ID&#39;</span><span class="p">),</span>
+    <span class="p">}}}}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Run the above code, and you’ll see the issue appear in GitHub:
+<span class="raw-html-m2r"><img width="636" src="https://user-images.githubusercontent.com/5943242/72079909-c6012300-32c9-11ea-8acc-19e6f5f3d067.png"></span></p>
+<p>By provisioning <code class="docutils literal notranslate"><span class="pre">github_resource</span></code> as a Dagster pipeline resource, you can post to GitHub from
+within any solid execution.</p>
+</div>
+<div class="section" id="executing-graphql-queries">
+<h1>Executing GraphQL queries<a class="headerlink" href="#executing-graphql-queries" title="Permalink to this headline">¶</a></h1>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">solid</span><span class="p">,</span> <span class="n">execute_pipeline</span><span class="p">,</span> <span class="n">ModeDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster_github</span> <span class="kn">import</span> <span class="n">github_resource</span>
+
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;github&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">github_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">github</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+        <span class="n">query</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        query get_repo_id($repo_name: String!, $repo_owner: String!) {</span>
+<span class="s2">            repository(name: $repo_name, owner: $repo_owner) {</span>
+<span class="s2">                id</span>
+<span class="s2">            }</span>
+<span class="s2">        }</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="n">variables</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;repo_name&quot;</span><span class="p">:</span> <span class="n">repo_name</span><span class="p">,</span> <span class="s2">&quot;repo_owner&quot;</span><span class="p">:</span> <span class="n">repo_owner</span><span class="p">},</span>
+    <span class="p">)</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;github&#39;</span><span class="p">:</span> <span class="n">github_resource</span><span class="p">})],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">github_pipeline</span><span class="p">():</span>
+    <span class="n">github_solid</span><span class="p">()</span>
+
+<span class="n">execute_pipeline</span><span class="p">(</span>
+    <span class="n">github_pipeline</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;github&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;github_app_id&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;GITHUB_APP_ID&#39;</span><span class="p">),</span>
+        <span class="s2">&quot;github_app_private_rsa_key&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;GITHUB_PRIVATE_KEY&#39;</span><span class="p">),</span>
+        <span class="s2">&quot;github_installation_id&quot;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;GITHUB_INSTALLATION_ID&#39;</span><span class="p">),</span>
+    <span class="p">}}}}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="data">
+<dt id="dagster_github.github_resource">
+<code class="sig-prename descclassname">dagster_github.</code><code class="sig-name descname">github_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_github/resources.html#github_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_github.github_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_ge.html" title="Previous document">Great Expectations (dagster_ge)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_k8s.html" title="Next document">Kubernetes (dagster_k8s)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

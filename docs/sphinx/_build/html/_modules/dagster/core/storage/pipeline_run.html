@@ -1,0 +1,492 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.pipeline_run &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.pipeline_run</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.tags</span> <span class="kn">import</span> <span class="n">PARENT_RUN_ID_TAG</span><span class="p">,</span> <span class="n">ROOT_RUN_ID_TAG</span>
+<span class="kn">from</span> <span class="nn">dagster.core.utils</span> <span class="kn">import</span> <span class="n">make_new_run_id</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">Persistable</span><span class="p">,</span> <span class="n">whitelist_for_persistence</span><span class="p">,</span> <span class="n">whitelist_for_serdes</span>
+
+<span class="kn">from</span> <span class="nn">.tags</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BACKFILL_ID_TAG</span><span class="p">,</span>
+    <span class="n">PARTITION_NAME_TAG</span><span class="p">,</span>
+    <span class="n">PARTITION_SET_TAG</span><span class="p">,</span>
+    <span class="n">RESUME_RETRY_TAG</span><span class="p">,</span>
+    <span class="n">SCHEDULE_NAME_TAG</span><span class="p">,</span>
+    <span class="n">SENSOR_NAME_TAG</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">PipelineRunStatus</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">QUEUED</span> <span class="o">=</span> <span class="s2">&quot;QUEUED&quot;</span>
+    <span class="n">NOT_STARTED</span> <span class="o">=</span> <span class="s2">&quot;NOT_STARTED&quot;</span>
+    <span class="n">MANAGED</span> <span class="o">=</span> <span class="s2">&quot;MANAGED&quot;</span>
+    <span class="n">STARTING</span> <span class="o">=</span> <span class="s2">&quot;STARTING&quot;</span>
+    <span class="n">STARTED</span> <span class="o">=</span> <span class="s2">&quot;STARTED&quot;</span>
+    <span class="n">SUCCESS</span> <span class="o">=</span> <span class="s2">&quot;SUCCESS&quot;</span>
+    <span class="n">FAILURE</span> <span class="o">=</span> <span class="s2">&quot;FAILURE&quot;</span>
+    <span class="n">CANCELING</span> <span class="o">=</span> <span class="s2">&quot;CANCELING&quot;</span>
+    <span class="n">CANCELED</span> <span class="o">=</span> <span class="s2">&quot;CANCELED&quot;</span>
+
+
+<span class="c1"># These statuses that indicate a run may be using compute resources</span>
+<span class="n">IN_PROGRESS_RUN_STATUSES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">STARTING</span><span class="p">,</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">STARTED</span><span class="p">,</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">CANCELING</span><span class="p">,</span>
+<span class="p">]</span>
+
+<span class="c1"># This serves as an explicit list of run statuses that indicate that the run is not using compute</span>
+<span class="c1"># resources. This and the enum above should cover all run statuses.</span>
+<span class="n">NON_IN_PROGRESS_RUN_STATUSES</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">QUEUED</span><span class="p">,</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">NOT_STARTED</span><span class="p">,</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">SUCCESS</span><span class="p">,</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">FAILURE</span><span class="p">,</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">MANAGED</span><span class="p">,</span>
+    <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">CANCELED</span><span class="p">,</span>
+<span class="p">]</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">PipelineRunStatsSnapshot</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_PipelineRunStatsSnapshot&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;run_id steps_succeeded steps_failed materializations &quot;</span>
+            <span class="s2">&quot;expectations start_time end_time&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="p">,</span>
+        <span class="n">steps_succeeded</span><span class="p">,</span>
+        <span class="n">steps_failed</span><span class="p">,</span>
+        <span class="n">materializations</span><span class="p">,</span>
+        <span class="n">expectations</span><span class="p">,</span>
+        <span class="n">start_time</span><span class="p">,</span>
+        <span class="n">end_time</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PipelineRunStatsSnapshot</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">run_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">),</span>
+            <span class="n">steps_succeeded</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">steps_succeeded</span><span class="p">,</span> <span class="s2">&quot;steps_succeeded&quot;</span><span class="p">),</span>
+            <span class="n">steps_failed</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">steps_failed</span><span class="p">,</span> <span class="s2">&quot;steps_failed&quot;</span><span class="p">),</span>
+            <span class="n">materializations</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">materializations</span><span class="p">,</span> <span class="s2">&quot;materializations&quot;</span><span class="p">),</span>
+            <span class="n">expectations</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">expectations</span><span class="p">,</span> <span class="s2">&quot;expectations&quot;</span><span class="p">),</span>
+            <span class="n">start_time</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_float_param</span><span class="p">(</span><span class="n">start_time</span><span class="p">,</span> <span class="s2">&quot;start_time&quot;</span><span class="p">),</span>
+            <span class="n">end_time</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_float_param</span><span class="p">(</span><span class="n">end_time</span><span class="p">,</span> <span class="s2">&quot;end_time&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="PipelineRun"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.PipelineRun">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">PipelineRun</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_PipelineRun&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;pipeline_name run_id run_config mode solid_selection solids_to_execute &quot;</span>
+            <span class="s2">&quot;step_keys_to_execute status tags root_run_id parent_run_id &quot;</span>
+            <span class="s2">&quot;pipeline_snapshot_id execution_plan_snapshot_id external_pipeline_origin&quot;</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="n">Persistable</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Serializable internal representation of a pipeline run, as stored in a</span>
+<span class="sd">    :py:class:`~dagster.core.storage.runs.RunStorage`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solids_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">status</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">root_run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">parent_run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">pipeline_snapshot_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">execution_plan_snapshot_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">external_pipeline_origin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">root_run_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">parent_run_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="p">(</span><span class="n">root_run_id</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">parent_run_id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;Must set both root_run_id and parent_run_id when creating a PipelineRun that &quot;</span>
+                <span class="s2">&quot;belongs to a run group&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="c1"># a frozenset which contains the names of the solids to execute</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">,</span> <span class="s2">&quot;solids_to_execute&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="c1"># a list of solid queries provided by the user</span>
+        <span class="c1"># possible to be None when only solids_to_execute is set by the user directly</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">step_keys_to_execute</span><span class="p">,</span> <span class="s2">&quot;step_keys_to_execute&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="c1"># Placing this with the other imports causes a cyclic import</span>
+        <span class="c1"># https://github.com/dagster-io/dagster/issues/3181</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.host_representation.origin</span> <span class="kn">import</span> <span class="n">ExternalPipelineOrigin</span>
+
+        <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">QUEUED</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">external_pipeline_origin</span><span class="p">,</span>
+                <span class="s2">&quot;external_pipeline_origin&quot;</span><span class="p">,</span>
+                <span class="n">ExternalPipelineOrigin</span><span class="p">,</span>
+                <span class="s2">&quot;external_pipeline_origin is required for queued runs&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PipelineRun</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">run_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">make_new_run_id</span><span class="p">()),</span>
+            <span class="n">run_config</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">run_config</span><span class="p">,</span> <span class="s2">&quot;run_config&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">),</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">solids_to_execute</span><span class="o">=</span><span class="n">solids_to_execute</span><span class="p">,</span>
+            <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="n">step_keys_to_execute</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">status</span><span class="p">,</span> <span class="s2">&quot;status&quot;</span><span class="p">,</span> <span class="n">PipelineRunStatus</span><span class="p">,</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">NOT_STARTED</span>
+            <span class="p">),</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">root_run_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">root_run_id</span><span class="p">,</span> <span class="s2">&quot;root_run_id&quot;</span><span class="p">),</span>
+            <span class="n">parent_run_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">parent_run_id</span><span class="p">,</span> <span class="s2">&quot;parent_run_id&quot;</span><span class="p">),</span>
+            <span class="n">pipeline_snapshot_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">pipeline_snapshot_id</span><span class="p">,</span> <span class="s2">&quot;pipeline_snapshot_id&quot;</span><span class="p">),</span>
+            <span class="n">execution_plan_snapshot_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span>
+                <span class="n">execution_plan_snapshot_id</span><span class="p">,</span> <span class="s2">&quot;execution_plan_snapshot_id&quot;</span>
+            <span class="p">),</span>
+            <span class="n">external_pipeline_origin</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">external_pipeline_origin</span><span class="p">,</span> <span class="s2">&quot;external_pipeline_origin&quot;</span><span class="p">,</span> <span class="n">ExternalPipelineOrigin</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_storage_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">storage_dict</span><span class="p">):</span>
+        <span class="c1"># called by the serdes layer, delegates to helper method with expanded kwargs</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_from_storage</span><span class="p">(</span><span class="o">**</span><span class="n">storage_dict</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_from_storage</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solids_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">status</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">root_run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">parent_run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">pipeline_snapshot_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">execution_plan_snapshot_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="c1"># backcompat</span>
+        <span class="n">environment_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">previous_run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">selector</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solid_subset</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">reexecution_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># pylint: disable=unused-argument</span>
+        <span class="n">external_pipeline_origin</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="c1"># serdes log</span>
+        <span class="c1"># * removed reexecution_config - serdes logic expected to strip unknown keys so no need to preserve</span>
+        <span class="c1"># * added pipeline_snapshot_id</span>
+        <span class="c1"># * renamed previous_run_id -&gt; parent_run_id, added root_run_id</span>
+        <span class="c1"># * added execution_plan_snapshot_id</span>
+        <span class="c1"># * removed selector</span>
+        <span class="c1"># * added solid_subset</span>
+        <span class="c1"># * renamed solid_subset -&gt; solid_selection, added solids_to_execute</span>
+        <span class="c1"># * renamed environment_dict -&gt; run_config</span>
+
+        <span class="c1"># back compat for environment dict =&gt; run_config</span>
+        <span class="k">if</span> <span class="n">environment_dict</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                <span class="ow">not</span> <span class="n">run_config</span><span class="p">,</span>
+                <span class="s2">&quot;Cannot set both run_config and environment_dict. Use run_config parameter.&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">run_config</span> <span class="o">=</span> <span class="n">environment_dict</span>
+
+        <span class="c1"># back compat for previous_run_id =&gt; parent_run_id, root_run_id</span>
+        <span class="k">if</span> <span class="n">previous_run_id</span> <span class="ow">and</span> <span class="ow">not</span> <span class="p">(</span><span class="n">parent_run_id</span> <span class="ow">and</span> <span class="n">root_run_id</span><span class="p">):</span>
+            <span class="n">parent_run_id</span> <span class="o">=</span> <span class="n">previous_run_id</span>
+            <span class="n">root_run_id</span> <span class="o">=</span> <span class="n">previous_run_id</span>
+
+        <span class="c1"># back compat for selector =&gt; pipeline_name, solids_to_execute</span>
+        <span class="n">selector</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">selector</span><span class="p">,</span> <span class="s2">&quot;selector&quot;</span><span class="p">,</span> <span class="n">ExecutionSelector</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">selector</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                <span class="n">pipeline_name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">selector</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">pipeline_name</span><span class="p">,</span>
+                <span class="p">(</span>
+                    <span class="s2">&quot;Conflicting pipeline name </span><span class="si">{pipeline_name}</span><span class="s2"> in arguments to PipelineRun: &quot;</span>
+                    <span class="s2">&quot;selector was passed with pipeline </span><span class="si">{selector_pipeline}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="n">selector_pipeline</span><span class="o">=</span><span class="n">selector</span><span class="o">.</span><span class="n">name</span>
+                    <span class="p">)</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">pipeline_name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">pipeline_name</span> <span class="o">=</span> <span class="n">selector</span><span class="o">.</span><span class="n">name</span>
+
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                <span class="n">solids_to_execute</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">set</span><span class="p">(</span><span class="n">selector</span><span class="o">.</span><span class="n">solid_subset</span><span class="p">)</span> <span class="o">==</span> <span class="n">solids_to_execute</span><span class="p">,</span>
+                <span class="p">(</span>
+                    <span class="s2">&quot;Conflicting solids_to_execute </span><span class="si">{solids_to_execute}</span><span class="s2"> in arguments to PipelineRun: &quot;</span>
+                    <span class="s2">&quot;selector was passed with subset </span><span class="si">{selector_subset}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">solids_to_execute</span><span class="o">=</span><span class="n">solids_to_execute</span><span class="p">,</span> <span class="n">selector_subset</span><span class="o">=</span><span class="n">selector</span><span class="o">.</span><span class="n">solid_subset</span>
+                    <span class="p">)</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="c1"># for old runs that only have selector but no solids_to_execute</span>
+            <span class="k">if</span> <span class="n">solids_to_execute</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">solids_to_execute</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="nb">frozenset</span><span class="p">(</span><span class="n">selector</span><span class="o">.</span><span class="n">solid_subset</span><span class="p">)</span> <span class="k">if</span> <span class="n">selector</span><span class="o">.</span><span class="n">solid_subset</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">)</span>
+
+        <span class="c1"># back compat for solid_subset =&gt; solids_to_execute</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">solid_subset</span><span class="p">,</span> <span class="s2">&quot;solid_subset&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">solid_subset</span><span class="p">:</span>
+            <span class="n">solids_to_execute</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">solid_subset</span><span class="p">)</span>
+
+        <span class="c1"># warn about unused arguments</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Found unhandled arguments from stored PipelineRun: </span><span class="si">{args}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">args</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>  <span class="c1"># pylint: disable=redundant-keyword-arg</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span>
+            <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">solids_to_execute</span><span class="o">=</span><span class="n">solids_to_execute</span><span class="p">,</span>
+            <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="n">step_keys_to_execute</span><span class="p">,</span>
+            <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">,</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+            <span class="n">root_run_id</span><span class="o">=</span><span class="n">root_run_id</span><span class="p">,</span>
+            <span class="n">parent_run_id</span><span class="o">=</span><span class="n">parent_run_id</span><span class="p">,</span>
+            <span class="n">pipeline_snapshot_id</span><span class="o">=</span><span class="n">pipeline_snapshot_id</span><span class="p">,</span>
+            <span class="n">execution_plan_snapshot_id</span><span class="o">=</span><span class="n">execution_plan_snapshot_id</span><span class="p">,</span>
+            <span class="n">external_pipeline_origin</span><span class="o">=</span><span class="n">external_pipeline_origin</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">with_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">QUEUED</span><span class="p">:</span>
+            <span class="c1"># Placing this with the other imports causes a cyclic import</span>
+            <span class="c1"># https://github.com/dagster-io/dagster/issues/3181</span>
+            <span class="kn">from</span> <span class="nn">dagster.core.host_representation.origin</span> <span class="kn">import</span> <span class="n">ExternalPipelineOrigin</span>
+
+            <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">external_pipeline_origin</span><span class="p">,</span>
+                <span class="n">ExternalPipelineOrigin</span><span class="p">,</span>
+                <span class="s2">&quot;external_pipeline_origin is required for queued runs&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">with_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">with_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tags</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span><span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_root_run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">ROOT_RUN_ID_TAG</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_parent_run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">PARENT_RUN_ID_TAG</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_finished</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">SUCCESS</span>
+            <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">FAILURE</span>
+            <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">CANCELED</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_success</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">SUCCESS</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">FAILURE</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">CANCELED</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_resume_retry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">RESUME_RETRY_TAG</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">previous_run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Compat</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent_run_id</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">tags_for_schedule</span><span class="p">(</span><span class="n">schedule</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">SCHEDULE_NAME_TAG</span><span class="p">:</span> <span class="n">schedule</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">tags_for_sensor</span><span class="p">(</span><span class="n">sensor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">SENSOR_NAME_TAG</span><span class="p">:</span> <span class="n">sensor</span><span class="o">.</span><span class="n">name</span><span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">tags_for_backfill_id</span><span class="p">(</span><span class="n">backfill_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">BACKFILL_ID_TAG</span><span class="p">:</span> <span class="n">backfill_id</span><span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">tags_for_partition_set</span><span class="p">(</span><span class="n">partition_set</span><span class="p">,</span> <span class="n">partition</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">PARTITION_NAME_TAG</span><span class="p">:</span> <span class="n">partition</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">PARTITION_SET_TAG</span><span class="p">:</span> <span class="n">partition_set</span><span class="o">.</span><span class="n">name</span><span class="p">}</span></div>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">PipelineRunsFilter</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_PipelineRunsFilter&quot;</span><span class="p">,</span> <span class="s2">&quot;run_ids pipeline_name statuses tags snapshot_id&quot;</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">run_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">statuses</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">snapshot_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PipelineRunsFilter</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">run_ids</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">run_ids</span><span class="p">,</span> <span class="s2">&quot;run_ids&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">statuses</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">statuses</span><span class="p">,</span> <span class="s2">&quot;statuses&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">PipelineRunStatus</span><span class="p">),</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">snapshot_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">snapshot_id</span><span class="p">,</span> <span class="s2">&quot;snapshot_id&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">for_schedule</span><span class="p">(</span><span class="n">schedule</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PipelineRunsFilter</span><span class="p">(</span><span class="n">tags</span><span class="o">=</span><span class="n">PipelineRun</span><span class="o">.</span><span class="n">tags_for_schedule</span><span class="p">(</span><span class="n">schedule</span><span class="p">))</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">for_partition</span><span class="p">(</span><span class="n">partition_set</span><span class="p">,</span> <span class="n">partition</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PipelineRunsFilter</span><span class="p">(</span><span class="n">tags</span><span class="o">=</span><span class="n">PipelineRun</span><span class="o">.</span><span class="n">tags_for_partition_set</span><span class="p">(</span><span class="n">partition_set</span><span class="p">,</span> <span class="n">partition</span><span class="p">))</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">for_sensor</span><span class="p">(</span><span class="n">sensor</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PipelineRunsFilter</span><span class="p">(</span><span class="n">tags</span><span class="o">=</span><span class="n">PipelineRun</span><span class="o">.</span><span class="n">tags_for_sensor</span><span class="p">(</span><span class="n">sensor</span><span class="p">))</span>
+
+
+<span class="c1">###################################################################################################</span>
+<span class="c1"># GRAVEYARD</span>
+<span class="c1">#</span>
+<span class="c1">#            -|-</span>
+<span class="c1">#             |</span>
+<span class="c1">#        _-&#39;~~~~~`-_</span>
+<span class="c1">#      .&#39;           &#39;.</span>
+<span class="c1">#      |    R I P    |</span>
+<span class="c1">#      |             |</span>
+<span class="c1">#      |  Execution  |</span>
+<span class="c1">#      |  Selector   |</span>
+<span class="c1">#      |             |</span>
+<span class="c1">#      |             |</span>
+<span class="c1">###################################################################################################</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">ExecutionSelector</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_ExecutionSelector&quot;</span><span class="p">,</span> <span class="s2">&quot;name solid_subset&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Kept here to maintain loading of PipelineRuns from when it was still alive.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">solid_subset</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ExecutionSelector</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">),</span>
+            <span class="n">solid_subset</span><span class="o">=</span><span class="kc">None</span>
+            <span class="k">if</span> <span class="n">solid_subset</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">solid_subset</span><span class="p">,</span> <span class="s2">&quot;solid_subset&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+        <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

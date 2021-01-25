@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_aws.s3.file_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_aws.s3.file_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">usable_as_dagster_type</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.file_manager</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">FileHandle</span><span class="p">,</span>
+    <span class="n">FileManager</span><span class="p">,</span>
+    <span class="n">TempfileManager</span><span class="p">,</span>
+    <span class="n">check_file_like_obj</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="S3FileHandle"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.s3.S3FileHandle">[docs]</a><span class="nd">@usable_as_dagster_type</span>
+<span class="k">class</span> <span class="nc">S3FileHandle</span><span class="p">(</span><span class="n">FileHandle</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A reference to a file on S3.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s3_bucket</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">s3_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="s2">&quot;s3_bucket&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">s3_key</span><span class="p">,</span> <span class="s2">&quot;s3_key&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">s3_bucket</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;str: The name of the S3 bucket.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">s3_key</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;str: The S3 key.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_s3_key</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">path_desc</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;str: The file&#39;s S3 URL.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">s3_path</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">s3_path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;str: The file&#39;s S3 URL.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;s3://</span><span class="si">{bucket}</span><span class="s2">/</span><span class="si">{key}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s3_key</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">S3FileManager</span><span class="p">(</span><span class="n">FileManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s3_session</span><span class="p">,</span> <span class="n">s3_bucket</span><span class="p">,</span> <span class="n">s3_base_key</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span> <span class="o">=</span> <span class="n">s3_session</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="s2">&quot;s3_bucket&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_base_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">s3_base_key</span><span class="p">,</span> <span class="s2">&quot;s3_base_key&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_local_handle_cache</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_file_manager</span> <span class="o">=</span> <span class="n">TempfileManager</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">copy_handle_to_local_temp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_download_if_not_cached</span><span class="p">(</span><span class="n">file_handle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_local_path</span><span class="p">(</span><span class="n">file_handle</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_download_if_not_cached</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_handle_cached</span><span class="p">(</span><span class="n">file_handle</span><span class="p">):</span>
+            <span class="c1"># instigate download</span>
+            <span class="n">temp_file_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_file_manager</span><span class="o">.</span><span class="n">tempfile</span><span class="p">()</span>
+            <span class="n">temp_name</span> <span class="o">=</span> <span class="n">temp_file_obj</span><span class="o">.</span><span class="n">name</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span><span class="o">.</span><span class="n">download_file</span><span class="p">(</span>
+                <span class="n">Bucket</span><span class="o">=</span><span class="n">file_handle</span><span class="o">.</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="n">file_handle</span><span class="o">.</span><span class="n">s3_key</span><span class="p">,</span> <span class="n">Filename</span><span class="o">=</span><span class="n">temp_name</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_local_handle_cache</span><span class="p">[</span><span class="n">file_handle</span><span class="o">.</span><span class="n">s3_path</span><span class="p">]</span> <span class="o">=</span> <span class="n">temp_name</span>
+
+        <span class="k">return</span> <span class="n">file_handle</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="s2">&quot;file_handle&quot;</span><span class="p">,</span> <span class="n">S3FileHandle</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">},</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_download_if_not_cached</span><span class="p">(</span><span class="n">file_handle</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_local_path</span><span class="p">(</span><span class="n">file_handle</span><span class="p">),</span> <span class="n">mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_obj</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">file_obj</span>
+
+    <span class="k">def</span> <span class="nf">_file_handle_cached</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">file_handle</span><span class="o">.</span><span class="n">s3_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_handle_cache</span>
+
+    <span class="k">def</span> <span class="nf">_get_local_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_local_handle_cache</span><span class="p">[</span><span class="n">file_handle</span><span class="o">.</span><span class="n">s3_path</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">file_obj</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">write_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="n">ext</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_obj</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check_file_like_obj</span><span class="p">(</span><span class="n">file_obj</span><span class="p">)</span>
+        <span class="n">s3_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_full_key</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span> <span class="o">+</span> <span class="p">((</span><span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">ext</span><span class="p">)</span> <span class="k">if</span> <span class="n">ext</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span><span class="n">Body</span><span class="o">=</span><span class="n">file_obj</span><span class="p">,</span> <span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="n">s3_key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">S3FileHandle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span><span class="p">,</span> <span class="n">s3_key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_full_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{base_key}</span><span class="s2">/</span><span class="si">{file_key}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_s3_base_key</span><span class="p">,</span> <span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delete_local_temp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_file_manager</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,341 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_ssh.resources &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_ssh.resources</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">getpass</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">StringIO</span>
+
+<span class="kn">import</span> <span class="nn">paramiko</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">resource</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">merge_dicts</span><span class="p">,</span> <span class="n">mkdir_p</span>
+<span class="kn">from</span> <span class="nn">paramiko.config</span> <span class="kn">import</span> <span class="n">SSH_PORT</span>
+<span class="kn">from</span> <span class="nn">sshtunnel</span> <span class="kn">import</span> <span class="n">SSHTunnelForwarder</span>
+
+
+<span class="k">def</span> <span class="nf">key_from_str</span><span class="p">(</span><span class="n">key_str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a paramiko SSH key from a string.&quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key_str</span><span class="p">,</span> <span class="s2">&quot;key_str&quot;</span><span class="p">)</span>
+
+    <span class="c1"># py2 StringIO doesn&#39;t support with</span>
+    <span class="n">key_file</span> <span class="o">=</span> <span class="n">StringIO</span><span class="p">(</span><span class="n">key_str</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">paramiko</span><span class="o">.</span><span class="n">RSAKey</span><span class="o">.</span><span class="n">from_private_key</span><span class="p">(</span><span class="n">key_file</span><span class="p">)</span>
+    <span class="n">key_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">result</span>
+
+
+<div class="viewcode-block" id="SSHResource"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_ssh.html#dagster_ssh.SSHResource">[docs]</a><span class="k">class</span> <span class="nc">SSHResource</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Resource for ssh remote execution using Paramiko.</span>
+<span class="sd">    ref: https://github.com/paramiko/paramiko</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">remote_host</span><span class="p">,</span>
+        <span class="n">remote_port</span><span class="p">,</span>
+        <span class="n">username</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">password</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">key_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">key_string</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">keepalive_interval</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="n">compress</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">no_host_key_check</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">allow_host_key_change</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote_host</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">remote_host</span><span class="p">,</span> <span class="s2">&quot;remote_host&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remote_port</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">remote_port</span><span class="p">,</span> <span class="s2">&quot;remote_port&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="s2">&quot;username&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="s2">&quot;password&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_file</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">key_file</span><span class="p">,</span> <span class="s2">&quot;key_file&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="s2">&quot;timeout&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">keepalive_interval</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">keepalive_interval</span><span class="p">,</span> <span class="s2">&quot;keepalive_interval&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compress</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_bool_param</span><span class="p">(</span><span class="n">compress</span><span class="p">,</span> <span class="s2">&quot;compress&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">no_host_key_check</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_bool_param</span><span class="p">(</span><span class="n">no_host_key_check</span><span class="p">,</span> <span class="s2">&quot;no_host_key_check&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">allow_host_key_change</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_bool_param</span><span class="p">(</span>
+            <span class="n">allow_host_key_change</span><span class="p">,</span> <span class="s2">&quot;allow_host_key_change&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">logger</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">host_proxy</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># Create RSAKey object from private key string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_obj</span> <span class="o">=</span> <span class="n">key_from_str</span><span class="p">(</span><span class="n">key_string</span><span class="p">)</span> <span class="k">if</span> <span class="n">key_string</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+
+        <span class="c1"># Auto detecting username values from system</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+                <span class="s2">&quot;username to ssh to host: </span><span class="si">%s</span><span class="s2"> is not specified. Using system&#39;s default provided by&quot;</span>
+                <span class="s2">&quot; getpass.getuser()&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">remote_host</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
+
+        <span class="n">user_ssh_config_filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~/.ssh/config&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">user_ssh_config_filename</span><span class="p">):</span>
+            <span class="n">ssh_conf</span> <span class="o">=</span> <span class="n">paramiko</span><span class="o">.</span><span class="n">SSHConfig</span><span class="p">()</span>
+            <span class="n">ssh_conf</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">user_ssh_config_filename</span><span class="p">))</span>
+            <span class="n">host_info</span> <span class="o">=</span> <span class="n">ssh_conf</span><span class="o">.</span><span class="n">lookup</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">remote_host</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">host_info</span> <span class="ow">and</span> <span class="n">host_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;proxycommand&quot;</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">host_proxy</span> <span class="o">=</span> <span class="n">paramiko</span><span class="o">.</span><span class="n">ProxyCommand</span><span class="p">(</span><span class="n">host_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;proxycommand&quot;</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_file</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">host_info</span> <span class="ow">and</span> <span class="n">host_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identityfile&quot;</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">key_file</span> <span class="o">=</span> <span class="n">host_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;identityfile&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get_connection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Opens a SSH connection to the remote host.</span>
+
+<span class="sd">        :rtype: paramiko.client.SSHClient</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">paramiko</span><span class="o">.</span><span class="n">SSHClient</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">allow_host_key_change</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;Remote Identification Change is not verified. This won&#39;t protect against &quot;</span>
+                <span class="s2">&quot;Man-In-The-Middle attacks&quot;</span>
+            <span class="p">)</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">load_system_host_keys</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">no_host_key_check</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;No Host Key Verification. This won&#39;t protect against Man-In-The-Middle attacks&quot;</span>
+            <span class="p">)</span>
+            <span class="c1"># Default is RejectPolicy</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">set_missing_host_key_policy</span><span class="p">(</span><span class="n">paramiko</span><span class="o">.</span><span class="n">AutoAddPolicy</span><span class="p">())</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+                <span class="n">hostname</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">remote_host</span><span class="p">,</span>
+                <span class="n">username</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+                <span class="n">password</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="p">,</span>
+                <span class="n">key_filename</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">key_file</span><span class="p">,</span>
+                <span class="n">pkey</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">key_obj</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+                <span class="n">compress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span>
+                <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">remote_port</span><span class="p">,</span>
+                <span class="n">sock</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host_proxy</span><span class="p">,</span>
+                <span class="n">look_for_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span>
+                <span class="n">hostname</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">remote_host</span><span class="p">,</span>
+                <span class="n">username</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+                <span class="n">key_filename</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">key_file</span><span class="p">,</span>
+                <span class="n">pkey</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">key_obj</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+                <span class="n">compress</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">compress</span><span class="p">,</span>
+                <span class="n">port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">remote_port</span><span class="p">,</span>
+                <span class="n">sock</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host_proxy</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">keepalive_interval</span><span class="p">:</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">get_transport</span><span class="p">()</span><span class="o">.</span><span class="n">set_keepalive</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">keepalive_interval</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">client</span>
+
+    <span class="k">def</span> <span class="nf">get_tunnel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_port</span><span class="p">,</span> <span class="n">remote_host</span><span class="o">=</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">local_port</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">remote_port</span><span class="p">,</span> <span class="s2">&quot;remote_port&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">remote_host</span><span class="p">,</span> <span class="s2">&quot;remote_host&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">local_port</span><span class="p">,</span> <span class="s2">&quot;local_port&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">local_port</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">local_bind_address</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,</span> <span class="n">local_port</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">local_bind_address</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;localhost&quot;</span><span class="p">,)</span>
+
+        <span class="c1"># Will prefer key string if specified, otherwise use the key file</span>
+        <span class="n">pkey</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_obj</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_obj</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_file</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="o">.</span><span class="n">strip</span><span class="p">():</span>
+            <span class="n">client</span> <span class="o">=</span> <span class="n">SSHTunnelForwarder</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remote_host</span><span class="p">,</span>
+                <span class="n">ssh_port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">remote_port</span><span class="p">,</span>
+                <span class="n">ssh_username</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+                <span class="n">ssh_password</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">password</span><span class="p">,</span>
+                <span class="n">ssh_pkey</span><span class="o">=</span><span class="n">pkey</span><span class="p">,</span>
+                <span class="n">ssh_proxy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host_proxy</span><span class="p">,</span>
+                <span class="n">local_bind_address</span><span class="o">=</span><span class="n">local_bind_address</span><span class="p">,</span>
+                <span class="n">remote_bind_address</span><span class="o">=</span><span class="p">(</span><span class="n">remote_host</span><span class="p">,</span> <span class="n">remote_port</span><span class="p">),</span>
+                <span class="n">logger</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">client</span> <span class="o">=</span> <span class="n">SSHTunnelForwarder</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">remote_host</span><span class="p">,</span>
+                <span class="n">ssh_port</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">remote_port</span><span class="p">,</span>
+                <span class="n">ssh_username</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+                <span class="n">ssh_pkey</span><span class="o">=</span><span class="n">pkey</span><span class="p">,</span>
+                <span class="n">ssh_proxy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">host_proxy</span><span class="p">,</span>
+                <span class="n">local_bind_address</span><span class="o">=</span><span class="n">local_bind_address</span><span class="p">,</span>
+                <span class="n">remote_bind_address</span><span class="o">=</span><span class="p">(</span><span class="n">remote_host</span><span class="p">,</span> <span class="n">remote_port</span><span class="p">),</span>
+                <span class="n">host_pkey_directories</span><span class="o">=</span><span class="p">[],</span>
+                <span class="n">logger</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">client</span>
+
+    <span class="k">def</span> <span class="nf">sftp_get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_filepath</span><span class="p">,</span> <span class="n">local_filepath</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">remote_filepath</span><span class="p">,</span> <span class="s2">&quot;remote_filepath&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">local_filepath</span><span class="p">,</span> <span class="s2">&quot;local_filepath&quot;</span><span class="p">)</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_connection</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">open_sftp</span><span class="p">()</span> <span class="k">as</span> <span class="n">sftp_client</span><span class="p">:</span>
+            <span class="n">local_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">local_filepath</span><span class="p">)</span>
+
+            <span class="c1"># Create intermediate directories if they don&#39;t exist</span>
+            <span class="n">mkdir_p</span><span class="p">(</span><span class="n">local_folder</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Starting to transfer from </span><span class="si">{0}</span><span class="s2"> to </span><span class="si">{1}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">remote_filepath</span><span class="p">,</span> <span class="n">local_filepath</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="n">sftp_client</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">remote_filepath</span><span class="p">,</span> <span class="n">local_filepath</span><span class="p">)</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">local_filepath</span>
+
+    <span class="k">def</span> <span class="nf">sftp_put</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_filepath</span><span class="p">,</span> <span class="n">local_filepath</span><span class="p">,</span> <span class="n">confirm</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">remote_filepath</span><span class="p">,</span> <span class="s2">&quot;remote_filepath&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">local_filepath</span><span class="p">,</span> <span class="s2">&quot;local_filepath&quot;</span><span class="p">)</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_connection</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">open_sftp</span><span class="p">()</span> <span class="k">as</span> <span class="n">sftp_client</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Starting to transfer file from </span><span class="si">{0}</span><span class="s2"> to </span><span class="si">{1}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">local_filepath</span><span class="p">,</span> <span class="n">remote_filepath</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="n">sftp_client</span><span class="o">.</span><span class="n">put</span><span class="p">(</span><span class="n">local_filepath</span><span class="p">,</span> <span class="n">remote_filepath</span><span class="p">,</span> <span class="n">confirm</span><span class="o">=</span><span class="n">confirm</span><span class="p">)</span>
+
+        <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">local_filepath</span></div>
+
+
+<div class="viewcode-block" id="ssh_resource"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_ssh.html#dagster_ssh.ssh_resource">[docs]</a><span class="nd">@resource</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;remote_host&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;remote host to connect to&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;remote_port&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;port of remote host to connect (Default is paramiko SSH_PORT)&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="n">SSH_PORT</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;username to connect to the remote_host&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;password of the username to connect to the remote_host&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;key_file&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;key file to use to connect to the remote_host.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;key_string&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;key string to use to connect to remote_host&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;timeout for the attempt to connect to the remote_host.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;keepalive_interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;send a keepalive packet to remote host every keepalive_interval seconds&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;compress&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">&quot;no_host_key_check&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">&quot;allow_host_key_change&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">ssh_resource</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">merge_dicts</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;logger&quot;</span><span class="p">:</span> <span class="n">init_context</span><span class="o">.</span><span class="n">log_manager</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">SSHResource</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

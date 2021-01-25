@@ -1,0 +1,161 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.schedules.sqlite.sqlite_schedule_storage &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../../" src="../../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.schedules.sqlite.sqlite_schedule_storage</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.sql</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">check_alembic_revision</span><span class="p">,</span>
+    <span class="n">create_engine</span><span class="p">,</span>
+    <span class="n">get_alembic_config</span><span class="p">,</span>
+    <span class="n">handle_schema_errors</span><span class="p">,</span>
+    <span class="n">run_alembic_upgrade</span><span class="p">,</span>
+    <span class="n">stamp_alembic_rev</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.sqlite</span> <span class="kn">import</span> <span class="n">create_db_conn_string</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">ConfigurableClass</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">mkdir_p</span>
+<span class="kn">from</span> <span class="nn">sqlalchemy.pool</span> <span class="kn">import</span> <span class="n">NullPool</span>
+
+<span class="kn">from</span> <span class="nn">..schema</span> <span class="kn">import</span> <span class="n">ScheduleStorageSqlMetadata</span>
+<span class="kn">from</span> <span class="nn">..sql_schedule_storage</span> <span class="kn">import</span> <span class="n">SqlScheduleStorage</span>
+
+
+<div class="viewcode-block" id="SqliteScheduleStorage"><a class="viewcode-back" href="../../../../../../sections/api/apidocs/internals.html#dagster.core.storage.schedules.SqliteScheduleStorage">[docs]</a><span class="k">class</span> <span class="nc">SqliteScheduleStorage</span><span class="p">(</span><span class="n">SqlScheduleStorage</span><span class="p">,</span> <span class="n">ConfigurableClass</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Local SQLite backed schedule storage</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn_string</span><span class="p">,</span> <span class="n">inst_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">conn_string</span><span class="p">,</span> <span class="s2">&quot;conn_string&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_conn_string</span> <span class="o">=</span> <span class="n">conn_string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="s2">&quot;inst_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">inst_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">config_type</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">StringSource</span><span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_config_value</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">SqliteScheduleStorage</span><span class="o">.</span><span class="n">from_local</span><span class="p">(</span><span class="n">inst_data</span><span class="o">=</span><span class="n">inst_data</span><span class="p">,</span> <span class="o">**</span><span class="n">config_value</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_local</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">inst_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;base_dir&quot;</span><span class="p">)</span>
+        <span class="n">mkdir_p</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)</span>
+        <span class="n">conn_string</span> <span class="o">=</span> <span class="n">create_db_conn_string</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;schedules&quot;</span><span class="p">)</span>
+        <span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">conn_string</span><span class="p">,</span> <span class="n">poolclass</span><span class="o">=</span><span class="n">NullPool</span><span class="p">)</span>
+        <span class="n">alembic_config</span> <span class="o">=</span> <span class="n">get_alembic_config</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">connection</span><span class="p">:</span>
+            <span class="n">db_revision</span><span class="p">,</span> <span class="n">head_revision</span> <span class="o">=</span> <span class="n">check_alembic_revision</span><span class="p">(</span><span class="n">alembic_config</span><span class="p">,</span> <span class="n">connection</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">db_revision</span> <span class="ow">and</span> <span class="n">head_revision</span><span class="p">):</span>
+                <span class="n">ScheduleStorageSqlMetadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">engine</span><span class="p">)</span>
+                <span class="n">engine</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;PRAGMA journal_mode=WAL;&quot;</span><span class="p">)</span>
+                <span class="n">stamp_alembic_rev</span><span class="p">(</span><span class="n">alembic_config</span><span class="p">,</span> <span class="n">connection</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">SqliteScheduleStorage</span><span class="p">(</span><span class="n">conn_string</span><span class="p">,</span> <span class="n">inst_data</span><span class="p">)</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_conn_string</span><span class="p">,</span> <span class="n">poolclass</span><span class="o">=</span><span class="n">NullPool</span><span class="p">)</span>
+        <span class="n">conn</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">handle_schema_errors</span><span class="p">(</span>
+                <span class="n">conn</span><span class="p">,</span>
+                <span class="n">get_alembic_config</span><span class="p">(</span><span class="vm">__file__</span><span class="p">),</span>
+                <span class="n">msg</span><span class="o">=</span><span class="s2">&quot;Sqlite schedule storage requires migration&quot;</span><span class="p">,</span>
+            <span class="p">):</span>
+                <span class="k">yield</span> <span class="n">conn</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">upgrade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">alembic_config</span> <span class="o">=</span> <span class="n">get_alembic_config</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">run_alembic_upgrade</span><span class="p">(</span><span class="n">alembic_config</span><span class="p">,</span> <span class="n">conn</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,149 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Databricks (dagster_databricks) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Datadog (dagster_datadog)" href="dagster_datadog.html" />
+    <link rel="prev" title="Dask (dagster_dask)" href="dagster_dask.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_dask.html" title="Previous document">Dask (dagster_dask)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_datadog.html" title="Next document">Datadog (dagster_datadog)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="databricks-dagster-databricks">
+<h1>Databricks (dagster_databricks)<a class="headerlink" href="#databricks-dagster-databricks" title="Permalink to this headline">¶</a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">dagster_databricks</span></code> package provides two main pieces of functionality:</p>
+<ul class="simple">
+<li><p>A resource, <code class="docutils literal notranslate"><span class="pre">databricks_pyspark_step_launcher</span></code>, which will execute a solid within a Databricks
+context on a cluster, such that the <code class="docutils literal notranslate"><span class="pre">pyspark</span></code> resource uses the cluster’s Spark instance.</p></li>
+<li><p>A function, <code class="docutils literal notranslate"><span class="pre">create_databricks_job_solid</span></code>, which creates a solid that submits an external
+configurable job to Databricks using the ‘Run Now’ API.</p></li>
+</ul>
+<p>Note that, for the <code class="docutils literal notranslate"><span class="pre">databricks_pyspark_step_launcher</span></code>, either S3 or Azure Data Lake Storage config
+<strong>must</strong> be specified for solids to succeed, and the credentials for this storage must also be
+stored as a Databricks Secret and stored in the resource config so that the Databricks cluster can
+access storage.</p>
+<dl class="function">
+<dt id="dagster_databricks.create_databricks_job_solid">
+<code class="sig-prename descclassname">dagster_databricks.</code><code class="sig-name descname">create_databricks_job_solid</code><span class="sig-paren">(</span><em class="sig-param">name='databricks_job'</em>, <em class="sig-param">num_inputs=1</em>, <em class="sig-param">description=None</em>, <em class="sig-param">required_resource_keys=frozenset({'databricks_client'})</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_databricks/solids.html#create_databricks_job_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_databricks.create_databricks_job_solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a solid that launches a databricks job.</p>
+<p>As config, the solid accepts a blob of the form described in Databricks’ job API:
+<a class="reference external" href="https://docs.databricks.com/dev-tools/api/latest/jobs.html">https://docs.databricks.com/dev-tools/api/latest/jobs.html</a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A solid definition.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="../solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition">SolidDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_databricks.databricks_pyspark_step_launcher">
+<code class="sig-prename descclassname">dagster_databricks.</code><code class="sig-name descname">databricks_pyspark_step_launcher</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_databricks/databricks_pyspark_step_launcher.html#databricks_pyspark_step_launcher"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_databricks.databricks_pyspark_step_launcher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resource for running solids as a Databricks Job.</p>
+<p>When this resource is used, the solid will be executed in Databricks using the ‘Run Submit’
+API. Pipeline code will be zipped up and copied to a directory in DBFS along with the solid’s
+execution context.</p>
+<p>Use the ‘run_config’ configuration to specify the details of the Databricks cluster used, and
+the ‘storage’ key to configure persistent storage on that cluster. Storage is accessed by
+setting the credentials in the Spark context, as documented <a class="reference external" href="https://docs.databricks.com/data/data-sources/aws/amazon-s3.html#alternative-1-set-aws-keys-in-the-spark-context">here for S3</a> and <a class="reference external" href="https://docs.microsoft.com/en-gb/azure/databricks/data/data-sources/azure/azure-datalake-gen2#--access-directly-using-the-storage-account-access-key">here for ADLS</a>.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster_databricks.DatabricksError">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_databricks.</code><code class="sig-name descname">DatabricksError</code><a class="reference internal" href="../../../../_modules/dagster_databricks/databricks.html#DatabricksError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_databricks.DatabricksError" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_dask.html" title="Previous document">Dask (dagster_dask)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_datadog.html" title="Next document">Datadog (dagster_datadog)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,216 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.decorators.lambda_solid &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.decorators.lambda_solid</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span><span class="p">,</span> <span class="n">wraps</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">DagsterTypeKind</span>
+
+<span class="kn">from</span> <span class="nn">..events</span> <span class="kn">import</span> <span class="n">Output</span>
+<span class="kn">from</span> <span class="nn">..inference</span> <span class="kn">import</span> <span class="n">infer_input_definitions_for_lambda_solid</span><span class="p">,</span> <span class="n">infer_output_definitions</span>
+<span class="kn">from</span> <span class="nn">..input</span> <span class="kn">import</span> <span class="n">InputDefinition</span>
+<span class="kn">from</span> <span class="nn">..output</span> <span class="kn">import</span> <span class="n">OutputDefinition</span>
+<span class="kn">from</span> <span class="nn">..solid</span> <span class="kn">import</span> <span class="n">SolidDefinition</span>
+<span class="kn">from</span> <span class="nn">.solid</span> <span class="kn">import</span> <span class="n">validate_solid_fn</span>
+
+
+<span class="k">class</span> <span class="nc">_LambdaSolid</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">input_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output_def</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span><span class="n">input_defs</span><span class="p">,</span> <span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="n">InputDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_def</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">output_def</span><span class="p">,</span> <span class="s2">&quot;output_def&quot;</span><span class="p">,</span> <span class="n">OutputDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">input_defs</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">infer_input_definitions_for_lambda_solid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">output_def</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_def</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_def</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">infer_output_definitions</span><span class="p">(</span><span class="s2">&quot;@lambda_solid&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fn</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="n">positional_inputs</span> <span class="o">=</span> <span class="n">validate_solid_fn</span><span class="p">(</span><span class="s2">&quot;@lambda_solid&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">)</span>
+        <span class="n">compute_fn</span> <span class="o">=</span> <span class="n">_create_lambda_solid_compute_wrapper</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">,</span> <span class="n">output_def</span><span class="p">)</span>
+
+        <span class="n">solid_def</span> <span class="o">=</span> <span class="n">SolidDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">input_defs</span><span class="o">=</span><span class="n">input_defs</span><span class="p">,</span>
+            <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">output_def</span><span class="p">],</span>
+            <span class="n">compute_fn</span><span class="o">=</span><span class="n">compute_fn</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">positional_inputs</span><span class="o">=</span><span class="n">positional_inputs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">solid_def</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">solid_def</span>
+
+
+<div class="viewcode-block" id="lambda_solid"><a class="viewcode-back" href="../../../../../sections/api/apidocs/solids.html#dagster.lambda_solid">[docs]</a><span class="k">def</span> <span class="nf">lambda_solid</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">input_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">output_def</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a simple solid from the decorated function.</span>
+
+<span class="sd">    This shortcut allows the creation of simple solids that do not require</span>
+<span class="sd">    configuration and whose implementations do not require a</span>
+<span class="sd">    :py:class:`context &lt;SystemComputeExecutionContext&gt;`.</span>
+
+<span class="sd">    Lambda solids take any number of inputs and produce a single output.</span>
+
+<span class="sd">    Inputs can be defined using :class:`InputDefinition` and passed to the ``input_defs`` argument</span>
+<span class="sd">    of this decorator, or inferred from the type signature of the decorated function.</span>
+
+<span class="sd">    The single output can be defined using :class:`OutputDefinition` and passed as the</span>
+<span class="sd">    ``output_def`` argument of this decorator, or its type can be inferred from the type signature</span>
+<span class="sd">    of the decorated function.</span>
+
+<span class="sd">    The body of the decorated function should return a single value, which will be yielded as the</span>
+<span class="sd">    solid&#39;s output.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): Name of solid.</span>
+<span class="sd">        description (str): Solid description.</span>
+<span class="sd">        input_defs (List[InputDefinition]): List of input_defs.</span>
+<span class="sd">        output_def (OutputDefinition): The output of the solid. Defaults to</span>
+<span class="sd">            :class:`OutputDefinition() &lt;OutputDefinition&gt;`.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @lambda_solid</span>
+<span class="sd">        def hello_world():</span>
+<span class="sd">            return &#39;hello&#39;</span>
+
+<span class="sd">        @lambda_solid(</span>
+<span class="sd">            input_defs=[InputDefinition(name=&#39;foo&#39;, str)],</span>
+<span class="sd">            output_def=OutputDefinition(str)</span>
+<span class="sd">        )</span>
+<span class="sd">        def hello_world(foo):</span>
+<span class="sd">            # explicitly type and name inputs and outputs</span>
+<span class="sd">            return foo</span>
+
+<span class="sd">        @lambda_solid</span>
+<span class="sd">        def hello_world(foo: str) -&gt; str:</span>
+<span class="sd">            # same as above inferred from signature</span>
+<span class="sd">            return foo</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">input_defs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">description</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_LambdaSolid</span><span class="p">(</span><span class="n">output_def</span><span class="o">=</span><span class="n">output_def</span><span class="p">)(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_LambdaSolid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">input_defs</span><span class="o">=</span><span class="n">input_defs</span><span class="p">,</span> <span class="n">output_def</span><span class="o">=</span><span class="n">output_def</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span>
+    <span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_create_lambda_solid_compute_wrapper</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">,</span> <span class="n">output_def</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">input_defs</span><span class="p">,</span> <span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">InputDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">output_def</span><span class="p">,</span> <span class="s2">&quot;output_def&quot;</span><span class="p">,</span> <span class="n">OutputDefinition</span><span class="p">)</span>
+
+    <span class="n">input_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">input_def</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">for</span> <span class="n">input_def</span> <span class="ow">in</span> <span class="n">input_defs</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">input_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DagsterTypeKind</span><span class="o">.</span><span class="n">NOTHING</span>
+    <span class="p">]</span>
+
+    <span class="nd">@wraps</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="n">_context</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">):</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">input_name</span> <span class="ow">in</span> <span class="n">input_names</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="n">input_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">input_defs</span><span class="p">[</span><span class="n">input_name</span><span class="p">]</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">result</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">compute</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

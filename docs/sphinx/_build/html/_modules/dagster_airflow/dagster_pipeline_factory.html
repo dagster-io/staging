@@ -1,0 +1,651 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_airflow.dagster_pipeline_factory &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_airflow.dagster_pipeline_factory</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">import</span> <span class="nn">dateutil</span>
+<span class="kn">import</span> <span class="nn">lazy_object_proxy</span>
+<span class="kn">import</span> <span class="nn">pendulum</span>
+<span class="kn">from</span> <span class="nn">airflow.models</span> <span class="kn">import</span> <span class="n">TaskInstance</span>
+<span class="kn">from</span> <span class="nn">airflow.models.baseoperator</span> <span class="kn">import</span> <span class="n">BaseOperator</span>
+<span class="kn">from</span> <span class="nn">airflow.models.dag</span> <span class="kn">import</span> <span class="n">DAG</span>
+<span class="kn">from</span> <span class="nn">airflow.models.dagbag</span> <span class="kn">import</span> <span class="n">DagBag</span>
+<span class="kn">from</span> <span class="nn">airflow.settings</span> <span class="kn">import</span> <span class="n">LOG_FORMAT</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DagsterInvariantViolationError</span><span class="p">,</span>
+    <span class="n">DependencyDefinition</span><span class="p">,</span>
+    <span class="n">InputDefinition</span><span class="p">,</span>
+    <span class="n">MultiDependencyDefinition</span><span class="p">,</span>
+    <span class="n">Nothing</span><span class="p">,</span>
+    <span class="n">OutputDefinition</span><span class="p">,</span>
+    <span class="n">PipelineDefinition</span><span class="p">,</span>
+    <span class="n">SolidDefinition</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">repository</span><span class="p">,</span>
+    <span class="n">solid</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.utils</span> <span class="kn">import</span> <span class="n">VALID_NAME_REGEX</span><span class="p">,</span> <span class="n">validate_tags</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">AIRFLOW_EXECUTION_DATE_STR</span><span class="p">,</span> <span class="n">IS_AIRFLOW_INGEST_PIPELINE_STR</span>
+<span class="kn">from</span> <span class="nn">dagster_airflow.patch_airflow_example_dag</span> <span class="kn">import</span> <span class="n">patch_airflow_example_dag</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterAirflowError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">def</span> <span class="nf">contains_duplicate_task_names</span><span class="p">(</span><span class="n">dag_bag</span><span class="p">,</span> <span class="n">refresh_from_airflow_db</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">dag_bag</span><span class="p">,</span> <span class="s2">&quot;dag_bag&quot;</span><span class="p">,</span> <span class="n">DagBag</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">refresh_from_airflow_db</span><span class="p">,</span> <span class="s2">&quot;refresh_from_airflow_db&quot;</span><span class="p">)</span>
+    <span class="n">seen_task_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="c1"># To enforce predictable iteration order</span>
+    <span class="n">sorted_dag_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dag_bag</span><span class="o">.</span><span class="n">dag_ids</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">dag_id</span> <span class="ow">in</span> <span class="n">sorted_dag_ids</span><span class="p">:</span>
+        <span class="n">dag</span> <span class="o">=</span> <span class="n">dag_bag</span><span class="o">.</span><span class="n">dags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dag_id</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh_from_airflow_db</span> <span class="k">else</span> <span class="n">dag_bag</span><span class="o">.</span><span class="n">get_dag</span><span class="p">(</span><span class="n">dag_id</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">dag</span><span class="o">.</span><span class="n">tasks</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">task_id</span> <span class="ow">in</span> <span class="n">seen_task_names</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">seen_task_names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">task_id</span><span class="p">)</span>
+    <span class="k">return</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="make_dagster_repo_from_airflow_dag_bag"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_airflow.html#dagster_airflow.make_dagster_repo_from_airflow_dag_bag">[docs]</a><span class="k">def</span> <span class="nf">make_dagster_repo_from_airflow_dag_bag</span><span class="p">(</span>
+    <span class="n">dag_bag</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">refresh_from_airflow_db</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Construct a Dagster repository corresponding to Airflow DAGs in DagBag.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        Create `make_dagster_repo.py`:</span>
+<span class="sd">            from dagster_airflow.dagster_pipeline_factory import make_dagster_repo_from_airflow_dag_bag</span>
+<span class="sd">            from airflow_home import my_dag_bag</span>
+
+<span class="sd">            def make_repo_from_dag_bag():</span>
+<span class="sd">                return make_dagster_repo_from_airflow_dag_bag(my_dag_bag, &#39;my_repo_name&#39;)</span>
+
+<span class="sd">        Use RepositoryDefinition as usual, for example:</span>
+<span class="sd">            `dagit -f path/to/make_dagster_repo.py -n make_repo_from_dag_bag`</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dag_path (str): Path to directory or file that contains Airflow Dags</span>
+<span class="sd">        repo_name (str): Name for generated RepositoryDefinition</span>
+<span class="sd">        refresh_from_airflow_db (bool): If True, will refresh DAG if expired via DagBag.get_dag(),</span>
+<span class="sd">            which requires access to initialized Airflow DB. If False (recommended), gets dag from</span>
+<span class="sd">            DagBag&#39;s dags dict without depending on Airflow DB. (default: False)</span>
+<span class="sd">        use_airflow_template_context (bool): If True, will call get_template_context() on the</span>
+<span class="sd">            Airflow TaskInstance model which requires and modifies the DagRun table.</span>
+<span class="sd">            (default: False)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        RepositoryDefinition</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">dag_bag</span><span class="p">,</span> <span class="s2">&quot;dag_bag&quot;</span><span class="p">,</span> <span class="n">DagBag</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">repo_name</span><span class="p">,</span> <span class="s2">&quot;repo_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">refresh_from_airflow_db</span><span class="p">,</span> <span class="s2">&quot;refresh_from_airflow_db&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="s2">&quot;use_airflow_template_context&quot;</span><span class="p">)</span>
+
+    <span class="n">use_unique_id</span> <span class="o">=</span> <span class="n">contains_duplicate_task_names</span><span class="p">(</span><span class="n">dag_bag</span><span class="p">,</span> <span class="n">refresh_from_airflow_db</span><span class="p">)</span>
+
+    <span class="n">pipeline_defs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="c1"># To enforce predictable iteration order</span>
+    <span class="n">sorted_dag_ids</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dag_bag</span><span class="o">.</span><span class="n">dag_ids</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">dag_id</span> <span class="ow">in</span> <span class="n">sorted_dag_ids</span><span class="p">:</span>
+        <span class="c1"># Only call Airflow DB via dag_bag.get_dag(dag_id) if refresh_from_airflow_db is True</span>
+        <span class="n">dag</span> <span class="o">=</span> <span class="n">dag_bag</span><span class="o">.</span><span class="n">dags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dag_id</span><span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">refresh_from_airflow_db</span> <span class="k">else</span> <span class="n">dag_bag</span><span class="o">.</span><span class="n">get_dag</span><span class="p">(</span><span class="n">dag_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">use_unique_id</span><span class="p">:</span>
+            <span class="n">pipeline_defs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">make_dagster_pipeline_from_airflow_dag</span><span class="p">(</span>
+                    <span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="o">=</span><span class="n">use_airflow_template_context</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pipeline_defs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">make_dagster_pipeline_from_airflow_dag</span><span class="p">(</span>
+                    <span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">,</span>
+                    <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">use_airflow_template_context</span><span class="o">=</span><span class="n">use_airflow_template_context</span><span class="p">,</span>
+                    <span class="n">unique_id</span><span class="o">=</span><span class="n">count</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="nd">@repository</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">repo_name</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_repo</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">pipeline_defs</span>
+
+    <span class="k">return</span> <span class="n">_repo</span></div>
+
+
+<div class="viewcode-block" id="make_dagster_repo_from_airflow_example_dags"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_airflow.html#dagster_airflow.make_dagster_repo_from_airflow_example_dags">[docs]</a><span class="k">def</span> <span class="nf">make_dagster_repo_from_airflow_example_dags</span><span class="p">(</span><span class="n">repo_name</span><span class="o">=</span><span class="s2">&quot;airflow_example_dags_repo&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Construct a Dagster repository for Airflow&#39;s example DAGs.</span>
+
+<span class="sd">    Execution of the following Airflow example DAGs is not currently supported:</span>
+<span class="sd">            &#39;example_external_task_marker_child&#39;,</span>
+<span class="sd">            &#39;example_pig_operator&#39;,</span>
+<span class="sd">            &#39;example_skip_dag&#39;,</span>
+<span class="sd">            &#39;example_trigger_target_dag&#39;,</span>
+<span class="sd">            &#39;example_xcom&#39;,</span>
+<span class="sd">            &#39;test_utils&#39;,</span>
+
+<span class="sd">    Usage:</span>
+
+<span class="sd">        Create `make_dagster_repo.py`:</span>
+<span class="sd">            from dagster_airflow.dagster_pipeline_factory import make_dagster_repo_from_airflow_example_dags</span>
+
+<span class="sd">            def make_airflow_example_dags():</span>
+<span class="sd">                return make_dagster_repo_from_airflow_example_dags()</span>
+
+<span class="sd">        Use RepositoryDefinition as usual, for example:</span>
+<span class="sd">            `dagit -f path/to/make_dagster_repo.py -n make_airflow_example_dags`</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        repo_name (str): Name for generated RepositoryDefinition</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        RepositoryDefinition</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dag_bag</span> <span class="o">=</span> <span class="n">DagBag</span><span class="p">(</span>
+        <span class="n">dag_folder</span><span class="o">=</span><span class="s2">&quot;some/empty/folder/with/no/dags&quot;</span><span class="p">,</span>  <span class="c1"># prevent defaulting to settings.DAGS_FOLDER</span>
+        <span class="n">include_examples</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="c1"># There is a bug in Airflow v1.10.8, v1.10.9, v1.10.10 where the python_callable for task</span>
+    <span class="c1"># &#39;search_catalog&#39; is missing a required position argument &#39;_&#39;. It is currently fixed in master.</span>
+    <span class="c1"># v1.10 stable: https://github.com/apache/airflow/blob/v1-10-stable/airflow/example_dags/example_complex.py#L133</span>
+    <span class="c1"># master (05-05-2020): https://github.com/apache/airflow/blob/master/airflow/example_dags/example_complex.py#L136</span>
+    <span class="n">patch_airflow_example_dag</span><span class="p">(</span><span class="n">dag_bag</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">make_dagster_repo_from_airflow_dag_bag</span><span class="p">(</span><span class="n">dag_bag</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_dagster_repo_from_airflow_dags_path"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_airflow.html#dagster_airflow.make_dagster_repo_from_airflow_dags_path">[docs]</a><span class="k">def</span> <span class="nf">make_dagster_repo_from_airflow_dags_path</span><span class="p">(</span>
+    <span class="n">dag_path</span><span class="p">,</span>
+    <span class="n">repo_name</span><span class="p">,</span>
+    <span class="n">safe_mode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">store_serialized_dags</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">use_airflow_template_context</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Construct a Dagster repository corresponding to Airflow DAGs in dag_path.</span>
+
+<span class="sd">    ``DagBag.get_dag()`` dependency requires Airflow DB to be initialized.</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        Create ``make_dagster_repo.py``:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            from dagster_airflow.dagster_pipeline_factory import make_dagster_repo_from_airflow_dags_path</span>
+
+<span class="sd">            def make_repo_from_dir():</span>
+<span class="sd">                return make_dagster_repo_from_airflow_dags_path(</span>
+<span class="sd">                    &#39;/path/to/dags/&#39;, &#39;my_repo_name&#39;</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Use RepositoryDefinition as usual, for example:</span>
+<span class="sd">        ``dagit -f path/to/make_dagster_repo.py -n make_repo_from_dir``</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dag_path (str): Path to directory or file that contains Airflow Dags</span>
+<span class="sd">        repo_name (str): Name for generated RepositoryDefinition</span>
+<span class="sd">        include_examples (bool): True to include Airflow&#39;s example DAGs. (default: False)</span>
+<span class="sd">        safe_mode (bool): True to use Airflow&#39;s default heuristic to find files that contain DAGs</span>
+<span class="sd">            (ie find files that contain both b&#39;DAG&#39; and b&#39;airflow&#39;) (default: True)</span>
+<span class="sd">        store_serialized_dags (bool): True to read Airflow DAGS from Airflow DB. False to read DAGS</span>
+<span class="sd">            from Python files. (default: False)</span>
+<span class="sd">        use_airflow_template_context (bool): If True, will call get_template_context() on the</span>
+<span class="sd">            Airflow TaskInstance model which requires and modifies the DagRun table.</span>
+<span class="sd">            (default: False)</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        RepositoryDefinition</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">dag_path</span><span class="p">,</span> <span class="s2">&quot;dag_path&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">repo_name</span><span class="p">,</span> <span class="s2">&quot;repo_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">safe_mode</span><span class="p">,</span> <span class="s2">&quot;safe_mode&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">store_serialized_dags</span><span class="p">,</span> <span class="s2">&quot;store_serialized_dags&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="s2">&quot;use_airflow_template_context&quot;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">dag_bag</span> <span class="o">=</span> <span class="n">DagBag</span><span class="p">(</span>
+            <span class="n">dag_folder</span><span class="o">=</span><span class="n">dag_path</span><span class="p">,</span>
+            <span class="n">include_examples</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Exclude Airflow example dags</span>
+            <span class="n">safe_mode</span><span class="o">=</span><span class="n">safe_mode</span><span class="p">,</span>
+            <span class="n">store_serialized_dags</span><span class="o">=</span><span class="n">store_serialized_dags</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>  <span class="c1"># pylint: disable=broad-except</span>
+        <span class="k">raise</span> <span class="n">DagsterAirflowError</span><span class="p">(</span><span class="s2">&quot;Error initializing airflow.models.dagbag object with arguments&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">make_dagster_repo_from_airflow_dag_bag</span><span class="p">(</span><span class="n">dag_bag</span><span class="p">,</span> <span class="n">repo_name</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_dagster_pipeline_from_airflow_dag"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_airflow.html#dagster_airflow.make_dagster_pipeline_from_airflow_dag">[docs]</a><span class="k">def</span> <span class="nf">make_dagster_pipeline_from_airflow_dag</span><span class="p">(</span>
+    <span class="n">dag</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">unique_id</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct a Dagster pipeline corresponding to a given Airflow DAG.</span>
+
+<span class="sd">    Tasks in the resulting pipeline will execute the ``execute()`` method on the corresponding</span>
+<span class="sd">    Airflow Operator. Dagster, any dependencies required by Airflow Operators, and the module</span>
+<span class="sd">    containing your DAG definition must be available in the Python environment within which your</span>
+<span class="sd">    Dagster solids execute.</span>
+
+<span class="sd">    To set Airflow&#39;s ``execution_date`` for use with Airflow Operator&#39;s ``execute()`` methods,</span>
+<span class="sd">    either:</span>
+
+<span class="sd">    1. (Best for ad hoc runs) Run Pipeline with &#39;default&#39; preset, which sets execution_date to the</span>
+<span class="sd">        time (in UTC) of pipeline invocation:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            execute_pipeline(</span>
+<span class="sd">                pipeline=make_dagster_pipeline_from_airflow_dag(dag=dag),</span>
+<span class="sd">                preset=&#39;default&#39;)</span>
+
+<span class="sd">    2. Add ``{&#39;airflow_execution_date&#39;: utc_date_string}`` to the PipelineDefinition tags. This will</span>
+<span class="sd">       override behavior from (1).</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            execute_pipeline(</span>
+<span class="sd">                make_dagster_pipeline_from_airflow_dag(</span>
+<span class="sd">                    dag=dag,</span>
+<span class="sd">                    tags={&#39;airflow_execution_date&#39;: utc_execution_date_str}</span>
+<span class="sd">                )</span>
+<span class="sd">            )</span>
+
+<span class="sd">    3. (Recommended) Add ``{&#39;airflow_execution_date&#39;: utc_date_string}`` to the PipelineRun tags,</span>
+<span class="sd">        such as in the Dagit UI. This will override behavior from (1) and (2)</span>
+
+
+<span class="sd">    We apply normalized_name() to the dag id and task ids when generating pipeline name and solid</span>
+<span class="sd">    names to ensure that names conform to Dagster&#39;s naming conventions.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dag (DAG): The Airflow DAG to compile into a Dagster pipeline</span>
+<span class="sd">        tags (Dict[str, Field]): Pipeline tags. Optionally include</span>
+<span class="sd">            `tags={&#39;airflow_execution_date&#39;: utc_date_string}` to specify execution_date used within</span>
+<span class="sd">            execution of Airflow Operators.</span>
+<span class="sd">        use_airflow_template_context (bool): If True, will call get_template_context() on the</span>
+<span class="sd">            Airflow TaskInstance model which requires and modifies the DagRun table.</span>
+<span class="sd">            (default: False)</span>
+<span class="sd">        unique_id (int): If not None, this id will be postpended to generated solid names. Used by</span>
+<span class="sd">            framework authors to enforce unique solid names within a repo.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        pipeline_def (PipelineDefinition): The generated Dagster pipeline</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="s2">&quot;dag&quot;</span><span class="p">,</span> <span class="n">DAG</span><span class="p">)</span>
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="s2">&quot;use_airflow_template_context&quot;</span><span class="p">)</span>
+    <span class="n">unique_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">unique_id</span><span class="p">,</span> <span class="s2">&quot;unique_id&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">IS_AIRFLOW_INGEST_PIPELINE_STR</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+        <span class="n">tags</span><span class="p">[</span><span class="n">IS_AIRFLOW_INGEST_PIPELINE_STR</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;true&quot;</span>
+
+    <span class="n">tags</span> <span class="o">=</span> <span class="n">validate_tags</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+
+    <span class="n">pipeline_dependencies</span><span class="p">,</span> <span class="n">solid_defs</span> <span class="o">=</span> <span class="n">_get_pipeline_definition_args</span><span class="p">(</span>
+        <span class="n">dag</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="n">unique_id</span>
+    <span class="p">)</span>
+    <span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">normalized_name</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">dag_id</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="n">solid_defs</span><span class="o">=</span><span class="n">solid_defs</span><span class="p">,</span>
+        <span class="n">dependencies</span><span class="o">=</span><span class="n">pipeline_dependencies</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pipeline_def</span></div>
+
+
+<span class="c1"># Airflow DAG ids and Task ids allow a larger valid character set (alphanumeric characters,</span>
+<span class="c1"># dashes, dots and underscores) than Dagster&#39;s naming conventions (alphanumeric characters,</span>
+<span class="c1"># underscores), so Dagster will strip invalid characters and replace with &#39;_&#39;</span>
+<span class="k">def</span> <span class="nf">normalized_name</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">unique_id</span><span class="p">):</span>
+    <span class="n">base_name</span> <span class="o">=</span> <span class="s2">&quot;airflow_&quot;</span> <span class="o">+</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span> <span class="k">if</span> <span class="n">VALID_NAME_REGEX</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;_&quot;</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">unique_id</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">base_name</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">base_name</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">unique_id</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_pipeline_definition_args</span><span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="n">unique_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">dag</span><span class="p">,</span> <span class="s2">&quot;dag&quot;</span><span class="p">,</span> <span class="n">DAG</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="s2">&quot;use_airflow_template_context&quot;</span><span class="p">)</span>
+    <span class="n">unique_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">unique_id</span><span class="p">,</span> <span class="s2">&quot;unique_id&quot;</span><span class="p">)</span>
+
+    <span class="n">pipeline_dependencies</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">solid_defs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen_tasks</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># To enforce predictable iteration order</span>
+    <span class="n">dag_roots</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">dag</span><span class="o">.</span><span class="n">roots</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">task_id</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">dag_roots</span><span class="p">:</span>
+        <span class="n">_traverse_airflow_dag</span><span class="p">(</span>
+            <span class="n">task</span><span class="p">,</span>
+            <span class="n">seen_tasks</span><span class="p">,</span>
+            <span class="n">pipeline_dependencies</span><span class="p">,</span>
+            <span class="n">solid_defs</span><span class="p">,</span>
+            <span class="n">use_airflow_template_context</span><span class="p">,</span>
+            <span class="n">unique_id</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">pipeline_dependencies</span><span class="p">,</span> <span class="n">solid_defs</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_traverse_airflow_dag</span><span class="p">(</span>
+    <span class="n">task</span><span class="p">,</span> <span class="n">seen_tasks</span><span class="p">,</span> <span class="n">pipeline_dependencies</span><span class="p">,</span> <span class="n">solid_defs</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="n">unique_id</span>
+<span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="s2">&quot;task&quot;</span><span class="p">,</span> <span class="n">BaseOperator</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">seen_tasks</span><span class="p">,</span> <span class="s2">&quot;seen_tasks&quot;</span><span class="p">,</span> <span class="n">BaseOperator</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">solid_defs</span><span class="p">,</span> <span class="s2">&quot;solid_defs&quot;</span><span class="p">,</span> <span class="n">SolidDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="s2">&quot;use_airflow_template_context&quot;</span><span class="p">)</span>
+    <span class="n">unique_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">unique_id</span><span class="p">,</span> <span class="s2">&quot;unique_id&quot;</span><span class="p">)</span>
+
+    <span class="n">seen_tasks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+    <span class="n">current_solid</span> <span class="o">=</span> <span class="n">make_dagster_solid_from_airflow_task</span><span class="p">(</span>
+        <span class="n">task</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="n">unique_id</span>
+    <span class="p">)</span>
+    <span class="n">solid_defs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current_solid</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">upstream_list</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="c1"># To enforce predictable iteration order</span>
+        <span class="n">task_upstream_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">upstream_list</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">task_id</span><span class="p">)</span>
+
+        <span class="n">pipeline_dependencies</span><span class="p">[</span><span class="n">current_solid</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;airflow_task_ready&quot;</span><span class="p">:</span> <span class="n">MultiDependencyDefinition</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">DependencyDefinition</span><span class="p">(</span>
+                        <span class="n">solid</span><span class="o">=</span><span class="n">normalized_name</span><span class="p">(</span><span class="n">task_upstream</span><span class="o">.</span><span class="n">task_id</span><span class="p">,</span> <span class="n">unique_id</span><span class="p">),</span>
+                        <span class="n">output</span><span class="o">=</span><span class="s2">&quot;airflow_task_complete&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="k">for</span> <span class="n">task_upstream</span> <span class="ow">in</span> <span class="n">task_upstream_list</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+        <span class="p">}</span>
+
+    <span class="c1"># To enforce predictable iteration order</span>
+    <span class="n">task_downstream_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">downstream_list</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">task_id</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">child_task</span> <span class="ow">in</span> <span class="n">task_downstream_list</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">child_task</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen_tasks</span><span class="p">:</span>
+            <span class="n">_traverse_airflow_dag</span><span class="p">(</span>
+                <span class="n">child_task</span><span class="p">,</span>
+                <span class="n">seen_tasks</span><span class="p">,</span>
+                <span class="n">pipeline_dependencies</span><span class="p">,</span>
+                <span class="n">solid_defs</span><span class="p">,</span>
+                <span class="n">use_airflow_template_context</span><span class="p">,</span>
+                <span class="n">unique_id</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">replace_airflow_logger_handlers</span><span class="p">():</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># Redirect airflow handlers to stdout / compute logs</span>
+        <span class="n">prev_airflow_handlers</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;airflow.task&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">handlers</span>
+        <span class="n">handler</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">StreamHandler</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">)</span>
+        <span class="n">handler</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span><span class="n">LOG_FORMAT</span><span class="p">))</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;airflow.task&quot;</span><span class="p">)</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">handlers</span> <span class="o">=</span> <span class="p">[</span><span class="n">handler</span><span class="p">]</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="c1"># Restore previous log handlers</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="s2">&quot;airflow.task&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">handlers</span> <span class="o">=</span> <span class="n">prev_airflow_handlers</span>
+
+
+<span class="c1"># If unique_id is not None, this id will be postpended to generated solid names, generally used</span>
+<span class="c1"># to enforce unique solid names within a repo.</span>
+<span class="k">def</span> <span class="nf">make_dagster_solid_from_airflow_task</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="n">unique_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">task</span><span class="p">,</span> <span class="s2">&quot;task&quot;</span><span class="p">,</span> <span class="n">BaseOperator</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">use_airflow_template_context</span><span class="p">,</span> <span class="s2">&quot;use_airflow_template_context&quot;</span><span class="p">)</span>
+    <span class="n">unique_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">unique_id</span><span class="p">,</span> <span class="s2">&quot;unique_id&quot;</span><span class="p">)</span>
+
+    <span class="nd">@solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">normalized_name</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">task_id</span><span class="p">,</span> <span class="n">unique_id</span><span class="p">),</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;airflow_task_ready&quot;</span><span class="p">,</span> <span class="n">Nothing</span><span class="p">)],</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">Nothing</span><span class="p">,</span> <span class="s2">&quot;airflow_task_complete&quot;</span><span class="p">)],</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>  <span class="c1"># pylint: disable=unused-argument</span>
+        <span class="k">if</span> <span class="n">AIRFLOW_EXECUTION_DATE_STR</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s1">&#39;Could not find &quot;</span><span class="si">{AIRFLOW_EXECUTION_DATE_STR}</span><span class="s1">&quot; in pipeline tags &quot;</span><span class="si">{tags}</span><span class="s1">&quot;. Please &#39;</span>
+                <span class="s1">&#39;add &quot;</span><span class="si">{AIRFLOW_EXECUTION_DATE_STR}</span><span class="s1">&quot; to pipeline tags before executing&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">AIRFLOW_EXECUTION_DATE_STR</span><span class="o">=</span><span class="n">AIRFLOW_EXECUTION_DATE_STR</span><span class="p">,</span>
+                    <span class="n">tags</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="n">execution_date_str</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">AIRFLOW_EXECUTION_DATE_STR</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">execution_date_str</span><span class="p">,</span> <span class="s2">&quot;execution_date_str&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">execution_date</span> <span class="o">=</span> <span class="n">dateutil</span><span class="o">.</span><span class="n">parser</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">execution_date_str</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s1">&#39;Could not parse execution_date &quot;</span><span class="si">{execution_date_str}</span><span class="s1">&quot;. Please use datetime format &#39;</span>
+                <span class="s2">&quot;compatible with  dateutil.parser.parse.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">execution_date_str</span><span class="o">=</span><span class="n">execution_date_str</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OverflowError</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s1">&#39;Date &quot;</span><span class="si">{execution_date_str}</span><span class="s1">&quot; exceeds the largest valid C integer on the system.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">execution_date_str</span><span class="o">=</span><span class="n">execution_date_str</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_date</span><span class="p">,</span> <span class="s2">&quot;execution_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">replace_airflow_logger_handlers</span><span class="p">():</span>
+            <span class="n">task_instance</span> <span class="o">=</span> <span class="n">TaskInstance</span><span class="p">(</span><span class="n">task</span><span class="o">=</span><span class="n">task</span><span class="p">,</span> <span class="n">execution_date</span><span class="o">=</span><span class="n">execution_date</span><span class="p">)</span>
+
+            <span class="n">ti_context</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">dagster_get_template_context</span><span class="p">(</span><span class="n">task_instance</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">execution_date</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">use_airflow_template_context</span>
+                <span class="k">else</span> <span class="n">task_instance</span><span class="o">.</span><span class="n">get_template_context</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="n">task</span><span class="o">.</span><span class="n">render_template_fields</span><span class="p">(</span><span class="n">ti_context</span><span class="p">)</span>
+
+            <span class="n">task</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">ti_context</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">_solid</span>
+
+
+<span class="k">def</span> <span class="nf">dagster_get_template_context</span><span class="p">(</span><span class="n">task_instance</span><span class="p">,</span> <span class="n">task</span><span class="p">,</span> <span class="n">execution_date</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Modified from /airflow/models/taskinstance.py to not reference Airflow DB</span>
+<span class="sd">    (1) Removes the following block, which queries DB, removes dagrun instances, recycles run_id</span>
+<span class="sd">    if hasattr(task, &#39;dag&#39;):</span>
+<span class="sd">        if task.dag.params:</span>
+<span class="sd">            params.update(task.dag.params)</span>
+<span class="sd">        from airflow.models.dagrun import DagRun  # Avoid circular import</span>
+
+<span class="sd">        dag_run = (</span>
+<span class="sd">            session.query(DagRun)</span>
+<span class="sd">            .filter_by(dag_id=task.dag.dag_id, execution_date=execution_date)</span>
+<span class="sd">            .first()</span>
+<span class="sd">        )</span>
+<span class="sd">        run_id = dag_run.run_id if dag_run else None</span>
+<span class="sd">        session.expunge_all()</span>
+<span class="sd">        session.commit()</span>
+<span class="sd">    (2) Removes returning &#39;conf&#39;: conf which passes along Airflow config</span>
+<span class="sd">    (3) Removes &#39;var&#39;: {&#39;value&#39;: VariableAccessor(), &#39;json&#39;: VariableJsonAccessor()}, which allows</span>
+<span class="sd">        fetching Variable from Airflow DB</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">airflow</span> <span class="kn">import</span> <span class="n">macros</span>
+
+    <span class="n">tables</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="s2">&quot;tables&quot;</span> <span class="ow">in</span> <span class="n">task</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+        <span class="n">tables</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;tables&quot;</span><span class="p">]</span>
+
+    <span class="n">params</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">run_id</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">dag_run</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">execution_date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">ts</span> <span class="o">=</span> <span class="n">execution_date</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+    <span class="n">yesterday_ds</span> <span class="o">=</span> <span class="p">(</span><span class="n">execution_date</span> <span class="o">-</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">tomorrow_ds</span> <span class="o">=</span> <span class="p">(</span><span class="n">execution_date</span> <span class="o">+</span> <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># For manually triggered dagruns that aren&#39;t run on a schedule, next/previous</span>
+    <span class="c1"># schedule dates don&#39;t make sense, and should be set to execution date for</span>
+    <span class="c1"># consistency with how execution_date is set for manually triggered tasks, i.e.</span>
+    <span class="c1"># triggered_date == execution_date.</span>
+    <span class="k">if</span> <span class="n">dag_run</span> <span class="ow">and</span> <span class="n">dag_run</span><span class="o">.</span><span class="n">external_trigger</span><span class="p">:</span>
+        <span class="n">prev_execution_date</span> <span class="o">=</span> <span class="n">execution_date</span>
+        <span class="n">next_execution_date</span> <span class="o">=</span> <span class="n">execution_date</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">prev_execution_date</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">previous_schedule</span><span class="p">(</span><span class="n">execution_date</span><span class="p">)</span>
+        <span class="n">next_execution_date</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">dag</span><span class="o">.</span><span class="n">following_schedule</span><span class="p">(</span><span class="n">execution_date</span><span class="p">)</span>
+
+    <span class="n">next_ds</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">next_ds_nodash</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">next_execution_date</span><span class="p">:</span>
+        <span class="n">next_ds</span> <span class="o">=</span> <span class="n">next_execution_date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">next_ds_nodash</span> <span class="o">=</span> <span class="n">next_ds</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">next_execution_date</span> <span class="o">=</span> <span class="n">pendulum</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">next_execution_date</span><span class="p">)</span>
+
+    <span class="n">prev_ds</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">prev_ds_nodash</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">prev_execution_date</span><span class="p">:</span>
+        <span class="n">prev_ds</span> <span class="o">=</span> <span class="n">prev_execution_date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">prev_ds_nodash</span> <span class="o">=</span> <span class="n">prev_ds</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">prev_execution_date</span> <span class="o">=</span> <span class="n">pendulum</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">prev_execution_date</span><span class="p">)</span>
+
+    <span class="n">ds_nodash</span> <span class="o">=</span> <span class="n">ds</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">ts_nodash</span> <span class="o">=</span> <span class="n">execution_date</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">T%H%M%S&quot;</span><span class="p">)</span>
+    <span class="n">ts_nodash_with_tz</span> <span class="o">=</span> <span class="n">ts</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;:&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">yesterday_ds_nodash</span> <span class="o">=</span> <span class="n">yesterday_ds</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">tomorrow_ds_nodash</span> <span class="o">=</span> <span class="n">tomorrow_ds</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+    <span class="n">ti_key_str</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{dag_id}</span><span class="s2">__</span><span class="si">{task_id}</span><span class="s2">__</span><span class="si">{ds_nodash}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">dag_id</span><span class="o">=</span><span class="n">task</span><span class="o">.</span><span class="n">dag_id</span><span class="p">,</span> <span class="n">task_id</span><span class="o">=</span><span class="n">task</span><span class="o">.</span><span class="n">task_id</span><span class="p">,</span> <span class="n">ds_nodash</span><span class="o">=</span><span class="n">ds_nodash</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">task</span><span class="o">.</span><span class="n">params</span><span class="p">:</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">task</span><span class="o">.</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;dag&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">dag</span><span class="p">,</span>
+        <span class="s2">&quot;ds&quot;</span><span class="p">:</span> <span class="n">ds</span><span class="p">,</span>
+        <span class="s2">&quot;next_ds&quot;</span><span class="p">:</span> <span class="n">next_ds</span><span class="p">,</span>
+        <span class="s2">&quot;next_ds_nodash&quot;</span><span class="p">:</span> <span class="n">next_ds_nodash</span><span class="p">,</span>
+        <span class="s2">&quot;prev_ds&quot;</span><span class="p">:</span> <span class="n">prev_ds</span><span class="p">,</span>
+        <span class="s2">&quot;prev_ds_nodash&quot;</span><span class="p">:</span> <span class="n">prev_ds_nodash</span><span class="p">,</span>
+        <span class="s2">&quot;ds_nodash&quot;</span><span class="p">:</span> <span class="n">ds_nodash</span><span class="p">,</span>
+        <span class="s2">&quot;ts&quot;</span><span class="p">:</span> <span class="n">ts</span><span class="p">,</span>
+        <span class="s2">&quot;ts_nodash&quot;</span><span class="p">:</span> <span class="n">ts_nodash</span><span class="p">,</span>
+        <span class="s2">&quot;ts_nodash_with_tz&quot;</span><span class="p">:</span> <span class="n">ts_nodash_with_tz</span><span class="p">,</span>
+        <span class="s2">&quot;yesterday_ds&quot;</span><span class="p">:</span> <span class="n">yesterday_ds</span><span class="p">,</span>
+        <span class="s2">&quot;yesterday_ds_nodash&quot;</span><span class="p">:</span> <span class="n">yesterday_ds_nodash</span><span class="p">,</span>
+        <span class="s2">&quot;tomorrow_ds&quot;</span><span class="p">:</span> <span class="n">tomorrow_ds</span><span class="p">,</span>
+        <span class="s2">&quot;tomorrow_ds_nodash&quot;</span><span class="p">:</span> <span class="n">tomorrow_ds_nodash</span><span class="p">,</span>
+        <span class="s2">&quot;END_DATE&quot;</span><span class="p">:</span> <span class="n">ds</span><span class="p">,</span>
+        <span class="s2">&quot;end_date&quot;</span><span class="p">:</span> <span class="n">ds</span><span class="p">,</span>
+        <span class="s2">&quot;dag_run&quot;</span><span class="p">:</span> <span class="n">dag_run</span><span class="p">,</span>
+        <span class="s2">&quot;run_id&quot;</span><span class="p">:</span> <span class="n">run_id</span><span class="p">,</span>
+        <span class="s2">&quot;execution_date&quot;</span><span class="p">:</span> <span class="n">pendulum</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">execution_date</span><span class="p">),</span>
+        <span class="s2">&quot;prev_execution_date&quot;</span><span class="p">:</span> <span class="n">prev_execution_date</span><span class="p">,</span>
+        <span class="s2">&quot;prev_execution_date_success&quot;</span><span class="p">:</span> <span class="n">lazy_object_proxy</span><span class="o">.</span><span class="n">Proxy</span><span class="p">(</span>
+            <span class="k">lambda</span><span class="p">:</span> <span class="n">task_instance</span><span class="o">.</span><span class="n">previous_execution_date_success</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;prev_start_date_success&quot;</span><span class="p">:</span> <span class="n">lazy_object_proxy</span><span class="o">.</span><span class="n">Proxy</span><span class="p">(</span>
+            <span class="k">lambda</span><span class="p">:</span> <span class="n">task_instance</span><span class="o">.</span><span class="n">previous_start_date_success</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;next_execution_date&quot;</span><span class="p">:</span> <span class="n">next_execution_date</span><span class="p">,</span>
+        <span class="s2">&quot;latest_date&quot;</span><span class="p">:</span> <span class="n">ds</span><span class="p">,</span>
+        <span class="s2">&quot;macros&quot;</span><span class="p">:</span> <span class="n">macros</span><span class="p">,</span>
+        <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">,</span>
+        <span class="s2">&quot;tables&quot;</span><span class="p">:</span> <span class="n">tables</span><span class="p">,</span>
+        <span class="s2">&quot;task&quot;</span><span class="p">:</span> <span class="n">task</span><span class="p">,</span>
+        <span class="s2">&quot;task_instance&quot;</span><span class="p">:</span> <span class="n">task_instance</span><span class="p">,</span>
+        <span class="s2">&quot;ti&quot;</span><span class="p">:</span> <span class="n">task_instance</span><span class="p">,</span>
+        <span class="s2">&quot;task_instance_key_str&quot;</span><span class="p">:</span> <span class="n">ti_key_str</span><span class="p">,</span>
+        <span class="s2">&quot;test_mode&quot;</span><span class="p">:</span> <span class="n">task_instance</span><span class="o">.</span><span class="n">test_mode</span><span class="p">,</span>
+        <span class="s2">&quot;inlets&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">inlets</span><span class="p">,</span>
+        <span class="s2">&quot;outlets&quot;</span><span class="p">:</span> <span class="n">task</span><span class="o">.</span><span class="n">outlets</span><span class="p">,</span>
+    <span class="p">}</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

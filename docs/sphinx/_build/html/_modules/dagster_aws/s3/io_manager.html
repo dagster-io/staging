@@ -1,0 +1,203 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_aws.s3.io_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_aws.s3.io_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">IOManager</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">io_manager</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">PICKLE_PROTOCOL</span>
+
+
+<span class="k">class</span> <span class="nc">PickledObjectS3IOManager</span><span class="p">(</span><span class="n">IOManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">s3_bucket</span><span class="p">,</span> <span class="n">s3_session</span><span class="p">,</span> <span class="n">s3_prefix</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bucket</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="s2">&quot;s3_bucket&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3_prefix</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">s3_prefix</span><span class="p">,</span> <span class="s2">&quot;s3_prefix&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3</span> <span class="o">=</span> <span class="n">s3_session</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">head_bucket</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">s3_prefix</span><span class="p">,</span> <span class="s2">&quot;storage&quot;</span><span class="p">,</span> <span class="o">*</span><span class="n">context</span><span class="o">.</span><span class="n">get_run_scoped_output_identifier</span><span class="p">()])</span>
+
+    <span class="k">def</span> <span class="nf">_last_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">key</span>
+        <span class="n">comps</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">comps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_rm_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">delete_for_results</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">results</span><span class="p">):</span>
+            <span class="n">store</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">delete_objects</span><span class="p">(</span>
+                <span class="n">Bucket</span><span class="o">=</span><span class="n">store</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span>
+                <span class="n">Delete</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Objects&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;Key&quot;</span><span class="p">:</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]}</span> <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;Contents&quot;</span><span class="p">]]},</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_object</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_objects_v2</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">Prefix</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+            <span class="n">delete_for_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+
+            <span class="n">continuation</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;IsTruncated&quot;</span><span class="p">]</span>
+            <span class="k">while</span> <span class="n">continuation</span><span class="p">:</span>
+                <span class="n">continuation_token</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;NextContinuationToken&quot;</span><span class="p">]</span>
+                <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_objects_v2</span><span class="p">(</span>
+                    <span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">Prefix</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">ContinuationToken</span><span class="o">=</span><span class="n">continuation_token</span>
+                <span class="p">)</span>
+                <span class="n">delete_for_results</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+                <span class="n">continuation</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;IsTruncated&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_has_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+        <span class="n">key_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_objects_v2</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">Prefix</span><span class="o">=</span><span class="n">key</span><span class="p">)[</span><span class="s2">&quot;KeyCount&quot;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="n">key_count</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_uri_for_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;s3://&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">bucket</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">{key}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">upstream_output</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading S3 object from: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_uri_for_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="n">key</span><span class="p">)[</span><span class="s2">&quot;Body&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="nf">handle_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing S3 object at: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_uri_for_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_object</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Removing existing S3 key: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rm_object</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="n">pickled_obj</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">PICKLE_PROTOCOL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span> <span class="n">Body</span><span class="o">=</span><span class="n">pickled_obj</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="s3_pickle_io_manager"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.s3.s3_pickle_io_manager">[docs]</a><span class="nd">@io_manager</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;s3_bucket&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">),</span>
+        <span class="s2">&quot;s3_prefix&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;dagster&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;s3&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">s3_pickle_io_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Persistent IO manager using S3 for storage.</span>
+
+<span class="sd">    Serializes objects via pickling. Suitable for objects storage for distributed executors, so long</span>
+<span class="sd">    as each execution node has network connectivity and credentials for S3 and the backing bucket.</span>
+
+<span class="sd">    Attach this resource definition to a :py:class:`~dagster.ModeDefinition`</span>
+<span class="sd">    in order to make it available to your pipeline:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        pipeline_def = PipelineDefinition(</span>
+<span class="sd">            mode_defs=[</span>
+<span class="sd">                ModeDefinition(</span>
+<span class="sd">                    resource_defs={&#39;io_manager&#39;: s3_pickle_io_manager, &quot;s3&quot;: s3_resource, ...},</span>
+<span class="sd">                ), ...</span>
+<span class="sd">            ], ...</span>
+<span class="sd">        )</span>
+
+<span class="sd">    You may configure this storage as follows:</span>
+
+<span class="sd">    .. code-block:: YAML</span>
+
+<span class="sd">        resources:</span>
+<span class="sd">            io_manager:</span>
+<span class="sd">                config:</span>
+<span class="sd">                    s3_bucket: my-cool-bucket</span>
+<span class="sd">                    s3_prefix: good/prefix-for-files-</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">s3_session</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">s3</span>
+    <span class="n">s3_bucket</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;s3_bucket&quot;</span><span class="p">]</span>
+    <span class="n">s3_prefix</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;s3_prefix&quot;</span><span class="p">)</span>  <span class="c1"># s3_prefix is optional</span>
+    <span class="n">pickled_io_manager</span> <span class="o">=</span> <span class="n">PickledObjectS3IOManager</span><span class="p">(</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="n">s3_session</span><span class="p">,</span> <span class="n">s3_prefix</span><span class="o">=</span><span class="n">s3_prefix</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pickled_io_manager</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

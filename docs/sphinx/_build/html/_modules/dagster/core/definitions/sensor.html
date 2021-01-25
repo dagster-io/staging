@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.sensor &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.sensor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">inspect</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">ensure_gen</span>
+
+<span class="kn">from</span> <span class="nn">.job</span> <span class="kn">import</span> <span class="n">JobContext</span><span class="p">,</span> <span class="n">JobDefinition</span><span class="p">,</span> <span class="n">JobType</span><span class="p">,</span> <span class="n">RunRequest</span><span class="p">,</span> <span class="n">SkipReason</span>
+
+
+<div class="viewcode-block" id="SensorExecutionContext"><a class="viewcode-back" href="../../../../sections/api/apidocs/schedules-sensors.html#dagster.SensorExecutionContext">[docs]</a><span class="k">class</span> <span class="nc">SensorExecutionContext</span><span class="p">(</span><span class="n">JobContext</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sensor execution context.</span>
+
+<span class="sd">    An instance of this class is made available as the first argument to the evaluation function</span>
+<span class="sd">    on SensorDefinition.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        instance (DagsterInstance): The instance configured to run the schedule</span>
+<span class="sd">        last_completion_time (float): The last time that the sensor was evaluated (UTC).</span>
+<span class="sd">        last_run_key (str): The run key of the RunRequest most recently created by this sensor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_last_completion_time&quot;</span><span class="p">,</span> <span class="s2">&quot;_last_run_key&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">last_completion_time</span><span class="p">,</span> <span class="n">last_run_key</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SensorExecutionContext</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_completion_time</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_float_param</span><span class="p">(</span>
+            <span class="n">last_completion_time</span><span class="p">,</span> <span class="s2">&quot;last_completion_time&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_run_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">last_run_key</span><span class="p">,</span> <span class="s2">&quot;last_run_key&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">last_completion_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_completion_time</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">last_run_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_run_key</span></div>
+
+
+<div class="viewcode-block" id="SensorDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/schedules-sensors.html#dagster.SensorDefinition">[docs]</a><span class="k">class</span> <span class="nc">SensorDefinition</span><span class="p">(</span><span class="n">JobDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define a sensor that initiates a set of job runs</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of the sensor to create.</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute when the sensor fires.</span>
+<span class="sd">        evaluation_fn (Callable[[SensorExecutionContext]]): The core evaluation function for the</span>
+<span class="sd">            sensor, which is run at an interval to determine whether a run should be launched or</span>
+<span class="sd">            not. Takes a :py:class:`~dagster.SensorExecutionContext`.</span>
+
+<span class="sd">            This function must return a generator, which must yield either a single SkipReason</span>
+<span class="sd">            or one or more RunRequest objects.</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute when the sensor runs. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The mode to apply when executing this sensor. (default: &#39;default&#39;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;_evaluation_fn&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">,</span> <span class="n">evaluation_fn</span><span class="p">,</span> <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SensorDefinition</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">name</span><span class="p">,</span>
+            <span class="n">job_type</span><span class="o">=</span><span class="n">JobType</span><span class="o">.</span><span class="n">SENSOR</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_evaluation_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">evaluation_fn</span><span class="p">,</span> <span class="s2">&quot;evaluation_fn&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_execution_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">SensorExecutionContext</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ensure_gen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_evaluation_fn</span><span class="p">(</span><span class="n">context</span><span class="p">)))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span> <span class="ow">or</span> <span class="n">result</span> <span class="o">==</span> <span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="p">(</span><span class="n">RunRequest</span><span class="p">,</span> <span class="n">SkipReason</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">RunRequest</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">wrap_sensor_evaluation</span><span class="p">(</span><span class="n">sensor_name</span><span class="p">,</span> <span class="n">result</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isgenerator</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">item</span>
+
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="p">(</span><span class="n">SkipReason</span><span class="p">,</span> <span class="n">RunRequest</span><span class="p">)):</span>
+        <span class="k">yield</span> <span class="n">result</span>
+
+    <span class="k">elif</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Error in sensor </span><span class="si">{</span><span class="n">sensor_name</span><span class="si">}</span><span class="s2">: Sensor unexpectedly returned output &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2"> of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2">.  Should only return SkipReason or &quot;</span>
+            <span class="s2">&quot;RunRequest objects.&quot;</span>
+        <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

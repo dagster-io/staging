@@ -1,0 +1,315 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.types.config_schema &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.types.config_schema</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">hashlib</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.config.config_type</span> <span class="kn">import</span> <span class="n">ConfigType</span>
+<span class="kn">from</span> <span class="nn">dagster.core.decorator_utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">split_function_parameters</span><span class="p">,</span>
+    <span class="n">validate_decorated_fn_positionals</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">ensure_gen</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental_arg_warning</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterTypeLoader</span><span class="p">:</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">not_implemented</span><span class="p">(</span>
+            <span class="s2">&quot;Must override schema_type in </span><span class="si">{klass}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">klass</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">loader_version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">compute_loaded_input_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">construct_from_config_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_context</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        How to create a runtime value from config data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">config_value</span>
+
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterTypeMaterializer</span><span class="p">:</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">not_implemented</span><span class="p">(</span>
+            <span class="s2">&quot;Must override schema_type in </span><span class="si">{klass}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">klass</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">materialize_runtime_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_context</span><span class="p">,</span> <span class="n">_config_value</span><span class="p">,</span> <span class="n">_runtime_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        How to materialize a runtime value given configuration.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">not_implemented</span><span class="p">(</span><span class="s2">&quot;Must implement&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterTypeLoaderFromDecorator</span><span class="p">(</span><span class="n">DagsterTypeLoader</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">config_type</span><span class="p">,</span>
+        <span class="n">func</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="n">loader_version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">external_version_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_type</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">config_type</span><span class="p">,</span> <span class="s2">&quot;config_type&quot;</span><span class="p">,</span> <span class="n">ConfigType</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_func</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;func&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_loader_version</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">loader_version</span><span class="p">,</span> <span class="s2">&quot;loader_version&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader_version</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;loader_version&quot;</span><span class="p">,</span> <span class="s2">&quot;DagsterTypeLoaderFromDecorator.__init__&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_external_version_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span>
+            <span class="n">external_version_fn</span><span class="p">,</span> <span class="s2">&quot;external_version_fn&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_version_fn</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span>
+                <span class="s2">&quot;external_version_fn&quot;</span><span class="p">,</span> <span class="s2">&quot;DagsterTypeLoaderFromDecorator.__init__&quot;</span>
+            <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_type</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">loader_version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loader_version</span>
+
+    <span class="k">def</span> <span class="nf">compute_loaded_input_version</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compute the type-loaded input from a given config_value.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            config_value (Union[Any, Dict]): Config value to be ingested by the external version</span>
+<span class="sd">                loading function.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[str]: Hash of concatenated loader version and external input version if both</span>
+<span class="sd">                are provided, else None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">loader_version</span><span class="p">:</span>
+            <span class="n">version</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">loader_version</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_version_fn</span><span class="p">:</span>
+            <span class="n">ext_version</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_external_version_fn</span><span class="p">(</span><span class="n">config_value</span><span class="p">)</span>
+            <span class="n">version</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ext_version</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">version</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>  <span class="c1"># Sentinel value for no version provided.</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha1</span><span class="p">(</span><span class="n">version</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">construct_from_config_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_func</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">config_value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_create_type_loader_for_decorator</span><span class="p">(</span>
+    <span class="n">config_type</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">,</span> <span class="n">loader_version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">external_version_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="k">return</span> <span class="n">DagsterTypeLoaderFromDecorator</span><span class="p">(</span>
+        <span class="n">config_type</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">,</span> <span class="n">loader_version</span><span class="p">,</span> <span class="n">external_version_fn</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="dagster_type_loader"><a class="viewcode-back" href="../../../../sections/api/apidocs/types.html#dagster.dagster_type_loader">[docs]</a><span class="k">def</span> <span class="nf">dagster_type_loader</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">loader_version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">external_version_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create an dagster type loader that maps config data to a runtime value.</span>
+
+<span class="sd">    The decorated function should take the execution context and parsed config value and return the</span>
+<span class="sd">    appropriate runtime value.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config_schema (ConfigSchema): The schema for the config that&#39;s passed to the decorated</span>
+<span class="sd">            function.</span>
+<span class="sd">        loader_version (str): (Experimental) The version of the decorated compute function. Two</span>
+<span class="sd">            loading functions should have the same version if and only if they deterministically</span>
+<span class="sd">            produce the same outputs when provided the same inputs.</span>
+<span class="sd">        external_version_fn (Callable): (Experimental) A function that takes in the same parameters as the loader</span>
+<span class="sd">            function (config_value) and returns a representation of the version of the external</span>
+<span class="sd">            asset (str). Two external assets with identical versions are treated as identical to one</span>
+<span class="sd">            another.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @dagster_type_loader(Permissive())</span>
+<span class="sd">        def load_dict(_context, value):</span>
+<span class="sd">            return value</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">dagster.config.field</span> <span class="kn">import</span> <span class="n">resolve_to_config_type</span>
+
+    <span class="n">config_type</span> <span class="o">=</span> <span class="n">resolve_to_config_type</span><span class="p">(</span><span class="n">config_schema</span><span class="p">)</span>
+    <span class="n">EXPECTED_POSITIONALS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="s2">&quot;*&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+        <span class="n">fn_positionals</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">split_function_parameters</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">EXPECTED_POSITIONALS</span><span class="p">)</span>
+        <span class="n">missing_positional</span> <span class="o">=</span> <span class="n">validate_decorated_fn_positionals</span><span class="p">(</span><span class="n">fn_positionals</span><span class="p">,</span> <span class="n">EXPECTED_POSITIONALS</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing_positional</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;@dagster_type_loader &#39;</span><span class="si">{solid_name}</span><span class="s2">&#39; decorated function does not have required positional &quot;</span>
+                <span class="s2">&quot;parameter &#39;</span><span class="si">{missing_param}</span><span class="s2">&#39;. Solid functions should only have keyword arguments &quot;</span>
+                <span class="s2">&quot;that match input names and a first positional parameter named &#39;context&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">solid_name</span><span class="o">=</span><span class="n">func</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">missing_param</span><span class="o">=</span><span class="n">missing_positional</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">_create_type_loader_for_decorator</span><span class="p">(</span>
+            <span class="n">config_type</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">,</span> <span class="n">loader_version</span><span class="p">,</span> <span class="n">external_version_fn</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">wrapper</span></div>
+
+
+<span class="k">class</span> <span class="nc">DagsterTypeMaterializerForDecorator</span><span class="p">(</span><span class="n">DagsterTypeMaterializer</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_type</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_type</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">config_type</span><span class="p">,</span> <span class="s2">&quot;config_type&quot;</span><span class="p">,</span> <span class="n">ConfigType</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_func</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="s2">&quot;func&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_type</span>
+
+    <span class="k">def</span> <span class="nf">materialize_runtime_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">config_value</span><span class="p">,</span> <span class="n">runtime_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ensure_gen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_func</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">config_value</span><span class="p">,</span> <span class="n">runtime_value</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_create_output_materializer_for_decorator</span><span class="p">(</span><span class="n">config_type</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">DagsterTypeMaterializerForDecorator</span><span class="p">(</span><span class="n">config_type</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="dagster_type_materializer"><a class="viewcode-back" href="../../../../sections/api/apidocs/types.html#dagster.dagster_type_materializer">[docs]</a><span class="k">def</span> <span class="nf">dagster_type_materializer</span><span class="p">(</span><span class="n">config_schema</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create an output materialization hydration config that configurably materializes a runtime</span>
+<span class="sd">    value.</span>
+
+<span class="sd">    The decorated function should take the execution context, the parsed config value, and the</span>
+<span class="sd">    runtime value and the parsed config data, should materialize the runtime value, and should</span>
+<span class="sd">    return an appropriate :py:class:`AssetMaterialization`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config_schema (Any): The type of the config data expected by the decorated function.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        # Takes a list of dicts such as might be read in using csv.DictReader, as well as a config</span>
+<span class="sd">        value, and writes</span>
+<span class="sd">        @dagster_type_materializer(str)</span>
+<span class="sd">        def materialize_df(_context, path, value):</span>
+<span class="sd">            with open(path, &#39;w&#39;) as fd:</span>
+<span class="sd">                writer = csv.DictWriter(fd, fieldnames=value[0].keys())</span>
+<span class="sd">                writer.writeheader()</span>
+<span class="sd">                writer.writerows(rowdicts=value)</span>
+
+<span class="sd">            return AssetMaterialization.file(path)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">dagster.config.field</span> <span class="kn">import</span> <span class="n">resolve_to_config_type</span>
+
+    <span class="n">config_type</span> <span class="o">=</span> <span class="n">resolve_to_config_type</span><span class="p">(</span><span class="n">config_schema</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">func</span><span class="p">:</span> <span class="n">_create_output_materializer_for_decorator</span><span class="p">(</span>
+        <span class="n">config_type</span><span class="p">,</span> <span class="n">func</span><span class="p">,</span> <span class="n">required_resource_keys</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

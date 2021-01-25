@@ -1,0 +1,414 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Airflow (dagster_airflow) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="AWS (dagster_aws)" href="dagster_aws.html" />
+    <link rel="prev" title="Utilities" href="../utilities.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="../utilities.html" title="Previous document">Utilities</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_aws.html" title="Next document">AWS (dagster_aws)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="airflow-dagster-airflow">
+<h1>Airflow (dagster_airflow)<a class="headerlink" href="#airflow-dagster-airflow" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="dagster_airflow.make_airflow_dag">
+<code class="sig-prename descclassname">dagster_airflow.</code><code class="sig-name descname">make_airflow_dag</code><span class="sig-paren">(</span><em class="sig-param">module_name</em>, <em class="sig-param">pipeline_name</em>, <em class="sig-param">run_config=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">instance=None</em>, <em class="sig-param">dag_id=None</em>, <em class="sig-param">dag_description=None</em>, <em class="sig-param">dag_kwargs=None</em>, <em class="sig-param">op_kwargs=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_airflow/factory.html#make_airflow_dag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_airflow.make_airflow_dag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an Airflow DAG corresponding to a given Dagster pipeline.</p>
+<p>Tasks in the resulting DAG will execute the Dagster logic they encapsulate as a Python
+callable, run by an underlying <code class="xref py py-class docutils literal notranslate"><span class="pre">PythonOperator</span></code>. As a
+consequence, both dagster, any Python dependencies required by your solid logic, and the module
+containing your pipeline definition must be available in the Python environment within which
+your Airflow tasks execute. If you cannot install requirements into this environment, or you
+are looking for a containerized solution to provide better isolation, see instead
+<a class="reference internal" href="#dagster_airflow.make_airflow_dag_containerized" title="dagster_airflow.make_airflow_dag_containerized"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_airflow_dag_containerized()</span></code></a>.</p>
+<p>This function should be invoked in an Airflow DAG definition file, such as that created by an
+invocation of the dagster-airflow scaffold CLI tool.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>module_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the importable module in which the pipeline definition can be
+found.</p></li>
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline definition.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment config, if any, with which to compile
+the pipeline to an execution plan, as a Python dict.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode in which to execute the pipeline.</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The Dagster instance to use to execute the pipeline.</p></li>
+<li><p><strong>dag_id</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The id to use for the compiled Airflow DAG (passed through to
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a>).</p></li>
+<li><p><strong>dag_description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The description to use for the compiled Airflow DAG
+(passed through to <a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a>)</p></li>
+<li><p><strong>dag_kwargs</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – Any additional kwargs to pass to the Airflow
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a> constructor, including <code class="docutils literal notranslate"><span class="pre">default_args</span></code>.</p></li>
+<li><p><strong>op_kwargs</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – Any additional kwargs to pass to the underlying Airflow
+operator (a subclass of
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/operators/python_operator/index.html#airflow.operators.python_operator.PythonOperator" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">PythonOperator</span></code></a>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The generated Airflow DAG, and a
+list of its constituent tasks.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)">airflow.models.DAG</a>, List[<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.BaseOperator" title="(in Airflow v1.10.6)">airflow.models.BaseOperator</a>])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_airflow.make_airflow_dag_for_operator">
+<code class="sig-prename descclassname">dagster_airflow.</code><code class="sig-name descname">make_airflow_dag_for_operator</code><span class="sig-paren">(</span><em class="sig-param">recon_repo</em>, <em class="sig-param">pipeline_name</em>, <em class="sig-param">operator</em>, <em class="sig-param">run_config=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">dag_id=None</em>, <em class="sig-param">dag_description=None</em>, <em class="sig-param">dag_kwargs=None</em>, <em class="sig-param">op_kwargs=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_airflow/factory.html#make_airflow_dag_for_operator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_airflow.make_airflow_dag_for_operator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct an Airflow DAG corresponding to a given Dagster pipeline and custom operator.</p>
+<p><a class="reference external" href="https://github.com/dagster-io/dagster/blob/master/python_modules/dagster-test/dagster_test/dagster_airflow/custom_operator.py">Custom operator template</a></p>
+<p>Tasks in the resulting DAG will execute the Dagster logic they encapsulate run by the given
+Operator <a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.BaseOperator" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseOperator</span></code></a>. If you
+are looking for a containerized solution to provide better isolation, see instead
+<a class="reference internal" href="#dagster_airflow.make_airflow_dag_containerized" title="dagster_airflow.make_airflow_dag_containerized"><code class="xref py py-func docutils literal notranslate"><span class="pre">make_airflow_dag_containerized()</span></code></a>.</p>
+<p>This function should be invoked in an Airflow DAG definition file, such as that created by an
+invocation of the dagster-airflow scaffold CLI tool.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>recon_repo</strong> (<code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.ReconstructableRepository</span></code>) – reference to a Dagster RepositoryDefinition
+that can be reconstructed in another process</p></li>
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline definition.</p></li>
+<li><p><strong>operator</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.8)"><em>type</em></a>) – The operator to use. Must be a class that inherits from
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.BaseOperator" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseOperator</span></code></a></p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment config, if any, with which to compile
+the pipeline to an execution plan, as a Python dict.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode in which to execute the pipeline.</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The Dagster instance to use to execute the pipeline.</p></li>
+<li><p><strong>dag_id</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The id to use for the compiled Airflow DAG (passed through to
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a>).</p></li>
+<li><p><strong>dag_description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The description to use for the compiled Airflow DAG
+(passed through to <a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a>)</p></li>
+<li><p><strong>dag_kwargs</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – Any additional kwargs to pass to the Airflow
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a> constructor, including <code class="docutils literal notranslate"><span class="pre">default_args</span></code>.</p></li>
+<li><p><strong>op_kwargs</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – Any additional kwargs to pass to the underlying Airflow
+operator.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The generated Airflow DAG, and a
+list of its constituent tasks.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)">airflow.models.DAG</a>, List[<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.BaseOperator" title="(in Airflow v1.10.6)">airflow.models.BaseOperator</a>])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_airflow.make_airflow_dag_containerized">
+<code class="sig-prename descclassname">dagster_airflow.</code><code class="sig-name descname">make_airflow_dag_containerized</code><span class="sig-paren">(</span><em class="sig-param">module_name</em>, <em class="sig-param">pipeline_name</em>, <em class="sig-param">image</em>, <em class="sig-param">run_config=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">dag_id=None</em>, <em class="sig-param">dag_description=None</em>, <em class="sig-param">dag_kwargs=None</em>, <em class="sig-param">op_kwargs=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_airflow/factory.html#make_airflow_dag_containerized"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_airflow.make_airflow_dag_containerized" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a containerized Airflow DAG corresponding to a given Dagster pipeline.</p>
+<p>Tasks in the resulting DAG will execute the Dagster logic they encapsulate by calling the
+dagster-graphql API exposed by a container run using a subclass of
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/operators/docker_operator/index.html#airflow.operators.docker_operator.DockerOperator" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerOperator</span></code></a>. As a
+consequence, both dagster, any Python dependencies required by your solid logic, and the module
+containing your pipeline definition must be available in the container spun up by this operator.
+Typically you’ll want to install these requirements onto the image you’re using.</p>
+<p>This function should be invoked in an Airflow DAG definition file, such as that created by an
+invocation of the dagster-airflow scaffold CLI tool.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>module_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the importable module in which the pipeline definition can be
+found.</p></li>
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline definition.</p></li>
+<li><p><strong>image</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the Docker image to use for execution (passed through to
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/operators/docker_operator/index.html#airflow.operators.docker_operator.DockerOperator" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerOperator</span></code></a>).</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment config, if any, with which to compile
+the pipeline to an execution plan, as a Python dict.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode in which to execute the pipeline.</p></li>
+<li><p><strong>dag_id</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The id to use for the compiled Airflow DAG (passed through to
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a>).</p></li>
+<li><p><strong>dag_description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The description to use for the compiled Airflow DAG
+(passed through to <a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a>)</p></li>
+<li><p><strong>dag_kwargs</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – Any additional kwargs to pass to the Airflow
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DAG</span></code></a> constructor, including <code class="docutils literal notranslate"><span class="pre">default_args</span></code>.</p></li>
+<li><p><strong>op_kwargs</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – Any additional kwargs to pass to the underlying Airflow
+operator (a subclass of
+<a class="reference external" href="https://airflow.apache.org/_api/airflow/operators/docker_operator/index.html#airflow.operators.docker_operator.DockerOperator" title="(in Airflow v1.10.6)"><code class="xref py py-class docutils literal notranslate"><span class="pre">DockerOperator</span></code></a>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The generated Airflow DAG, and a
+list of its constituent tasks.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>(<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.DAG" title="(in Airflow v1.10.6)">airflow.models.DAG</a>, List[<a class="reference external" href="https://airflow.apache.org/_api/airflow/models/index.html#airflow.models.BaseOperator" title="(in Airflow v1.10.6)">airflow.models.BaseOperator</a>])</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_airflow.make_dagster_pipeline_from_airflow_dag">
+<code class="sig-prename descclassname">dagster_airflow.</code><code class="sig-name descname">make_dagster_pipeline_from_airflow_dag</code><span class="sig-paren">(</span><em class="sig-param">dag</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">use_airflow_template_context=False</em>, <em class="sig-param">unique_id=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_airflow/dagster_pipeline_factory.html#make_dagster_pipeline_from_airflow_dag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_airflow.make_dagster_pipeline_from_airflow_dag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a Dagster pipeline corresponding to a given Airflow DAG.</p>
+<p>Tasks in the resulting pipeline will execute the <code class="docutils literal notranslate"><span class="pre">execute()</span></code> method on the corresponding
+Airflow Operator. Dagster, any dependencies required by Airflow Operators, and the module
+containing your DAG definition must be available in the Python environment within which your
+Dagster solids execute.</p>
+<p>To set Airflow’s <code class="docutils literal notranslate"><span class="pre">execution_date</span></code> for use with Airflow Operator’s <code class="docutils literal notranslate"><span class="pre">execute()</span></code> methods,
+either:</p>
+<ol class="arabic">
+<li><dl>
+<dt>(Best for ad hoc runs) Run Pipeline with ‘default’ preset, which sets execution_date to the</dt><dd><p>time (in UTC) of pipeline invocation:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">execute_pipeline</span><span class="p">(</span>
+    <span class="n">pipeline</span><span class="o">=</span><span class="n">make_dagster_pipeline_from_airflow_dag</span><span class="p">(</span><span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">),</span>
+    <span class="n">preset</span><span class="o">=</span><span class="s1">&#39;default&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">{'airflow_execution_date':</span> <span class="pre">utc_date_string}</span></code> to the PipelineDefinition tags. This will
+override behavior from (1).</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">execute_pipeline</span><span class="p">(</span>
+    <span class="n">make_dagster_pipeline_from_airflow_dag</span><span class="p">(</span>
+        <span class="n">dag</span><span class="o">=</span><span class="n">dag</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;airflow_execution_date&#39;</span><span class="p">:</span> <span class="n">utc_execution_date_str</span><span class="p">}</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div></blockquote>
+</li>
+<li><dl class="simple">
+<dt>(Recommended) Add <code class="docutils literal notranslate"><span class="pre">{'airflow_execution_date':</span> <span class="pre">utc_date_string}</span></code> to the PipelineRun tags,</dt><dd><p>such as in the Dagit UI. This will override behavior from (1) and (2)</p>
+</dd>
+</dl>
+</li>
+</ol>
+<p>We apply normalized_name() to the dag id and task ids when generating pipeline name and solid
+names to ensure that names conform to Dagster’s naming conventions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dag</strong> (<em>DAG</em>) – The Airflow DAG to compile into a Dagster pipeline</p></li>
+<li><p><strong>tags</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="../config.html#dagster.Field" title="dagster.Field"><em>Field</em></a><em>]</em>) – Pipeline tags. Optionally include
+<cite>tags={‘airflow_execution_date’: utc_date_string}</cite> to specify execution_date used within
+execution of Airflow Operators.</p></li>
+<li><p><strong>use_airflow_template_context</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – If True, will call get_template_context() on the
+Airflow TaskInstance model which requires and modifies the DagRun table.
+(default: False)</p></li>
+<li><p><strong>unique_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – If not None, this id will be postpended to generated solid names. Used by
+framework authors to enforce unique solid names within a repo.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The generated Dagster pipeline</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pipeline_def (<a class="reference internal" href="../pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition">PipelineDefinition</a>)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_airflow.make_dagster_repo_from_airflow_dags_path">
+<code class="sig-prename descclassname">dagster_airflow.</code><code class="sig-name descname">make_dagster_repo_from_airflow_dags_path</code><span class="sig-paren">(</span><em class="sig-param">dag_path</em>, <em class="sig-param">repo_name</em>, <em class="sig-param">safe_mode=True</em>, <em class="sig-param">store_serialized_dags=False</em>, <em class="sig-param">use_airflow_template_context=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_airflow/dagster_pipeline_factory.html#make_dagster_repo_from_airflow_dags_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_airflow.make_dagster_repo_from_airflow_dags_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a Dagster repository corresponding to Airflow DAGs in dag_path.</p>
+<p><code class="docutils literal notranslate"><span class="pre">DagBag.get_dag()</span></code> dependency requires Airflow DB to be initialized.</p>
+<dl>
+<dt>Usage:</dt><dd><p>Create <code class="docutils literal notranslate"><span class="pre">make_dagster_repo.py</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dagster_airflow.dagster_pipeline_factory</span> <span class="kn">import</span> <span class="n">make_dagster_repo_from_airflow_dags_path</span>
+
+<span class="k">def</span> <span class="nf">make_repo_from_dir</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">make_dagster_repo_from_airflow_dags_path</span><span class="p">(</span>
+        <span class="s1">&#39;/path/to/dags/&#39;</span><span class="p">,</span> <span class="s1">&#39;my_repo_name&#39;</span>
+    <span class="p">)</span>
+</pre></div>
+</div>
+<p>Use RepositoryDefinition as usual, for example:
+<code class="docutils literal notranslate"><span class="pre">dagit</span> <span class="pre">-f</span> <span class="pre">path/to/make_dagster_repo.py</span> <span class="pre">-n</span> <span class="pre">make_repo_from_dir</span></code></p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dag_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Path to directory or file that contains Airflow Dags</p></li>
+<li><p><strong>repo_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name for generated RepositoryDefinition</p></li>
+<li><p><strong>include_examples</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – True to include Airflow’s example DAGs. (default: False)</p></li>
+<li><p><strong>safe_mode</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – True to use Airflow’s default heuristic to find files that contain DAGs
+(ie find files that contain both b’DAG’ and b’airflow’) (default: True)</p></li>
+<li><p><strong>store_serialized_dags</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – True to read Airflow DAGS from Airflow DB. False to read DAGS
+from Python files. (default: False)</p></li>
+<li><p><strong>use_airflow_template_context</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – If True, will call get_template_context() on the
+Airflow TaskInstance model which requires and modifies the DagRun table.
+(default: False)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>RepositoryDefinition</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_airflow.make_dagster_repo_from_airflow_dag_bag">
+<code class="sig-prename descclassname">dagster_airflow.</code><code class="sig-name descname">make_dagster_repo_from_airflow_dag_bag</code><span class="sig-paren">(</span><em class="sig-param">dag_bag</em>, <em class="sig-param">repo_name</em>, <em class="sig-param">refresh_from_airflow_db=False</em>, <em class="sig-param">use_airflow_template_context=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_airflow/dagster_pipeline_factory.html#make_dagster_repo_from_airflow_dag_bag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_airflow.make_dagster_repo_from_airflow_dag_bag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a Dagster repository corresponding to Airflow DAGs in DagBag.</p>
+<dl>
+<dt>Usage:</dt><dd><dl>
+<dt>Create <cite>make_dagster_repo.py</cite>:</dt><dd><p>from dagster_airflow.dagster_pipeline_factory import make_dagster_repo_from_airflow_dag_bag
+from airflow_home import my_dag_bag</p>
+<dl class="simple">
+<dt>def make_repo_from_dag_bag():</dt><dd><p>return make_dagster_repo_from_airflow_dag_bag(my_dag_bag, ‘my_repo_name’)</p>
+</dd>
+</dl>
+</dd>
+<dt>Use RepositoryDefinition as usual, for example:</dt><dd><p><cite>dagit -f path/to/make_dagster_repo.py -n make_repo_from_dag_bag</cite></p>
+</dd>
+</dl>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dag_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Path to directory or file that contains Airflow Dags</p></li>
+<li><p><strong>repo_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name for generated RepositoryDefinition</p></li>
+<li><p><strong>refresh_from_airflow_db</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – If True, will refresh DAG if expired via DagBag.get_dag(),
+which requires access to initialized Airflow DB. If False (recommended), gets dag from
+DagBag’s dags dict without depending on Airflow DB. (default: False)</p></li>
+<li><p><strong>use_airflow_template_context</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – If True, will call get_template_context() on the
+Airflow TaskInstance model which requires and modifies the DagRun table.
+(default: False)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>RepositoryDefinition</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_airflow.make_dagster_repo_from_airflow_example_dags">
+<code class="sig-prename descclassname">dagster_airflow.</code><code class="sig-name descname">make_dagster_repo_from_airflow_example_dags</code><span class="sig-paren">(</span><em class="sig-param">repo_name='airflow_example_dags_repo'</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_airflow/dagster_pipeline_factory.html#make_dagster_repo_from_airflow_example_dags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_airflow.make_dagster_repo_from_airflow_example_dags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct a Dagster repository for Airflow’s example DAGs.</p>
+<dl class="simple">
+<dt>Execution of the following Airflow example DAGs is not currently supported:</dt><dd><p>‘example_external_task_marker_child’,
+‘example_pig_operator’,
+‘example_skip_dag’,
+‘example_trigger_target_dag’,
+‘example_xcom’,
+‘test_utils’,</p>
+</dd>
+</dl>
+<p>Usage:</p>
+<blockquote>
+<div><dl>
+<dt>Create <cite>make_dagster_repo.py</cite>:</dt><dd><p>from dagster_airflow.dagster_pipeline_factory import make_dagster_repo_from_airflow_example_dags</p>
+<dl class="simple">
+<dt>def make_airflow_example_dags():</dt><dd><p>return make_dagster_repo_from_airflow_example_dags()</p>
+</dd>
+</dl>
+</dd>
+<dt>Use RepositoryDefinition as usual, for example:</dt><dd><p><cite>dagit -f path/to/make_dagster_repo.py -n make_airflow_example_dags</cite></p>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>repo_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name for generated RepositoryDefinition</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>RepositoryDefinition</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="../utilities.html" title="Previous document">Utilities</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_aws.html" title="Next document">AWS (dagster_aws)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

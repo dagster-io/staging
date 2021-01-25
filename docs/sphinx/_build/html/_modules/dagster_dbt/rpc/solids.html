@@ -1,0 +1,1013 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_dbt.rpc.solids &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_dbt.rpc.solids</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Array</span><span class="p">,</span>
+    <span class="n">Bool</span><span class="p">,</span>
+    <span class="n">DagsterInvalidDefinitionError</span><span class="p">,</span>
+    <span class="n">Failure</span><span class="p">,</span>
+    <span class="n">Field</span><span class="p">,</span>
+    <span class="n">InputDefinition</span><span class="p">,</span>
+    <span class="n">Int</span><span class="p">,</span>
+    <span class="n">Noneable</span><span class="p">,</span>
+    <span class="n">Nothing</span><span class="p">,</span>
+    <span class="n">Output</span><span class="p">,</span>
+    <span class="n">OutputDefinition</span><span class="p">,</span>
+    <span class="n">Permissive</span><span class="p">,</span>
+    <span class="n">RetryRequested</span><span class="p">,</span>
+    <span class="n">String</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">solid</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.context.compute</span> <span class="kn">import</span> <span class="n">SolidExecutionContext</span>
+<span class="kn">from</span> <span class="nn">dagster_pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+
+<span class="kn">from</span> <span class="nn">..errors</span> <span class="kn">import</span> <span class="n">DagsterDbtRpcUnexpectedPollOutputError</span>
+<span class="kn">from</span> <span class="nn">.types</span> <span class="kn">import</span> <span class="n">DbtRpcOutput</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">log_rpc</span><span class="p">,</span> <span class="n">raise_for_rpc_error</span>
+
+
+<span class="k">def</span> <span class="nf">_poll_rpc</span><span class="p">(</span>
+    <span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">,</span> <span class="n">request_token</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">should_yield_materializations</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtRpcOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Polls the dbt RPC server for the status of a request until the state is ``success``.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">generate_materializations</span>
+
+    <span class="n">logs_start</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">interval</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;interval&quot;</span><span class="p">)</span>
+
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+    <span class="n">current_state</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="c1"># Poll for the dbt RPC request.</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;RequestToken: </span><span class="si">{</span><span class="n">request_token</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">poll</span><span class="p">(</span>
+            <span class="n">request_token</span><span class="o">=</span><span class="n">request_token</span><span class="p">,</span> <span class="n">logs</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;logs&quot;</span><span class="p">],</span> <span class="n">logs_start</span><span class="o">=</span><span class="n">logs_start</span>
+        <span class="p">)</span>
+        <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+
+        <span class="n">resp_json</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="n">resp_result</span> <span class="o">=</span> <span class="n">resp_json</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="c1"># Pass dbt RPC logs into the Dagster/Dagit logger.</span>
+        <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;logs&quot;</span><span class="p">]:</span>
+            <span class="n">logs</span> <span class="o">=</span> <span class="n">resp_result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">logs</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">log_rpc</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">logs</span><span class="p">)</span>
+            <span class="n">logs_start</span> <span class="o">+=</span> <span class="nb">len</span><span class="p">(</span><span class="n">logs</span><span class="p">)</span>
+
+        <span class="n">current_state</span> <span class="o">=</span> <span class="n">resp_result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state&quot;</span><span class="p">)</span>
+        <span class="c1"># Stop polling if request&#39;s state is no longer &quot;running&quot;.</span>
+        <span class="k">if</span> <span class="n">current_state</span> <span class="o">!=</span> <span class="s2">&quot;running&quot;</span><span class="p">:</span>
+            <span class="k">break</span>
+
+        <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">resp_result</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;elapsed&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># Sleep for the configured time interval before polling again.</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Request </span><span class="si">{</span><span class="n">request_token</span><span class="si">}</span><span class="s2"> currently in state &#39;</span><span class="si">{</span><span class="n">current_state</span><span class="si">}</span><span class="s2">&#39; (elapsed time &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">elapsed_time</span><span class="si">}</span><span class="s2"> seconds). Sleeping for </span><span class="si">{</span><span class="n">interval</span><span class="si">}</span><span class="s2">s...&quot;</span>
+        <span class="p">)</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">interval</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">current_state</span> <span class="o">!=</span> <span class="s2">&quot;success&quot;</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">Failure</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Request </span><span class="si">{</span><span class="n">request_token</span><span class="si">}</span><span class="s2"> finished with state &#39;</span><span class="si">{</span><span class="n">current_state</span><span class="si">}</span><span class="s2">&#39; in &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">elapsed_time</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Request </span><span class="si">{</span><span class="n">request_token</span><span class="si">}</span><span class="s2"> finished with state &#39;</span><span class="si">{</span><span class="n">current_state</span><span class="si">}</span><span class="s2">&#39; in </span><span class="si">{</span><span class="n">elapsed_time</span><span class="si">}</span><span class="s2"> seconds&quot;</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">resp_result</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+
+    <span class="n">polled_run_results</span> <span class="o">=</span> <span class="n">DbtRpcOutput</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">resp_result</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">should_yield_materializations</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">materialization</span> <span class="ow">in</span> <span class="n">generate_materializations</span><span class="p">(</span><span class="n">polled_run_results</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">materialization</span>
+
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">polled_run_results</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">unwrap_result</span><span class="p">(</span><span class="n">poll_rpc_generator</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtRpcOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;A helper function that extracts the `DbtRpcOutput` value from a generator.</span>
+
+<span class="sd">    The parameter `poll_rpc_generator` is expected to be an invocation of `_poll_rpc`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">poll_rpc_generator</span><span class="p">:</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">x</span>
+
+    <span class="k">if</span> <span class="n">output</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterDbtRpcUnexpectedPollOutputError</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;poll_rpc yielded None as its last value. Expected value of type Output containing DbtRpcOutput.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">Output</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterDbtRpcUnexpectedPollOutputError</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll_rpc yielded value of type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">output</span><span class="p">)</span><span class="si">}</span><span class="s2"> as its last value. Expected value of type Output containing DbtRpcOutput.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">DbtRpcOutput</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterDbtRpcUnexpectedPollOutputError</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;poll_rpc yielded Output containing </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">value</span><span class="p">)</span><span class="si">}</span><span class="s2">. Expected DbtRpcOutput.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">output</span><span class="o">.</span><span class="n">value</span>
+
+
+<div class="viewcode-block" id="dbt_rpc_run"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_run">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt run over RPC.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">OutputDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;request_token&quot;</span><span class="p">,</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The request token of the invoked dbt run.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to run.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_run</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt run`` command to a dbt RPC server and returns the request token.</span>
+
+<span class="sd">    This dbt RPC solid is asynchronous. The request token can be used in subsequent RPC requests to</span>
+<span class="sd">    poll the progress of the running dbt process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="n">models</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;models&quot;</span><span class="p">],</span> <span class="n">exclude</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_run_and_wait"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_run_and_wait">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt run over RPC and poll the resulting RPC process until it&#39;s complete.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DbtRpcOutput</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to run.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;full_refresh&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to perform a --full-refresh.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;fail_fast&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to --fail-fast.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;warn_error&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to --warn-error.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The interval (in seconds) at which to poll the dbt rpc process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to return logs from the process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;task_tags&quot;</span><span class="p">:</span> <span class="n">Permissive</span><span class="p">(),</span>
+        <span class="s2">&quot;max_retries&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+        <span class="s2">&quot;retry_interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="mi">120</span><span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation will &quot;</span>
+                <span class="s2">&quot;be yielded when the solid executes. Default: True&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_run_and_wait</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtRpcOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt run`` command to a dbt RPC server and returns the result of the</span>
+<span class="sd">    executed dbt process.</span>
+
+<span class="sd">    This dbt RPC solid is synchronous, and will periodically poll the dbt RPC server until the dbt</span>
+<span class="sd">    process is completed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;task_tags&quot;</span><span class="p">]:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">ps</span><span class="p">()</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;result&quot;</span><span class="p">][</span><span class="s2">&quot;rows&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">task</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;task_tags&quot;</span><span class="p">]:</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;RPC task with tags </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">task</span><span class="p">[</span><span class="s1">&#39;tags&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> currently running.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="n">RetryRequested</span><span class="p">(</span>
+                    <span class="n">max_retries</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;max_retries&quot;</span><span class="p">],</span>
+                    <span class="n">seconds_to_wait</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;retry_interval&quot;</span><span class="p">],</span>
+                <span class="p">)</span>
+
+    <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn_error&quot;</span><span class="p">]:</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; --warn-error&quot;</span>
+
+    <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; run&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;models&quot;</span><span class="p">]:</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;models&quot;</span><span class="p">]))</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; --models </span><span class="si">{</span><span class="n">models</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">]:</span>
+        <span class="n">exclude</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">]))</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; --exclude </span><span class="si">{</span><span class="n">exclude</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;full_refresh&quot;</span><span class="p">]:</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; --full-refresh&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;fail_fast&quot;</span><span class="p">]:</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; --fail-fast&quot;</span>
+
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running dbt command: dbt </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">cli</span><span class="p">(</span><span class="n">cli</span><span class="o">=</span><span class="n">command</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;task_tags&quot;</span><span class="p">])</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="n">request_token</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_poll_rpc</span><span class="p">(</span>
+        <span class="n">context</span><span class="p">,</span>
+        <span class="n">request_token</span><span class="p">,</span>
+        <span class="n">should_yield_materializations</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_test"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_test">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt test over RPC.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">OutputDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;request_token&quot;</span><span class="p">,</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The request token of the invoked dbt test.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to test.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to run custom data tests.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to run schema tests.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_test</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt test`` command to a dbt RPC server and returns the request token.</span>
+
+<span class="sd">    This dbt RPC solid is asynchronous. The request token can be used in subsequent RPC requests to</span>
+<span class="sd">    poll the progress of the running dbt process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">test</span><span class="p">(</span>
+        <span class="n">models</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;models&quot;</span><span class="p">],</span>
+        <span class="n">exclude</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">],</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
+        <span class="n">schema</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;schema&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_test_and_wait"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_test_and_wait">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;A solid to invoke dbt test over RPC and poll the resulting RPC process until it&#39;s &quot;</span>
+        <span class="s2">&quot;complete.&quot;</span>
+    <span class="p">),</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DbtRpcOutput</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to test.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to run custom data tests.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to run schema tests.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The interval (in seconds) at which to poll the dbt rpc process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to return logs from the process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation will &quot;</span>
+                <span class="s2">&quot;be yielded when the solid executes. Default: True&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_test_and_wait</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtRpcOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt test`` command to a dbt RPC server and returns the result of the</span>
+<span class="sd">    executed dbt process.</span>
+
+<span class="sd">    This dbt RPC solid is synchronous, and will periodically poll the dbt RPC server until the dbt</span>
+<span class="sd">    process is completed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">test</span><span class="p">(</span>
+        <span class="n">models</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;models&quot;</span><span class="p">],</span>
+        <span class="n">exclude</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">],</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
+        <span class="n">schema</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;schema&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="n">request_token</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_poll_rpc</span><span class="p">(</span>
+        <span class="n">context</span><span class="p">,</span>
+        <span class="n">request_token</span><span class="p">,</span>
+        <span class="n">should_yield_materializations</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_run_operation"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_run_operation">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke a dbt run operation over RPC.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">OutputDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;request_token&quot;</span><span class="p">,</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The request token of the invoked dbt run operation.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;macro&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">String</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt macro to invoke as a run operation&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Permissive</span><span class="p">()),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Arguments to supply to the invoked macro.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_run_operation</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt run-operation`` command to a dbt RPC server and returns the</span>
+<span class="sd">    request token.</span>
+
+<span class="sd">    This dbt RPC solid is asynchronous. The request token can be used in subsequent RPC requests to</span>
+<span class="sd">    poll the progress of the running dbt process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">run_operation</span><span class="p">(</span>
+        <span class="n">macro</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;macro&quot;</span><span class="p">],</span> <span class="n">args</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_run_operation_and_wait"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_run_operation_and_wait">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;A solid to invoke a dbt run operation over RPC and poll the resulting RPC process until &quot;</span>
+        <span class="s2">&quot;it&#39;s complete.&quot;</span>
+    <span class="p">),</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DbtRpcOutput</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;macro&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">String</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt macro to invoke as a run operation&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Permissive</span><span class="p">()),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Arguments to supply to the invoked macro.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The interval (in seconds) at which to poll the dbt rpc process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to return logs from the process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation will &quot;</span>
+                <span class="s2">&quot;be yielded when the solid executes. Default: True&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_run_operation_and_wait</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtRpcOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt run-operation`` command to a dbt RPC server and returns the</span>
+<span class="sd">    result of the executed dbt process.</span>
+
+<span class="sd">    This dbt RPC solid is synchronous, and will periodically poll the dbt RPC server until the dbt</span>
+<span class="sd">    process is completed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">run_operation</span><span class="p">(</span>
+        <span class="n">macro</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;macro&quot;</span><span class="p">],</span> <span class="n">args</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;args&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="n">request_token</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_poll_rpc</span><span class="p">(</span>
+        <span class="n">context</span><span class="p">,</span>
+        <span class="n">request_token</span><span class="p">,</span>
+        <span class="n">should_yield_materializations</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_snapshot"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_snapshot">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke a dbt snapshot over RPC.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">OutputDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;request_token&quot;</span><span class="p">,</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The request token of the invoked dbt snapshot.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt snapshot files to snapshot.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt snapshot files to exclude from the snapshot.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_snapshot</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt snapshot`` command to a dbt RPC server and returns the</span>
+<span class="sd">    request token.</span>
+
+<span class="sd">    This dbt RPC solid is asynchronous. The request token can be used in subsequent RPC requests to</span>
+<span class="sd">    poll the progress of the running dbt process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(</span>
+        <span class="n">select</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">],</span> <span class="n">exclude</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_snapshot_and_wait"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_snapshot_and_wait">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;A solid to invoke a dbt snapshot over RPC and poll the resulting RPC process until &quot;</span>
+        <span class="s2">&quot;it&#39;s complete.&quot;</span>
+    <span class="p">),</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DbtRpcOutput</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt snapshot files to snapshot.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt snapshot files to exclude from the snapshot.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The interval (in seconds) at which to poll the dbt rpc process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to return logs from the process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;task_tags&quot;</span><span class="p">:</span> <span class="n">Permissive</span><span class="p">(),</span>
+        <span class="s2">&quot;max_retries&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="mi">5</span><span class="p">),</span>
+        <span class="s2">&quot;retry_interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="mi">120</span><span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation will &quot;</span>
+                <span class="s2">&quot;be yielded when the solid executes. Default: True&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_snapshot_and_wait</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtRpcOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt snapshot`` command to a dbt RPC server and returns the result of</span>
+<span class="sd">    the executed dbt process.</span>
+
+<span class="sd">    This dbt RPC solid is synchronous, and will periodically poll the dbt RPC server until the dbt</span>
+<span class="sd">    process is completed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;task_tags&quot;</span><span class="p">]:</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">ps</span><span class="p">()</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">task</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="s2">&quot;result&quot;</span><span class="p">][</span><span class="s2">&quot;rows&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">task</span><span class="p">[</span><span class="s2">&quot;tags&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;task_tags&quot;</span><span class="p">]:</span>
+                <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;RPC task with tags </span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">task</span><span class="p">[</span><span class="s1">&#39;tags&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> currently running.&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="n">RetryRequested</span><span class="p">(</span>
+                    <span class="n">max_retries</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;max_retries&quot;</span><span class="p">],</span>
+                    <span class="n">seconds_to_wait</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;retry_interval&quot;</span><span class="p">],</span>
+                <span class="p">)</span>
+
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">snapshot</span><span class="p">(</span>
+        <span class="n">select</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">],</span> <span class="n">exclude</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;exclude&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="n">request_token</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_poll_rpc</span><span class="p">(</span>
+        <span class="n">context</span><span class="p">,</span>
+        <span class="n">request_token</span><span class="p">,</span>
+        <span class="n">should_yield_materializations</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_snapshot_freshness"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_snapshot_freshness">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt source snapshot-freshness over RPC.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">OutputDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;request_token&quot;</span><span class="p">,</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The request token of the invoked dbt snapshot.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt sources to snapshot-freshness for.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;warn_error&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to --warn-error.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_snapshot_freshness</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt source snapshot-freshness`` command to a dbt RPC server and</span>
+<span class="sd">    returns the request token.</span>
+
+<span class="sd">    This dbt RPC solid is asynchronous. The request token can be used in subsequent RPC requests to</span>
+<span class="sd">    poll the progress of the running dbt process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn_error&quot;</span><span class="p">]:</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; --warn-error&quot;</span>
+
+    <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; source snapshot-freshness&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">]:</span>
+        <span class="n">select</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">]))</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; --select </span><span class="si">{</span><span class="n">select</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running dbt command: dbt </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">cli</span><span class="p">(</span><span class="n">cli</span><span class="o">=</span><span class="n">command</span><span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_snapshot_freshness_and_wait"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_snapshot_freshness_and_wait">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;A solid to invoke dbt source snapshot-freshness over RPC and poll the resulting &quot;</span>
+        <span class="s2">&quot;RPC process until it&#39;s complete.&quot;</span>
+    <span class="p">),</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DbtRpcOutput</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="n">Array</span><span class="p">(</span><span class="n">String</span><span class="p">)),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt sources to snapshot-freshness for.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;warn_error&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to --warn-error.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The interval (in seconds) at which to poll the dbt rpc process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to return logs from the process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation will &quot;</span>
+                <span class="s2">&quot;be yielded when the solid executes. Default: True&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_snapshot_freshness_and_wait</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtRpcOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt source snapshot`` command to a dbt RPC server and returns the</span>
+<span class="sd">    result of the executed dbt process.</span>
+
+<span class="sd">    This dbt RPC solid is synchronous, and will periodically poll the dbt RPC server until the dbt</span>
+<span class="sd">    process is completed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn_error&quot;</span><span class="p">]:</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; --warn-error&quot;</span>
+
+    <span class="n">command</span> <span class="o">+=</span> <span class="s2">&quot; source snapshot-freshness&quot;</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">]:</span>
+        <span class="n">select</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;select&quot;</span><span class="p">]))</span>
+        <span class="n">command</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; --select </span><span class="si">{</span><span class="n">select</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Running dbt command: dbt </span><span class="si">{</span><span class="n">command</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">cli</span><span class="p">(</span><span class="n">cli</span><span class="o">=</span><span class="n">command</span><span class="p">)</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="n">request_token</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_poll_rpc</span><span class="p">(</span>
+        <span class="n">context</span><span class="p">,</span>
+        <span class="n">request_token</span><span class="p">,</span>
+        <span class="n">should_yield_materializations</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">],</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_rpc_compile_sql"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_rpc_compile_sql">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to compile a SQL query in context of a dbt project over RPC.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">),</span>
+        <span class="n">InputDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;sql&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The SQL query to be compiled.&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span>
+        <span class="p">),</span>
+    <span class="p">],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;sql&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The compiled SQL query.&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span><span class="p">)</span>
+    <span class="p">],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">String</span><span class="p">),</span>
+        <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The interval (in seconds) at which to poll the dbt rpc process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to return logs from the process.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation will &quot;</span>
+                <span class="s2">&quot;be yielded when the solid executes. Default: True&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dbt_rpc_compile_sql</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">,</span> <span class="n">sql</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">String</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid sends the ``dbt compile`` command to a dbt RPC server and returns the request</span>
+<span class="sd">    token.</span>
+
+<span class="sd">    This dbt RPC solid is asynchronous. The request token can be used in subsequent RPC requests to</span>
+<span class="sd">    poll the progress of the running dbt process.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">compile_sql</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="n">sql</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+    <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+    <span class="n">request_token</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">unwrap_result</span><span class="p">(</span>
+        <span class="n">_poll_rpc</span><span class="p">(</span>
+            <span class="n">context</span><span class="p">,</span>
+            <span class="n">request_token</span><span class="p">,</span>
+            <span class="n">should_yield_materializations</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="s2">&quot;compiled_sql&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="create_dbt_rpc_run_sql_solid"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.create_dbt_rpc_run_sql_solid">[docs]</a><span class="k">def</span> <span class="nf">create_dbt_rpc_run_sql_solid</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">output_def</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Callable</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This function is a factory which constructs a solid that will copy the results of a SQL query</span>
+<span class="sd">    run within the context of a dbt project to a pandas ``DataFrame``.</span>
+
+<span class="sd">    Any kwargs passed to this function will be passed along to the underlying :func:`@solid</span>
+<span class="sd">    &lt;dagster.solid&gt;` decorator. However, note that overriding ``config_schema``, ``input_defs``, and</span>
+<span class="sd">    ``required_resource_keys`` is not allowed and will throw a :class:`DagsterInvalidDefinitionError</span>
+<span class="sd">    &lt;dagster.DagsterInvalidDefinitionError&gt;`.</span>
+
+<span class="sd">    If you would like to configure this solid with different config fields, you could consider using</span>
+<span class="sd">    :func:`@composite_solid &lt;dagster.composite_solid&gt;` to wrap this solid.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of this solid.</span>
+<span class="sd">        output_def (OutputDefinition, optional): The :class:`OutputDefinition</span>
+<span class="sd">            &lt;dagster.OutputDefinition&gt;` for the solid. This value should always be a representation</span>
+<span class="sd">            of a pandas ``DataFrame``. If not specified, the solid will default to an</span>
+<span class="sd">            :class:`OutputDefinition &lt;dagster.OutputDefinition&gt;` named &quot;df&quot; with a ``DataFrame``</span>
+<span class="sd">            dagster type.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        SolidDefinition: Returns the constructed solid definition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">param_name</span><span class="o">=</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">obj</span><span class="o">=</span><span class="n">output_def</span><span class="p">,</span> <span class="n">param_name</span><span class="o">=</span><span class="s2">&quot;output_def&quot;</span><span class="p">,</span> <span class="n">ttype</span><span class="o">=</span><span class="n">OutputDefinition</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;config_schema&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span><span class="s2">&quot;Overriding config_schema is not supported.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;input_defs&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span><span class="s2">&quot;Overriding input_defs is not supported.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;required_resource_keys&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span><span class="s2">&quot;Overriding required_resource_keys is not supported.&quot;</span><span class="p">)</span>
+
+    <span class="nd">@solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;A solid to run a SQL query in context of a dbt project over RPC and return the &quot;</span>
+            <span class="s2">&quot;results in a pandas DataFrame.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">),</span>
+            <span class="n">InputDefinition</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;sql&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The SQL query to be run.&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">String</span>
+            <span class="p">),</span>
+        <span class="p">],</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">output_def</span>
+            <span class="ow">or</span> <span class="n">OutputDefinition</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;df&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The results of the SQL query.&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DataFrame</span>
+            <span class="p">)</span>
+        <span class="p">],</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">String</span><span class="p">),</span>
+            <span class="s2">&quot;interval&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                <span class="n">config</span><span class="o">=</span><span class="n">Int</span><span class="p">,</span>
+                <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">default_value</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The interval (in seconds) at which to poll the dbt rpc process.&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+                <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Whether or not to return logs from the process.&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+                <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                    <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation &quot;</span>
+                    <span class="s2">&quot;will be yielded when the solid executes. Default: True&quot;</span>
+                <span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">},</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;dbt_rpc&quot;</span><span class="p">},</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_dbt_rpc_run_sql</span><span class="p">(</span><span class="n">context</span><span class="p">:</span> <span class="n">SolidExecutionContext</span><span class="p">,</span> <span class="n">sql</span><span class="p">:</span> <span class="n">String</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DataFrame</span><span class="p">:</span>
+        <span class="n">resp</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">dbt_rpc</span><span class="o">.</span><span class="n">run_sql</span><span class="p">(</span><span class="n">sql</span><span class="o">=</span><span class="n">sql</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">resp</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+        <span class="n">raise_for_rpc_error</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">resp</span><span class="p">)</span>
+        <span class="n">request_token</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;result&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;request_token&quot;</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="n">unwrap_result</span><span class="p">(</span>
+            <span class="n">_poll_rpc</span><span class="p">(</span>
+                <span class="n">context</span><span class="p">,</span>
+                <span class="n">request_token</span><span class="p">,</span>
+                <span class="n">should_yield_materializations</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">table</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_records</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;rows&quot;</span><span class="p">],</span> <span class="n">columns</span><span class="o">=</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;column_names&quot;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">_dbt_rpc_run_sql</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

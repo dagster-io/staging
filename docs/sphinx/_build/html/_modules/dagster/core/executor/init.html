@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.executor.init &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.executor.init</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ExecutorDefinition</span><span class="p">,</span>
+    <span class="n">IPipeline</span><span class="p">,</span>
+    <span class="n">IntermediateStorageDefinition</span><span class="p">,</span>
+    <span class="n">ModeDefinition</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.core.system_config.objects</span> <span class="kn">import</span> <span class="n">EnvironmentConfig</span>
+
+
+<div class="viewcode-block" id="InitExecutorContext"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.InitExecutorContext">[docs]</a><span class="k">class</span> <span class="nc">InitExecutorContext</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;InitExecutorContext&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pipeline mode_def executor_def pipeline_run environment_config &quot;</span>
+        <span class="s2">&quot;executor_config intermediate_storage_def instance&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Executor-specific initialization context.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        pipeline (IPipeline): The pipeline to be executed.</span>
+<span class="sd">        mode_def (ModeDefinition): The mode in which the pipeline is to be executed.</span>
+<span class="sd">        executor_def (ExecutorDefinition): The definition of the executor currently being</span>
+<span class="sd">            constructed.</span>
+<span class="sd">        pipeline_run (PipelineRun): Configuration for this pipeline run.</span>
+<span class="sd">        environment_config (EnvironmentConfig): The parsed environment configuration for this</span>
+<span class="sd">            pipeline run.</span>
+<span class="sd">        executor_config (dict): The parsed config passed to the executor.</span>
+<span class="sd">        intermediate_storage_def (Optional[IntermediateStorageDefinition]): The intermediate storage definition.</span>
+<span class="sd">        instance (DagsterInstance): The current instance.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">pipeline</span><span class="p">,</span>
+        <span class="n">mode_def</span><span class="p">,</span>
+        <span class="n">executor_def</span><span class="p">,</span>
+        <span class="n">pipeline_run</span><span class="p">,</span>
+        <span class="n">environment_config</span><span class="p">,</span>
+        <span class="n">executor_config</span><span class="p">,</span>
+        <span class="n">instance</span><span class="p">,</span>
+        <span class="n">intermediate_storage_def</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InitExecutorContext</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">pipeline</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="n">IPipeline</span><span class="p">),</span>
+            <span class="n">mode_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">mode_def</span><span class="p">,</span> <span class="s2">&quot;mode_def&quot;</span><span class="p">,</span> <span class="n">ModeDefinition</span><span class="p">),</span>
+            <span class="n">executor_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">executor_def</span><span class="p">,</span> <span class="s2">&quot;executor_def&quot;</span><span class="p">,</span> <span class="n">ExecutorDefinition</span><span class="p">),</span>
+            <span class="n">pipeline_run</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">),</span>
+            <span class="n">environment_config</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">environment_config</span><span class="p">,</span> <span class="s2">&quot;environment_config&quot;</span><span class="p">,</span> <span class="n">EnvironmentConfig</span>
+            <span class="p">),</span>
+            <span class="n">executor_config</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">executor_config</span><span class="p">,</span> <span class="n">executor_config</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">intermediate_storage_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">intermediate_storage_def</span><span class="p">,</span> <span class="s2">&quot;intermediate_storage_def&quot;</span><span class="p">,</span> <span class="n">IntermediateStorageDefinition</span>
+            <span class="p">),</span>
+            <span class="n">instance</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

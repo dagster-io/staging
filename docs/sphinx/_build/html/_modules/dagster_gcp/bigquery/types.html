@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_gcp.bigquery.types &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_gcp.bigquery.types</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span> <span class="k">as</span> <span class="n">PyEnum</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Enum</span><span class="p">,</span> <span class="n">EnumValue</span>
+<span class="kn">from</span> <span class="nn">dagster.config</span> <span class="kn">import</span> <span class="n">ConfigScalar</span><span class="p">,</span> <span class="n">ConfigScalarKind</span><span class="p">,</span> <span class="n">PostProcessingError</span>
+<span class="kn">from</span> <span class="nn">google.cloud.bigquery.job</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CreateDisposition</span><span class="p">,</span>
+    <span class="n">Encoding</span><span class="p">,</span>
+    <span class="n">QueryPriority</span><span class="p">,</span>
+    <span class="n">SchemaUpdateOption</span><span class="p">,</span>
+    <span class="n">SourceFormat</span><span class="p">,</span>
+    <span class="n">WriteDisposition</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">BigQueryLoadSource</span><span class="p">(</span><span class="n">PyEnum</span><span class="p">):</span>
+    <span class="n">DataFrame</span> <span class="o">=</span> <span class="s2">&quot;DATA_FRAME&quot;</span>
+    <span class="n">GCS</span> <span class="o">=</span> <span class="s2">&quot;GCS&quot;</span>
+    <span class="n">File</span> <span class="o">=</span> <span class="s2">&quot;FILE&quot;</span>
+
+
+<span class="n">BQCreateDisposition</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;BQCreateDisposition&quot;</span><span class="p">,</span>
+    <span class="n">enum_values</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">CreateDisposition</span><span class="o">.</span><span class="n">CREATE_IF_NEEDED</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">CreateDisposition</span><span class="o">.</span><span class="n">CREATE_NEVER</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="n">BQPriority</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;BQPriority&quot;</span><span class="p">,</span>
+    <span class="n">enum_values</span><span class="o">=</span><span class="p">[</span><span class="n">EnumValue</span><span class="p">(</span><span class="n">QueryPriority</span><span class="o">.</span><span class="n">BATCH</span><span class="p">),</span> <span class="n">EnumValue</span><span class="p">(</span><span class="n">QueryPriority</span><span class="o">.</span><span class="n">INTERACTIVE</span><span class="p">)],</span>
+<span class="p">)</span>
+
+<span class="n">BQSchemaUpdateOption</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;BQSchemaUpdateOption&quot;</span><span class="p">,</span>
+    <span class="n">enum_values</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">EnumValue</span><span class="p">(</span>
+            <span class="n">SchemaUpdateOption</span><span class="o">.</span><span class="n">ALLOW_FIELD_ADDITION</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Allow adding a nullable field to the schema.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span>
+            <span class="n">SchemaUpdateOption</span><span class="o">.</span><span class="n">ALLOW_FIELD_RELAXATION</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Allow relaxing a required field in the original schema to nullable.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="n">BQWriteDisposition</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;BQWriteDisposition&quot;</span><span class="p">,</span>
+    <span class="n">enum_values</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">WriteDisposition</span><span class="o">.</span><span class="n">WRITE_APPEND</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">WriteDisposition</span><span class="o">.</span><span class="n">WRITE_EMPTY</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">WriteDisposition</span><span class="o">.</span><span class="n">WRITE_TRUNCATE</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+<span class="n">BQEncoding</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;BQEncoding&quot;</span><span class="p">,</span> <span class="n">enum_values</span><span class="o">=</span><span class="p">[</span><span class="n">EnumValue</span><span class="p">(</span><span class="n">Encoding</span><span class="o">.</span><span class="n">ISO_8859_1</span><span class="p">),</span> <span class="n">EnumValue</span><span class="p">(</span><span class="n">Encoding</span><span class="o">.</span><span class="n">UTF_8</span><span class="p">)]</span>
+<span class="p">)</span>
+
+<span class="n">BQSourceFormat</span> <span class="o">=</span> <span class="n">Enum</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;BQSourceFormat&quot;</span><span class="p">,</span>
+    <span class="n">enum_values</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">AVRO</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">CSV</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">DATASTORE_BACKUP</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">NEWLINE_DELIMITED_JSON</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">ORC</span><span class="p">),</span>
+        <span class="n">EnumValue</span><span class="p">(</span><span class="n">SourceFormat</span><span class="o">.</span><span class="n">PARQUET</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+
+
+<span class="c1"># Project names are permitted to have alphanumeric, dashes and underscores, up to 1024 characters.</span>
+<span class="n">RE_PROJECT</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;[\w\d\-\_]{1,1024}&quot;</span>
+
+<span class="c1"># Datasets and tables are permitted to have alphanumeric or underscores, no dashes allowed, up to</span>
+<span class="c1"># 1024 characters</span>
+<span class="n">RE_DS_TABLE</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;[\w\d\_]{1,1024}&quot;</span>
+
+<span class="c1"># BigQuery supports writes directly to date partitions with the syntax foo.bar$20190101</span>
+<span class="n">RE_PARTITION_SUFFIX</span> <span class="o">=</span> <span class="sa">r</span><span class="s2">&quot;(\$\d</span><span class="si">{8}</span><span class="s2">)?&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_is_valid_dataset</span><span class="p">(</span><span class="n">config_value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Datasets must be of form &quot;project.dataset&quot; or &quot;dataset&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span>
+        <span class="c1"># regex matches: project.dataset -- OR -- dataset</span>
+        <span class="sa">r</span><span class="s2">&quot;^&quot;</span> <span class="o">+</span> <span class="n">RE_PROJECT</span> <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;\.&quot;</span> <span class="o">+</span> <span class="n">RE_DS_TABLE</span> <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;$|^&quot;</span> <span class="o">+</span> <span class="n">RE_DS_TABLE</span> <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;$&quot;</span><span class="p">,</span>
+        <span class="n">config_value</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_is_valid_table</span><span class="p">(</span><span class="n">config_value</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Tables must be of form &quot;project.dataset.table&quot; or &quot;dataset.table&quot; with optional</span>
+<span class="sd">    date-partition suffix</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">&quot;^&quot;</span>
+        <span class="o">+</span> <span class="n">RE_PROJECT</span>  <span class="c1">#          project</span>
+        <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;\.&quot;</span>  <span class="c1">#               .</span>
+        <span class="o">+</span> <span class="n">RE_DS_TABLE</span>  <span class="c1">#         dataset</span>
+        <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;\.&quot;</span>  <span class="c1">#               .</span>
+        <span class="o">+</span> <span class="n">RE_DS_TABLE</span>  <span class="c1">#         table</span>
+        <span class="o">+</span> <span class="n">RE_PARTITION_SUFFIX</span>  <span class="c1"># date partition suffix</span>
+        <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;$|^&quot;</span>  <span class="c1">#              -- OR --</span>
+        <span class="o">+</span> <span class="n">RE_DS_TABLE</span>  <span class="c1">#         dataset</span>
+        <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;\.&quot;</span>  <span class="c1">#               .</span>
+        <span class="o">+</span> <span class="n">RE_DS_TABLE</span>  <span class="c1">#         table</span>
+        <span class="o">+</span> <span class="n">RE_PARTITION_SUFFIX</span>  <span class="c1"># date partition suffix</span>
+        <span class="o">+</span> <span class="sa">r</span><span class="s2">&quot;$&quot;</span><span class="p">,</span>
+        <span class="n">config_value</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">_Dataset</span><span class="p">(</span><span class="n">ConfigScalar</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_Dataset</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">key</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">given_name</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">scalar_kind</span><span class="o">=</span><span class="n">ConfigScalarKind</span><span class="o">.</span><span class="n">STRING</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">post_process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_valid_dataset</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">PostProcessingError</span><span class="p">(</span><span class="s1">&#39;Datasets must be of the form &quot;project.dataset&quot; or &quot;dataset&quot;&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">class</span> <span class="nc">_Table</span><span class="p">(</span><span class="n">ConfigScalar</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_Table</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">key</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">given_name</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+            <span class="n">scalar_kind</span><span class="o">=</span><span class="n">ConfigScalarKind</span><span class="o">.</span><span class="n">STRING</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">post_process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_is_valid_table</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">PostProcessingError</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="s1">&#39;Tables must be of the form &quot;project.dataset.table&quot; or &quot;dataset.table&quot; &#39;</span>
+                    <span class="s2">&quot;with optional date-partition suffix&quot;</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="c1"># https://github.com/dagster-io/dagster/issues/1971</span>
+<span class="n">Table</span> <span class="o">=</span> <span class="n">_Table</span><span class="p">()</span>
+<span class="n">Dataset</span> <span class="o">=</span> <span class="n">_Dataset</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="BigQueryError"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_gcp.html#dagster_gcp.BigQueryError">[docs]</a><span class="k">class</span> <span class="nc">BigQueryError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.input &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.input</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">BuiltinScalarDagsterType</span><span class="p">,</span>
+    <span class="n">DagsterType</span><span class="p">,</span>
+    <span class="n">resolve_dagster_type</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental_arg_warning</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+
+<span class="k">class</span> <span class="nc">_NoValueSentinel</span><span class="p">:</span>
+    <span class="k">pass</span>
+
+
+<span class="c1"># unfortunately since type_check functions need TypeCheckContext which is only available</span>
+<span class="c1"># at runtime, we can only check basic types before runtime</span>
+<span class="k">def</span> <span class="nf">_check_default_value</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="n">dagster_type</span><span class="p">,</span> <span class="n">default_value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">default_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_NoValueSentinel</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">is_nothing</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;Setting a default_value is invalid on InputDefinitions of type Nothing&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">,</span> <span class="n">BuiltinScalarDagsterType</span><span class="p">):</span>
+            <span class="n">type_check</span> <span class="o">=</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">type_check_scalar_value</span><span class="p">(</span><span class="n">default_value</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">type_check</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s2">&quot;Type check failed for the default_value of InputDefinition &quot;</span>
+                        <span class="s2">&quot;</span><span class="si">{input_name}</span><span class="s2"> of type </span><span class="si">{dagster_type}</span><span class="s2">. &quot;</span>
+                        <span class="s2">&quot;Received value </span><span class="si">{value}</span><span class="s2"> of type </span><span class="si">{type}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">input_name</span><span class="o">=</span><span class="n">input_name</span><span class="p">,</span>
+                        <span class="n">dagster_type</span><span class="o">=</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                        <span class="n">value</span><span class="o">=</span><span class="n">default_value</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">default_value</span><span class="p">),</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">default_value</span>
+
+
+<div class="viewcode-block" id="InputDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.InputDefinition">[docs]</a><span class="k">class</span> <span class="nc">InputDefinition</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Defines an argument to a solid&#39;s compute function.</span>
+
+<span class="sd">    Inputs may flow from previous solids&#39; outputs, or be stubbed using config. They may optionally</span>
+<span class="sd">    be typed using the Dagster type system.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): Name of the input.</span>
+<span class="sd">        dagster_type (Optional[Any]):  The type of this input. Users should provide one of the</span>
+<span class="sd">            :ref:`built-in types &lt;builtin&gt;`, a dagster type explicitly constructed with</span>
+<span class="sd">            :py:func:`as_dagster_type`, :py:func:`@usable_as_dagster_type &lt;dagster_type`, or</span>
+<span class="sd">            :py:func:`PythonObjectDagsterType`, or a Python type. Defaults to :py:class:`Any`.</span>
+<span class="sd">        description (Optional[str]): Human-readable description of the input.</span>
+<span class="sd">        default_value (Optional[Any]): The default value to use if no input is provided.</span>
+<span class="sd">        root_manager_key (Optional[str]): (Experimental) The resource key for the</span>
+<span class="sd">            :py:class:`RootInputManager` used for loading this input when it is not connected to an</span>
+<span class="sd">            upstream output.</span>
+<span class="sd">        metadata (Optional[Dict[str, Any]]): (Experimental) A dict of metadata for the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">dagster_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="n">_NoValueSentinel</span><span class="p">,</span>
+        <span class="n">root_manager_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span><span class="n">resolve_dagster_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">),</span> <span class="n">DagsterType</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_default_value</span> <span class="o">=</span> <span class="n">_check_default_value</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type</span><span class="p">,</span> <span class="n">default_value</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">root_manager_key</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;root_manager_key&quot;</span><span class="p">,</span> <span class="s2">&quot;InputDefinition&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_root_manager_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">root_manager_key</span><span class="p">,</span> <span class="s2">&quot;root_manager_key&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="s2">&quot;InputDefinition&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dagster_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">has_default_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="n">_NoValueSentinel</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">default_value</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">has_default_value</span><span class="p">,</span> <span class="s2">&quot;Can only fetch default_value if has_default_value&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_value</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">root_manager_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_root_manager_key</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span>
+
+<div class="viewcode-block" id="InputDefinition.mapping_to"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.InputDefinition.mapping_to">[docs]</a>    <span class="k">def</span> <span class="nf">mapping_to</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">fan_in_index</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create an input mapping to an input of a child solid.</span>
+
+<span class="sd">        In a CompositeSolidDefinition, you can use this helper function to construct</span>
+<span class="sd">        an :py:class:`InputMapping` to the input of a child solid.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            solid_name (str): The name of the child solid to which to map this input.</span>
+<span class="sd">            input_name (str): The name of the child solid&#39; input to which to map this input.</span>
+<span class="sd">            fan_in_index (Optional[int]): The index in to a fanned in input, else None</span>
+
+<span class="sd">        Examples:</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                input_mapping = InputDefinition(&#39;composite_input&#39;, Int).mapping_to(</span>
+<span class="sd">                    &#39;child_solid&#39;, &#39;int_input&#39;</span>
+<span class="sd">                )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="s2">&quot;input_name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">fan_in_index</span><span class="p">,</span> <span class="s2">&quot;fan_in_index&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">fan_in_index</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">maps_to</span> <span class="o">=</span> <span class="n">FanInInputPointer</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">fan_in_index</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">maps_to</span> <span class="o">=</span> <span class="n">InputPointer</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">InputMapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">maps_to</span><span class="p">)</span></div></div>
+
+
+<span class="k">class</span> <span class="nc">InputPointer</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_InputPointer&quot;</span><span class="p">,</span> <span class="s2">&quot;solid_name input_name&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InputPointer</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="s2">&quot;input_name&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">FanInInputPointer</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_FanInInputPointer&quot;</span><span class="p">,</span> <span class="s2">&quot;solid_name input_name fan_in_index&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">fan_in_index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">FanInInputPointer</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="s2">&quot;input_name&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">fan_in_index</span><span class="p">,</span> <span class="s2">&quot;fan_in_index&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="InputMapping"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.InputMapping">[docs]</a><span class="k">class</span> <span class="nc">InputMapping</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_InputMapping&quot;</span><span class="p">,</span> <span class="s2">&quot;definition maps_to&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Defines an input mapping for a composite solid.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        definition (InputDefinition): Defines the input to the composite solid.</span>
+<span class="sd">        solid_name (str): The name of the child solid onto which to map the input.</span>
+<span class="sd">        input_name (str): The name of the input to the child solid onto which to map the input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">definition</span><span class="p">,</span> <span class="n">maps_to</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InputMapping</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="s2">&quot;definition&quot;</span><span class="p">,</span> <span class="n">InputDefinition</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">maps_to</span><span class="p">,</span> <span class="s2">&quot;maps_to&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">InputPointer</span><span class="p">,</span> <span class="n">FanInInputPointer</span><span class="p">)),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">maps_to_fan_in</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">maps_to</span><span class="p">,</span> <span class="n">FanInInputPointer</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

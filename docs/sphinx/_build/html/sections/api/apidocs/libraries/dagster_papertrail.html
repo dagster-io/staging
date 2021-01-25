@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Papertrail (dagster_papertrail) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="PostgreSQL (dagster_postgres)" href="dagster_postgres.html" />
+    <link rel="prev" title="Pandas (dagster_pandas)" href="dagster_pandas.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_pandas.html" title="Previous document">Pandas (dagster_pandas)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_postgres.html" title="Next document">PostgreSQL (dagster_postgres)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="papertrail-dagster-papertrail">
+<h1>Papertrail (dagster_papertrail)<a class="headerlink" href="#papertrail-dagster-papertrail" title="Permalink to this headline">¶</a></h1>
+<p>This library provides an integration with <a class="reference external" href="https://papertrailapp.com">Papertrail</a> for logging.</p>
+<p>You can easily set up your Dagster pipeline to log to Papertrail. You’ll need an active Papertrail
+account, and have your papertrail URL and port handy.</p>
+<dl class="data">
+<dt id="dagster_papertrail.papertrail_logger">
+<code class="sig-prename descclassname">dagster_papertrail.</code><code class="sig-name descname">papertrail_logger</code><em class="property"> LoggerDefinition</em><a class="headerlink" href="#dagster_papertrail.papertrail_logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core class for defining loggers.</p>
+<p>Loggers are pipeline-scoped logging handlers, which will be automatically invoked whenever
+solids in a pipeline log messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>logger_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="../loggers.html#dagster.InitLoggerContext" title="dagster.InitLoggerContext"><em>InitLoggerContext</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.8)"><em>logging.Logger</em></a><em>]</em>) – User-provided function to
+instantiate the logger. This logger will be automatically invoked whenever the methods
+on <code class="docutils literal notranslate"><span class="pre">context.log</span></code> are called from within solid compute logic.</p></li>
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the config. Configuration data available in
+<cite>init_context.logger_config</cite>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of this logger.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_pandas.html" title="Previous document">Pandas (dagster_pandas)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_postgres.html" title="Next document">PostgreSQL (dagster_postgres)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

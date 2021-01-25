@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.decorators.pipeline &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.decorators.pipeline</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental_arg_warning</span>
+
+<span class="kn">from</span> <span class="nn">..hook</span> <span class="kn">import</span> <span class="n">HookDefinition</span>
+<span class="kn">from</span> <span class="nn">..input</span> <span class="kn">import</span> <span class="n">InputDefinition</span>
+<span class="kn">from</span> <span class="nn">..mode</span> <span class="kn">import</span> <span class="n">ModeDefinition</span>
+<span class="kn">from</span> <span class="nn">..output</span> <span class="kn">import</span> <span class="n">OutputDefinition</span>
+<span class="kn">from</span> <span class="nn">..pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+<span class="kn">from</span> <span class="nn">..preset</span> <span class="kn">import</span> <span class="n">PresetDefinition</span>
+
+
+<span class="k">class</span> <span class="nc">_Pipeline</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mode_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">preset_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">hook_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mode_definitions</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">mode_defs</span><span class="p">,</span> <span class="s2">&quot;mode_defs&quot;</span><span class="p">,</span> <span class="n">ModeDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">preset_definitions</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">preset_defs</span><span class="p">,</span> <span class="s2">&quot;preset_defs&quot;</span><span class="p">,</span> <span class="n">PresetDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hook_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span><span class="n">hook_defs</span><span class="p">,</span> <span class="s2">&quot;hook_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">HookDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+            <span class="n">input_defs</span><span class="p">,</span> <span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">InputDefinition</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">did_pass_outputs</span> <span class="o">=</span> <span class="n">output_defs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+            <span class="n">output_defs</span><span class="p">,</span> <span class="s2">&quot;output_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">OutputDefinition</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="o">=</span> <span class="n">config_schema</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">config_fn</span><span class="p">,</span> <span class="s2">&quot;config_fn&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="kn">from</span> <span class="nn">dagster.core.definitions.decorators.composite_solid</span> <span class="kn">import</span> <span class="n">do_composition</span>
+
+        <span class="p">(</span>
+            <span class="n">input_mappings</span><span class="p">,</span>
+            <span class="n">output_mappings</span><span class="p">,</span>
+            <span class="n">dependencies</span><span class="p">,</span>
+            <span class="n">solid_defs</span><span class="p">,</span>
+            <span class="n">config_mapping</span><span class="p">,</span>
+            <span class="n">positional_inputs</span><span class="p">,</span>
+        <span class="p">)</span> <span class="o">=</span> <span class="n">do_composition</span><span class="p">(</span>
+            <span class="s2">&quot;@pipeline&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">fn</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_defs</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config_fn</span><span class="p">,</span>
+            <span class="n">ignore_output_from_composition_fn</span><span class="o">=</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">did_pass_outputs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">dependencies</span><span class="o">=</span><span class="n">dependencies</span><span class="p">,</span>
+            <span class="n">solid_defs</span><span class="o">=</span><span class="n">solid_defs</span><span class="p">,</span>
+            <span class="n">mode_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode_definitions</span><span class="p">,</span>
+            <span class="n">preset_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">preset_definitions</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">tags</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+            <span class="n">hook_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">,</span>
+            <span class="n">input_mappings</span><span class="o">=</span><span class="n">input_mappings</span><span class="p">,</span>
+            <span class="n">output_mappings</span><span class="o">=</span><span class="n">output_mappings</span><span class="p">,</span>
+            <span class="n">config_mapping</span><span class="o">=</span><span class="n">config_mapping</span><span class="p">,</span>
+            <span class="n">positional_inputs</span><span class="o">=</span><span class="n">positional_inputs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">pipeline_def</span>
+
+
+<div class="viewcode-block" id="pipeline"><a class="viewcode-back" href="../../../../../sections/api/apidocs/pipeline.html#dagster.pipeline">[docs]</a><span class="k">def</span> <span class="nf">pipeline</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">preset_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">hook_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a pipeline with the specified parameters from the decorated composition function.</span>
+
+<span class="sd">    Using this decorator allows you to build up the dependency graph of the pipeline by writing a</span>
+<span class="sd">    function that invokes solids and passes the output to other solids.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of the pipeline. Must be unique within any</span>
+<span class="sd">            :py:class:`RepositoryDefinition` containing the pipeline.</span>
+<span class="sd">        description (Optional[str]): A human-readable description of the pipeline.</span>
+<span class="sd">        mode_defs (Optional[List[ModeDefinition]]): The set of modes in which this pipeline can</span>
+<span class="sd">            operate. Modes are used to attach resources, custom loggers, custom system storage</span>
+<span class="sd">            options, and custom executors to a pipeline. Modes can be used, e.g., to vary</span>
+<span class="sd">            available resource and logging implementations between local test and production runs.</span>
+<span class="sd">        preset_defs (Optional[List[PresetDefinition]]): A set of preset collections of configuration</span>
+<span class="sd">            options that may be used to execute a pipeline. A preset consists of an environment</span>
+<span class="sd">            dict, an optional subset of solids to execute, and a mode selection. Presets can be used</span>
+<span class="sd">            to ship common combinations of options to pipeline end users in Python code, and can</span>
+<span class="sd">            be selected by tools like Dagit.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Arbitrary metadata for any execution run of the pipeline.</span>
+<span class="sd">            Values that are not strings will be json encoded and must meet the criteria that</span>
+<span class="sd">            `json.loads(json.dumps(value)) == value`.  These tag values may be overwritten by tag</span>
+<span class="sd">            values provided at invocation time.</span>
+<span class="sd">        hook_defs (Optional[Set[HookDefinition]]): A set of hook definitions applied to the</span>
+<span class="sd">            pipeline. When a hook is applied to a pipeline, it will be attached to all solid</span>
+<span class="sd">            instances within the pipeline.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid(output_defs=[OutputDefinition(int, &quot;two&quot;), OutputDefinition(int, &quot;four&quot;)])</span>
+<span class="sd">            def emit_two_four(_) -&gt; int:</span>
+<span class="sd">                yield Output(2, &quot;two&quot;)</span>
+<span class="sd">                yield Output(4, &quot;four&quot;)</span>
+
+
+<span class="sd">            @lambda_solid</span>
+<span class="sd">            def add_one(num: int) -&gt; int:</span>
+<span class="sd">                return num + 1</span>
+
+
+<span class="sd">            @lambda_solid</span>
+<span class="sd">            def mult_two(num: int) -&gt; int:</span>
+<span class="sd">                return num * 2</span>
+
+
+<span class="sd">            @pipeline</span>
+<span class="sd">            def math_pipeline():</span>
+<span class="sd">                two, four = emit_two_four()</span>
+<span class="sd">                add_one(two)</span>
+<span class="sd">                mult_two(four)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">input_defs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">output_defs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;output_defs&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">config_schema</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;config_schema&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">config_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;config_fn&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">description</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_Pipeline</span><span class="p">()(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_Pipeline</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">mode_defs</span><span class="o">=</span><span class="n">mode_defs</span><span class="p">,</span>
+        <span class="n">preset_defs</span><span class="o">=</span><span class="n">preset_defs</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+        <span class="n">hook_defs</span><span class="o">=</span><span class="n">hook_defs</span><span class="p">,</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="n">input_defs</span><span class="p">,</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="n">output_defs</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+        <span class="n">config_fn</span><span class="o">=</span><span class="n">config_fn</span><span class="p">,</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

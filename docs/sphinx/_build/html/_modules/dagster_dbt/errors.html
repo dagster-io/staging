@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_dbt.errors &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_dbt.errors</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">EventMetadataEntry</span><span class="p">,</span> <span class="n">Failure</span><span class="p">,</span> <span class="n">check</span>
+
+
+<div class="viewcode-block" id="DagsterDbtError"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DagsterDbtError">[docs]</a><span class="k">class</span> <span class="nc">DagsterDbtError</span><span class="p">(</span><span class="n">Failure</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The base exception of the ``dagster-dbt`` library.&quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="DagsterDbtCliUnexpectedOutputError"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DagsterDbtCliUnexpectedOutputError">[docs]</a><span class="k">class</span> <span class="nc">DagsterDbtCliUnexpectedOutputError</span><span class="p">(</span><span class="n">DagsterDbtError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents an error when parsing the output of a dbt CLI command.&quot;&quot;&quot;</span>
+
+    <span class="n">invalid_line_nos</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">invalid_line_nos</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">invalid_line_nos</span><span class="p">,</span> <span class="s2">&quot;invalid_line_nos&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">line_nos_str</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">invalid_line_nos</span><span class="p">))</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;dbt CLI emitted unexpected output on lines </span><span class="si">{</span><span class="n">line_nos_str</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">metadata_entries</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;line_nos&quot;</span><span class="p">:</span> <span class="n">invalid_line_nos</span><span class="p">},</span> <span class="s2">&quot;Invalid CLI Output Line Numbers&quot;</span>
+            <span class="p">)</span>
+        <span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invalid_line_nos</span> <span class="o">=</span> <span class="n">invalid_line_nos</span></div>
+
+
+<div class="viewcode-block" id="DagsterDbtCliRuntimeError"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DagsterDbtCliRuntimeError">[docs]</a><span class="k">class</span> <span class="nc">DagsterDbtCliRuntimeError</span><span class="p">(</span><span class="n">DagsterDbtError</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents an error while executing a dbt CLI command.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">logs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">raw_output</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">metadata_entries</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">({</span><span class="s2">&quot;logs&quot;</span><span class="p">:</span> <span class="n">logs</span><span class="p">},</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Parsed CLI Output (JSON)&quot;</span><span class="p">,),</span>
+            <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+                <span class="n">DagsterDbtCliRuntimeError</span><span class="o">.</span><span class="n">stitch_messages</span><span class="p">(</span><span class="n">logs</span><span class="p">),</span>
+                <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Parsed CLI Output (JSON) Message Attributes&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">raw_output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Raw CLI Output&quot;</span><span class="p">,),</span>
+        <span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">stitch_messages</span><span class="p">(</span><span class="n">logs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="n">log</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">log</span> <span class="ow">in</span> <span class="n">logs</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">log</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;message&quot;</span><span class="p">),</span> <span class="nb">str</span><span class="p">)</span>  <span class="c1"># defensive</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterDbtCliHandledRuntimeError"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DagsterDbtCliHandledRuntimeError">[docs]</a><span class="k">class</span> <span class="nc">DagsterDbtCliHandledRuntimeError</span><span class="p">(</span><span class="n">DagsterDbtCliRuntimeError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents a model error reported by the dbt CLI at runtime (return code 1).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">raw_output</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;Handled error in the dbt CLI (return code 1)&quot;</span><span class="p">,</span> <span class="n">logs</span><span class="p">,</span> <span class="n">raw_output</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterDbtCliFatalRuntimeError"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DagsterDbtCliFatalRuntimeError">[docs]</a><span class="k">class</span> <span class="nc">DagsterDbtCliFatalRuntimeError</span><span class="p">(</span><span class="n">DagsterDbtCliRuntimeError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents a fatal error in the dbt CLI (return code 2).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span> <span class="n">raw_output</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;Fatal error in the dbt CLI (return code 2)&quot;</span><span class="p">,</span> <span class="n">logs</span><span class="p">,</span> <span class="n">raw_output</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterDbtRpcUnexpectedPollOutputError"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DagsterDbtRpcUnexpectedPollOutputError">[docs]</a><span class="k">class</span> <span class="nc">DagsterDbtRpcUnexpectedPollOutputError</span><span class="p">(</span><span class="n">DagsterDbtError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents an unexpected response when polling the dbt RPC server.&quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="DagsterDbtCliOutputsNotFoundError"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DagsterDbtCliOutputsNotFoundError">[docs]</a><span class="k">class</span> <span class="nc">DagsterDbtCliOutputsNotFoundError</span><span class="p">(</span><span class="n">DagsterDbtError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents a problem in finding the ``target/run_results.json`` artifact when executing a dbt</span>
+<span class="sd">    CLI command.</span>
+
+<span class="sd">    For more details on ``target/run_results.json``, see</span>
+<span class="sd">    https://docs.getdbt.com/reference/dbt-artifacts#run_resultsjson.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;Expected to find file at path </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

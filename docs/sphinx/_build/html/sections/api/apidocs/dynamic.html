@@ -1,0 +1,130 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dynamic Graphs (Experimental) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Types" href="types.html" />
+    <link rel="prev" title="Solids" href="solids.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="solids.html" title="Previous document">Solids</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="types.html" title="Next document">Types</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="dynamic-graphs-experimental">
+<h1>Dynamic Graphs (Experimental)<a class="headerlink" href="#dynamic-graphs-experimental" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="dagster.experimental.DynamicOutputDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.experimental.</code><code class="sig-name descname">DynamicOutputDefinition</code><span class="sig-paren">(</span><em class="sig-param">dagster_type=None</em>, <em class="sig-param">name=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">is_required=None</em>, <em class="sig-param">io_manager_key=None</em>, <em class="sig-param">metadata=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/output.html#DynamicOutputDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.experimental.DynamicOutputDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>(EXPERIMENTAL) Variant of <code class="xref py py-class docutils literal notranslate"><span class="pre">OutputDefinition</span></code> for an output that will dynamically
+alter the graph at runtime. Each copy of <a class="reference internal" href="#dagster.experimental.DynamicOutput" title="dagster.experimental.DynamicOutput"><code class="xref py py-class docutils literal notranslate"><span class="pre">DynamicOutput</span></code></a> corresponding to this
+definition that is yielded from the solid will create a copy of the downstream graph.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.experimental.DynamicOutput">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.experimental.</code><code class="sig-name descname">DynamicOutput</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/events.html#DynamicOutput"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.experimental.DynamicOutput" title="Permalink to this definition">¶</a></dt>
+<dd><p>(Experimental) Variant of <code class="xref py py-class docutils literal notranslate"><span class="pre">Output</span></code> used to support mapping. Each DynamicOutput
+produced by a solid will result in the downstream dag being cloned to run on that individual
+value. Each DynamicOutput must have a unique mapping_key to distinguish it.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Any</em>) – The value returned by the compute function.</p></li>
+<li><p><strong>mapping_key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The key that uniquely identifies this dynamic value relative to its peers.</p></li>
+<li><p><strong>output_name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Name of the corresponding output definition. (default: “result”)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="solids.html" title="Previous document">Solids</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="types.html" title="Next document">Types</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

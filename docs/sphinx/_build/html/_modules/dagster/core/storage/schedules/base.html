@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.schedules.base &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.schedules.base</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">abc</span>
+
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.job</span> <span class="kn">import</span> <span class="n">JobType</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterScheduleWipeRequired</span>
+<span class="kn">from</span> <span class="nn">dagster.core.scheduler.job</span> <span class="kn">import</span> <span class="n">JobStatus</span>
+
+
+<div class="viewcode-block" id="ScheduleStorage"><a class="viewcode-back" href="../../../../../sections/api/apidocs/internals.html#dagster.core.storage.schedules.ScheduleStorage">[docs]</a><span class="k">class</span> <span class="nc">ScheduleStorage</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract class for managing persistance of scheduler artifacts</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">wipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete all schedules from storage</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">all_stored_job_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">repository_origin_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">job_type</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all JobStates present in storage</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            repository_origin_id (Optional[str]): The ExternalRepository target id to scope results to</span>
+<span class="sd">            job_type (Optional[JobType]): The JobType to scope results to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_job_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_origin_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the unique job with the given id</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job_origin_id (str): The unique job identifier</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_job_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a job to storage.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job (JobState): The job to add</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">update_job_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a job in storage.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job (JobState): The job to update</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">delete_job_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_origin_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete a job in storage.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job_origin_id (str): The id of the ExternalJob target to delete</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_job_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_origin_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the ticks for a given job.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job_origin_id (str): The id of the ExternalJob target</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_latest_job_tick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_origin_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the most recent tick for a given job.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job_origin_id (str): The id of the ExternalJob target</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">create_job_tick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_tick_data</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a job tick to storage.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            repository_name (str): The repository the schedule belongs to</span>
+<span class="sd">            job_tick_data (JobTickData): The job tick to add</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">update_job_tick</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tick</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a job tick already in storage.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tick (ScheduleTick): The job tick to update</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">purge_job_ticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_origin_id</span><span class="p">,</span> <span class="n">tick_status</span><span class="p">,</span> <span class="n">before</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Wipe ticks for a job for a certain status and timestamp.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job_origin_id (str): The id of the ExternalJob target to delete</span>
+<span class="sd">            tick_status (JobTickStatus): The tick status to wipe</span>
+<span class="sd">            before (datetime): All ticks before this datetime will get purged</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_job_tick_stats</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_origin_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get tick stats for a given job.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            job_origin_id (str): The id of the ExternalJob target</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">upgrade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform any needed migrations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">optimize_for_dagit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statement_timeout</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Allows for optimizing database connection / use in the context of a long lived dagit process&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">validate_stored_schedules</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scheduler_class</span><span class="p">):</span>
+        <span class="c1"># Check for any running job states that reference a different scheduler,</span>
+        <span class="c1"># prompt the user to wipe if they don&#39;t match</span>
+        <span class="n">stored_schedules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_stored_job_state</span><span class="p">(</span><span class="n">job_type</span><span class="o">=</span><span class="n">JobType</span><span class="o">.</span><span class="n">SCHEDULE</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">schedule</span> <span class="ow">in</span> <span class="n">stored_schedules</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">schedule</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">RUNNING</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">stored_scheduler_class</span> <span class="o">=</span> <span class="n">schedule</span><span class="o">.</span><span class="n">job_specific_data</span><span class="o">.</span><span class="n">scheduler</span>
+
+            <span class="k">if</span> <span class="n">stored_scheduler_class</span> <span class="ow">and</span> <span class="n">stored_scheduler_class</span> <span class="o">!=</span> <span class="n">scheduler_class</span><span class="p">:</span>
+                <span class="n">instance_scheduler_class</span> <span class="o">=</span> <span class="n">scheduler_class</span> <span class="k">if</span> <span class="n">scheduler_class</span> <span class="k">else</span> <span class="s2">&quot;None&quot;</span>
+
+                <span class="k">raise</span> <span class="n">DagsterScheduleWipeRequired</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Found a running schedule using a scheduler (</span><span class="si">{</span><span class="n">stored_scheduler_class</span><span class="si">}</span><span class="s2">) &quot;</span>
+                    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;that differs from the scheduler on the instance (</span><span class="si">{</span><span class="n">instance_scheduler_class</span><span class="si">}</span><span class="s2">). &quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;The most likely reason for this error is that you changed the scheduler on &quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;your instance while it was still running schedules. &quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;To fix this, change the scheduler on your instance back to the previous &quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;scheduler configuration and run the command &#39;dagster schedule wipe&#39;. It &quot;</span>
+                    <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot;will then be safe to change back to </span><span class="si">{</span><span class="n">instance_scheduler_class</span><span class="si">}</span><span class="s2">.&quot;</span>
+                <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

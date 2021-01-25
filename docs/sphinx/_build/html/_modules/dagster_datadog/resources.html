@@ -1,0 +1,170 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_datadog.resources &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_datadog.resources</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">resource</span>
+<span class="kn">from</span> <span class="nn">datadog</span> <span class="kn">import</span> <span class="n">DogStatsd</span><span class="p">,</span> <span class="n">initialize</span><span class="p">,</span> <span class="n">statsd</span>
+
+
+<span class="k">class</span> <span class="nc">DataDogResource</span><span class="p">:</span>
+    <span class="c1"># Mirroring levels from the dogstatsd library</span>
+    <span class="n">OK</span><span class="p">,</span> <span class="n">WARNING</span><span class="p">,</span> <span class="n">CRITICAL</span><span class="p">,</span> <span class="n">UNKNOWN</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">DogStatsd</span><span class="o">.</span><span class="n">OK</span><span class="p">,</span>
+        <span class="n">DogStatsd</span><span class="o">.</span><span class="n">WARNING</span><span class="p">,</span>
+        <span class="n">DogStatsd</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span>
+        <span class="n">DogStatsd</span><span class="o">.</span><span class="n">UNKNOWN</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">api_key</span><span class="p">,</span> <span class="n">app_key</span><span class="p">):</span>
+        <span class="n">initialize</span><span class="p">(</span><span class="n">api_key</span><span class="o">=</span><span class="n">api_key</span><span class="p">,</span> <span class="n">app_key</span><span class="o">=</span><span class="n">app_key</span><span class="p">)</span>
+
+        <span class="c1"># Pull in methods from the dogstatsd library</span>
+        <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="p">[</span>
+            <span class="s2">&quot;event&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;gauge&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;increment&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;decrement&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;histogram&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;distribution&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;set&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;service_check&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;timed&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;timing&quot;</span><span class="p">,</span>
+        <span class="p">]:</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">statsd</span><span class="p">,</span> <span class="n">method</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="datadog_resource"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_datadog.html#dagster_datadog.datadog_resource">[docs]</a><span class="nd">@resource</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;api_key&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Datadog API key&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;app_key&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Datadog application key&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;This resource is for publishing to DataDog&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">datadog_resource</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This resource is a thin wrapper over the</span>
+<span class="sd">    `dogstatsd library &lt;https://datadogpy.readthedocs.io/en/latest/&gt;`_.</span>
+
+<span class="sd">    As such, we directly mirror the public API methods of DogStatsd here; you can refer to the</span>
+<span class="sd">    `DataDog documentation &lt;https://docs.datadoghq.com/developers/dogstatsd/&gt;`_ for how to use this</span>
+<span class="sd">    resource.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid(required_resource_keys={&#39;datadog&#39;})</span>
+<span class="sd">            def datadog_solid(context):</span>
+<span class="sd">                dd = context.resources.datadog</span>
+
+<span class="sd">                dd.event(&#39;Man down!&#39;, &#39;This server needs assistance.&#39;)</span>
+<span class="sd">                dd.gauge(&#39;users.online&#39;, 1001, tags=[&quot;protocol:http&quot;])</span>
+<span class="sd">                dd.increment(&#39;page.views&#39;)</span>
+<span class="sd">                dd.decrement(&#39;page.views&#39;)</span>
+<span class="sd">                dd.histogram(&#39;album.photo.count&#39;, 26, tags=[&quot;gender:female&quot;])</span>
+<span class="sd">                dd.distribution(&#39;album.photo.count&#39;, 26, tags=[&quot;color:blue&quot;])</span>
+<span class="sd">                dd.set(&#39;visitors.uniques&#39;, 999, tags=[&quot;browser:ie&quot;])</span>
+<span class="sd">                dd.service_check(&#39;svc.check_name&#39;, dd.WARNING)</span>
+<span class="sd">                dd.timing(&quot;query.response.time&quot;, 1234)</span>
+
+<span class="sd">                # Use timed decorator</span>
+<span class="sd">                @dd.timed(&#39;run_fn&#39;)</span>
+<span class="sd">                def run_fn():</span>
+<span class="sd">                    pass</span>
+
+<span class="sd">                run_fn()</span>
+
+<span class="sd">            @pipeline(mode_defs=[ModeDefinition(resource_defs={&#39;datadog&#39;: datadog_resource})])</span>
+<span class="sd">            def dd_pipeline():</span>
+<span class="sd">                datadog_solid()</span>
+
+<span class="sd">            result = execute_pipeline(</span>
+<span class="sd">                dd_pipeline,</span>
+<span class="sd">                {&#39;resources&#39;: {&#39;datadog&#39;: {&#39;config&#39;: {&#39;api_key&#39;: &#39;YOUR_KEY&#39;, &#39;app_key&#39;: &#39;YOUR_KEY&#39;}}}},</span>
+<span class="sd">            )</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">DataDogResource</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;api_key&quot;</span><span class="p">),</span> <span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;app_key&quot;</span><span class="p">)</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Great Expectations (dagster_ge) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="GitHub (dagster_github)" href="dagster_github.html" />
+    <link rel="prev" title="GCP (dagster_gcp)" href="dagster_gcp.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_gcp.html" title="Previous document">GCP (dagster_gcp)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_github.html" title="Next document">GitHub (dagster_github)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="great-expectations-dagster-ge">
+<h1>Great Expectations (dagster_ge)<a class="headerlink" href="#great-expectations-dagster-ge" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="dagster_ge.ge_validation_solid_factory">
+<code class="sig-prename descclassname">dagster_ge.</code><code class="sig-name descname">ge_validation_solid_factory</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">datasource_name</em>, <em class="sig-param">suite_name</em>, <em class="sig-param">validation_operator_name=None</em>, <em class="sig-param">input_dagster_type=&lt;dagster.core.types.dagster_type.DagsterType object&gt;</em>, <em class="sig-param">batch_kwargs=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_ge/factory.html#ge_validation_solid_factory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_ge.ge_validation_solid_factory" title="Permalink to this definition">¶</a></dt>
+<dd><blockquote>
+<div><p>Generates solids for interacting with GE.</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – the name of the solid</p></li>
+<li><p><strong>datasource_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – the name of your DataSource, see your great_expectations.yml</p></li>
+<li><p><strong>suite_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – the name of your expectation suite, see your great_expectations.yml</p></li>
+<li><p><strong>validation_operator_name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – what validation operator to run  – defaults to None,
+which generates an ephemeral validator.
+If you want to save data docs, use ‘action_list_operator’.
+See <a class="reference external" href="https://docs.greatexpectations.io/en/latest/reference/core_concepts/validation_operators_and_actions.html">https://docs.greatexpectations.io/en/latest/reference/core_concepts/validation_operators_and_actions.html</a></p></li>
+<li><p><strong>input_dagster_type</strong> (<a class="reference internal" href="../types.html#dagster.DagsterType" title="dagster.DagsterType"><em>DagsterType</em></a>) – the Dagster type used to type check the input to the
+solid. Defaults to <cite>dagster_pandas.DataFrame</cite>.</p></li>
+<li><p><strong>batch_kwargs</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – overrides the <cite>batch_kwargs</cite> parameter when calling the
+<cite>ge_data_context</cite>’s <cite>get_batch</cite> method. Defaults to <cite>{“dataset”: dataset}</cite>,
+where <cite>dataset</cite> is the input to the generated solid.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A solid that takes in a set of data and yields both an expectation with relevant metadata
+and an output with all the metadata (for user processing)</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_gcp.html" title="Previous document">GCP (dagster_gcp)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_github.html" title="Next document">GitHub (dagster_github)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

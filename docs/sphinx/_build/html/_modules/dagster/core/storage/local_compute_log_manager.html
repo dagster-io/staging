@@ -1,0 +1,288 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.local_compute_log_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.local_compute_log_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">hashlib</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.compute_logs</span> <span class="kn">import</span> <span class="n">mirror_stream_to_file</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">ConfigurableClass</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">ensure_dir</span><span class="p">,</span> <span class="n">touch_file</span>
+<span class="kn">from</span> <span class="nn">watchdog.events</span> <span class="kn">import</span> <span class="n">PatternMatchingEventHandler</span>
+<span class="kn">from</span> <span class="nn">watchdog.observers.polling</span> <span class="kn">import</span> <span class="n">PollingObserver</span>
+
+<span class="kn">from</span> <span class="nn">.compute_log_manager</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MAX_BYTES_FILE_READ</span><span class="p">,</span>
+    <span class="n">ComputeIOType</span><span class="p">,</span>
+    <span class="n">ComputeLogFileData</span><span class="p">,</span>
+    <span class="n">ComputeLogManager</span><span class="p">,</span>
+    <span class="n">ComputeLogSubscription</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">WATCHDOG_POLLING_TIMEOUT</span> <span class="o">=</span> <span class="mf">2.5</span>
+
+<span class="n">IO_TYPE_EXTENSION</span> <span class="o">=</span> <span class="p">{</span><span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">:</span> <span class="s2">&quot;out&quot;</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDERR</span><span class="p">:</span> <span class="s2">&quot;err&quot;</span><span class="p">}</span>
+
+<span class="n">MAX_FILENAME_LENGTH</span> <span class="o">=</span> <span class="mi">255</span>
+
+
+<div class="viewcode-block" id="LocalComputeLogManager"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.local_compute_log_manager.LocalComputeLogManager">[docs]</a><span class="k">class</span> <span class="nc">LocalComputeLogManager</span><span class="p">(</span><span class="n">ComputeLogManager</span><span class="p">,</span> <span class="n">ConfigurableClass</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Stores copies of stdout &amp; stderr for each compute step locally on disk.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">,</span> <span class="n">inst_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span> <span class="o">=</span> <span class="n">base_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subscription_manager</span> <span class="o">=</span> <span class="n">LocalComputeLogSubscriptionManager</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="s2">&quot;inst_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span><span class="p">)</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">_watch_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_key</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+        <span class="n">outpath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">)</span>
+        <span class="n">errpath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDERR</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">mirror_stream_to_file</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">outpath</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">mirror_stream_to_file</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="n">errpath</span><span class="p">):</span>
+                <span class="k">yield</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">inst_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">config_type</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">StringSource</span><span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_config_value</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">LocalComputeLogManager</span><span class="p">(</span><span class="n">inst_data</span><span class="o">=</span><span class="n">inst_data</span><span class="p">,</span> <span class="o">**</span><span class="n">config_value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_run_directory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_base_dir</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;compute_logs&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_local_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">io_type</span><span class="p">,</span> <span class="s2">&quot;io_type&quot;</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">IO_TYPE_EXTENSION</span><span class="p">[</span><span class="n">io_type</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">complete_artifact_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="s2">&quot;complete&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_local_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">extension</span><span class="p">):</span>
+        <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">extension</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">MAX_FILENAME_LENGTH</span><span class="p">:</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">hashlib</span><span class="o">.</span><span class="n">md5</span><span class="p">(</span><span class="n">key</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">(),</span> <span class="n">extension</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_run_directory</span><span class="p">(</span><span class="n">run_id</span><span class="p">),</span> <span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">read_logs_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=</span><span class="n">MAX_BYTES_FILE_READ</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">ComputeLogFileData</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">download_url</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># See: https://docs.python.org/2/library/stdtypes.html#file.tell for Windows behavior</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">seek</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">SEEK_SET</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">max_bytes</span><span class="p">)</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
+            <span class="n">stats</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">fstat</span><span class="p">(</span><span class="n">f</span><span class="o">.</span><span class="n">fileno</span><span class="p">())</span>
+
+        <span class="c1"># local download path</span>
+        <span class="n">download_url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">download_url</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ComputeLogFileData</span><span class="p">(</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">),</span>
+            <span class="n">cursor</span><span class="o">=</span><span class="n">cursor</span><span class="p">,</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">stats</span><span class="o">.</span><span class="n">st_size</span><span class="p">,</span>
+            <span class="n">download_url</span><span class="o">=</span><span class="n">download_url</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">is_watch_completed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">complete_artifact_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">on_watch_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">get_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">step_key</span> <span class="ow">or</span> <span class="n">pipeline_run</span><span class="o">.</span><span class="n">pipeline_name</span>
+
+    <span class="k">def</span> <span class="nf">on_watch_finish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_key</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+        <span class="n">touchpath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">complete_artifact_path</span><span class="p">(</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">touch_file</span><span class="p">(</span><span class="n">touchpath</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">download_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">io_type</span><span class="p">,</span> <span class="s2">&quot;io_type&quot;</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;/download/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subscription</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subscription_manager</span><span class="o">.</span><span class="n">add_subscription</span><span class="p">(</span><span class="n">subscription</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">dispose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subscription_manager</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span></div>
+
+
+<span class="k">class</span> <span class="nc">LocalComputeLogSubscriptionManager</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subscriptions</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_watchers</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_observer</span> <span class="o">=</span> <span class="n">PollingObserver</span><span class="p">(</span><span class="n">WATCHDOG_POLLING_TIMEOUT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_observer</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">:</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_subscription</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subscription</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">subscription</span><span class="p">,</span> <span class="s2">&quot;subscription&quot;</span><span class="p">,</span> <span class="n">ComputeLogSubscription</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">(</span><span class="n">subscription</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">subscription</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_subscriptions</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">subscription</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">watch</span><span class="p">(</span><span class="n">subscription</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">subscription</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">remove_all_subscriptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">subscription</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subscriptions</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="p">[]):</span>
+            <span class="n">subscription</span><span class="o">.</span><span class="n">complete</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">watch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_watchers</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">update_paths</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDERR</span><span class="p">),</span>
+        <span class="p">]</span>
+        <span class="n">complete_paths</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">complete_artifact_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)]</span>
+        <span class="n">directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_manager</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDERR</span><span class="p">))</span>
+
+        <span class="n">ensure_dir</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_watchers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_observer</span><span class="o">.</span><span class="n">schedule</span><span class="p">(</span>
+            <span class="n">LocalComputeLogFilesystemEventHandler</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">update_paths</span><span class="p">,</span> <span class="n">complete_paths</span><span class="p">),</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">directory</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">notify_subscriptions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">subscription</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subscriptions</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+            <span class="n">subscription</span><span class="o">.</span><span class="n">fetch</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">unwatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">handler</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_watchers</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_observer</span><span class="o">.</span><span class="n">remove_handler_for_watch</span><span class="p">(</span><span class="n">handler</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_watchers</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">_watchers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">dispose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_observer</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">LocalComputeLogFilesystemEventHandler</span><span class="p">(</span><span class="n">PatternMatchingEventHandler</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">update_paths</span><span class="p">,</span> <span class="n">complete_paths</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="o">=</span> <span class="n">run_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key</span> <span class="o">=</span> <span class="n">key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_paths</span> <span class="o">=</span> <span class="n">update_paths</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complete_paths</span> <span class="o">=</span> <span class="n">complete_paths</span>
+        <span class="n">patterns</span> <span class="o">=</span> <span class="n">update_paths</span> <span class="o">+</span> <span class="n">complete_paths</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LocalComputeLogFilesystemEventHandler</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">patterns</span><span class="o">=</span><span class="n">patterns</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_created</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">src_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">complete_paths</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">remove_all_subscriptions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">unwatch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_modified</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">src_path</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">update_paths</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">notify_subscriptions</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

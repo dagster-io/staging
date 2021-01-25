@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.execution.context.compute &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.execution.context.compute</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span><span class="p">,</span> <span class="n">abstractproperty</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.dependency</span> <span class="kn">import</span> <span class="n">Solid</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.solid</span> <span class="kn">import</span> <span class="n">SolidDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.log_manager</span> <span class="kn">import</span> <span class="n">DagsterLogManager</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.forked_pdb</span> <span class="kn">import</span> <span class="n">ForkedPdb</span>
+
+<span class="kn">from</span> <span class="nn">.step</span> <span class="kn">import</span> <span class="n">StepExecutionContext</span>
+<span class="kn">from</span> <span class="nn">.system</span> <span class="kn">import</span> <span class="n">SystemComputeExecutionContext</span>
+
+
+<div class="viewcode-block" id="AbstractComputeExecutionContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/execution.html#dagster.core.execution.context.compute.AbstractComputeExecutionContext">[docs]</a><span class="k">class</span> <span class="nc">AbstractComputeExecutionContext</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>  <span class="c1"># pylint: disable=no-init</span>
+    <span class="sd">&quot;&quot;&quot;Base class for solid context implemented by SolidExecutionContext and DagstermillExecutionContext&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="AbstractComputeExecutionContext.has_tag"><a class="viewcode-back" href="../../../../../sections/api/apidocs/execution.html#dagster.core.execution.context.compute.AbstractComputeExecutionContext.has_tag">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">has_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Implement this method to check if a logging tag is set.&quot;&quot;&quot;</span></div>
+
+<div class="viewcode-block" id="AbstractComputeExecutionContext.get_tag"><a class="viewcode-back" href="../../../../../sections/api/apidocs/execution.html#dagster.core.execution.context.compute.AbstractComputeExecutionContext.get_tag">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Implement this method to get a logging tag.&quot;&quot;&quot;</span></div>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The run id for the context.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">solid_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolidDefinition</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The solid definition corresponding to the execution step being executed.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">solid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Solid</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The solid corresponding to the execution step being executed.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineDefinition</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The pipeline being executed.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">pipeline_run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineRun</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The PipelineRun object corresponding to the execution.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">resources</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Resources available in the execution context.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DagsterLogManager</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The log manager available in the execution context.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">solid_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The parsed config specific to this solid.&quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="SolidExecutionContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/execution.html#dagster.core.execution.context.compute.SolidExecutionContext">[docs]</a><span class="k">class</span> <span class="nc">SolidExecutionContext</span><span class="p">(</span><span class="n">StepExecutionContext</span><span class="p">,</span> <span class="n">AbstractComputeExecutionContext</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The ``context`` object available to solid compute logic.&quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_system_compute_execution_context&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system_compute_execution_context</span><span class="p">:</span> <span class="n">SystemComputeExecutionContext</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_system_compute_execution_context</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+            <span class="n">system_compute_execution_context</span><span class="p">,</span>
+            <span class="s2">&quot;system_compute_execution_context&quot;</span><span class="p">,</span>
+            <span class="n">SystemComputeExecutionContext</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pdb</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ForkedPdb</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SolidExecutionContext</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">system_compute_execution_context</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The parsed config specific to this solid.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_system_compute_execution_context</span><span class="o">.</span><span class="n">solid_config</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineRun</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The current PipelineRun&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_system_compute_execution_context</span><span class="o">.</span><span class="n">pipeline_run</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DagsterInstance</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The current Instance&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_system_compute_execution_context</span><span class="o">.</span><span class="n">instance</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pdb</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ForkedPdb</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Allows pdb debugging from within the solid.</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def debug_solid(context):</span>
+<span class="sd">                context.pdb.set_trace()</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pdb</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_pdb</span> <span class="o">=</span> <span class="n">ForkedPdb</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pdb</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

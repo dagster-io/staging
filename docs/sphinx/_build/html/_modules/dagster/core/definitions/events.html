@@ -1,0 +1,956 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.events &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.events</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidAssetKey</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">Persistable</span><span class="p">,</span> <span class="n">whitelist_for_persistence</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_OUTPUT</span><span class="p">,</span> <span class="n">check_valid_name</span>
+
+
+<span class="k">def</span> <span class="nf">last_file_comp</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+
+
+<span class="n">ASSET_KEY_REGEX</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;^[a-zA-Z0-9_.-]+$&quot;</span><span class="p">)</span>  <span class="c1"># alphanumeric, _, -, .</span>
+<span class="n">ASSET_KEY_SPLIT_REGEX</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="s2">&quot;[^a-zA-Z0-9_]&quot;</span><span class="p">)</span>
+<span class="n">ASSET_KEY_STRUCTURED_DELIMITER</span> <span class="o">=</span> <span class="s2">&quot;.&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">validate_asset_key_string</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">s</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">ASSET_KEY_REGEX</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidAssetKey</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">s</span>
+
+
+<span class="k">def</span> <span class="nf">parse_asset_key_string</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">ASSET_KEY_SPLIT_REGEX</span><span class="p">,</span> <span class="n">s</span><span class="p">)))</span>
+
+
+<div class="viewcode-block" id="AssetKey"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.AssetKey">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">AssetKey</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_AssetKey&quot;</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Object representing the structure of an asset key.  Takes in a sanitized string, list of</span>
+<span class="sd">    strings, or tuple of strings.</span>
+
+<span class="sd">    Example usage:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @solid</span>
+<span class="sd">        def emit_metadata_solid(context, df):</span>
+<span class="sd">            yield AssetMaterialization(</span>
+<span class="sd">                asset_key=AssetKey(&#39;flat_asset_key&#39;),</span>
+<span class="sd">                metadata_entries=[</span>
+<span class="sd">                    EventMetadataEntry.text(&quot;Text-based metadata for this event&quot;, &quot;text_metadata&quot;)</span>
+<span class="sd">                ],</span>
+<span class="sd">            )</span>
+
+<span class="sd">        @solid</span>
+<span class="sd">        def structured_asset_key_solid(context, df):</span>
+<span class="sd">            yield AssetMaterialization(</span>
+<span class="sd">                asset_key=AssetKey([&#39;parent&#39;, &#39;child&#39;, &#39;grandchild&#39;]),</span>
+<span class="sd">                metadata_entries=[</span>
+<span class="sd">                    EventMetadataEntry.text(&quot;Text-based metadata for this event&quot;, &quot;text_metadata&quot;)</span>
+<span class="sd">                ],</span>
+<span class="sd">            )</span>
+
+<span class="sd">        @solid</span>
+<span class="sd">        def structured_asset_key_solid_2(context, df):</span>
+<span class="sd">            yield AssetMaterialization(</span>
+<span class="sd">                asset_key=AssetKey((&#39;parent&#39;, &#39;child&#39;, &#39;grandchild&#39;)),</span>
+<span class="sd">                metadata_entries=[</span>
+<span class="sd">                    EventMetadataEntry.text(&quot;Text-based metadata for this event&quot;, &quot;text_metadata&quot;)</span>
+<span class="sd">                ],</span>
+<span class="sd">            )</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path (str|str[]|str()): String, list of strings, or tuple of strings.  A list of strings</span>
+<span class="sd">            represent the hierarchical structure of the asset_key.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">tuple_param</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">AssetKey</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;AssetKey(</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;AssetKey(</span><span class="si">{}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">to_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">legacy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">legacy</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ASSET_KEY_STRUCTURED_DELIMITER</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_db_string</span><span class="p">(</span><span class="n">asset_key_string</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">asset_key_string</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">asset_key_string</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;[&quot;</span><span class="p">:</span>
+            <span class="c1"># is a json string</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">asset_key_string</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">seven</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">path</span> <span class="o">=</span> <span class="n">parse_asset_key_string</span><span class="p">(</span><span class="n">asset_key_string</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">parse_asset_key_string</span><span class="p">(</span><span class="n">asset_key_string</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">AssetKey</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_db_prefix</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">legacy</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">legacy</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">ASSET_KEY_STRUCTURED_DELIMITER</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">path</span><span class="p">)[:</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>  <span class="c1"># strip trailing &#39;&quot;]&#39; from json string</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_graphql_input</span><span class="p">(</span><span class="n">asset_key</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">asset_key</span> <span class="ow">and</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">AssetKey</span><span class="p">(</span><span class="n">asset_key</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="EventMetadataEntry"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">EventMetadataEntry</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_EventMetadataEntry&quot;</span><span class="p">,</span> <span class="s2">&quot;label description entry_data&quot;</span><span class="p">),</span> <span class="n">Persistable</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The standard structure for describing metadata for Dagster events.</span>
+
+<span class="sd">    Lists of objects of this type can be passed as arguments to Dagster events and will be displayed</span>
+<span class="sd">    in Dagit and other tooling.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        label (str): Short display label for this metadata entry.</span>
+<span class="sd">        description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        entry_data (Union[(Union[TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData]):</span>
+<span class="sd">            Typed metadata entry data. The different types allow for customized display in tools</span>
+<span class="sd">            like dagit.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">entry_data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">EventMetadataEntry</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">entry_data</span><span class="p">,</span> <span class="s2">&quot;entry_data&quot;</span><span class="p">,</span> <span class="n">EntryDataUnion</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="EventMetadataEntry.text"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.text">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">text</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing text as</span>
+<span class="sd">        :py:class:`TextMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context, df):</span>
+<span class="sd">                yield AssetMaterialization(</span>
+<span class="sd">                    asset_key=&quot;my_dataset&quot;,</span>
+<span class="sd">                    metadata_entries=[</span>
+<span class="sd">                        EventMetadataEntry.text(&quot;Text-based metadata for this event&quot;, &quot;text_metadata&quot;)</span>
+<span class="sd">                    ],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            text (Optional[str]): The text of this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">TextMetadataEntryData</span><span class="p">(</span><span class="n">text</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="EventMetadataEntry.url"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.url">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">url</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing a URL as</span>
+<span class="sd">        :py:class:`UrlMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context):</span>
+<span class="sd">                yield AssetMaterialization(</span>
+<span class="sd">                    asset_key=&quot;my_dashboard&quot;,</span>
+<span class="sd">                    metadata_entries=[</span>
+<span class="sd">                        EventMetadataEntry.url(</span>
+<span class="sd">                            &quot;http://mycoolsite.com/my_dashboard&quot;, label=&quot;dashboard_url&quot;</span>
+<span class="sd">                        ),</span>
+<span class="sd">                    ],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            url (Optional[str]): The URL contained by this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">UrlMetadataEntryData</span><span class="p">(</span><span class="n">url</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="EventMetadataEntry.path"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.path">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">path</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing a path as</span>
+<span class="sd">        :py:class:`PathMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context):</span>
+<span class="sd">                yield AssetMaterialization(</span>
+<span class="sd">                    asset_key=&quot;my_dataset&quot;,</span>
+<span class="sd">                    metadata_entries=[EventMetadataEntry.path(&quot;path/to/file&quot;, label=&quot;filepath&quot;)],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (Optional[str]): The path contained by this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">PathMetadataEntryData</span><span class="p">(</span><span class="n">path</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="EventMetadataEntry.fspath"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.fspath">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing a filesystem path as</span>
+<span class="sd">        :py:class:`PathMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context):</span>
+<span class="sd">                yield AssetMaterialization(</span>
+<span class="sd">                    asset_key=&quot;my_dataset&quot;,</span>
+<span class="sd">                    metadata_entries=[EventMetadataEntry.fspath(&quot;path/to/file&quot;)],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (Optional[str]): The path contained by this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry. Defaults to the</span>
+<span class="sd">                base name of the path.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">path</span><span class="p">(</span>
+            <span class="n">path</span><span class="p">,</span> <span class="n">label</span> <span class="k">if</span> <span class="n">label</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">last_file_comp</span><span class="p">(</span><span class="n">path</span><span class="p">),</span> <span class="n">description</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="EventMetadataEntry.json"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.json">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">json</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing JSON data as</span>
+<span class="sd">        :py:class:`JsonMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context):</span>
+<span class="sd">                yield ExpectationResult(</span>
+<span class="sd">                    success=not missing_things,</span>
+<span class="sd">                    label=&quot;is_present&quot;,</span>
+<span class="sd">                    metadata_entries=[</span>
+<span class="sd">                        EventMetadataEntry.json(</span>
+<span class="sd">                            label=&quot;metadata&quot;, data={&quot;missing_columns&quot;: missing_things},</span>
+<span class="sd">                        )</span>
+<span class="sd">                    ],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (Optional[Dict[str, Any]]): The JSON data contained by this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">JsonMetadataEntryData</span><span class="p">(</span><span class="n">data</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="EventMetadataEntry.md"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.md">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">md</span><span class="p">(</span><span class="n">md_str</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing markdown data as</span>
+<span class="sd">        :py:class:`MarkdownMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context, md_str):</span>
+<span class="sd">                yield AssetMaterialization(</span>
+<span class="sd">                    asset_key=&quot;info&quot;,</span>
+<span class="sd">                    metadata_entries=[EventMetadataEntry.md(md_str=md_str)],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            md_str (Optional[str]): The markdown contained by this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">MarkdownMetadataEntryData</span><span class="p">(</span><span class="n">md_str</span><span class="p">))</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">python_artifact</span><span class="p">(</span><span class="n">python_artifact</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">python_artifact</span><span class="p">,</span> <span class="s2">&quot;python_artifact&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span>
+            <span class="n">label</span><span class="p">,</span>
+            <span class="n">description</span><span class="p">,</span>
+            <span class="n">PythonArtifactMetadataEntryData</span><span class="p">(</span><span class="n">python_artifact</span><span class="o">.</span><span class="vm">__module__</span><span class="p">,</span> <span class="n">python_artifact</span><span class="o">.</span><span class="vm">__name__</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="EventMetadataEntry.float"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.float">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">float</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing float as</span>
+<span class="sd">        :py:class:`FloatMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context, df):</span>
+<span class="sd">                yield AssetMaterialization(</span>
+<span class="sd">                    asset_key=&quot;my_dataset&quot;,</span>
+<span class="sd">                    metadata_entries=[EventMetadataEntry.float(calculate_bytes(df), &quot;size (bytes)&quot;)],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value (Optional[float]): The float value contained by this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">FloatMetadataEntryData</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="EventMetadataEntry.int"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.EventMetadataEntry.int">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">int</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for a metadata entry containing int as</span>
+<span class="sd">        :py:class:`IntMetadataEntryData`. For example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def emit_metadata_solid(context, df):</span>
+<span class="sd">                yield AssetMaterialization(</span>
+<span class="sd">                    asset_key=&quot;my_dataset&quot;,</span>
+<span class="sd">                    metadata_entries=[EventMetadataEntry.int(len(df), &quot;number of rows&quot;)],</span>
+<span class="sd">                )</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value (Optional[int]): The int value contained by this metadata entry.</span>
+<span class="sd">            label (str): Short display label for this metadata entry.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of this metadata entry.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">IntMetadataEntryData</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="TextMetadataEntryData"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.TextMetadataEntryData">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">TextMetadataEntryData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_TextMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Container class for text metadata entry data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        text (Optional[str]): The text data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">TextMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="UrlMetadataEntryData"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.UrlMetadataEntryData">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">UrlMetadataEntryData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_UrlMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;url&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Container class for URL metadata entry data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        url (Optional[str]): The URL as a string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">url</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">UrlMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PathMetadataEntryData"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.PathMetadataEntryData">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">PathMetadataEntryData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_PathMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Container class for path metadata entry data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        path (Optional[str]): The path as a string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PathMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="JsonMetadataEntryData"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.JsonMetadataEntryData">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">JsonMetadataEntryData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_JsonMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Container class for JSON metadata entry data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        data (Optional[Dict[str, Any]]): The JSON data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">JsonMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MarkdownMetadataEntryData"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.MarkdownMetadataEntryData">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">MarkdownMetadataEntryData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_MarkdownMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;md_str&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Container class for markdown metadata entry data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        md_str (Optional[str]): The markdown as a string.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">md_str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">MarkdownMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">md_str</span><span class="p">,</span> <span class="s2">&quot;md_str&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">PythonArtifactMetadataEntryData</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_PythonArtifactMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;module name&quot;</span><span class="p">),</span> <span class="n">Persistable</span>
+<span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">module</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PythonArtifactMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="s2">&quot;module&quot;</span><span class="p">),</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="FloatMetadataEntryData"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.FloatMetadataEntryData">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">FloatMetadataEntryData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_FloatMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Container class for float metadata entry data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value (Optional[float]): The float value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">FloatMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_float_param</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="IntMetadataEntryData"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.IntMetadataEntryData">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">IntMetadataEntryData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_IntMetadataEntryData&quot;</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Container class for int metadata entry data.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value (Optional[int]): The int value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">IntMetadataEntryData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">))</span></div>
+
+
+<span class="n">EntryDataUnion</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">TextMetadataEntryData</span><span class="p">,</span>
+    <span class="n">UrlMetadataEntryData</span><span class="p">,</span>
+    <span class="n">PathMetadataEntryData</span><span class="p">,</span>
+    <span class="n">JsonMetadataEntryData</span><span class="p">,</span>
+    <span class="n">MarkdownMetadataEntryData</span><span class="p">,</span>
+    <span class="n">PythonArtifactMetadataEntryData</span><span class="p">,</span>
+    <span class="n">FloatMetadataEntryData</span><span class="p">,</span>
+    <span class="n">IntMetadataEntryData</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="Output"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.Output">[docs]</a><span class="k">class</span> <span class="nc">Output</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_Output&quot;</span><span class="p">,</span> <span class="s2">&quot;value output_name&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Event corresponding to one of a solid&#39;s outputs.</span>
+
+<span class="sd">    Solid compute functions must explicitly yield events of this type when they have more than</span>
+<span class="sd">    one output, or when they also yield events of other types, or when defining a solid using the</span>
+<span class="sd">    :py:class:`SolidDefinition` API directly.</span>
+
+<span class="sd">    Outputs are values produced by solids that will be consumed by downstream solids in a pipeline.</span>
+<span class="sd">    They are type-checked at solid boundaries when their corresponding :py:class:`OutputDefinition`</span>
+<span class="sd">    or the downstream :py:class:`InputDefinition` is typed.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value (Any): The value returned by the compute function.</span>
+<span class="sd">        output_name (Optional[str]): Name of the corresponding output definition. (default:</span>
+<span class="sd">            &quot;result&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Output</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">),)</span></div>
+
+
+<div class="viewcode-block" id="DynamicOutput"><a class="viewcode-back" href="../../../../sections/api/apidocs/dynamic.html#dagster.experimental.DynamicOutput">[docs]</a><span class="k">class</span> <span class="nc">DynamicOutput</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_DynamicOutput&quot;</span><span class="p">,</span> <span class="s2">&quot;value mapping_key output_name&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    (Experimental) Variant of :py:class:`Output` used to support mapping. Each DynamicOutput</span>
+<span class="sd">    produced by a solid will result in the downstream dag being cloned to run on that individual</span>
+<span class="sd">    value. Each DynamicOutput must have a unique mapping_key to distinguish it.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value (Any):</span>
+<span class="sd">            The value returned by the compute function.</span>
+<span class="sd">        mapping_key (str):</span>
+<span class="sd">            The key that uniquely identifies this dynamic value relative to its peers.</span>
+<span class="sd">        output_name (Optional[str]):</span>
+<span class="sd">            Name of the corresponding output definition. (default: &quot;result&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">mapping_key</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">DynamicOutput</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">value</span><span class="p">,</span>
+            <span class="n">check_valid_name</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">mapping_key</span><span class="p">,</span> <span class="s2">&quot;mapping_key&quot;</span><span class="p">)),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="AssetMaterialization"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.AssetMaterialization">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">AssetMaterialization</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_AssetMaterialization&quot;</span><span class="p">,</span> <span class="s2">&quot;asset_key description metadata_entries partition&quot;</span><span class="p">),</span>
+    <span class="n">Persistable</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Event indicating that a solid has materialized an asset.</span>
+
+<span class="sd">    Solid compute functions may yield events of this type whenever they wish to indicate to the</span>
+<span class="sd">    Dagster framework (and the end user) that they have produced a materialized value as a</span>
+<span class="sd">    side effect of computation. Unlike outputs, asset materializations can not be passed to other</span>
+<span class="sd">    solids, and their persistence is controlled by solid logic, rather than by the Dagster</span>
+<span class="sd">    framework.</span>
+
+<span class="sd">    Solid authors should use these events to organize metadata about the side effects of their</span>
+<span class="sd">    computations, enabling tooling like the Assets dashboard in Dagit.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        asset_key (str|List[str]|AssetKey): A key to identify the materialized asset across pipeline</span>
+<span class="sd">            runs</span>
+<span class="sd">        description (Optional[str]): A longer human-radable description of the materialized value.</span>
+<span class="sd">        metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the</span>
+<span class="sd">            materialized value.</span>
+<span class="sd">        partition (Optional[str]): The name of the partition that was materialized.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">asset_key</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">partition</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">):</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">asset_key</span> <span class="o">=</span> <span class="n">AssetKey</span><span class="p">(</span><span class="n">parse_asset_key_string</span><span class="p">(</span><span class="n">asset_key</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+            <span class="n">asset_key</span> <span class="o">=</span> <span class="n">AssetKey</span><span class="p">(</span><span class="n">asset_key</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">is_tuple</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+            <span class="n">asset_key</span> <span class="o">=</span> <span class="n">AssetKey</span><span class="p">(</span><span class="n">asset_key</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">AssetMaterialization</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="n">asset_key</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">),</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">EventMetadataEntry</span>
+            <span class="p">),</span>
+            <span class="n">partition</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">partition</span><span class="p">,</span> <span class="s2">&quot;partition&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">label</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AssetMaterialization.file"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.AssetMaterialization.file">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">asset_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for standard materializations corresponding to files on disk.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): The path to the file.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of the materialization.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">asset_key</span><span class="p">:</span>
+            <span class="n">asset_key</span> <span class="o">=</span> <span class="n">path</span>
+
+        <span class="k">return</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="n">asset_key</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">)],</span>
+        <span class="p">)</span></div></div>
+
+
+<span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">Materialization</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_Materialization&quot;</span><span class="p">,</span> <span class="s2">&quot;label description metadata_entries asset_key partition&quot;</span><span class="p">),</span>
+    <span class="n">Persistable</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Event indicating that a solid has materialized a value.</span>
+
+<span class="sd">    Solid compute functions may yield events of this type whenever they wish to indicate to the</span>
+<span class="sd">    Dagster framework (and the end user) that they have produced a materialized value as a</span>
+<span class="sd">    side effect of computation. Unlike outputs, materializations can not be passed to other solids,</span>
+<span class="sd">    and their persistence is controlled by solid logic, rather than by the Dagster framework.</span>
+
+<span class="sd">    Solid authors should use these events to organize metadata about the side effects of their</span>
+<span class="sd">    computations to enable downstream tooling like artifact catalogues and diff tools.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        label (str): A short display name for the materialized value.</span>
+<span class="sd">        description (Optional[str]): A longer human-radable description of the materialized value.</span>
+<span class="sd">        metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the</span>
+<span class="sd">            materialized value.</span>
+<span class="sd">        asset_key (Optional[str|AssetKey]): An optional parameter to identify the materialized asset</span>
+<span class="sd">            across pipeline runs</span>
+<span class="sd">        partition (Optional[str]): The name of the partition that was materialized.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata_entries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">asset_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">partition</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">skip_deprecation_warning</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="n">asset_key</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">asset_key</span> <span class="o">=</span> <span class="n">AssetKey</span><span class="p">(</span><span class="n">parse_asset_key_string</span><span class="p">(</span><span class="n">asset_key</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">label</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span>
+                <span class="n">asset_key</span> <span class="ow">and</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">path</span><span class="p">,</span>
+                <span class="s2">&quot;label&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Either label or asset_key with a path must be provided&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">label</span> <span class="o">=</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">skip_deprecation_warning</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s2">&quot;`Materialization` is deprecated; use `AssetMaterialization` instead.&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Materialization</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">),</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">EventMetadataEntry</span>
+            <span class="p">),</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="n">asset_key</span><span class="p">,</span>
+            <span class="n">partition</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">partition</span><span class="p">,</span> <span class="s2">&quot;partition&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">file</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">asset_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for standard materializations corresponding to files on disk.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): The path to the file.</span>
+<span class="sd">            description (Optional[str]): A human-readable description of the materialization.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">Materialization</span><span class="p">(</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">last_file_comp</span><span class="p">(</span><span class="n">path</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">path</span><span class="p">)],</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="n">asset_key</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_storage_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">storage_dict</span><span class="p">):</span>
+        <span class="c1"># override the default `from_storage_dict` implementation in order to skip the deprecation</span>
+        <span class="c1"># warning for historical Materialization events, loaded from event_log storage</span>
+        <span class="k">return</span> <span class="n">Materialization</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">skip_deprecation_warning</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">storage_dict</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ExpectationResult"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.ExpectationResult">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">ExpectationResult</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_ExpectationResult&quot;</span><span class="p">,</span> <span class="s2">&quot;success label description metadata_entries&quot;</span><span class="p">),</span> <span class="n">Persistable</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Event corresponding to a data quality test.</span>
+
+<span class="sd">    Solid compute functions may yield events of this type whenever they wish to indicate to the</span>
+<span class="sd">    Dagster framework (and the end user) that a data quality test has produced a (positive or</span>
+<span class="sd">    negative) result.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        success (bool): Whether the expectation passed or not.</span>
+<span class="sd">        label (Optional[str]): Short display name for expectation. Defaults to &quot;result&quot;.</span>
+<span class="sd">        description (Optional[str]): A longer human-readable description of the expectation.</span>
+<span class="sd">        metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the</span>
+<span class="sd">            expectation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">success</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ExpectationResult</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">success</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">success</span><span class="p">,</span> <span class="s2">&quot;success&quot;</span><span class="p">),</span>
+            <span class="n">label</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="s2">&quot;label&quot;</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">),</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">EventMetadataEntry</span>
+            <span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="TypeCheck"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.TypeCheck">[docs]</a><span class="nd">@whitelist_for_persistence</span>
+<span class="k">class</span> <span class="nc">TypeCheck</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_TypeCheck&quot;</span><span class="p">,</span> <span class="s2">&quot;success description metadata_entries&quot;</span><span class="p">),</span> <span class="n">Persistable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Event corresponding to a successful typecheck.</span>
+
+<span class="sd">    Events of this type should be returned by user-defined type checks when they need to encapsulate</span>
+<span class="sd">    additional metadata about a type check&#39;s success or failure. (i.e., when using</span>
+<span class="sd">    :py:func:`as_dagster_type`, :py:func:`@usable_as_dagster_type &lt;dagster_type&gt;`, or the underlying</span>
+<span class="sd">    :py:func:`PythonObjectDagsterType` API.)</span>
+
+<span class="sd">    Solid compute functions should generally avoid yielding events of this type to avoid confusion.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        success (bool): ``True`` if the type check succeeded, ``False`` otherwise.</span>
+<span class="sd">        description (Optional[str]): A human-readable description of the type check.</span>
+<span class="sd">        metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the</span>
+<span class="sd">            type check.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">success</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">TypeCheck</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">success</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">success</span><span class="p">,</span> <span class="s2">&quot;success&quot;</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">),</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">EventMetadataEntry</span>
+            <span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Failure"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.Failure">[docs]</a><span class="k">class</span> <span class="nc">Failure</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Event indicating solid failure.</span>
+
+<span class="sd">    Raise events of this type from within solid compute functions or custom type checks in order to</span>
+<span class="sd">    indicate an unrecoverable failure in user code to the Dagster machinery and return</span>
+<span class="sd">    structured metadata about the failure.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        description (Optional[str]): A human-readable description of the failure.</span>
+<span class="sd">        metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the</span>
+<span class="sd">            failure.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">Failure</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">description</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata_entries</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+            <span class="n">metadata_entries</span><span class="p">,</span> <span class="s2">&quot;metadata_entries&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">EventMetadataEntry</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RetryRequested"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.RetryRequested">[docs]</a><span class="k">class</span> <span class="nc">RetryRequested</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An exception to raise from a solid to indicate that it should be retried.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        max_retries (Optional[int]):</span>
+<span class="sd">            The max number of retries this step should attempt before failing</span>
+<span class="sd">        seconds_to_wait (Optional[int]):</span>
+<span class="sd">            Seconds to wait before restarting the step after putting the step in</span>
+<span class="sd">            to the up_for_retry state</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def flakes():</span>
+<span class="sd">                try:</span>
+<span class="sd">                    flakey_operation()</span>
+<span class="sd">                except:</span>
+<span class="sd">                    raise RetryRequested(max_retries=3)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_retries</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">seconds_to_wait</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RetryRequested</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_retries</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">max_retries</span><span class="p">,</span> <span class="s2">&quot;max_retries&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">seconds_to_wait</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">seconds_to_wait</span><span class="p">,</span> <span class="s2">&quot;seconds_to_wait&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">ObjectStoreOperationType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">SET_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;SET_OBJECT&quot;</span>
+    <span class="n">GET_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;GET_OBJECT&quot;</span>
+    <span class="n">RM_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;RM_OBJECT&quot;</span>
+    <span class="n">CP_OBJECT</span> <span class="o">=</span> <span class="s2">&quot;CP_OBJECT&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">ObjectStoreOperation</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_ObjectStoreOperation&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;op key dest_key obj serialization_strategy_name object_store_name value_name version mapping_key&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This event is used internally by Dagster machinery when values are written to and read from</span>
+<span class="sd">    an ObjectStore.</span>
+
+<span class="sd">    Users should not import this class or yield events of this type from user code.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        op (ObjectStoreOperationType): The type of the operation on the object store.</span>
+<span class="sd">        key (str): The key of the object on which the operation was performed.</span>
+<span class="sd">        dest_key (Optional[str]): The destination key, if any, to which the object was copied.</span>
+<span class="sd">        obj (Any): The object, if any, retrieved by the operation.</span>
+<span class="sd">        serialization_strategy_name (Optional[str]): The name of the serialization strategy, if any,</span>
+<span class="sd">            employed by the operation</span>
+<span class="sd">        object_store_name (Optional[str]): The name of the object store that performed the</span>
+<span class="sd">            operation.</span>
+<span class="sd">        value_name (Optional[str]): The name of the input/output</span>
+<span class="sd">        version (Optional[str]): (Experimental) The version of the stored data.</span>
+<span class="sd">        mapping_key (Optional[str]): The mapping key when a dynamic output is used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">op</span><span class="p">,</span>
+        <span class="n">key</span><span class="p">,</span>
+        <span class="n">dest_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">obj</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">serialization_strategy_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">object_store_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">value_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mapping_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ObjectStoreOperation</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">op</span><span class="o">=</span><span class="n">op</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">),</span>
+            <span class="n">dest_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">dest_key</span><span class="p">,</span> <span class="s2">&quot;dest_key&quot;</span><span class="p">),</span>
+            <span class="n">obj</span><span class="o">=</span><span class="n">obj</span><span class="p">,</span>
+            <span class="n">serialization_strategy_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span>
+                <span class="n">serialization_strategy_name</span><span class="p">,</span> <span class="s2">&quot;serialization_strategy_name&quot;</span>
+            <span class="p">),</span>
+            <span class="n">object_store_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">object_store_name</span><span class="p">,</span> <span class="s2">&quot;object_store_name&quot;</span><span class="p">),</span>
+            <span class="n">value_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">value_name</span><span class="p">,</span> <span class="s2">&quot;value_name&quot;</span><span class="p">),</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">),</span>
+            <span class="n">mapping_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mapping_key</span><span class="p">,</span> <span class="s2">&quot;mapping_key&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">serializable</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">inst</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="o">**</span><span class="nb">dict</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;op&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">op</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                    <span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+                    <span class="s2">&quot;dest_key&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">dest_key</span><span class="p">,</span>
+                    <span class="s2">&quot;obj&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+                    <span class="s2">&quot;serialization_strategy_name&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">serialization_strategy_name</span><span class="p">,</span>
+                    <span class="s2">&quot;object_store_name&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">object_store_name</span><span class="p">,</span>
+                    <span class="s2">&quot;value_name&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">value_name</span><span class="p">,</span>
+                    <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">HookExecutionResult</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_HookExecutionResult&quot;</span><span class="p">,</span> <span class="s2">&quot;hook_name is_skipped&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;This event is used internally to indicate the execution result of a hook, e.g. whether the</span>
+<span class="sd">    user-defined hook function is skipped.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        hook_name (str): The name of the hook.</span>
+<span class="sd">        is_skipped (bool): ``False`` if the hook_fn is executed, ``True`` otheriwse.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">hook_name</span><span class="p">,</span> <span class="n">is_skipped</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HookExecutionResult</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">hook_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">hook_name</span><span class="p">,</span> <span class="s2">&quot;hook_name&quot;</span><span class="p">),</span>
+            <span class="n">is_skipped</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_bool_param</span><span class="p">(</span><span class="n">is_skipped</span><span class="p">,</span> <span class="s2">&quot;is_skipped&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_databricks.solids &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_databricks.solids</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">InputDefinition</span><span class="p">,</span> <span class="n">Nothing</span><span class="p">,</span> <span class="n">OutputDefinition</span><span class="p">,</span> <span class="n">Permissive</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">solid</span>
+
+<span class="kn">from</span> <span class="nn">.databricks</span> <span class="kn">import</span> <span class="n">wait_for_run_to_complete</span>
+
+<span class="n">_START</span> <span class="o">=</span> <span class="s2">&quot;start&quot;</span>
+
+<span class="n">_DEFAULT_POLL_INTERVAL</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="c1"># wait at most 24 hours by default for run execution</span>
+<span class="n">_DEFAULT_RUN_MAX_WAIT_TIME_SEC</span> <span class="o">=</span> <span class="mi">24</span> <span class="o">*</span> <span class="mi">60</span> <span class="o">*</span> <span class="mi">60</span>
+
+
+<div class="viewcode-block" id="create_databricks_job_solid"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_databricks.html#dagster_databricks.create_databricks_job_solid">[docs]</a><span class="k">def</span> <span class="nf">create_databricks_job_solid</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;databricks_job&quot;</span><span class="p">,</span>
+    <span class="n">num_inputs</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">([</span><span class="s2">&quot;databricks_client&quot;</span><span class="p">]),</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Creates a solid that launches a databricks job.</span>
+
+<span class="sd">    As config, the solid accepts a blob of the form described in Databricks&#39; job API:</span>
+<span class="sd">    https://docs.databricks.com/dev-tools/api/latest/jobs.html.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        SolidDefinition: A solid definition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">num_inputs</span><span class="p">,</span> <span class="s2">&quot;num_inputs&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="n">input_defs</span> <span class="o">=</span> <span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;input_&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="n">Nothing</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_inputs</span><span class="p">)]</span>
+
+    <span class="nd">@solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;job&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                <span class="n">Permissive</span><span class="p">(),</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Databricks job run configuration, in the form described in &quot;</span>
+                <span class="s2">&quot;Databricks&#39; job API: https://docs.databricks.com/dev-tools/api/latest/jobs.html&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;poll_interval_sec&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                <span class="nb">float</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Check whether the job is done at this interval.&quot;</span><span class="p">,</span>
+                <span class="n">default_value</span><span class="o">=</span><span class="n">_DEFAULT_POLL_INTERVAL</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;max_wait_time_sec&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                <span class="nb">float</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;If the job is not complete after this length of time, raise an error.&quot;</span><span class="p">,</span>
+                <span class="n">default_value</span><span class="o">=</span><span class="n">_DEFAULT_RUN_MAX_WAIT_TIME_SEC</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">},</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="n">input_defs</span><span class="p">,</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">Nothing</span><span class="p">)],</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;databricks&quot;</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">databricks_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="n">job_config</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;job&quot;</span><span class="p">]</span>
+        <span class="n">databricks_client</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">databricks_client</span>
+        <span class="n">run_id</span> <span class="o">=</span> <span class="n">databricks_client</span><span class="o">.</span><span class="n">submit_run</span><span class="p">(</span><span class="o">**</span><span class="n">job_config</span><span class="p">)</span>
+
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Launched databricks job with run id </span><span class="si">{run_id}</span><span class="s2">. UI: </span><span class="si">{url}</span><span class="s2">. Waiting to run to completion...&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span> <span class="n">url</span><span class="o">=</span><span class="n">create_ui_url</span><span class="p">(</span><span class="n">databricks_client</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">wait_for_run_to_complete</span><span class="p">(</span>
+            <span class="n">databricks_client</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+            <span class="n">run_id</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;poll_interval_sec&quot;</span><span class="p">],</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;max_wait_time_sec&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">databricks_solid</span></div>
+
+
+<span class="k">def</span> <span class="nf">create_ui_url</span><span class="p">(</span><span class="n">databricks_client</span><span class="p">,</span> <span class="n">solid_config</span><span class="p">):</span>
+    <span class="n">host</span> <span class="o">=</span> <span class="n">databricks_client</span><span class="o">.</span><span class="n">host</span>
+    <span class="n">workspace_id</span> <span class="o">=</span> <span class="n">databricks_client</span><span class="o">.</span><span class="n">workspace_id</span> <span class="ow">or</span> <span class="s2">&quot;&lt;workspace_id&gt;&quot;</span>
+    <span class="k">if</span> <span class="s2">&quot;existing_cluster_id&quot;</span> <span class="ow">in</span> <span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;job&quot;</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="s2">&quot;https://</span><span class="si">{host}</span><span class="s2">/?o=</span><span class="si">{workspace_id}</span><span class="s2">#/setting/clusters/</span><span class="si">{cluster_id}</span><span class="s2">/sparkUi&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span>
+            <span class="n">workspace_id</span><span class="o">=</span><span class="n">workspace_id</span><span class="p">,</span>
+            <span class="n">cluster_id</span><span class="o">=</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;job&quot;</span><span class="p">][</span><span class="s2">&quot;existing_cluster_id&quot;</span><span class="p">],</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;https://</span><span class="si">{host}</span><span class="s2">/?o=</span><span class="si">{workspace_id}</span><span class="s2">#joblist&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">workspace_id</span><span class="o">=</span><span class="n">workspace_id</span>
+        <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

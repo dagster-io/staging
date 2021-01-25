@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spark (dagster_spark) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="SSH / SFTP (dagster_ssh)" href="dagster_ssh.html" />
+    <link rel="prev" title="Snowflake (dagster_snowflake)" href="dagster_snowflake.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_snowflake.html" title="Previous document">Snowflake (dagster_snowflake)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_ssh.html" title="Next document">SSH / SFTP (dagster_ssh)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="spark-dagster-spark">
+<h1>Spark (dagster_spark)<a class="headerlink" href="#spark-dagster-spark" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="dagster_spark.SparkSolidError">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_spark.</code><code class="sig-name descname">SparkSolidError</code><a class="reference internal" href="../../../../_modules/dagster_spark/types.html#SparkSolidError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_spark.SparkSolidError" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="dagster_spark.define_spark_config">
+<code class="sig-prename descclassname">dagster_spark.</code><code class="sig-name descname">define_spark_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_spark/configs.html#define_spark_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_spark.define_spark_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spark configuration.</p>
+<dl class="simple">
+<dt>See the Spark documentation for reference:</dt><dd><p><a class="reference external" href="https://spark.apache.org/docs/latest/submitting-applications.html">https://spark.apache.org/docs/latest/submitting-applications.html</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_spark.create_spark_solid">
+<code class="sig-prename descclassname">dagster_spark.</code><code class="sig-name descname">create_spark_solid</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">main_class</em>, <em class="sig-param">description=None</em>, <em class="sig-param">required_resource_keys=frozenset({'spark'})</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_spark/solids.html#create_spark_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_spark.create_spark_solid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="dagster_spark.construct_spark_shell_command">
+<code class="sig-prename descclassname">dagster_spark.</code><code class="sig-name descname">construct_spark_shell_command</code><span class="sig-paren">(</span><em class="sig-param">application_jar</em>, <em class="sig-param">main_class</em>, <em class="sig-param">master_url=None</em>, <em class="sig-param">spark_conf=None</em>, <em class="sig-param">deploy_mode=None</em>, <em class="sig-param">application_arguments=None</em>, <em class="sig-param">spark_home=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_spark/utils.html#construct_spark_shell_command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_spark.construct_spark_shell_command" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructs the spark-submit command for a Spark job.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_spark.spark_resource">
+<code class="sig-prename descclassname">dagster_spark.</code><code class="sig-name descname">spark_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_spark/resources.html#spark_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_spark.spark_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_snowflake.html" title="Previous document">Snowflake (dagster_snowflake)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_ssh.html" title="Next document">SSH / SFTP (dagster_ssh)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

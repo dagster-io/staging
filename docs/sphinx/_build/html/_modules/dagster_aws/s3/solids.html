@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_aws.s3.solids &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_aws.s3.solids</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AssetMaterialization</span><span class="p">,</span>
+    <span class="n">EventMetadataEntry</span><span class="p">,</span>
+    <span class="n">Field</span><span class="p">,</span>
+    <span class="n">FileHandle</span><span class="p">,</span>
+    <span class="n">InputDefinition</span><span class="p">,</span>
+    <span class="n">Output</span><span class="p">,</span>
+    <span class="n">OutputDefinition</span><span class="p">,</span>
+    <span class="n">StringSource</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">dagster_type_loader</span><span class="p">,</span>
+    <span class="n">solid</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">PythonObjectDagsterType</span>
+
+<span class="kn">from</span> <span class="nn">.file_manager</span> <span class="kn">import</span> <span class="n">S3FileHandle</span>
+
+
+<span class="k">def</span> <span class="nf">dict_with_fields</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">fields</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">fields</span><span class="p">,</span> <span class="s2">&quot;fields&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">field_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">fields</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="nd">@dagster_type_loader</span><span class="p">(</span><span class="n">fields</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_input_schema</span><span class="p">(</span><span class="n">_context</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="n">field_names</span><span class="p">,</span> <span class="s2">&quot;value&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+    <span class="k">class</span> <span class="nc">_DictWithSchema</span><span class="p">(</span><span class="n">PythonObjectDagsterType</span><span class="p">):</span>
+        <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="nb">super</span><span class="p">(</span><span class="n">_DictWithSchema</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">python_type</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">loader</span><span class="o">=</span><span class="n">_input_schema</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_DictWithSchema</span><span class="p">()</span>
+
+
+<span class="n">S3Coordinate</span> <span class="o">=</span> <span class="n">dict_with_fields</span><span class="p">(</span>
+    <span class="s2">&quot;S3Coordinate&quot;</span><span class="p">,</span>
+    <span class="n">fields</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;bucket&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;S3 bucket name&quot;</span><span class="p">),</span>
+        <span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;S3 key name&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">last_key</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s2">&quot;/&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">key</span>
+    <span class="n">comps</span> <span class="o">=</span> <span class="n">key</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">comps</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+
+<span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;Bucket&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The name of the bucket to upload to.&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;Key&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The name of the key to upload to.&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;file_handle&quot;</span><span class="p">,</span> <span class="n">FileHandle</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The file to upload.&quot;</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;s3_file_handle&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">S3FileHandle</span><span class="p">)],</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;Take a file handle and upload it to s3. Returns an S3FileHandle.&quot;&quot;&quot;</span><span class="p">,</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;s3&quot;</span><span class="p">,</span> <span class="s2">&quot;file_manager&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">file_handle_to_s3</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+    <span class="n">bucket</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;Bucket&quot;</span><span class="p">]</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;Key&quot;</span><span class="p">]</span>
+
+    <span class="k">with</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">file_manager</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fileobj</span><span class="p">:</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">upload_fileobj</span><span class="p">(</span><span class="n">fileobj</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">s3_file_handle</span> <span class="o">=</span> <span class="n">S3FileHandle</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+        <span class="k">yield</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="n">s3_file_handle</span><span class="o">.</span><span class="n">s3_path</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="n">s3_file_handle</span><span class="o">.</span><span class="n">s3_path</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">last_key</span><span class="p">(</span><span class="n">key</span><span class="p">))],</span>
+        <span class="p">)</span>
+
+        <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">s3_file_handle</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;s3_file_handle&quot;</span><span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

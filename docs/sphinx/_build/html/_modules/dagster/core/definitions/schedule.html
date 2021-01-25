@@ -1,0 +1,335 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.schedule &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.schedule</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">import</span> <span class="nn">pendulum</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DagsterInvalidDefinitionError</span><span class="p">,</span>
+    <span class="n">ScheduleExecutionError</span><span class="p">,</span>
+    <span class="n">user_code_error_boundary</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.tags</span> <span class="kn">import</span> <span class="n">check_tags</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">ensure_gen</span><span class="p">,</span> <span class="n">merge_dicts</span>
+
+<span class="kn">from</span> <span class="nn">.job</span> <span class="kn">import</span> <span class="n">JobContext</span><span class="p">,</span> <span class="n">JobDefinition</span><span class="p">,</span> <span class="n">JobType</span><span class="p">,</span> <span class="n">RunRequest</span><span class="p">,</span> <span class="n">SkipReason</span>
+<span class="kn">from</span> <span class="nn">.mode</span> <span class="kn">import</span> <span class="n">DEFAULT_MODE_NAME</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+
+<div class="viewcode-block" id="ScheduleExecutionContext"><a class="viewcode-back" href="../../../../sections/api/apidocs/schedules-sensors.html#dagster.ScheduleExecutionContext">[docs]</a><span class="k">class</span> <span class="nc">ScheduleExecutionContext</span><span class="p">(</span><span class="n">JobContext</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Schedule-specific execution context.</span>
+
+<span class="sd">    An instance of this class is made available as the first argument to various ScheduleDefinition</span>
+<span class="sd">    functions. It is passed as the first argument to ``run_config_fn``, ``tags_fn``,</span>
+<span class="sd">    and ``should_execute``.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        instance (DagsterInstance): The instance configured to run the schedule</span>
+<span class="sd">        scheduled_execution_time (datetime):</span>
+<span class="sd">            The time in which the execution was scheduled to happen. May differ slightly</span>
+<span class="sd">            from both the actual execution time and the time at which the run config is computed.</span>
+<span class="sd">            Not available in all schedulers - currently only set in deployments using</span>
+<span class="sd">            DagsterDaemonScheduler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_scheduled_execution_time&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">scheduled_execution_time</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ScheduleExecutionContext</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scheduled_execution_time</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+            <span class="n">scheduled_execution_time</span><span class="p">,</span> <span class="s2">&quot;scheduled_execution_time&quot;</span><span class="p">,</span> <span class="n">datetime</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">scheduled_execution_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scheduled_execution_time</span></div>
+
+
+<div class="viewcode-block" id="ScheduleDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/schedules-sensors.html#dagster.ScheduleDefinition">[docs]</a><span class="k">class</span> <span class="nc">ScheduleDefinition</span><span class="p">(</span><span class="n">JobDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define a schedule that targets a pipeline</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of the schedule to create.</span>
+<span class="sd">        cron_schedule (str): A valid cron string specifying when the schedule will run, e.g.,</span>
+<span class="sd">            &#39;45 23 * * 6&#39; for a schedule that runs at 11:45 PM every Saturday.</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute when the schedule runs.</span>
+<span class="sd">        execution_fn (Callable[ScheduleExecutionContext]): The core evaluation function for the</span>
+<span class="sd">            schedule, which is run at an interval to determine whether a run should be launched or</span>
+<span class="sd">            not. Takes a :py:class:`~dagster.ScheduleExecutionContext`.</span>
+
+<span class="sd">            This function must return a generator, which must yield either a single SkipReason</span>
+<span class="sd">            or one or more RunRequest objects.</span>
+<span class="sd">        run_config (Optional[Dict]): The environment config that parameterizes this execution,</span>
+<span class="sd">            as a dict.</span>
+<span class="sd">        run_config_fn (Callable[[ScheduleExecutionContext], [Dict]]): A function that takes a</span>
+<span class="sd">            ScheduleExecutionContext object and returns the environment configuration that</span>
+<span class="sd">            parameterizes this execution, as a dict. You may set only one of ``run_config``</span>
+<span class="sd">            and ``run_config_fn``.</span>
+<span class="sd">        tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach</span>
+<span class="sd">            to the scheduled runs.</span>
+<span class="sd">        tags_fn (Optional[Callable[[ScheduleExecutionContext], Optional[Dict[str, str]]]]): A</span>
+<span class="sd">            function that generates tags to attach to the schedules runs. Takes a</span>
+<span class="sd">            :py:class:`~dagster.ScheduleExecutionContext` and returns a dictionary of tags (string</span>
+<span class="sd">            key-value pairs). You may set only one of ``tags`` and ``tags_fn``.</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute when the schedule runs. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The mode to apply when executing this schedule. (default: &#39;default&#39;)</span>
+<span class="sd">        should_execute (Optional[Callable[[ScheduleExecutionContext], bool]]): A function that runs</span>
+<span class="sd">            at schedule execution time to determine whether a schedule should execute or skip. Takes</span>
+<span class="sd">            a :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the</span>
+<span class="sd">            schedule should execute). Defaults to a function that always returns ``True``.</span>
+<span class="sd">        environment_vars (Optional[dict[str, str]]): The environment variables to set for the</span>
+<span class="sd">            schedule</span>
+<span class="sd">        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works</span>
+<span class="sd">            with DagsterDaemonScheduler, and must be set when using that scheduler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;_cron_schedule&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_environment_vars&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_execution_fn&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_execution_timezone&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">run_config_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+        <span class="n">should_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">environment_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">execution_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">ScheduleDefinition</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+            <span class="n">job_type</span><span class="o">=</span><span class="n">JobType</span><span class="o">.</span><span class="n">SCHEDULE</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">),</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+                <span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cron_schedule</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cron_schedule</span><span class="p">,</span> <span class="s2">&quot;cron_schedule&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_environment_vars</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+            <span class="n">environment_vars</span><span class="p">,</span> <span class="s2">&quot;environment_vars&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_execution_timezone</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">execution_timezone</span><span class="p">,</span> <span class="s2">&quot;execution_timezone&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">execution_fn</span> <span class="ow">and</span> <span class="p">(</span><span class="n">run_config_fn</span> <span class="ow">or</span> <span class="n">tags_fn</span> <span class="ow">or</span> <span class="n">should_execute</span> <span class="ow">or</span> <span class="n">tags</span> <span class="ow">or</span> <span class="n">run_config</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;Attempted to provide both execution_fn and individual run_config/tags arguments &quot;</span>
+                <span class="s2">&quot;to ScheduleDefinition. Must provide only one of the two.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">execution_fn</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_execution_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">execution_fn</span><span class="p">,</span> <span class="s2">&quot;execution_fn&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">run_config_fn</span> <span class="ow">and</span> <span class="n">run_config</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="s2">&quot;Attempted to provide both run_config_fn and run_config as arguments&quot;</span>
+                    <span class="s2">&quot; to ScheduleDefinition. Must provide only one of the two.&quot;</span>
+                <span class="p">)</span>
+            <span class="n">run_config_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span>
+                <span class="n">run_config_fn</span><span class="p">,</span>
+                <span class="s2">&quot;run_config_fn&quot;</span><span class="p">,</span>
+                <span class="n">default</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_context</span><span class="p">:</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">run_config</span><span class="p">,</span> <span class="s2">&quot;run_config&quot;</span><span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">tags_fn</span> <span class="ow">and</span> <span class="n">tags</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="s2">&quot;Attempted to provide both tags_fn and tags as arguments&quot;</span>
+                    <span class="s2">&quot; to ScheduleDefinition. Must provide only one of the two.&quot;</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">tags</span><span class="p">:</span>
+                <span class="n">check_tags</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">)</span>
+                <span class="n">tags_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">_context</span><span class="p">:</span> <span class="n">tags</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">tags_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">tags_fn</span><span class="p">,</span> <span class="s2">&quot;tags_fn&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_context</span><span class="p">:</span> <span class="p">{})</span>
+
+            <span class="n">should_execute</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span>
+                <span class="n">should_execute</span><span class="p">,</span> <span class="s2">&quot;should_execute&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_context</span><span class="p">:</span> <span class="kc">True</span>
+            <span class="p">)</span>
+
+            <span class="k">def</span> <span class="nf">_execution_fn</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+                <span class="k">with</span> <span class="n">user_code_error_boundary</span><span class="p">(</span>
+                    <span class="n">ScheduleExecutionError</span><span class="p">,</span>
+                    <span class="k">lambda</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Error occurred during the execution of should_execute for schedule </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">should_execute</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+                        <span class="k">return</span>
+
+                <span class="k">with</span> <span class="n">user_code_error_boundary</span><span class="p">(</span>
+                    <span class="n">ScheduleExecutionError</span><span class="p">,</span>
+                    <span class="k">lambda</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Error occurred during the execution of run_config_fn for schedule </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">):</span>
+                    <span class="n">evaluated_run_config</span> <span class="o">=</span> <span class="n">run_config_fn</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+                <span class="k">with</span> <span class="n">user_code_error_boundary</span><span class="p">(</span>
+                    <span class="n">ScheduleExecutionError</span><span class="p">,</span>
+                    <span class="k">lambda</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Error occurred during the execution of tags_fn for schedule </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">):</span>
+                    <span class="n">evaluated_tags</span> <span class="o">=</span> <span class="n">tags_fn</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+                <span class="k">yield</span> <span class="n">RunRequest</span><span class="p">(</span>
+                    <span class="n">run_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">run_config</span><span class="o">=</span><span class="n">evaluated_run_config</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="n">evaluated_tags</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_execution_fn</span> <span class="o">=</span> <span class="n">_execution_fn</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_timezone</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="c1"># Verify that the timezone can be loaded</span>
+                <span class="n">pendulum</span><span class="o">.</span><span class="n">timezone</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execution_timezone</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="s2">&quot;Invalid execution timezone </span><span class="si">{timezone}</span><span class="s2"> for </span><span class="si">{schedule_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">schedule_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">timezone</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_execution_timezone</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">cron_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cron_schedule</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">environment_vars</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_environment_vars</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">execution_timezone</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_timezone</span>
+
+    <span class="k">def</span> <span class="nf">get_execution_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">ScheduleExecutionContext</span><span class="p">)</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ensure_gen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execution_fn</span><span class="p">(</span><span class="n">context</span><span class="p">)))</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">result</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="p">(</span><span class="n">RunRequest</span><span class="p">,</span> <span class="n">SkipReason</span><span class="p">))</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">result</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">SkipReason</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">result</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">RunRequest</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="n">RunRequest</span><span class="p">(</span>
+                    <span class="n">run_key</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">run_key</span><span class="p">,</span>
+                    <span class="n">run_config</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">run_config</span><span class="p">,</span>
+                    <span class="n">tags</span><span class="o">=</span><span class="n">merge_dicts</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="o">.</span><span class="n">tags_for_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">)),</span>
+                <span class="p">)</span>
+            <span class="p">]</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">RunRequest</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="ow">not</span> <span class="n">data</span><span class="o">.</span><span class="n">run_key</span> <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">result</span><span class="p">),</span>
+            <span class="s2">&quot;Schedules that return multiple RunRequests must specify a run_key in each RunRequest&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># clone all the run requests with the required schedule tags</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">RunRequest</span><span class="p">(</span>
+                <span class="n">run_key</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">run_key</span><span class="p">,</span>
+                <span class="n">run_config</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">run_config</span><span class="p">,</span>
+                <span class="n">tags</span><span class="o">=</span><span class="n">merge_dicts</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="o">.</span><span class="n">tags_for_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">)),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">result</span>
+        <span class="p">]</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_slack.resources &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_slack.resources</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">resource</span>
+<span class="kn">from</span> <span class="nn">slack</span> <span class="kn">import</span> <span class="n">WebClient</span>
+
+
+<div class="viewcode-block" id="slack_resource"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_slack.html#dagster_slack.slack_resource">[docs]</a><span class="nd">@resource</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;token&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;To configure access to the Slack API, you&#39;ll need an access</span>
+<span class="s2">                    token provisioned with access to your Slack workspace.</span>
+
+<span class="s2">                    Tokens are typically either user tokens or bot tokens. For programmatic posting</span>
+<span class="s2">                    to Slack from this resource, you probably want to provision and use a bot token.</span>
+
+<span class="s2">                    More in the Slack API documentation here: https://api.slack.com/docs/token-types</span>
+<span class="s2">                    &quot;&quot;&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">},</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;This resource is for connecting to Slack&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">slack_resource</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This resource is for connecting to Slack.</span>
+
+<span class="sd">    By configuring this Slack resource, you can post messages to Slack from any Dagster solid:</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import os</span>
+
+<span class="sd">        from dagster import solid, execute_pipeline, ModeDefinition</span>
+<span class="sd">        from dagster_slack import slack_resource</span>
+
+
+<span class="sd">        @solid(required_resource_keys={&#39;slack&#39;})</span>
+<span class="sd">        def slack_solid(context):</span>
+<span class="sd">            context.resources.slack.chat_postMessage(channel=&#39;#noise&#39;, text=&#39;:wave: hey there!&#39;)</span>
+
+<span class="sd">        @pipeline(</span>
+<span class="sd">            mode_defs=[ModeDefinition(resource_defs={&#39;slack&#39;: slack_resource})],</span>
+<span class="sd">        )</span>
+<span class="sd">        def slack_pipeline():</span>
+<span class="sd">            slack_solid()</span>
+
+<span class="sd">        execute_pipeline(</span>
+<span class="sd">            slack_pipeline, {&#39;resources&#39;: {&#39;slack&#39;: {&#39;config&#39;: {&#39;token&#39;: os.getenv(&#39;SLACK_TOKEN&#39;)}}}}</span>
+<span class="sd">        )</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">WebClient</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;token&quot;</span><span class="p">))</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

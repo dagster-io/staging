@@ -1,0 +1,1412 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Execution &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Hooks" href="hooks.html" />
+    <link rel="prev" title="Errors" href="errors.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="errors.html" title="Previous document">Errors</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="hooks.html" title="Next document">Hooks</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="execution">
+<h1>Execution<a class="headerlink" href="#execution" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="executing-pipelines">
+<h2>Executing pipelines<a class="headerlink" href="#executing-pipelines" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster.execute_pipeline">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">execute_pipeline</code><span class="sig-paren">(</span><em class="sig-param">pipeline: Union[dagster.core.definitions.pipeline.PipelineDefinition, dagster.core.definitions.pipeline_base.IPipeline], run_config: Optional[dict] = None, mode: Optional[str] = None, preset: Optional[str] = None, tags: Optional[Dict[str, Any]] = None, solid_selection: Optional[List[str]] = None, instance: Optional[dagster.core.instance.DagsterInstance] = None, raise_on_error: bool = True</em><span class="sig-paren">)</span> &#x2192; dagster.core.execution.results.PipelineExecutionResult<a class="reference internal" href="../../../_modules/dagster/core/execution/api.html#execute_pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.execute_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a pipeline synchronously.</p>
+<p>Users will typically call this API when testing pipeline execution, or running standalone
+scripts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<em>Union</em><em>[</em><em>IPipeline</em><em>, </em><a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><em>PipelineDefinition</em></a><em>]</em>) – The pipeline to execute.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment configuration that parametrizes this run,
+as a dict.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline mode to use. You may not set both <code class="docutils literal notranslate"><span class="pre">mode</span></code>
+and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>preset</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline preset to use. You may not set both
+<code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary key-value pairs that will be added to pipeline
+logs.</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The instance to execute against. If this is <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+an ephemeral instance will be used, and no artifacts will be persisted from the run.</p></li>
+<li><p><strong>raise_on_error</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Whether or not to raise exceptions when they occur.
+Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>, since this is the most useful behavior in test.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – <p>A list of solid selection queries (including single
+solid names) to execute. For example:
+- [‘some_solid’]: select “some_solid” itself.
+- [‘<a href="#id1"><span class="problematic" id="id2">*</span></a>some_solid’]: select “some_solid” and all its ancestors (upstream dependencies).
+- [‘<a href="#id3"><span class="problematic" id="id4">*</span></a>some_solid+++’]: select “some_solid”, all its ancestors, and its descendants</p>
+<blockquote>
+<div><p>(downstream dependencies) within 3 levels down.</p>
+</div></blockquote>
+<ul>
+<li><dl class="simple">
+<dt>[‘<a href="#id5"><span class="problematic" id="id6">*</span></a>some_solid’, ‘other_solid_a’, ‘other_solid_b+’]: select “some_solid” and all its</dt><dd><p>ancestors, “other_solid_a” itself, and “other_solid_b” and its direct child solids.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The result of pipeline execution.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.PipelineExecutionResult" title="dagster.PipelineExecutionResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineExecutionResult</span></code></a></p>
+</dd>
+</dl>
+<p>For the asynchronous version, see <a class="reference internal" href="#dagster.execute_pipeline_iterator" title="dagster.execute_pipeline_iterator"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_pipeline_iterator()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.execute_pipeline_iterator">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">execute_pipeline_iterator</code><span class="sig-paren">(</span><em class="sig-param">pipeline: Union[dagster.core.definitions.pipeline.PipelineDefinition, dagster.core.definitions.pipeline_base.IPipeline], run_config: Optional[dict] = None, mode: Optional[str] = None, preset: Optional[str] = None, tags: Optional[Dict[str, Any]] = None, solid_selection: Optional[List[str]] = None, instance: Optional[dagster.core.instance.DagsterInstance] = None</em><span class="sig-paren">)</span> &#x2192; Iterator[dagster.core.events.DagsterEvent]<a class="reference internal" href="../../../_modules/dagster/core/execution/api.html#execute_pipeline_iterator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.execute_pipeline_iterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a pipeline iteratively.</p>
+<p>Rather than package up the result of running a pipeline into a single object, like
+<a class="reference internal" href="#dagster.execute_pipeline" title="dagster.execute_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_pipeline()</span></code></a>, this function yields the stream of events resulting from pipeline
+execution.</p>
+<p>This is intended to allow the caller to handle these events on a streaming basis in whatever
+way is appropriate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<em>Union</em><em>[</em><em>IPipeline</em><em>, </em><a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><em>PipelineDefinition</em></a><em>]</em>) – The pipeline to execute.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment configuration that parametrizes this run,
+as a dict.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline mode to use. You may not set both <code class="docutils literal notranslate"><span class="pre">mode</span></code>
+and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>preset</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline preset to use. You may not set both
+<code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary key-value pairs that will be added to pipeline
+logs.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – <p>A list of solid selection queries (including single
+solid names) to execute. For example:
+- [‘some_solid’]: select “some_solid” itself.
+- [‘<a href="#id7"><span class="problematic" id="id8">*</span></a>some_solid’]: select “some_solid” and all its ancestors (upstream dependencies).
+- [‘<a href="#id9"><span class="problematic" id="id10">*</span></a>some_solid+++’]: select “some_solid”, all its ancestors, and its descendants</p>
+<blockquote>
+<div><p>(downstream dependencies) within 3 levels down.</p>
+</div></blockquote>
+<ul>
+<li><dl class="simple">
+<dt>[‘<a href="#id11"><span class="problematic" id="id12">*</span></a>some_solid’, ‘other_solid_a’, ‘other_solid_b+’]: select “some_solid” and all its</dt><dd><p>ancestors, “other_solid_a” itself, and “other_solid_b” and its direct child solids.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The instance to execute against. If this is <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+an ephemeral instance will be used, and no artifacts will be persisted from the run.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The stream of events resulting from pipeline execution.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Iterator[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="re-executing-pipelines">
+<h2>Re-executing pipelines<a class="headerlink" href="#re-executing-pipelines" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster.reexecute_pipeline">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">reexecute_pipeline</code><span class="sig-paren">(</span><em class="sig-param">pipeline: Union[dagster.core.definitions.pipeline_base.IPipeline, dagster.core.definitions.pipeline.PipelineDefinition], parent_run_id: str, run_config: Optional[dict] = None, step_selection: Optional[List[str]] = None, mode: Optional[str] = None, preset: Optional[str] = None, tags: Optional[Dict[str, Any]] = None, instance: dagster.core.instance.DagsterInstance = None, raise_on_error: bool = True</em><span class="sig-paren">)</span> &#x2192; dagster.core.execution.results.PipelineExecutionResult<a class="reference internal" href="../../../_modules/dagster/core/execution/api.html#reexecute_pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.reexecute_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reexecute an existing pipeline run.</p>
+<p>Users will typically call this API when testing pipeline reexecution, or running standalone
+scripts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<em>Union</em><em>[</em><em>IPipeline</em><em>, </em><a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><em>PipelineDefinition</em></a><em>]</em>) – The pipeline to execute.</p></li>
+<li><p><strong>parent_run_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The id of the previous run to reexecute. The run must exist in the
+instance.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment configuration that parametrizes this run,
+as a dict.</p></li>
+<li><p><strong>step_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – <p>A list of step selection queries (including single
+step keys) to execute. For example:
+- [‘some_solid’]: select the execution step “some_solid” itself.
+- [‘<a href="#id13"><span class="problematic" id="id14">*</span></a>some_solid’]: select the step “some_solid” and all its ancestors</p>
+<blockquote>
+<div><p>(upstream dependencies).</p>
+</div></blockquote>
+<ul>
+<li><dl class="simple">
+<dt>[‘<a href="#id15"><span class="problematic" id="id16">*</span></a>some_solid+++’]: select the step “some_solid”, all its ancestors,</dt><dd><p>and its descendants (downstream dependencies) within 3 levels down.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>[‘<a href="#id17"><span class="problematic" id="id18">*</span></a>some_solid’, ‘other_solid_a’, ‘other_solid_b+’]: select</dt><dd><p>”some_solid” and all its ancestors, “other_solid_a” itself, and
+“other_solid_b” and its direct child execution steps.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline mode to use. You may not set both <code class="docutils literal notranslate"><span class="pre">mode</span></code>
+and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>preset</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline preset to use. You may not set both
+<code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary key-value pairs that will be added to pipeline
+logs.</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The instance to execute against. If this is <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+an ephemeral instance will be used, and no artifacts will be persisted from the run.</p></li>
+<li><p><strong>raise_on_error</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Whether or not to raise exceptions when they occur.
+Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>, since this is the most useful behavior in test.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The result of pipeline execution.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.PipelineExecutionResult" title="dagster.PipelineExecutionResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineExecutionResult</span></code></a></p>
+</dd>
+</dl>
+<p>For the asynchronous version, see <a class="reference internal" href="#dagster.reexecute_pipeline_iterator" title="dagster.reexecute_pipeline_iterator"><code class="xref py py-func docutils literal notranslate"><span class="pre">reexecute_pipeline_iterator()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.reexecute_pipeline_iterator">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">reexecute_pipeline_iterator</code><span class="sig-paren">(</span><em class="sig-param">pipeline: Union[dagster.core.definitions.pipeline_base.IPipeline, dagster.core.definitions.pipeline.PipelineDefinition], parent_run_id: str, run_config: Optional[dict] = None, step_selection: Optional[List[str]] = None, mode: Optional[str] = None, preset: Optional[str] = None, tags: Optional[Dict[str, Any]] = None, instance: dagster.core.instance.DagsterInstance = None</em><span class="sig-paren">)</span> &#x2192; Iterator[dagster.core.events.DagsterEvent]<a class="reference internal" href="../../../_modules/dagster/core/execution/api.html#reexecute_pipeline_iterator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.reexecute_pipeline_iterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reexecute a pipeline iteratively.</p>
+<p>Rather than package up the result of running a pipeline into a single object, like
+<a class="reference internal" href="#dagster.reexecute_pipeline" title="dagster.reexecute_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">reexecute_pipeline()</span></code></a>, this function yields the stream of events resulting from pipeline
+reexecution.</p>
+<p>This is intended to allow the caller to handle these events on a streaming basis in whatever
+way is appropriate.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<em>Union</em><em>[</em><em>IPipeline</em><em>, </em><a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><em>PipelineDefinition</em></a><em>]</em>) – The pipeline to execute.</p></li>
+<li><p><strong>parent_run_id</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The id of the previous run to reexecute. The run must exist in the
+instance.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment configuration that parametrizes this run,
+as a dict.</p></li>
+<li><p><strong>step_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – <p>A list of step selection queries (including single
+step keys) to execute. For example:
+- [‘some_solid’]: select the execution step “some_solid” itself.
+- [‘<a href="#id19"><span class="problematic" id="id20">*</span></a>some_solid’]: select the step “some_solid” and all its ancestors</p>
+<blockquote>
+<div><p>(upstream dependencies).</p>
+</div></blockquote>
+<ul>
+<li><dl class="simple">
+<dt>[‘<a href="#id21"><span class="problematic" id="id22">*</span></a>some_solid+++’]: select the step “some_solid”, all its ancestors,</dt><dd><p>and its descendants (downstream dependencies) within 3 levels down.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>[‘<a href="#id23"><span class="problematic" id="id24">*</span></a>some_solid’, ‘other_solid_a’, ‘other_solid_b+’]: select</dt><dd><p>”some_solid” and all its ancestors, “other_solid_a” itself, and
+“other_solid_b” and its direct child execution steps.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline mode to use. You may not set both <code class="docutils literal notranslate"><span class="pre">mode</span></code>
+and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>preset</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline preset to use. You may not set both
+<code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary key-value pairs that will be added to pipeline
+logs.</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The instance to execute against. If this is <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+an ephemeral instance will be used, and no artifacts will be persisted from the run.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The stream of events resulting from pipeline reexecution.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Iterator[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="executing-solids">
+<h2>Executing solids<a class="headerlink" href="#executing-solids" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster.execute_solid">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">execute_solid</code><span class="sig-paren">(</span><em class="sig-param">solid_def</em>, <em class="sig-param">mode_def=None</em>, <em class="sig-param">input_values=None</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">run_config=None</em>, <em class="sig-param">raise_on_error=True</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/utils/test.html#execute_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.execute_solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a single solid in an ephemeral pipeline.</p>
+<p>Intended to support unit tests. Input values may be passed directly, and no pipeline need be
+specified – an ephemeral pipeline will be constructed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>solid_def</strong> (<a class="reference internal" href="solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition"><em>SolidDefinition</em></a>) – The solid to execute.</p></li>
+<li><p><strong>mode_def</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><em>ModeDefinition</em></a><em>]</em>) – The mode within which to execute the solid. Use this
+if, e.g., custom resources, loggers, or executors are desired.</p></li>
+<li><p><strong>input_values</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – A dict of input names to input values, used to
+pass inputs to the solid directly. You may also use the <code class="docutils literal notranslate"><span class="pre">run_config</span></code> to
+configure any inputs that are configurable.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary key-value pairs that will be added to pipeline
+logs.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment configuration that parameterized this
+execution, as a dict.</p></li>
+<li><p><strong>raise_on_error</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Whether or not to raise exceptions when they occur.
+Defaults to <code class="docutils literal notranslate"><span class="pre">True</span></code>, since this is the most useful behavior in test.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The result of executing the
+solid.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Union[<a class="reference internal" href="#dagster.CompositeSolidExecutionResult" title="dagster.CompositeSolidExecutionResult">CompositeSolidExecutionResult</a>, <a class="reference internal" href="#dagster.SolidExecutionResult" title="dagster.SolidExecutionResult">SolidExecutionResult</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.execute_solid_within_pipeline">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">execute_solid_within_pipeline</code><span class="sig-paren">(</span><em class="sig-param">pipeline_def</em>, <em class="sig-param">solid_name</em>, <em class="sig-param">inputs=None</em>, <em class="sig-param">run_config=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">preset=None</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">instance=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/utils/test.html#execute_solid_within_pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.execute_solid_within_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a single solid within an existing pipeline.</p>
+<p>Intended to support tests. Input values may be passed directly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline_def</strong> (<a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><em>PipelineDefinition</em></a>) – The pipeline within which to execute the solid.</p></li>
+<li><p><strong>solid_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the solid, or the aliased solid, to execute.</p></li>
+<li><p><strong>inputs</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – A dict of input names to input values, used to
+pass input values to the solid directly. You may also use the <code class="docutils literal notranslate"><span class="pre">run_config</span></code> to
+configure any inputs that are configurable.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment configuration that parameterized this
+execution, as a dict.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline mode to use. You may not set both <code class="docutils literal notranslate"><span class="pre">mode</span></code>
+and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>preset</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline preset to use. You may not set both
+<code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary key-value pairs that will be added to pipeline
+logs.</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The instance to execute against. If this is <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+an ephemeral instance will be used, and no artifacts will be persisted from the run.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The result of executing the
+solid.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Union[<a class="reference internal" href="#dagster.CompositeSolidExecutionResult" title="dagster.CompositeSolidExecutionResult">CompositeSolidExecutionResult</a>, <a class="reference internal" href="#dagster.SolidExecutionResult" title="dagster.SolidExecutionResult">SolidExecutionResult</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.execute_solids_within_pipeline">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">execute_solids_within_pipeline</code><span class="sig-paren">(</span><em class="sig-param">pipeline_def</em>, <em class="sig-param">solid_names</em>, <em class="sig-param">inputs=None</em>, <em class="sig-param">run_config=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">preset=None</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">instance=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/utils/test.html#execute_solids_within_pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.execute_solids_within_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execute a set of solids within an existing pipeline.</p>
+<p>Intended to support tests. Input values may be passed directly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline_def</strong> (<a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><em>PipelineDefinition</em></a>) – The pipeline within which to execute the solid.</p></li>
+<li><p><strong>solid_names</strong> (<em>FrozenSet</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A set of the solid names, or the aliased solids, to execute.</p></li>
+<li><p><strong>inputs</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em><em>]</em>) – A dict keyed on solid names, whose values are
+dicts of input names to input values, used to pass input values to the solids directly.
+You may also use the <code class="docutils literal notranslate"><span class="pre">run_config</span></code> to configure any inputs that are configurable.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment configuration that parameterized this
+execution, as a dict.</p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline mode to use. You may not set both <code class="docutils literal notranslate"><span class="pre">mode</span></code>
+and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>preset</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline preset to use. You may not set both
+<code class="docutils literal notranslate"><span class="pre">mode</span></code> and <code class="docutils literal notranslate"><span class="pre">preset</span></code>.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary key-value pairs that will be added to pipeline
+logs.</p></li>
+<li><p><strong>instance</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><em>DagsterInstance</em></a><em>]</em>) – The instance to execute against. If this is <code class="docutils literal notranslate"><span class="pre">None</span></code>,
+an ephemeral instance will be used, and no artifacts will be persisted from the run.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The results of
+executing the solids, keyed by solid name.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, Union[<a class="reference internal" href="#dagster.CompositeSolidExecutionResult" title="dagster.CompositeSolidExecutionResult">CompositeSolidExecutionResult</a>, <a class="reference internal" href="#dagster.SolidExecutionResult" title="dagster.SolidExecutionResult">SolidExecutionResult</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="execution-context">
+<h2>Execution context<a class="headerlink" href="#execution-context" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster.core.execution.context.compute.SolidExecutionContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.core.execution.context.compute.</code><code class="sig-name descname">SolidExecutionContext</code><span class="sig-paren">(</span><em class="sig-param">system_compute_execution_context: dagster.core.execution.context.system.SystemComputeExecutionContext</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/context/compute.html#SolidExecutionContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.core.execution.context.compute.SolidExecutionContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">context</span></code> object available to solid compute logic.</p>
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.SolidExecutionContext.instance">
+<em class="property">property </em><code class="sig-name descname">instance</code><a class="headerlink" href="#dagster.core.execution.context.compute.SolidExecutionContext.instance" title="Permalink to this definition">¶</a></dt>
+<dd><p>The current Instance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.SolidExecutionContext.pdb">
+<em class="property">property </em><code class="sig-name descname">pdb</code><a class="headerlink" href="#dagster.core.execution.context.compute.SolidExecutionContext.pdb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows pdb debugging from within the solid.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span>
+<span class="k">def</span> <span class="nf">debug_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.SolidExecutionContext.pipeline_run">
+<em class="property">property </em><code class="sig-name descname">pipeline_run</code><a class="headerlink" href="#dagster.core.execution.context.compute.SolidExecutionContext.pipeline_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>The current PipelineRun</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.SolidExecutionContext.solid_config">
+<em class="property">property </em><code class="sig-name descname">solid_config</code><a class="headerlink" href="#dagster.core.execution.context.compute.SolidExecutionContext.solid_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parsed config specific to this solid.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.core.execution.context.compute.</code><code class="sig-name descname">AbstractComputeExecutionContext</code><a class="reference internal" href="../../../_modules/dagster/core/execution/context/compute.html#AbstractComputeExecutionContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for solid context implemented by SolidExecutionContext and DagstermillExecutionContext</p>
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.get_tag">
+<em class="property">abstract </em><code class="sig-name descname">get_tag</code><span class="sig-paren">(</span><em class="sig-param">key: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../../../_modules/dagster/core/execution/context/compute.html#AbstractComputeExecutionContext.get_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.get_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implement this method to get a logging tag.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.has_tag">
+<em class="property">abstract </em><code class="sig-name descname">has_tag</code><span class="sig-paren">(</span><em class="sig-param">key</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="../../../_modules/dagster/core/execution/context/compute.html#AbstractComputeExecutionContext.has_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.has_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Implement this method to check if a logging tag is set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.log">
+<em class="property">abstract property </em><code class="sig-name descname">log</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>The log manager available in the execution context.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.pipeline_def">
+<em class="property">abstract property </em><code class="sig-name descname">pipeline_def</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.pipeline_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pipeline being executed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.pipeline_run">
+<em class="property">abstract property </em><code class="sig-name descname">pipeline_run</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.pipeline_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>The PipelineRun object corresponding to the execution.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.resources">
+<em class="property">abstract property </em><code class="sig-name descname">resources</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resources available in the execution context.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.run_id">
+<em class="property">abstract property </em><code class="sig-name descname">run_id</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.run_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The run id for the context.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.solid">
+<em class="property">abstract property </em><code class="sig-name descname">solid</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>The solid corresponding to the execution step being executed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.solid_config">
+<em class="property">abstract property </em><code class="sig-name descname">solid_config</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.solid_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parsed config specific to this solid.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.core.execution.context.compute.AbstractComputeExecutionContext.solid_def">
+<em class="property">abstract property </em><code class="sig-name descname">solid_def</code><a class="headerlink" href="#dagster.core.execution.context.compute.AbstractComputeExecutionContext.solid_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The solid definition corresponding to the execution step being executed.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.reconstructable">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">reconstructable</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/reconstructable.html#reconstructable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.reconstructable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a ReconstructablePipeline from a function that returns a PipelineDefinition, or a
+function decorated with <a class="reference internal" href="pipeline.html#dagster.pipeline" title="dagster.pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;pipeline</span></code></a></p>
+<p>When your pipeline must cross process boundaries, e.g., for execution on multiple nodes or
+in different systems (like dagstermill), Dagster must know how to reconstruct the pipeline
+on the other side of the process boundary.</p>
+<p>This function implements a very conservative strategy for reconstructing pipelines, so that
+its behavior is easy to predict, but as a consequence it is not able to reconstruct certain
+kinds of pipelines, such as those defined by lambdas, in nested scopes (e.g., dynamically
+within a method call), or in interactive environments such as the Python REPL or Jupyter
+notebooks.</p>
+<p>If you need to reconstruct pipelines constructed in these ways, you should use
+<code class="xref py py-func docutils literal notranslate"><span class="pre">build_reconstructable_pipeline()</span></code> instead, which allows you to specify your own
+strategy for reconstructing a pipeline.</p>
+<p>Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">reconstructable</span>
+
+<span class="nd">@pipeline</span>
+<span class="k">def</span> <span class="nf">foo_pipeline</span><span class="p">():</span>
+    <span class="o">...</span>
+
+<span class="n">reconstructable_foo_pipeline</span> <span class="o">=</span> <span class="n">reconstructable</span><span class="p">(</span><span class="n">foo_pipeline</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">make_bar_pipeline</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">PipelineDefinition</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+<span class="n">reconstructable_bar_pipeline</span> <span class="o">=</span> <span class="n">reconstructable</span><span class="p">(</span><span class="n">bar_pipeline</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="pipeline-and-solid-results">
+<h2>Pipeline and solid results<a class="headerlink" href="#pipeline-and-solid-results" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster.PipelineExecutionResult">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">PipelineExecutionResult</code><span class="sig-paren">(</span><em class="sig-param">pipeline_def</em>, <em class="sig-param">run_id</em>, <em class="sig-param">event_list</em>, <em class="sig-param">reconstruct_context</em>, <em class="sig-param">resource_instances_to_override=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/results.html#PipelineExecutionResult"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PipelineExecutionResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>The result of executing a pipeline.</p>
+<p>Returned by <a class="reference internal" href="#dagster.execute_pipeline" title="dagster.execute_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_pipeline()</span></code></a>. Users should not instantiate this class.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.SolidExecutionResult">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">SolidExecutionResult</code><span class="sig-paren">(</span><em class="sig-param">solid</em>, <em class="sig-param">step_events_by_kind</em>, <em class="sig-param">reconstruct_context</em>, <em class="sig-param">resource_instances_to_override=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/results.html#SolidExecutionResult"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SolidExecutionResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execution result for a leaf solid in a pipeline.</p>
+<p>Users should not instantiate this class.</p>
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.compute_input_event_dict">
+<em class="property">property </em><code class="sig-name descname">compute_input_event_dict</code><a class="headerlink" href="#dagster.SolidExecutionResult.compute_input_event_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>All events of type <code class="docutils literal notranslate"><span class="pre">STEP_INPUT</span></code>, keyed by input name.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, <a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.compute_output_events_dict">
+<em class="property">property </em><code class="sig-name descname">compute_output_events_dict</code><a class="headerlink" href="#dagster.SolidExecutionResult.compute_output_events_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>All events of type <code class="docutils literal notranslate"><span class="pre">STEP_OUTPUT</span></code>, keyed by output name</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, List[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.compute_step_events">
+<em class="property">property </em><code class="sig-name descname">compute_step_events</code><a class="headerlink" href="#dagster.SolidExecutionResult.compute_step_events" title="Permalink to this definition">¶</a></dt>
+<dd><p>All events generated by execution of the solid compute function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.compute_step_failure_event">
+<em class="property">property </em><code class="sig-name descname">compute_step_failure_event</code><a class="headerlink" href="#dagster.SolidExecutionResult.compute_step_failure_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">STEP_FAILURE</span></code> event, throws if it did not fail.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.expectation_events_during_compute">
+<em class="property">property </em><code class="sig-name descname">expectation_events_during_compute</code><a class="headerlink" href="#dagster.SolidExecutionResult.expectation_events_during_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>All events of type <code class="docutils literal notranslate"><span class="pre">STEP_EXPECTATION_RESULT</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.expectation_results_during_compute">
+<em class="property">property </em><code class="sig-name descname">expectation_results_during_compute</code><a class="headerlink" href="#dagster.SolidExecutionResult.expectation_results_during_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>All expectation results yielded by the solid</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="solids.html#dagster.ExpectationResult" title="dagster.ExpectationResult">ExpectationResult</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.failure_data">
+<em class="property">property </em><code class="sig-name descname">failure_data</code><a class="headerlink" href="#dagster.SolidExecutionResult.failure_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Any data corresponding to this step’s failure, if it
+failed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Union[<a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.8)">None</a>, StepFailureData]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.get_output_event_for_compute">
+<code class="sig-name descname">get_output_event_for_compute</code><span class="sig-paren">(</span><em class="sig-param">output_name='result'</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/results.html#SolidExecutionResult.get_output_event_for_compute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SolidExecutionResult.get_output_event_for_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">STEP_OUTPUT</span></code> event for the given output name.</p>
+<p>Throws if not present.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>output_name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the output. (default: ‘result’)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The corresponding event.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.get_output_events_for_compute">
+<code class="sig-name descname">get_output_events_for_compute</code><span class="sig-paren">(</span><em class="sig-param">output_name='result'</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/results.html#SolidExecutionResult.get_output_events_for_compute"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SolidExecutionResult.get_output_events_for_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">STEP_OUTPUT</span></code> event for the given output name.</p>
+<p>Throws if not present.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>output_name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the output. (default: ‘result’)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The corresponding events.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.get_step_success_event">
+<code class="sig-name descname">get_step_success_event</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/results.html#SolidExecutionResult.get_step_success_event"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SolidExecutionResult.get_step_success_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>DagsterEvent: The <code class="docutils literal notranslate"><span class="pre">STEP_SUCCESS</span></code> event, throws if not present.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.input_events_during_compute">
+<em class="property">property </em><code class="sig-name descname">input_events_during_compute</code><a class="headerlink" href="#dagster.SolidExecutionResult.input_events_during_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>All events of type <code class="docutils literal notranslate"><span class="pre">STEP_INPUT</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.materialization_events_during_compute">
+<em class="property">property </em><code class="sig-name descname">materialization_events_during_compute</code><a class="headerlink" href="#dagster.SolidExecutionResult.materialization_events_during_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>All events of type <code class="docutils literal notranslate"><span class="pre">STEP_MATERIALIZATION</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.materializations_during_compute">
+<em class="property">property </em><code class="sig-name descname">materializations_during_compute</code><a class="headerlink" href="#dagster.SolidExecutionResult.materializations_during_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>All materializations yielded by the solid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[Materialization]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.output_events_during_compute">
+<em class="property">property </em><code class="sig-name descname">output_events_during_compute</code><a class="headerlink" href="#dagster.SolidExecutionResult.output_events_during_compute" title="Permalink to this definition">¶</a></dt>
+<dd><p>All events of type <code class="docutils literal notranslate"><span class="pre">STEP_OUTPUT</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference internal" href="#dagster.DagsterEvent" title="dagster.DagsterEvent">DagsterEvent</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.output_value">
+<code class="sig-name descname">output_value</code><span class="sig-paren">(</span><em class="sig-param">output_name='result'</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/results.html#SolidExecutionResult.output_value"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SolidExecutionResult.output_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a computed output value.</p>
+<p>Note that calling this method will reconstruct the pipeline context (including, e.g.,
+resources) to retrieve materialized output values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>output_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The output name for which to retrieve the value. (default: ‘result’)</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">None</span></code> if execution did not succeed, the output value</dt><dd><p>in the normal case, and a dict of mapping keys to values in the mapped case.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Union[<a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.8)">None</a>, Any, Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.output_values">
+<em class="property">property </em><code class="sig-name descname">output_values</code><a class="headerlink" href="#dagster.SolidExecutionResult.output_values" title="Permalink to this definition">¶</a></dt>
+<dd><p>The computed output values.</p>
+<p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> if execution did not succeed.</p>
+<dl class="simple">
+<dt>Returns a dictionary where keys are output names and the values are:</dt><dd><ul class="simple">
+<li><p>the output values in the normal case</p></li>
+<li><p>a dictionary from mapping key to corresponding value in the mapped case</p></li>
+</ul>
+</dd>
+</dl>
+<p>Note that accessing this property will reconstruct the pipeline context (including, e.g.,
+resources) to retrieve materialized output values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Union[<a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.8)">None</a>, Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, Union[Any, Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, Any]]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.skipped">
+<em class="property">property </em><code class="sig-name descname">skipped</code><a class="headerlink" href="#dagster.SolidExecutionResult.skipped" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether solid execution was skipped.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.SolidExecutionResult.success">
+<em class="property">property </em><code class="sig-name descname">success</code><a class="headerlink" href="#dagster.SolidExecutionResult.success" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether solid execution was successful.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.CompositeSolidExecutionResult">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">CompositeSolidExecutionResult</code><span class="sig-paren">(</span><em class="sig-param">solid</em>, <em class="sig-param">event_list</em>, <em class="sig-param">step_events_by_kind</em>, <em class="sig-param">reconstruct_context</em>, <em class="sig-param">handle=None</em>, <em class="sig-param">resource_instances_to_override=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/results.html#CompositeSolidExecutionResult"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.CompositeSolidExecutionResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Execution result for a composite solid in a pipeline.</p>
+<p>Users should not instantiate this class.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.DagsterEvent">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterEvent</code><a class="reference internal" href="../../../_modules/dagster/core/events.html#DagsterEvent"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Events yielded by solid and pipeline execution.</p>
+<p>Users should not instantiate this class.</p>
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.event_type_value">
+<code class="sig-name descname">event_type_value</code><a class="headerlink" href="#dagster.DagsterEvent.event_type_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value for a DagsterEventType.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.pipeline_name">
+<code class="sig-name descname">pipeline_name</code><a class="headerlink" href="#dagster.DagsterEvent.pipeline_name" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.step_key">
+<code class="sig-name descname">step_key</code><a class="headerlink" href="#dagster.DagsterEvent.step_key" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.solid_handle">
+<code class="sig-name descname">solid_handle</code><a class="headerlink" href="#dagster.DagsterEvent.solid_handle" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>SolidHandle</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.step_kind_value">
+<code class="sig-name descname">step_kind_value</code><a class="headerlink" href="#dagster.DagsterEvent.step_kind_value" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value for a StepKind.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.logging_tags">
+<code class="sig-name descname">logging_tags</code><a class="headerlink" href="#dagster.DagsterEvent.logging_tags" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.event_specific_data">
+<code class="sig-name descname">event_specific_data</code><a class="headerlink" href="#dagster.DagsterEvent.event_specific_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Type must correspond to event_type_value.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.message">
+<code class="sig-name descname">message</code><a class="headerlink" href="#dagster.DagsterEvent.message" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEvent.pid">
+<code class="sig-name descname">pid</code><a class="headerlink" href="#dagster.DagsterEvent.pid" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="sig-name descname">step_key</code></dt>
+<dd><p>DEPRECATED</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.DagsterEvent.event_type">
+<em class="property">property </em><code class="sig-name descname">event_type</code><a class="headerlink" href="#dagster.DagsterEvent.event_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>The type of this event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.DagsterEventType" title="dagster.DagsterEventType">DagsterEventType</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.DagsterEventType">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DagsterEventType</code><a class="reference internal" href="../../../_modules/dagster/core/events.html#DagsterEventType"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DagsterEventType" title="Permalink to this definition">¶</a></dt>
+<dd><p>The types of events that may be yielded by solid and pipeline execution.</p>
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.ASSET_STORE_OPERATION">
+<code class="sig-name descname">ASSET_STORE_OPERATION</code><em class="property"> = 'ASSET_STORE_OPERATION'</em><a class="headerlink" href="#dagster.DagsterEventType.ASSET_STORE_OPERATION" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.ENGINE_EVENT">
+<code class="sig-name descname">ENGINE_EVENT</code><em class="property"> = 'ENGINE_EVENT'</em><a class="headerlink" href="#dagster.DagsterEventType.ENGINE_EVENT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.HANDLED_OUTPUT">
+<code class="sig-name descname">HANDLED_OUTPUT</code><em class="property"> = 'HANDLED_OUTPUT'</em><a class="headerlink" href="#dagster.DagsterEventType.HANDLED_OUTPUT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.HOOK_COMPLETED">
+<code class="sig-name descname">HOOK_COMPLETED</code><em class="property"> = 'HOOK_COMPLETED'</em><a class="headerlink" href="#dagster.DagsterEventType.HOOK_COMPLETED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.HOOK_ERRORED">
+<code class="sig-name descname">HOOK_ERRORED</code><em class="property"> = 'HOOK_ERRORED'</em><a class="headerlink" href="#dagster.DagsterEventType.HOOK_ERRORED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.HOOK_SKIPPED">
+<code class="sig-name descname">HOOK_SKIPPED</code><em class="property"> = 'HOOK_SKIPPED'</em><a class="headerlink" href="#dagster.DagsterEventType.HOOK_SKIPPED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.LOADED_INPUT">
+<code class="sig-name descname">LOADED_INPUT</code><em class="property"> = 'LOADED_INPUT'</em><a class="headerlink" href="#dagster.DagsterEventType.LOADED_INPUT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.OBJECT_STORE_OPERATION">
+<code class="sig-name descname">OBJECT_STORE_OPERATION</code><em class="property"> = 'OBJECT_STORE_OPERATION'</em><a class="headerlink" href="#dagster.DagsterEventType.OBJECT_STORE_OPERATION" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_CANCELED">
+<code class="sig-name descname">PIPELINE_CANCELED</code><em class="property"> = 'PIPELINE_CANCELED'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_CANCELED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_CANCELING">
+<code class="sig-name descname">PIPELINE_CANCELING</code><em class="property"> = 'PIPELINE_CANCELING'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_CANCELING" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_DEQUEUED">
+<code class="sig-name descname">PIPELINE_DEQUEUED</code><em class="property"> = 'PIPELINE_DEQUEUED'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_DEQUEUED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_ENQUEUED">
+<code class="sig-name descname">PIPELINE_ENQUEUED</code><em class="property"> = 'PIPELINE_ENQUEUED'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_ENQUEUED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_FAILURE">
+<code class="sig-name descname">PIPELINE_FAILURE</code><em class="property"> = 'PIPELINE_FAILURE'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_FAILURE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_INIT_FAILURE">
+<code class="sig-name descname">PIPELINE_INIT_FAILURE</code><em class="property"> = 'PIPELINE_INIT_FAILURE'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_INIT_FAILURE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_START">
+<code class="sig-name descname">PIPELINE_START</code><em class="property"> = 'PIPELINE_START'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_START" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_STARTING">
+<code class="sig-name descname">PIPELINE_STARTING</code><em class="property"> = 'PIPELINE_STARTING'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_STARTING" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.PIPELINE_SUCCESS">
+<code class="sig-name descname">PIPELINE_SUCCESS</code><em class="property"> = 'PIPELINE_SUCCESS'</em><a class="headerlink" href="#dagster.DagsterEventType.PIPELINE_SUCCESS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_EXPECTATION_RESULT">
+<code class="sig-name descname">STEP_EXPECTATION_RESULT</code><em class="property"> = 'STEP_EXPECTATION_RESULT'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_EXPECTATION_RESULT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_FAILURE">
+<code class="sig-name descname">STEP_FAILURE</code><em class="property"> = 'STEP_FAILURE'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_FAILURE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_INPUT">
+<code class="sig-name descname">STEP_INPUT</code><em class="property"> = 'STEP_INPUT'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_INPUT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_MATERIALIZATION">
+<code class="sig-name descname">STEP_MATERIALIZATION</code><em class="property"> = 'STEP_MATERIALIZATION'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_MATERIALIZATION" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_OUTPUT">
+<code class="sig-name descname">STEP_OUTPUT</code><em class="property"> = 'STEP_OUTPUT'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_OUTPUT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_RESTARTED">
+<code class="sig-name descname">STEP_RESTARTED</code><em class="property"> = 'STEP_RESTARTED'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_RESTARTED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_SKIPPED">
+<code class="sig-name descname">STEP_SKIPPED</code><em class="property"> = 'STEP_SKIPPED'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_SKIPPED" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_START">
+<code class="sig-name descname">STEP_START</code><em class="property"> = 'STEP_START'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_START" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_SUCCESS">
+<code class="sig-name descname">STEP_SUCCESS</code><em class="property"> = 'STEP_SUCCESS'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_SUCCESS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.DagsterEventType.STEP_UP_FOR_RETRY">
+<code class="sig-name descname">STEP_UP_FOR_RETRY</code><em class="property"> = 'STEP_UP_FOR_RETRY'</em><a class="headerlink" href="#dagster.DagsterEventType.STEP_UP_FOR_RETRY" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="pipeline-configuration">
+<h2>Pipeline configuration<a class="headerlink" href="#pipeline-configuration" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="run-config-schema">
+<span id="config-schema"></span><h3>Run Config Schema<a class="headerlink" href="#run-config-schema" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><p>The <code class="docutils literal notranslate"><span class="pre">run_config</span></code> used by <a class="reference internal" href="#dagster.execute_pipeline" title="dagster.execute_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_pipeline()</span></code></a> and
+<a class="reference internal" href="#dagster.execute_pipeline_iterator" title="dagster.execute_pipeline_iterator"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_pipeline_iterator()</span></code></a> has the following schema:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="c1"># configuration for execution, required if executors require config</span>
+  <span class="n">execution</span><span class="p">:</span> <span class="p">{</span>
+    <span class="c1"># the name of one, and only one available executor, typically &#39;in_process&#39; or &#39;multiprocess&#39;</span>
+    <span class="n">__executor_name__</span><span class="p">:</span> <span class="p">{</span>
+      <span class="c1"># executor-specific config, if required or permitted</span>
+      <span class="n">config</span><span class="p">:</span> <span class="p">{</span>
+        <span class="o">...</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+
+  <span class="c1"># configuration for loggers, required if loggers require config</span>
+  <span class="n">loggers</span><span class="p">:</span> <span class="p">{</span>
+    <span class="c1"># the name of an available logger</span>
+    <span class="n">__logger_name__</span><span class="p">:</span> <span class="p">{</span>
+      <span class="c1"># logger-specific config, if required or permitted</span>
+      <span class="n">config</span><span class="p">:</span> <span class="p">{</span>
+        <span class="o">...</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="o">...</span>
+  <span class="p">},</span>
+
+  <span class="c1"># configuration for resources, required if resources require config</span>
+  <span class="n">resources</span><span class="p">:</span> <span class="p">{</span>
+    <span class="c1"># the name of a resource</span>
+    <span class="n">__resource_name__</span><span class="p">:</span> <span class="p">{</span>
+      <span class="c1"># resource-specific config, if required or permitted</span>
+      <span class="n">config</span><span class="p">:</span> <span class="p">{</span>
+        <span class="o">...</span>
+      <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="o">...</span>
+  <span class="p">},</span>
+
+  <span class="c1"># configuration for solids, required if solids require config</span>
+  <span class="n">solids</span><span class="p">:</span> <span class="p">{</span>
+
+    <span class="c1"># these keys align with the names of the solids, or their alias in this pipeline</span>
+    <span class="n">__solid_name__</span><span class="p">:</span> <span class="p">{</span>
+
+      <span class="c1"># pass any data that was defined via config_field</span>
+      <span class="n">config</span><span class="p">:</span> <span class="o">...</span><span class="p">,</span>
+
+      <span class="c1"># configurably specify input values, keyed by input name</span>
+      <span class="n">inputs</span><span class="p">:</span> <span class="p">{</span>
+        <span class="n">__input_name__</span><span class="p">:</span> <span class="p">{</span>
+          <span class="c1"># if an dagster_type_loader is specified, that schema must be satisfied here;</span>
+          <span class="c1"># scalar, built-in types will generally allow their values to be specified directly:</span>
+          <span class="n">value</span><span class="p">:</span> <span class="o">...</span>
+        <span class="p">}</span>
+      <span class="p">},</span>
+
+      <span class="c1"># configurably materialize output values</span>
+      <span class="n">outputs</span><span class="p">:</span> <span class="p">{</span>
+        <span class="n">__output_name__</span><span class="p">:</span> <span class="p">{</span>
+          <span class="c1"># if an dagster_type_materializer is specified, that schema must be satisfied</span>
+          <span class="c1"># here; pickleable types will generally allow output as follows:</span>
+          <span class="n">pickle</span><span class="p">:</span> <span class="p">{</span>
+            <span class="n">path</span><span class="p">:</span> <span class="n">String</span>
+          <span class="p">}</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">},</span>
+
+  <span class="c1"># optionally use an available system storage for intermediates etc.</span>
+  <span class="n">intermediate_storage</span><span class="p">:</span> <span class="p">{</span>
+    <span class="c1"># the name of one, and only one available system storage, typically &#39;filesystem&#39; or</span>
+    <span class="c1"># &#39;in_memory&#39;</span>
+    <span class="n">__storage_name__</span><span class="p">:</span> <span class="p">{</span>
+      <span class="n">config</span><span class="p">:</span> <span class="p">{</span>
+        <span class="o">...</span>
+      <span class="p">}</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+</div>
+<div class="section" id="intermediate-storage">
+<h2>Intermediate Storage<a class="headerlink" href="#intermediate-storage" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster.io_manager_from_intermediate_storage">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">io_manager_from_intermediate_storage</code><span class="sig-paren">(</span><em class="sig-param">intermediate_storage_def</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/system_storage.html#io_manager_from_intermediate_storage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.io_manager_from_intermediate_storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define an <a class="reference internal" href="io-managers.html#dagster.IOManagerDefinition" title="dagster.IOManagerDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">IOManagerDefinition</span></code></a> from an existing <a class="reference internal" href="internals.html#dagster.IntermediateStorageDefinition" title="dagster.IntermediateStorageDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntermediateStorageDefinition</span></code></a>.</p>
+<p>This method is used to adapt an existing user-defined intermediate storage to a IO manager
+resource, for example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">my_io_manager_def</span> <span class="o">=</span> <span class="n">io_manager_from_intermediate_storage</span><span class="p">(</span><span class="n">my_intermediate_storage_def</span><span class="p">)</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span><span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;io_manager&quot;</span><span class="p">:</span> <span class="n">my_io_manager_def</span><span class="p">})])</span>
+<span class="k">def</span> <span class="nf">my_pipeline</span><span class="p">():</span>
+    <span class="o">...</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>intermediate_storage_def</strong> (<a class="reference internal" href="internals.html#dagster.IntermediateStorageDefinition" title="dagster.IntermediateStorageDefinition"><em>IntermediateStorageDefinition</em></a>) – The intermediate storage definition
+to be converted to an IO manager definition.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>IOManagerDefinition</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster.mem_intermediate_storage">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">mem_intermediate_storage</code><em class="property"> IntermediateStorageDefinition</em><a class="reference internal" href="../../../_modules/dagster/core/storage/system_storage.html#mem_intermediate_storage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.mem_intermediate_storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>The default in-memory intermediate storage.</p>
+<p>In-memory intermediate storage is the default on any pipeline run that does
+not configure any custom intermediate storage.</p>
+<p>Keep in mind when using this storage that intermediates will not be persisted after the pipeline
+run ends. Use a persistent intermediate storage like <a class="reference internal" href="#dagster.fs_intermediate_storage" title="dagster.fs_intermediate_storage"><code class="xref py py-func docutils literal notranslate"><span class="pre">fs_intermediate_storage()</span></code></a> to
+persist intermediates and take advantage of advanced features like pipeline re-execution.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster.fs_intermediate_storage">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">fs_intermediate_storage</code><em class="property"> IntermediateStorageDefinition</em><a class="reference internal" href="../../../_modules/dagster/core/storage/system_storage.html#fs_intermediate_storage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.fs_intermediate_storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>The default filesystem intermediate storage.</p>
+<p>Filesystem system storage is available by default on any <a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> that does
+not provide custom system storages. To select it, include a fragment such as the following in
+config:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">intermediate_storage</span><span class="p">:</span>
+  <span class="nt">filesystem</span><span class="p">:</span>
+    <span class="nt">base_dir</span><span class="p">:</span> <span class="s">&#39;/path/to/dir/&#39;</span>
+</pre></div>
+</div>
+<p>You may omit the <code class="docutils literal notranslate"><span class="pre">base_dir</span></code> config value, in which case the filesystem storage will use
+the <a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance"><code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterInstance</span></code></a>-provided default.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster.default_intermediate_storage_defs">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">default_intermediate_storage_defs</code><em class="property"> List[IntermediateStorageDefinition]</em><a class="headerlink" href="#dagster.default_intermediate_storage_defs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Built-in mutable sequence.</p>
+<p>If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.
+The default intermediate storages available on any <a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> that does not provide
+custom intermediate storages. These are currently [<a class="reference internal" href="#dagster.mem_intermediate_storage" title="dagster.mem_intermediate_storage"><code class="xref py py-class docutils literal notranslate"><span class="pre">mem_intermediate_storage</span></code></a>,
+<a class="reference internal" href="#dagster.fs_intermediate_storage" title="dagster.fs_intermediate_storage"><code class="xref py py-class docutils literal notranslate"><span class="pre">fs_intermediate_storage</span></code></a>].</p>
+</dd></dl>
+
+</div>
+<div class="section" id="executors">
+<h2>Executors<a class="headerlink" href="#executors" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="dagster.in_process_executor">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">in_process_executor</code><em class="property"> ExecutorDefinition</em><a class="reference internal" href="../../../_modules/dagster/core/definitions/executor.html#in_process_executor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.in_process_executor" title="Permalink to this definition">¶</a></dt>
+<dd><p>The default in-process executor.</p>
+<p>In most Dagster environments, this will be the default executor. It is available by default on
+any <a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> that does not provide custom executors. To select it explicitly,
+include the following top-level fragment in config:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">execution</span><span class="p">:</span>
+  <span class="nt">in_process</span><span class="p">:</span>
+</pre></div>
+</div>
+<p>Execution priority can be configured using the <code class="docutils literal notranslate"><span class="pre">dagster/priority</span></code> tag via solid metadata,
+where the higher the number the higher the priority. 0 is the default and both positive
+and negative numbers can be used.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster.multiprocess_executor">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">multiprocess_executor</code><em class="property"> ExecutorDefinition</em><a class="reference internal" href="../../../_modules/dagster/core/definitions/executor.html#multiprocess_executor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.multiprocess_executor" title="Permalink to this definition">¶</a></dt>
+<dd><p>The default multiprocess executor.</p>
+<p>This simple multiprocess executor is available by default on any <a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a>
+that does not provide custom executors. To select the multiprocess executor, include a fragment
+such as the following in your config:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">execution</span><span class="p">:</span>
+  <span class="nt">multiprocess</span><span class="p">:</span>
+    <span class="nt">config</span><span class="p">:</span>
+      <span class="nt">max_concurrent</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">max_concurrent</span></code> arg is optional and tells the execution engine how many processes may run
+concurrently. By default, or if you set <code class="docutils literal notranslate"><span class="pre">max_concurrent</span></code> to be 0, this is the return value of
+<a class="reference external" href="https://docs.python.org/3/library/multiprocessing.html#multiprocessing.cpu_count" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">multiprocessing.cpu_count()</span></code></a>.</p>
+<p>Execution priority can be configured using the <code class="docutils literal notranslate"><span class="pre">dagster/priority</span></code> tag via solid metadata,
+where the higher the number the higher the priority. 0 is the default and both positive
+and negative numbers can be used.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster.default_executors">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">default_executors</code><em class="property"> List[ExecutorDefinition]</em><a class="headerlink" href="#dagster.default_executors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Built-in mutable sequence.</p>
+<p>If no argument is given, the constructor creates a new empty list.
+The argument must be an iterable if specified.
+The default executors available on any <a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> that does not provide custom
+executors. These are currently [<a class="reference internal" href="#dagster.in_process_executor" title="dagster.in_process_executor"><code class="xref py py-class docutils literal notranslate"><span class="pre">in_process_executor</span></code></a>,
+<a class="reference internal" href="#dagster.multiprocess_executor" title="dagster.multiprocess_executor"><code class="xref py py-class docutils literal notranslate"><span class="pre">multiprocess_executor</span></code></a>].</p>
+</dd></dl>
+
+</div>
+<div class="section" id="contexts">
+<h2>Contexts<a class="headerlink" href="#contexts" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster.SystemComputeExecutionContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">SystemComputeExecutionContext</code><span class="sig-paren">(</span><em class="sig-param">execution_context_data: dagster.core.execution.context.system.SystemExecutionContextData</em>, <em class="sig-param">log_manager: dagster.core.log_manager.DagsterLogManager</em>, <em class="sig-param">step: dagster.core.execution.plan.step.ExecutionStep</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/context/system.html#SystemComputeExecutionContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SystemComputeExecutionContext" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="dagster.TypeCheckContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">TypeCheckContext</code><span class="sig-paren">(</span><em class="sig-param">execution_context_data: dagster.core.execution.context.system.SystemExecutionContextData</em>, <em class="sig-param">log_manager: dagster.core.log_manager.DagsterLogManager</em>, <em class="sig-param">dagster_type: dagster.core.types.dagster_type.DagsterType</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/context/system.html#TypeCheckContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.TypeCheckContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">context</span></code> object available to a type check function on a DagsterType.</p>
+<dl class="attribute">
+<dt id="dagster.TypeCheckContext.log">
+<code class="sig-name descname">log</code><a class="headerlink" href="#dagster.TypeCheckContext.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Centralized log dispatch from user code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="internals.html#dagster.DagsterLogManager" title="dagster.DagsterLogManager">DagsterLogManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.TypeCheckContext.resources">
+<code class="sig-name descname">resources</code><a class="headerlink" href="#dagster.TypeCheckContext.resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>An object whose attributes contain the resources available to this solid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.TypeCheckContext.run_id">
+<code class="sig-name descname">run_id</code><a class="headerlink" href="#dagster.TypeCheckContext.run_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The id of this pipeline run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.HookContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">HookContext</code><span class="sig-paren">(</span><em class="sig-param">execution_context_data: dagster.core.execution.context.system.SystemExecutionContextData</em>, <em class="sig-param">log_manager: dagster.core.log_manager.DagsterLogManager</em>, <em class="sig-param">hook_def: dagster.core.definitions.hook.HookDefinition</em>, <em class="sig-param">step: dagster.core.execution.plan.step.ExecutionStep</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/execution/context/system.html#HookContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.HookContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">context</span></code> object available to a hook function on an DagsterEvent.</p>
+<dl class="attribute">
+<dt id="dagster.HookContext.log">
+<code class="sig-name descname">log</code><a class="headerlink" href="#dagster.HookContext.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Centralized log dispatch from user code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="internals.html#dagster.DagsterLogManager" title="dagster.DagsterLogManager">DagsterLogManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.HookContext.hook_def">
+<code class="sig-name descname">hook_def</code><a class="headerlink" href="#dagster.HookContext.hook_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The hook that the context object belongs to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>HookDefinition</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.HookContext.step">
+<code class="sig-name descname">step</code><a class="headerlink" href="#dagster.HookContext.step" title="Permalink to this definition">¶</a></dt>
+<dd><p>The compute step associated with the hook.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>ExecutionStep</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.HookContext.solid">
+<code class="sig-name descname">solid</code><a class="headerlink" href="#dagster.HookContext.solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>The solid instance associated with the hook.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Solid</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.HookContext.resources">
+<code class="sig-name descname">resources</code><a class="headerlink" href="#dagster.HookContext.resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resources available in the hook context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>NamedTuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.HookContext.solid_config">
+<code class="sig-name descname">solid_config</code><a class="headerlink" href="#dagster.HookContext.solid_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The parsed config specific to this solid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="errors.html" title="Previous document">Errors</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="hooks.html" title="Next document">Hooks</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

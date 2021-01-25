@@ -1,0 +1,355 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Repositories &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Solids" href="solids.html" />
+    <link rel="prev" title="Presets" href="presets.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="presets.html" title="Previous document">Presets</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="solids.html" title="Next document">Solids</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="repositories">
+<h1>Repositories<a class="headerlink" href="#repositories" title="Permalink to this headline">¶</a></h1>
+<dl class="data">
+<dt id="dagster.repository">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">repository</code><em class="property"> RepositoryDefinition</em><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/repository.html#repository"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.repository" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a repository from the decorated function.</p>
+<p>The decorated function should take no arguments and its return value should one of:</p>
+<ol class="arabic simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">List[Union[PipelineDefinition,</span> <span class="pre">PartitionSetDefinition,</span> <span class="pre">ScheduleDefinition]]</span></code>. Use this</dt><dd><p>form when you have no need to lazy load pipelines or other definitions. This is the
+typical use case.</p>
+</dd>
+</dl>
+</li>
+<li><p>A dict of the form:</p></li>
+</ol>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s1">&#39;pipelines&#39;</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">PipelineDefinition</span><span class="p">]],</span>
+    <span class="s1">&#39;partition_sets&#39;</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">PartitionSetDefinition</span><span class="p">]],</span>
+    <span class="s1">&#39;schedules&#39;</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">ScheduleDefinition</span><span class="p">]]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This form is intended to allow definitions to be created lazily when accessed by name,
+which can be helpful for performance when there are many definitions in a repository, or
+when constructing the definitions is costly.</p>
+<ol class="arabic simple" start="3">
+<li><dl class="simple">
+<dt>An object of type <code class="xref py py-class docutils literal notranslate"><span class="pre">RepositoryData</span></code>. Return this object if you need fine-grained</dt><dd><p>control over the construction and indexing of definitions within the repository, e.g., to
+create definitions dynamically from .yaml files in a directory.</p>
+</dd>
+</dl>
+</li>
+</ol>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the repository. Defaults to the name of the decorated
+function.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A string description of the repository.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1">######################################################################</span>
+<span class="c1"># A simple repository using the first form of the decorated function</span>
+<span class="c1">######################################################################</span>
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="n">n</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">Int</span><span class="p">)})</span>
+<span class="k">def</span> <span class="nf">return_n</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s1">&#39;n&#39;</span><span class="p">]</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;simple_pipeline&#39;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">simple_pipeline</span><span class="p">():</span>
+    <span class="n">return_n</span><span class="p">()</span>
+
+<span class="n">simple_partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;simple_partition_set&#39;</span><span class="p">,</span>
+    <span class="n">pipeline_name</span><span class="o">=</span><span class="s1">&#39;simple_pipeline&#39;</span><span class="p">,</span>
+    <span class="n">partition_fn</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+    <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;solids&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;return_n&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">partition</span><span class="p">}}}</span>
+        <span class="p">}</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+
+<span class="n">simple_schedule</span> <span class="o">=</span> <span class="n">simple_partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+    <span class="n">schedule_name</span><span class="o">=</span><span class="s1">&#39;simple_daily_10_pm_schedule&#39;</span><span class="p">,</span>
+    <span class="n">cron_schedule</span><span class="o">=</span><span class="s1">&#39;0 22 * * *&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nd">@repository</span>
+<span class="k">def</span> <span class="nf">simple_repository</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">simple_pipeline</span><span class="p">,</span> <span class="n">simple_partition_set</span><span class="p">,</span> <span class="n">simple_schedule</span><span class="p">]</span>
+
+
+<span class="c1">######################################################################</span>
+<span class="c1"># A lazy-loaded repository</span>
+<span class="c1">######################################################################</span>
+
+<span class="k">def</span> <span class="nf">make_expensive_pipeline</span><span class="p">():</span>
+    <span class="nd">@pipeline</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;expensive_pipeline&#39;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">expensive_pipeline</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10000</span><span class="p">):</span>
+            <span class="n">return_n</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s1">&#39;return_n_</span><span class="si">{i}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="p">))()</span>
+
+    <span class="k">return</span> <span class="n">expensive_pipeline</span>
+
+<span class="n">expensive_partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;expensive_partition_set&#39;</span><span class="p">,</span>
+    <span class="n">pipeline_name</span><span class="o">=</span><span class="s1">&#39;expensive_pipeline&#39;</span><span class="p">,</span>
+    <span class="n">partition_fn</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">),</span>
+    <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;solids&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;return_n_</span><span class="si">{i}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="p">):</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;n&#39;</span><span class="p">:</span> <span class="n">partition</span><span class="p">}}</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">),</span>
+<span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">make_expensive_schedule</span><span class="p">():</span>
+    <span class="n">expensive_partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+        <span class="n">schedule_name</span><span class="o">=</span><span class="s1">&#39;expensive_schedule&#39;</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="o">=</span><span class="s1">&#39;0 22 * * *&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="nd">@repository</span>
+<span class="k">def</span> <span class="nf">lazy_loaded_repository</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;pipelines&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;expensive_pipeline&#39;</span><span class="p">:</span> <span class="n">make_expensive_pipeline</span><span class="p">},</span>
+        <span class="s1">&#39;partition_sets&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;expensive_partition_set&#39;</span><span class="p">:</span> <span class="n">expensive_partition_set</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;schedules&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;expensive_schedule: make_expensive_schedule}</span>
+    <span class="p">}</span>
+
+
+<span class="c1">######################################################################</span>
+<span class="c1"># A complex repository that lazily construct pipelines from a directory</span>
+<span class="c1"># of files in a bespoke YAML format</span>
+<span class="c1">######################################################################</span>
+
+<span class="k">class</span> <span class="nc">ComplexRepositoryData</span><span class="p">(</span><span class="n">RepositoryData</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_directory</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_yaml_directory</span> <span class="o">=</span> <span class="n">yaml_directory</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_pipeline_def_from_yaml_file</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_yaml_file_for_pipeline_name</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="o">...</span>
+
+<span class="nd">@repository</span>
+<span class="k">def</span> <span class="nf">complex_repository</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">ComplexRepositoryData</span><span class="p">(</span><span class="s1">&#39;some_directory&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.RepositoryDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">RepositoryDefinition</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">repository_data</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/repository.html#RepositoryDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RepositoryDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a repository that contains a collection of definitions.</p>
+<p>Users should typically not create objects of this class directly. Instead, use the
+<code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;repository()</span></code> decorator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the repository.</p></li>
+<li><p><strong>repository_data</strong> (<em>RepositoryData</em>) – Contains the definitions making up the repository.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A string description of the repository.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="dagster.RepositoryDefinition.get_all_pipelines">
+<code class="sig-name descname">get_all_pipelines</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/repository.html#RepositoryDefinition.get_all_pipelines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RepositoryDefinition.get_all_pipelines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return all pipelines in the repository as a list.</p>
+<p>Note that this will construct any pipeline in the lazily evaluated <code class="docutils literal notranslate"><span class="pre">pipeline_dict</span></code> that
+has not yet been constructed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>All pipelines in the repository.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>List[<a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition">PipelineDefinition</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.RepositoryDefinition.get_all_solid_defs">
+<code class="sig-name descname">get_all_solid_defs</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/repository.html#RepositoryDefinition.get_all_solid_defs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RepositoryDefinition.get_all_solid_defs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all the solid definitions in a repository.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>All solid definitions in the repository.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>List[<a class="reference internal" href="solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition">SolidDefinition</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.RepositoryDefinition.get_pipeline">
+<code class="sig-name descname">get_pipeline</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/repository.html#RepositoryDefinition.get_pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RepositoryDefinition.get_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a pipeline by name.</p>
+<p>If this pipeline is present in the lazily evaluated <code class="docutils literal notranslate"><span class="pre">pipeline_dict</span></code> passed to the
+constructor, but has not yet been constructed, only this pipeline is constructed, and will
+be cached for future calls.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the pipeline to retrieve.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The pipeline definition corresponding to the given name.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition">PipelineDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.RepositoryDefinition.has_pipeline">
+<code class="sig-name descname">has_pipeline</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/repository.html#RepositoryDefinition.has_pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RepositoryDefinition.has_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a pipeline with a given name is present in the repository.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.RepositoryDefinition.pipeline_names">
+<em class="property">property </em><code class="sig-name descname">pipeline_names</code><a class="headerlink" href="#dagster.RepositoryDefinition.pipeline_names" title="Permalink to this definition">¶</a></dt>
+<dd><p>Names of all pipelines in the repository</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>List[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.RepositoryDefinition.solid_def_named">
+<code class="sig-name descname">solid_def_named</code><span class="sig-paren">(</span><em class="sig-param">name</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/repository.html#RepositoryDefinition.solid_def_named"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RepositoryDefinition.solid_def_named" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the solid with the given name in the repository.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the solid for which to retrieve the solid definition.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The solid with the given name.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition">SolidDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="presets.html" title="Previous document">Presets</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="solids.html" title="Next document">Solids</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

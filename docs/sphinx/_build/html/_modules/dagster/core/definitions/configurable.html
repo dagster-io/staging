@@ -1,0 +1,287 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.configurable &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.configurable</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span><span class="p">,</span> <span class="n">abstractproperty</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.config.evaluate_value_result</span> <span class="kn">import</span> <span class="n">EvaluateValueResult</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.definition_config_schema</span> <span class="kn">import</span> <span class="n">IDefinitionConfigSchema</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span>
+
+<span class="kn">from</span> <span class="nn">.definition_config_schema</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">ConfiguredDefinitionConfigSchema</span><span class="p">,</span>
+    <span class="n">IDefinitionConfigSchema</span><span class="p">,</span>
+    <span class="n">convert_user_facing_definition_config_schema</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ConfigurableDefinition</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IDefinitionConfigSchema</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">has_config_field</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="o">.</span><span class="n">as_field</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">config_field</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Field</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="kc">None</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="o">.</span><span class="n">as_field</span><span class="p">()</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">copy_for_configured</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">description</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">config_schema</span><span class="p">:</span> <span class="n">IDefinitionConfigSchema</span><span class="p">,</span>
+        <span class="n">config_or_config_fn</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Any</span><span class="p">]],</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">apply_config_mapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EvaluateValueResult</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Applies user-provided config mapping functions to the given configuration and validates the</span>
+<span class="sd">        results against the respective config schema.</span>
+
+<span class="sd">        Expects incoming config to be validated and have fully-resolved values (StringSource values</span>
+<span class="sd">        resolved, Enum types hydrated, etc.) via process_config() during EnvironmentConfig</span>
+<span class="sd">        construction and CompositeSolid config mapping.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            config (Any): A validated and resolved configuration dictionary matching this object&#39;s</span>
+<span class="sd">            config_schema</span>
+
+<span class="sd">        Returns (EvaluateValueResult):</span>
+<span class="sd">            If successful, the value is a validated and resolved configuration dictionary for the</span>
+<span class="sd">            innermost wrapped object after applying the config mapping transformation function.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># If schema is on a mapped schema this is the innermost resource (base case),</span>
+        <span class="c1"># so we aren&#39;t responsible for validating against anything farther down.</span>
+        <span class="c1"># Returns an EVR for type consistency with config_mapping_fn.</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="o">.</span><span class="n">resolve_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="p">,</span> <span class="n">ConfiguredDefinitionConfigSchema</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">EvaluateValueResult</span><span class="o">.</span><span class="n">for_value</span><span class="p">(</span><span class="n">config</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">configured</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">config_or_config_fn</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Wraps this object in an object of the same type that provides configuration to the inner</span>
+<span class="sd">        object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            config_or_config_fn (Union[Any, Callable[[Any], Any]]): Either (1) Run configuration</span>
+<span class="sd">                that fully satisfies this object&#39;s config schema or (2) A function that accepts run</span>
+<span class="sd">                configuration and returns run configuration that fully satisfies this object&#39;s</span>
+<span class="sd">                config schema.  In the latter case, config_schema must be specified.  When</span>
+<span class="sd">                passing a function, it&#39;s easiest to use :py:func:`configured`.</span>
+<span class="sd">            config_schema (ConfigSchema): If config_or_config_fn is a function, the config schema</span>
+<span class="sd">                that its input must satisfy.</span>
+<span class="sd">            name (Optional[str]): Name of the new definition. If not specified, inherits the name</span>
+<span class="sd">                of the definition being configured. Note: some definitions (e.g. ResourceDefinition)</span>
+<span class="sd">                are unnamed and this will error if a name is passed.</span>
+<span class="sd">            description (Optional[str]): Name of the new definition. If not specified, inherits the name</span>
+<span class="sd">                of the definition being configured.</span>
+
+<span class="sd">        Returns (ConfigurableDefinition): A configured version of this object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">new_config_schema</span> <span class="o">=</span> <span class="n">ConfiguredDefinitionConfigSchema</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">convert_user_facing_definition_config_schema</span><span class="p">(</span><span class="n">config_schema</span><span class="p">),</span> <span class="n">config_or_config_fn</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">copy_for_configured</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">new_config_schema</span><span class="p">,</span> <span class="n">config_or_config_fn</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_name_for_configured_node</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">old_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">new_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+        <span class="n">original_config_or_config_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">fn_name</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">original_config_or_config_fn</span><span class="o">.</span><span class="vm">__name__</span>
+            <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">original_config_or_config_fn</span><span class="p">)</span>
+            <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">new_name</span> <span class="ow">or</span> <span class="n">fn_name</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s1">&#39;Missing string param &quot;name&quot; while attempting to configure the node &#39;</span>
+                <span class="s1">&#39;&quot;</span><span class="si">{node_name}</span><span class="s1">&quot;. When configuring a node, you must specify a name for the &#39;</span>
+                <span class="s2">&quot;resulting node definition as a keyword param or use `configured` in decorator &quot;</span>
+                <span class="s2">&quot;form. For examples, visit https://docs.dagster.io/overview/configuration#configured.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">node_name</span><span class="o">=</span><span class="n">old_name</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">name</span>
+
+
+<span class="k">def</span> <span class="nf">_check_configurable_param</span><span class="p">(</span><span class="n">configurable</span><span class="p">:</span> <span class="n">ConfigurableDefinition</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.definitions.composition</span> <span class="kn">import</span> <span class="n">CallableNode</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span>
+        <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">configurable</span><span class="p">,</span> <span class="n">CallableNode</span><span class="p">),</span>
+        <span class="s2">&quot;configurable&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;You have invoked `configured` on a CallableNode (an intermediate type), which is &quot;</span>
+            <span class="s2">&quot;produced by aliasing or tagging a solid definition. To configure a solid, you must &quot;</span>
+            <span class="s2">&quot;call `configured` on either a SolidDefinition and CompositeSolidDefinition. To fix &quot;</span>
+            <span class="s2">&quot;this error, make sure to call `configured` on the definition object *before* using &quot;</span>
+            <span class="s2">&quot;the `tag` or `alias` methods. For usage examples, see &quot;</span>
+            <span class="s2">&quot;https://docs.dagster.io/overview/configuration#configured&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+        <span class="n">configurable</span><span class="p">,</span>
+        <span class="s2">&quot;configurable&quot;</span><span class="p">,</span>
+        <span class="n">ConfigurableDefinition</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;Only the following types can be used with the `configured` method: ResourceDefinition, &quot;</span>
+            <span class="s2">&quot;ExecutorDefinition, CompositeSolidDefinition, SolidDefinition, LoggerDefinition, &quot;</span>
+            <span class="s2">&quot;and IntermediateStorageDefinition. For usage examples of &quot;</span>
+            <span class="s2">&quot;`configured`, see https://docs.dagster.io/overview/configuration#configured&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="configured"><a class="viewcode-back" href="../../../../sections/api/apidocs/config.html#dagster.configured">[docs]</a><span class="k">def</span> <span class="nf">configured</span><span class="p">(</span>
+    <span class="n">configurable</span><span class="p">:</span> <span class="n">ConfigurableDefinition</span><span class="p">,</span>
+    <span class="n">config_schema</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="o">**</span><span class="n">kwargs</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A decorator that makes it easy to create a function-configured version of an object.</span>
+<span class="sd">    The following definition types can be configured using this function:</span>
+
+<span class="sd">    * :py:class:`CompositeSolidDefinition`</span>
+<span class="sd">    * :py:class:`ExecutorDefinition`</span>
+<span class="sd">    * :py:class:`IntermediateStorageDefinition`</span>
+<span class="sd">    * :py:class:`LoggerDefinition`</span>
+<span class="sd">    * :py:class:`ResourceDefinition`</span>
+<span class="sd">    * :py:class:`SolidDefinition`</span>
+
+<span class="sd">    If the config that will be supplied to the object is constant, you may alternatively invoke this</span>
+<span class="sd">    and call the result with a dict of config values to be curried. Examples of both strategies</span>
+<span class="sd">    below.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        configurable (ConfigurableDefinition): An object that can be configured.</span>
+<span class="sd">        config_schema (ConfigSchema): The config schema that the inputs to the decorated function</span>
+<span class="sd">            must satisfy.</span>
+<span class="sd">        **kwargs: Arbitrary keyword arguments that will be passed to the initializer of the returned</span>
+<span class="sd">            object.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        (Callable[[Union[Any, Callable[[Any], Any]]], ConfigurableDefinition])</span>
+
+<span class="sd">    **Examples:**</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        dev_s3 = configured(s3_resource, name=&quot;dev_s3&quot;)({&#39;bucket&#39;: &#39;dev&#39;})</span>
+
+<span class="sd">        @configured(s3_resource):</span>
+<span class="sd">        def dev_s3(_):</span>
+<span class="sd">            return {&#39;bucket&#39;: &#39;dev&#39;}</span>
+
+<span class="sd">        @configured(s3_resource, {&#39;bucket_prefix&#39;, str}):</span>
+<span class="sd">        def dev_s3(config):</span>
+<span class="sd">            return {&#39;bucket&#39;: config[&#39;bucket_prefix&#39;] + &#39;dev&#39;}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_check_configurable_param</span><span class="p">(</span><span class="n">configurable</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_configured</span><span class="p">(</span><span class="n">config_or_config_fn</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">configurable</span><span class="o">.</span><span class="n">configured</span><span class="p">(</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span> <span class="n">config_or_config_fn</span><span class="o">=</span><span class="n">config_or_config_fn</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_configured</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

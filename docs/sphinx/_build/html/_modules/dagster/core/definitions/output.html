@@ -1,0 +1,227 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.output &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.output</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">resolve_dagster_type</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental_arg_warning</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_OUTPUT</span><span class="p">,</span> <span class="n">check_valid_name</span>
+
+
+<div class="viewcode-block" id="OutputDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.OutputDefinition">[docs]</a><span class="k">class</span> <span class="nc">OutputDefinition</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Defines an output from a solid&#39;s compute function.</span>
+
+<span class="sd">    Solids can have multiple outputs, in which case outputs cannot be anonymous.</span>
+
+<span class="sd">    Many solids have only one output, in which case the user can provide a single output definition</span>
+<span class="sd">    that will be given the default name, &quot;result&quot;.</span>
+
+<span class="sd">    Output definitions may be typed using the Dagster type system.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        dagster_type (Optional[Any]): The type of this output. Users should provide one of the</span>
+<span class="sd">            :ref:`built-in types &lt;builtin&gt;`, a dagster type explicitly constructed with</span>
+<span class="sd">            :py:func:`as_dagster_type`, :py:func:`@usable_as_dagster_type &lt;dagster_type`, or</span>
+<span class="sd">            :py:func:`PythonObjectDagsterType`, or a Python type. Defaults to :py:class:`Any`.</span>
+<span class="sd">        name (Optional[str]): Name of the output. (default: &quot;result&quot;)</span>
+<span class="sd">        description (Optional[str]): Human-readable description of the output.</span>
+<span class="sd">        is_required (Optional[bool]): Whether the presence of this field is required. (default: True)</span>
+<span class="sd">        io_manager_key (Optional[str]): The resource key of the output manager used for this output.</span>
+<span class="sd">            (default: &quot;io_manager&quot;).</span>
+<span class="sd">        metadata (Optional[Dict[str, Any]]): (Experimental) A dict of the metadata for the output.</span>
+<span class="sd">            For example, users can provide a file path if the data object will be stored in a</span>
+<span class="sd">            filesystem, or provide information of a database table when it is going to load the data</span>
+<span class="sd">            into the table.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dagster_type</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">io_manager_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">check_valid_name</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="n">DEFAULT_OUTPUT</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type</span> <span class="o">=</span> <span class="n">resolve_dagster_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_required</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_bool_param</span><span class="p">(</span><span class="n">is_required</span><span class="p">,</span> <span class="s2">&quot;is_required&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_manager_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span>
+            <span class="n">io_manager_key</span><span class="p">,</span> <span class="s2">&quot;io_manager_key&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;io_manager&quot;</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">metadata</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;metadata&quot;</span><span class="p">,</span> <span class="s2">&quot;OutputDefinition&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span> <span class="o">=</span> <span class="n">metadata</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dagster_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">optional</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_required</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_required</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_required</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">io_manager_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_manager_key</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metadata</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_dynamic</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="OutputDefinition.mapping_from"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.OutputDefinition.mapping_from">[docs]</a>    <span class="k">def</span> <span class="nf">mapping_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create an output mapping from an output of a child solid.</span>
+
+<span class="sd">        In a CompositeSolidDefinition, you can use this helper function to construct</span>
+<span class="sd">        an :py:class:`OutputMapping` from the output of a child solid.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            solid_name (str): The name of the child solid from which to map this output.</span>
+<span class="sd">            input_name (str): The name of the child solid&#39;s output from which to map this output.</span>
+
+<span class="sd">        Examples:</span>
+
+<span class="sd">            .. code-block:: python</span>
+
+<span class="sd">                output_mapping = OutputDefinition(Int).mapping_from(&#39;child_solid&#39;)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">OutputMapping</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">OutputPointer</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="n">output_name</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="DynamicOutputDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/dynamic.html#dagster.experimental.DynamicOutputDefinition">[docs]</a><span class="k">class</span> <span class="nc">DynamicOutputDefinition</span><span class="p">(</span><span class="n">OutputDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    (EXPERIMENTAL) Variant of :py:class:`OutputDefinition` for an output that will dynamically</span>
+<span class="sd">    alter the graph at runtime. Each copy of :py:class:`DynamicOutput` corresponding to this</span>
+<span class="sd">    definition that is yielded from the solid will create a copy of the downstream graph.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_dynamic</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<span class="k">class</span> <span class="nc">OutputPointer</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_OutputPointer&quot;</span><span class="p">,</span> <span class="s2">&quot;solid_name output_name&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">OutputPointer</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">,</span> <span class="n">DEFAULT_OUTPUT</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="OutputMapping"><a class="viewcode-back" href="../../../../sections/api/apidocs/solids.html#dagster.experimental.OutputMapping">[docs]</a><span class="k">class</span> <span class="nc">OutputMapping</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_OutputMapping&quot;</span><span class="p">,</span> <span class="s2">&quot;definition maps_from&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Defines an output mapping for a composite solid.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        definition (OutputDefinition): Defines the output of the composite solid.</span>
+<span class="sd">        solid_name (str): The name of the child solid from which to map the output.</span>
+<span class="sd">        output_name (str): The name of the child solid&#39;s output from which to map the output.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">definition</span><span class="p">,</span> <span class="n">maps_from</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">OutputMapping</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="s2">&quot;definition&quot;</span><span class="p">,</span> <span class="n">OutputDefinition</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">maps_from</span><span class="p">,</span> <span class="s2">&quot;maps_from&quot;</span><span class="p">,</span> <span class="n">OutputPointer</span><span class="p">),</span>
+        <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

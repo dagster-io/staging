@@ -1,0 +1,1290 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.events &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.events</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Structured representations of system events.&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">AssetMaterialization</span><span class="p">,</span>
+    <span class="n">EventMetadataEntry</span><span class="p">,</span>
+    <span class="n">ExpectationResult</span><span class="p">,</span>
+    <span class="n">Materialization</span><span class="p">,</span>
+    <span class="n">SolidHandle</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.events</span> <span class="kn">import</span> <span class="n">ObjectStoreOperationType</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.context.system</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">HookContext</span><span class="p">,</span>
+    <span class="n">SystemExecutionContext</span><span class="p">,</span>
+    <span class="n">SystemStepExecutionContext</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.handle</span> <span class="kn">import</span> <span class="n">ResolvedFromDynamicStepHandle</span><span class="p">,</span> <span class="n">StepHandle</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.outputs</span> <span class="kn">import</span> <span class="n">StepOutputData</span>
+<span class="kn">from</span> <span class="nn">dagster.core.log_manager</span> <span class="kn">import</span> <span class="n">DagsterLogManager</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">register_serdes_tuple_fallbacks</span><span class="p">,</span> <span class="n">whitelist_for_serdes</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.error</span> <span class="kn">import</span> <span class="n">SerializableErrorInfo</span><span class="p">,</span> <span class="n">serializable_error_info_from_exc_info</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.timing</span> <span class="kn">import</span> <span class="n">format_duration</span>
+
+
+<div class="viewcode-block" id="DagsterEventType"><a class="viewcode-back" href="../../../sections/api/apidocs/execution.html#dagster.DagsterEventType">[docs]</a><span class="k">class</span> <span class="nc">DagsterEventType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The types of events that may be yielded by solid and pipeline execution.&quot;&quot;&quot;</span>
+
+    <span class="n">STEP_OUTPUT</span> <span class="o">=</span> <span class="s2">&quot;STEP_OUTPUT&quot;</span>
+    <span class="n">STEP_INPUT</span> <span class="o">=</span> <span class="s2">&quot;STEP_INPUT&quot;</span>
+    <span class="n">STEP_FAILURE</span> <span class="o">=</span> <span class="s2">&quot;STEP_FAILURE&quot;</span>
+    <span class="n">STEP_START</span> <span class="o">=</span> <span class="s2">&quot;STEP_START&quot;</span>
+    <span class="n">STEP_SUCCESS</span> <span class="o">=</span> <span class="s2">&quot;STEP_SUCCESS&quot;</span>
+    <span class="n">STEP_SKIPPED</span> <span class="o">=</span> <span class="s2">&quot;STEP_SKIPPED&quot;</span>
+
+    <span class="n">STEP_UP_FOR_RETRY</span> <span class="o">=</span> <span class="s2">&quot;STEP_UP_FOR_RETRY&quot;</span>  <span class="c1"># &quot;failed&quot; but want to retry</span>
+    <span class="n">STEP_RESTARTED</span> <span class="o">=</span> <span class="s2">&quot;STEP_RESTARTED&quot;</span>
+
+    <span class="n">STEP_MATERIALIZATION</span> <span class="o">=</span> <span class="s2">&quot;STEP_MATERIALIZATION&quot;</span>
+    <span class="n">STEP_EXPECTATION_RESULT</span> <span class="o">=</span> <span class="s2">&quot;STEP_EXPECTATION_RESULT&quot;</span>
+
+    <span class="n">PIPELINE_INIT_FAILURE</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_INIT_FAILURE&quot;</span>
+
+    <span class="n">PIPELINE_ENQUEUED</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_ENQUEUED&quot;</span>
+    <span class="n">PIPELINE_DEQUEUED</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_DEQUEUED&quot;</span>
+    <span class="n">PIPELINE_STARTING</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_STARTING&quot;</span>  <span class="c1"># Launch is happening, execution hasn&#39;t started yet</span>
+
+    <span class="n">PIPELINE_START</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_START&quot;</span>  <span class="c1"># Execution has started</span>
+    <span class="n">PIPELINE_SUCCESS</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_SUCCESS&quot;</span>
+    <span class="n">PIPELINE_FAILURE</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_FAILURE&quot;</span>
+
+    <span class="n">PIPELINE_CANCELING</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_CANCELING&quot;</span>
+    <span class="n">PIPELINE_CANCELED</span> <span class="o">=</span> <span class="s2">&quot;PIPELINE_CANCELED&quot;</span>
+
+    <span class="n">OBJECT_STORE_OPERATION</span> <span class="o">=</span> <span class="s2">&quot;OBJECT_STORE_OPERATION&quot;</span>
+    <span class="n">ASSET_STORE_OPERATION</span> <span class="o">=</span> <span class="s2">&quot;ASSET_STORE_OPERATION&quot;</span>
+    <span class="n">LOADED_INPUT</span> <span class="o">=</span> <span class="s2">&quot;LOADED_INPUT&quot;</span>
+    <span class="n">HANDLED_OUTPUT</span> <span class="o">=</span> <span class="s2">&quot;HANDLED_OUTPUT&quot;</span>
+
+    <span class="n">ENGINE_EVENT</span> <span class="o">=</span> <span class="s2">&quot;ENGINE_EVENT&quot;</span>
+
+    <span class="n">HOOK_COMPLETED</span> <span class="o">=</span> <span class="s2">&quot;HOOK_COMPLETED&quot;</span>
+    <span class="n">HOOK_ERRORED</span> <span class="o">=</span> <span class="s2">&quot;HOOK_ERRORED&quot;</span>
+    <span class="n">HOOK_SKIPPED</span> <span class="o">=</span> <span class="s2">&quot;HOOK_SKIPPED&quot;</span></div>
+
+
+<span class="n">STEP_EVENTS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_INPUT</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_START</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_OUTPUT</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SKIPPED</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">OBJECT_STORE_OPERATION</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HANDLED_OUTPUT</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">LOADED_INPUT</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_RESTARTED</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_UP_FOR_RETRY</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">FAILURE_EVENTS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_INIT_FAILURE</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_FAILURE</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_CANCELED</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">PIPELINE_EVENTS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_ENQUEUED</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_DEQUEUED</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_STARTING</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_START</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_SUCCESS</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_INIT_FAILURE</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_FAILURE</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_CANCELING</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_CANCELED</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="n">HOOK_EVENTS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_COMPLETED</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_ERRORED</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_SKIPPED</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">_assert_type</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">expected_type</span><span class="p">,</span> <span class="n">actual_type</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+        <span class="n">expected_type</span> <span class="o">==</span> <span class="n">actual_type</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">{method}</span><span class="s2"> only callable when event_type is </span><span class="si">{expected_type}</span><span class="s2">, called on </span><span class="si">{actual_type}</span><span class="s2">&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="n">method</span><span class="p">,</span> <span class="n">expected_type</span><span class="o">=</span><span class="n">expected_type</span><span class="p">,</span> <span class="n">actual_type</span><span class="o">=</span><span class="n">actual_type</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_event_specific_data</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.objects</span> <span class="kn">import</span> <span class="n">StepFailureData</span><span class="p">,</span> <span class="n">StepSuccessData</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.inputs</span> <span class="kn">import</span> <span class="n">StepInputData</span>
+
+    <span class="k">if</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_OUTPUT</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">StepOutputData</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">StepFailureData</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">StepSuccessData</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">StepMaterializationData</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">StepExpectationResultData</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_INPUT</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">StepInputData</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">EngineEventData</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_ERRORED</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;event_specific_data&quot;</span><span class="p">,</span> <span class="n">HookErroredData</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">event_specific_data</span>
+
+
+<span class="k">def</span> <span class="nf">log_step_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="s2">&quot;step_context&quot;</span><span class="p">,</span> <span class="n">SystemStepExecutionContext</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;event&quot;</span><span class="p">,</span> <span class="n">DagsterEvent</span><span class="p">)</span>
+
+    <span class="n">event_type</span> <span class="o">=</span> <span class="n">DagsterEventType</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">event_type_value</span><span class="p">)</span>
+    <span class="n">log_fn</span> <span class="o">=</span> <span class="n">step_context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span> <span class="k">if</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="n">FAILURE_EVENTS</span> <span class="k">else</span> <span class="n">step_context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span>
+
+    <span class="n">log_fn</span><span class="p">(</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">message</span>
+        <span class="ow">or</span> <span class="s2">&quot;</span><span class="si">{event_type}</span><span class="s2"> for step </span><span class="si">{step_key}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">event_type</span><span class="p">,</span> <span class="n">step_key</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">key</span>
+        <span class="p">),</span>
+        <span class="n">dagster_event</span><span class="o">=</span><span class="n">event</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">log_pipeline_event</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+    <span class="n">event_type</span> <span class="o">=</span> <span class="n">DagsterEventType</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">event_type_value</span><span class="p">)</span>
+
+    <span class="n">log_fn</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">pipeline_context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span> <span class="k">if</span> <span class="n">event_type</span> <span class="ow">in</span> <span class="n">FAILURE_EVENTS</span> <span class="k">else</span> <span class="n">pipeline_context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span>
+    <span class="p">)</span>
+
+    <span class="n">log_fn</span><span class="p">(</span>
+        <span class="n">event</span><span class="o">.</span><span class="n">message</span>
+        <span class="ow">or</span> <span class="s2">&quot;</span><span class="si">{event_type}</span><span class="s2"> for pipeline </span><span class="si">{pipeline_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">event_type</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span>
+        <span class="p">),</span>
+        <span class="n">dagster_event</span><span class="o">=</span><span class="n">event</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">log_resource_event</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;event&quot;</span><span class="p">,</span> <span class="n">DagsterEvent</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="n">EngineEventData</span><span class="p">)</span>
+
+    <span class="n">log_fn</span> <span class="o">=</span> <span class="n">log_manager</span><span class="o">.</span><span class="n">error</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">event_specific_data</span><span class="o">.</span><span class="n">error</span> <span class="k">else</span> <span class="n">log_manager</span><span class="o">.</span><span class="n">debug</span>
+    <span class="n">log_fn</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">dagster_event</span><span class="o">=</span><span class="n">event</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="n">step_key</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">step_key</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="DagsterEvent"><a class="viewcode-back" href="../../../sections/api/apidocs/execution.html#dagster.DagsterEvent">[docs]</a><span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">DagsterEvent</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_DagsterEvent&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;event_type_value pipeline_name step_handle solid_handle step_kind_value &quot;</span>
+        <span class="s2">&quot;logging_tags event_specific_data message pid step_key&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Events yielded by solid and pipeline execution.</span>
+
+<span class="sd">    Users should not instantiate this class.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        event_type_value (str): Value for a DagsterEventType.</span>
+<span class="sd">        pipeline_name (str)</span>
+<span class="sd">        step_key (str)</span>
+<span class="sd">        solid_handle (SolidHandle)</span>
+<span class="sd">        step_kind_value (str): Value for a StepKind.</span>
+<span class="sd">        logging_tags (Dict[str, str])</span>
+<span class="sd">        event_specific_data (Any): Type must correspond to event_type_value.</span>
+<span class="sd">        message (str)</span>
+<span class="sd">        pid (int)</span>
+<span class="sd">        step_key (Optional[str]): DEPRECATED</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_step</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="n">step_context</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="s2">&quot;step_context&quot;</span><span class="p">,</span> <span class="n">SystemStepExecutionContext</span><span class="p">)</span>
+
+        <span class="n">event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+            <span class="n">event_type_value</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="s2">&quot;event_type&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">step_handle</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">handle</span><span class="p">,</span>
+            <span class="n">solid_handle</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">,</span>
+            <span class="n">step_kind_value</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">kind</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">logging_tags</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">logging_tags</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">_validate_event_specific_data</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">),</span>
+            <span class="n">pid</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+        <span class="n">log_step_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">event</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_pipeline</span><span class="p">(</span>
+        <span class="n">event_type</span><span class="p">,</span> <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">step_handle</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">,</span> <span class="s2">&quot;pipeline_context&quot;</span><span class="p">,</span> <span class="n">SystemExecutionContext</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+            <span class="n">step_handle</span><span class="p">,</span> <span class="s2">&quot;step_handle&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">StepHandle</span><span class="p">,</span> <span class="n">ResolvedFromDynamicStepHandle</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">pipeline_name</span> <span class="o">=</span> <span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span>
+
+        <span class="n">event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+            <span class="n">event_type_value</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="s2">&quot;event_type&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="p">)</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">_validate_event_specific_data</span><span class="p">(</span><span class="n">event_type</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="p">),</span>
+            <span class="n">step_handle</span><span class="o">=</span><span class="n">step_handle</span><span class="p">,</span>
+            <span class="n">pid</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">step_key</span> <span class="o">=</span> <span class="n">step_handle</span><span class="o">.</span><span class="n">to_key</span><span class="p">()</span> <span class="k">if</span> <span class="n">step_handle</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">log_pipeline_event</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">event</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_resource</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">)</span>
+        <span class="n">pipeline_name</span> <span class="o">=</span> <span class="n">execution_plan</span><span class="o">.</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">_validate_event_specific_data</span><span class="p">(</span>
+                <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="p">,</span> <span class="n">event_specific_data</span>
+            <span class="p">),</span>
+            <span class="n">step_handle</span><span class="o">=</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">step_handle_for_single_step_plans</span><span class="p">(),</span>
+            <span class="n">pid</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">log_resource_event</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">event</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">event_type_value</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="n">step_handle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">solid_handle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">step_kind_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">logging_tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">event_specific_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">message</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">pid</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="c1"># legacy</span>
+        <span class="n">step_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">event_type_value</span><span class="p">,</span> <span class="n">event_specific_data</span> <span class="o">=</span> <span class="n">_handle_back_compat</span><span class="p">(</span>
+            <span class="n">event_type_value</span><span class="p">,</span> <span class="n">event_specific_data</span>
+        <span class="p">)</span>
+
+        <span class="c1"># old events may contain solid_handle but not step_handle</span>
+        <span class="k">if</span> <span class="n">solid_handle</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">step_handle</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">step_handle</span> <span class="o">=</span> <span class="n">StepHandle</span><span class="p">(</span><span class="n">solid_handle</span><span class="p">)</span>
+
+        <span class="c1"># Legacy events may have step_key set directly, preserve those to stay in sync</span>
+        <span class="c1"># with legacy execution plan snapshots.</span>
+        <span class="k">if</span> <span class="n">step_handle</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">step_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">step_key</span> <span class="o">=</span> <span class="n">step_handle</span><span class="o">.</span><span class="n">to_key</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">DagsterEvent</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">event_type_value</span><span class="p">,</span> <span class="s2">&quot;event_type_value&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">step_handle</span><span class="p">,</span> <span class="s2">&quot;step_handle&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">StepHandle</span><span class="p">,</span> <span class="n">ResolvedFromDynamicStepHandle</span><span class="p">)</span>
+            <span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">solid_handle</span><span class="p">,</span> <span class="s2">&quot;solid_handle&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">step_kind_value</span><span class="p">,</span> <span class="s2">&quot;step_kind_value&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">logging_tags</span><span class="p">,</span> <span class="s2">&quot;logging_tags&quot;</span><span class="p">),</span>
+            <span class="n">_validate_event_specific_data</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="p">(</span><span class="n">event_type_value</span><span class="p">),</span> <span class="n">event_specific_data</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">message</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="s2">&quot;pid&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;step_key&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid_handle</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">event_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;DagsterEventType: The type of this event.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">DagsterEventType</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">event_type_value</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="ow">in</span> <span class="n">STEP_EVENTS</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_hook_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="ow">in</span> <span class="n">HOOK_EVENTS</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_kind</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.step</span> <span class="kn">import</span> <span class="n">StepKind</span>
+
+        <span class="k">return</span> <span class="n">StepKind</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">step_kind_value</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_success</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_successful_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_OUTPUT</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_START</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_skipped</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SKIPPED</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_up_for_retry</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_UP_FOR_RETRY</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_restarted</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_RESTARTED</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_pipeline_success</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_SUCCESS</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_pipeline_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_FAILURE</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_pipeline_init_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_INIT_FAILURE</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_failure</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="ow">in</span> <span class="n">FAILURE_EVENTS</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_pipeline_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="ow">in</span> <span class="n">PIPELINE_EVENTS</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_engine_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_handled_output</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HANDLED_OUTPUT</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_loaded_input</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">LOADED_INPUT</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_step_materialization</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">asset_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">!=</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_materialization_data</span><span class="o">.</span><span class="n">materialization</span><span class="o">.</span><span class="n">asset_key</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">partition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span> <span class="o">!=</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_materialization_data</span><span class="o">.</span><span class="n">materialization</span><span class="o">.</span><span class="n">partition</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_input_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;step_input_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_INPUT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_output_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;step_output_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_OUTPUT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_success_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;step_success_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_failure_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;step_failure_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_retry_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;step_retry_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_UP_FOR_RETRY</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_materialization_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span>
+            <span class="s2">&quot;step_materialization_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_expectation_result_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span>
+            <span class="s2">&quot;step_expectation_result_data&quot;</span><span class="p">,</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_init_failure_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span>
+            <span class="s2">&quot;pipeline_init_failure_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_INIT_FAILURE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_failure_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;pipeline_failure_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_FAILURE</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">engine_event_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;engine_event_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">hook_completed_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;hook_completed_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_COMPLETED</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">hook_errored_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;hook_errored_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_ERRORED</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">hook_skipped_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">_assert_type</span><span class="p">(</span><span class="s2">&quot;hook_skipped_data&quot;</span><span class="p">,</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_SKIPPED</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_type</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_specific_data</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_output_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">step_output_data</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">step_output_data</span><span class="p">,</span> <span class="s2">&quot;step_output_data&quot;</span><span class="p">,</span> <span class="n">StepOutputData</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_OUTPUT</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">step_output_data</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Yielded output &quot;</span><span class="si">{output_name}</span><span class="s1">&quot;</span><span class="si">{mapping_clause}</span><span class="s1"> of type &quot;</span><span class="si">{output_type}</span><span class="s1">&quot;.</span><span class="si">{type_check_clause}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">output_name</span><span class="o">=</span><span class="n">step_output_data</span><span class="o">.</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">output_name</span><span class="p">,</span>
+                <span class="n">output_type</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">step_output_named</span><span class="p">(</span>
+                    <span class="n">step_output_data</span><span class="o">.</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">output_name</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                <span class="n">type_check_clause</span><span class="o">=</span><span class="p">(</span>
+                    <span class="s2">&quot; Warning! Type check failed.&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">step_output_data</span><span class="o">.</span><span class="n">type_check_data</span><span class="o">.</span><span class="n">success</span>
+                    <span class="k">else</span> <span class="s2">&quot; (Type check passed).&quot;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">step_output_data</span><span class="o">.</span><span class="n">type_check_data</span>
+                <span class="k">else</span> <span class="s2">&quot; (No type check).&quot;</span><span class="p">,</span>
+                <span class="n">mapping_clause</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39; mapping key &quot;</span><span class="si">{</span><span class="n">step_output_data</span><span class="o">.</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">mapping_key</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+                <span class="k">if</span> <span class="n">step_output_data</span><span class="o">.</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">mapping_key</span>
+                <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_failure_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">step_failure_data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">step_failure_data</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Execution of step &quot;</span><span class="si">{step_key}</span><span class="s1">&quot; failed.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">step_key</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_retry_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">step_retry_data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_UP_FOR_RETRY</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">step_retry_data</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Execution of step &quot;</span><span class="si">{step_key}</span><span class="s1">&quot; failed and has requested a retry</span><span class="si">{wait_str}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">wait_str</span><span class="o">=</span><span class="s2">&quot; in </span><span class="si">{n}</span><span class="s2"> seconds&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">n</span><span class="o">=</span><span class="n">step_retry_data</span><span class="o">.</span><span class="n">seconds_to_wait</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">step_retry_data</span><span class="o">.</span><span class="n">seconds_to_wait</span>
+                <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_input_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">step_input_data</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_INPUT</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">step_input_data</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Got input &quot;</span><span class="si">{input_name}</span><span class="s1">&quot; of type &quot;</span><span class="si">{input_type}</span><span class="s1">&quot;.</span><span class="si">{type_check_clause}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">input_name</span><span class="o">=</span><span class="n">step_input_data</span><span class="o">.</span><span class="n">input_name</span><span class="p">,</span>
+                <span class="n">input_type</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">step_input_named</span><span class="p">(</span>
+                    <span class="n">step_input_data</span><span class="o">.</span><span class="n">input_name</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                <span class="n">type_check_clause</span><span class="o">=</span><span class="p">(</span>
+                    <span class="s2">&quot; Warning! Type check failed.&quot;</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">step_input_data</span><span class="o">.</span><span class="n">type_check_data</span><span class="o">.</span><span class="n">success</span>
+                    <span class="k">else</span> <span class="s2">&quot; (Type check passed).&quot;</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">step_input_data</span><span class="o">.</span><span class="n">type_check_data</span>
+                <span class="k">else</span> <span class="s2">&quot; (No type check).&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_start_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_START</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Started execution of step &quot;</span><span class="si">{step_key}</span><span class="s1">&quot;.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">key</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_restarted_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">previous_attempts</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_RESTARTED</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Started re-execution (attempt # </span><span class="si">{n}</span><span class="s1">) of step &quot;</span><span class="si">{step_key}</span><span class="s1">&quot;.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="n">previous_attempts</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_success_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">success</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">success</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Finished execution of step &quot;</span><span class="si">{step_key}</span><span class="s1">&quot; in </span><span class="si">{duration}</span><span class="s1">.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">duration</span><span class="o">=</span><span class="n">format_duration</span><span class="p">(</span><span class="n">success</span><span class="o">.</span><span class="n">duration_ms</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_skipped_event</span><span class="p">(</span><span class="n">step_context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SKIPPED</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Skipped execution of step &quot;</span><span class="si">{step_key}</span><span class="s1">&quot;.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">key</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_materialization</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">materialization</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+            <span class="n">materialization</span><span class="p">,</span> <span class="s2">&quot;materialization&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">AssetMaterialization</span><span class="p">,</span> <span class="n">Materialization</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">StepMaterializationData</span><span class="p">(</span><span class="n">materialization</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">materialization</span><span class="o">.</span><span class="n">description</span>
+            <span class="k">if</span> <span class="n">materialization</span><span class="o">.</span><span class="n">description</span>
+            <span class="k">else</span> <span class="s2">&quot;Materialized value</span><span class="si">{label_clause}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">label_clause</span><span class="o">=</span><span class="s2">&quot; </span><span class="si">{label}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="n">materialization</span><span class="o">.</span><span class="n">label</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">materialization</span><span class="o">.</span><span class="n">label</span>
+                <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">step_expectation_result</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">expectation_result</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">expectation_result</span><span class="p">,</span> <span class="s2">&quot;expectation_result&quot;</span><span class="p">,</span> <span class="n">ExpectationResult</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_msg</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">expectation_result</span><span class="o">.</span><span class="n">description</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">expectation_result</span><span class="o">.</span><span class="n">description</span>
+
+            <span class="k">return</span> <span class="s2">&quot;Expectation</span><span class="si">{label_clause}</span><span class="s2"> </span><span class="si">{result_verb}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">label_clause</span><span class="o">=</span><span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">expectation_result</span><span class="o">.</span><span class="n">label</span> <span class="k">if</span> <span class="n">expectation_result</span><span class="o">.</span><span class="n">label</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">result_verb</span><span class="o">=</span><span class="s2">&quot;passed&quot;</span> <span class="k">if</span> <span class="n">expectation_result</span><span class="o">.</span><span class="n">success</span> <span class="k">else</span> <span class="s2">&quot;failed&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">StepExpectationResultData</span><span class="p">(</span><span class="n">expectation_result</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">_msg</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pipeline_start</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_pipeline</span><span class="p">(</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_START</span><span class="p">,</span>
+            <span class="n">pipeline_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Started execution of pipeline &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot;.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pipeline_success</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_pipeline</span><span class="p">(</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_SUCCESS</span><span class="p">,</span>
+            <span class="n">pipeline_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Finished execution of pipeline &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot;.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pipeline_failure</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">,</span> <span class="n">context_msg</span><span class="p">,</span> <span class="n">error_info</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_pipeline</span><span class="p">(</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_FAILURE</span><span class="p">,</span>
+            <span class="n">pipeline_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Execution of pipeline &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot; failed. </span><span class="si">{context_msg}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+                <span class="n">context_msg</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">context_msg</span><span class="p">,</span> <span class="s2">&quot;context_msg&quot;</span><span class="p">),</span>
+            <span class="p">),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">PipelineFailureData</span><span class="p">(</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">error_info</span><span class="p">,</span> <span class="s2">&quot;error_info&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pipeline_canceled</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">,</span> <span class="n">error_info</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_pipeline</span><span class="p">(</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_CANCELED</span><span class="p">,</span>
+            <span class="n">pipeline_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="s1">&#39;Execution of pipeline &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot; canceled.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span>
+            <span class="p">),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">PipelineCanceledData</span><span class="p">(</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">error_info</span><span class="p">,</span> <span class="s2">&quot;error_info&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">resource_init_start</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">,</span> <span class="n">resource_keys</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_resource</span><span class="p">(</span>
+            <span class="n">execution_plan</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">),</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Starting initialization of resources [</span><span class="si">{}</span><span class="s2">].&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">resource_keys</span><span class="p">))</span>
+            <span class="p">),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">EngineEventData</span><span class="p">(</span><span class="n">metadata_entries</span><span class="o">=</span><span class="p">[],</span> <span class="n">marker_start</span><span class="o">=</span><span class="s2">&quot;resources&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">resource_init_success</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">,</span> <span class="n">resource_instances</span><span class="p">,</span> <span class="n">resource_init_times</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+        <span class="n">metadata_entries</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">resource_key</span> <span class="ow">in</span> <span class="n">resource_instances</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">resource_obj</span> <span class="o">=</span> <span class="n">resource_instances</span><span class="p">[</span><span class="n">resource_key</span><span class="p">]</span>
+            <span class="n">resource_time</span> <span class="o">=</span> <span class="n">resource_init_times</span><span class="p">[</span><span class="n">resource_key</span><span class="p">]</span>
+            <span class="n">metadata_entries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">python_artifact</span><span class="p">(</span>
+                    <span class="n">resource_obj</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="n">resource_key</span><span class="p">,</span> <span class="s2">&quot;Initialized in </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">resource_time</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_resource</span><span class="p">(</span>
+            <span class="n">execution_plan</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">),</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Finished initialization of resources [</span><span class="si">{}</span><span class="s2">].&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">resource_init_times</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+            <span class="p">),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">EngineEventData</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="o">=</span><span class="n">metadata_entries</span><span class="p">,</span> <span class="n">marker_end</span><span class="o">=</span><span class="s2">&quot;resources&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">resource_init_failure</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">,</span> <span class="n">resource_keys</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_resource</span><span class="p">(</span>
+            <span class="n">execution_plan</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">),</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Initialization of resources [</span><span class="si">{}</span><span class="s2">] failed.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">resource_keys</span><span class="p">)),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">EngineEventData</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[],</span> <span class="n">marker_end</span><span class="o">=</span><span class="s2">&quot;resources&quot;</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">resource_teardown_failure</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">,</span> <span class="n">resource_keys</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_resource</span><span class="p">(</span>
+            <span class="n">execution_plan</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">),</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Teardown of resources [</span><span class="si">{}</span><span class="s2">] failed.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">resource_keys</span><span class="p">)),</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">EngineEventData</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[],</span> <span class="n">marker_start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">marker_end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">pipeline_init_failure</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="n">failure_data</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">failure_data</span><span class="p">,</span> <span class="s2">&quot;failure_data&quot;</span><span class="p">,</span> <span class="n">PipelineInitFailureData</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">)</span>
+        <span class="c1"># this failure happens trying to bring up context so can&#39;t use from_pipeline</span>
+
+        <span class="n">event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+            <span class="n">event_type_value</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_INIT_FAILURE</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">failure_data</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="p">(</span>
+                <span class="s1">&#39;Pipeline failure during initialization of pipeline &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot;. &#39;</span>
+                <span class="s2">&quot;This may be due to a failure in initializing a resource or logger.&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">),</span>
+            <span class="n">pid</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="n">log_manager</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">message</span>
+            <span class="ow">or</span> <span class="s2">&quot;</span><span class="si">{event_type}</span><span class="s2"> for pipeline </span><span class="si">{pipeline_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_INIT_FAILURE</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span>
+            <span class="p">),</span>
+            <span class="n">dagster_event</span><span class="o">=</span><span class="n">event</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">event</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">engine_event</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">step_handle</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_pipeline</span><span class="p">(</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="p">,</span>
+            <span class="n">pipeline_context</span><span class="p">,</span>
+            <span class="n">message</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">event_specific_data</span><span class="p">,</span>
+            <span class="n">step_handle</span><span class="o">=</span><span class="n">step_handle</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">object_store_operation</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">object_store_operation_result</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.definitions.events</span> <span class="kn">import</span> <span class="n">ObjectStoreOperation</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+            <span class="n">object_store_operation_result</span><span class="p">,</span> <span class="s2">&quot;object_store_operation_result&quot;</span><span class="p">,</span> <span class="n">ObjectStoreOperation</span>
+        <span class="p">)</span>
+
+        <span class="n">object_store_name</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">{object_store_name}</span><span class="s2"> &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">object_store_name</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">object_store_name</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">object_store_name</span>
+            <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">serialization_strategy_modifier</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot; using </span><span class="si">{serialization_strategy_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">serialization_strategy_name</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">serialization_strategy_name</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">serialization_strategy_name</span>
+            <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">value_name</span> <span class="o">=</span> <span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">value_name</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">ObjectStoreOperationType</span><span class="p">(</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">op</span><span class="p">)</span>
+            <span class="o">==</span> <span class="n">ObjectStoreOperationType</span><span class="o">.</span><span class="n">SET_OBJECT</span>
+        <span class="p">):</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Stored intermediate object for output </span><span class="si">{value_name}</span><span class="s2"> in &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{object_store_name}</span><span class="s2">object store</span><span class="si">{serialization_strategy_modifier}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">value_name</span><span class="o">=</span><span class="n">value_name</span><span class="p">,</span>
+                <span class="n">object_store_name</span><span class="o">=</span><span class="n">object_store_name</span><span class="p">,</span>
+                <span class="n">serialization_strategy_modifier</span><span class="o">=</span><span class="n">serialization_strategy_modifier</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">ObjectStoreOperationType</span><span class="p">(</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">op</span><span class="p">)</span>
+            <span class="o">==</span> <span class="n">ObjectStoreOperationType</span><span class="o">.</span><span class="n">GET_OBJECT</span>
+        <span class="p">):</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Retrieved intermediate object for input </span><span class="si">{value_name}</span><span class="s2"> in &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{object_store_name}</span><span class="s2">object store</span><span class="si">{serialization_strategy_modifier}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">value_name</span><span class="o">=</span><span class="n">value_name</span><span class="p">,</span>
+                <span class="n">object_store_name</span><span class="o">=</span><span class="n">object_store_name</span><span class="p">,</span>
+                <span class="n">serialization_strategy_modifier</span><span class="o">=</span><span class="n">serialization_strategy_modifier</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span>
+            <span class="n">ObjectStoreOperationType</span><span class="p">(</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">op</span><span class="p">)</span>
+            <span class="o">==</span> <span class="n">ObjectStoreOperationType</span><span class="o">.</span><span class="n">CP_OBJECT</span>
+        <span class="p">):</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;Copied intermediate object for input </span><span class="si">{value_name}</span><span class="s2"> from </span><span class="si">{key}</span><span class="s2"> to </span><span class="si">{dest_key}</span><span class="s2">&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">value_name</span><span class="o">=</span><span class="n">value_name</span><span class="p">,</span>
+                <span class="n">key</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">dest_key</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">dest_key</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">OBJECT_STORE_OPERATION</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">ObjectStoreOperationResultData</span><span class="p">(</span>
+                <span class="n">op</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">op</span><span class="p">,</span>
+                <span class="n">value_name</span><span class="o">=</span><span class="n">value_name</span><span class="p">,</span>
+                <span class="n">address</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">path</span><span class="p">(</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;key&quot;</span><span class="p">)</span>
+                <span class="p">],</span>
+                <span class="n">version</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+                <span class="n">mapping_key</span><span class="o">=</span><span class="n">object_store_operation_result</span><span class="o">.</span><span class="n">mapping_key</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">handled_output</span><span class="p">(</span><span class="n">step_context</span><span class="p">,</span> <span class="n">output_name</span><span class="p">,</span> <span class="n">manager_key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">manager_key</span><span class="p">,</span> <span class="s2">&quot;manager_key&quot;</span><span class="p">)</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Handled output &quot;</span><span class="si">{</span><span class="n">output_name</span><span class="si">}</span><span class="s1">&quot; using output manager &#39;</span> <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">manager_key</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HANDLED_OUTPUT</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">HandledOutputData</span><span class="p">(</span>
+                <span class="n">output_name</span><span class="o">=</span><span class="n">output_name</span><span class="p">,</span> <span class="n">manager_key</span><span class="o">=</span><span class="n">manager_key</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">loaded_input</span><span class="p">(</span>
+        <span class="n">step_context</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">manager_key</span><span class="p">,</span> <span class="n">upstream_output_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upstream_step_key</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="s2">&quot;input_name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">manager_key</span><span class="p">,</span> <span class="s2">&quot;manager_key&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">upstream_output_name</span><span class="p">,</span> <span class="s2">&quot;upstream_output_name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">upstream_step_key</span><span class="p">,</span> <span class="s2">&quot;upstream_step_key&quot;</span><span class="p">)</span>
+
+        <span class="n">message</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;Loaded input &quot;</span><span class="si">{</span><span class="n">input_name</span><span class="si">}</span><span class="s1">&quot; using input manager &#39;</span> <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">manager_key</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+        <span class="k">if</span> <span class="n">upstream_output_name</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">+=</span> <span class="sa">f</span><span class="s1">&#39;, from output &quot;</span><span class="si">{</span><span class="n">upstream_output_name</span><span class="si">}</span><span class="s1">&quot; of step &#39;</span> <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">upstream_step_key</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+
+        <span class="k">return</span> <span class="n">DagsterEvent</span><span class="o">.</span><span class="n">from_step</span><span class="p">(</span>
+            <span class="n">event_type</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">LOADED_INPUT</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">LoadedInputData</span><span class="p">(</span>
+                <span class="n">input_name</span><span class="o">=</span><span class="n">input_name</span><span class="p">,</span>
+                <span class="n">manager_key</span><span class="o">=</span><span class="n">manager_key</span><span class="p">,</span>
+                <span class="n">upstream_output_name</span><span class="o">=</span><span class="n">upstream_output_name</span><span class="p">,</span>
+                <span class="n">upstream_step_key</span><span class="o">=</span><span class="n">upstream_step_key</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">hook_completed</span><span class="p">(</span><span class="n">hook_context</span><span class="p">,</span> <span class="n">hook_def</span><span class="p">):</span>
+        <span class="n">event_type</span> <span class="o">=</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_COMPLETED</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">hook_context</span><span class="p">,</span> <span class="s2">&quot;hook_context&quot;</span><span class="p">,</span> <span class="n">HookContext</span><span class="p">)</span>
+
+        <span class="n">event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+            <span class="n">event_type_value</span><span class="o">=</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">step_handle</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">handle</span><span class="p">,</span>
+            <span class="n">solid_handle</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">,</span>
+            <span class="n">step_kind_value</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">kind</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">logging_tags</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">logging_tags</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="p">(</span>
+                <span class="s1">&#39;Finished the execution of hook &quot;</span><span class="si">{hook_name}</span><span class="s1">&quot; triggered for solid &quot;</span><span class="si">{solid_name}</span><span class="s1">&quot;.&#39;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">hook_name</span><span class="o">=</span><span class="n">hook_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">solid_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">hook_context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">dagster_event</span><span class="o">=</span><span class="n">event</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">event</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">hook_errored</span><span class="p">(</span><span class="n">hook_context</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+        <span class="n">event_type</span> <span class="o">=</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_ERRORED</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">hook_context</span><span class="p">,</span> <span class="s2">&quot;hook_context&quot;</span><span class="p">,</span> <span class="n">HookContext</span><span class="p">)</span>
+
+        <span class="n">event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+            <span class="n">event_type_value</span><span class="o">=</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">step_handle</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">handle</span><span class="p">,</span>
+            <span class="n">solid_handle</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">,</span>
+            <span class="n">step_kind_value</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">kind</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">logging_tags</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">logging_tags</span><span class="p">,</span>
+            <span class="n">event_specific_data</span><span class="o">=</span><span class="n">_validate_event_specific_data</span><span class="p">(</span>
+                <span class="n">event_type</span><span class="p">,</span>
+                <span class="n">HookErroredData</span><span class="p">(</span>
+                    <span class="n">error</span><span class="o">=</span><span class="n">serializable_error_info_from_exc_info</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">original_exc_info</span><span class="p">)</span>
+                <span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">hook_context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">(</span><span class="n">error</span><span class="p">),</span> <span class="n">dagster_event</span><span class="o">=</span><span class="n">event</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">event</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">hook_skipped</span><span class="p">(</span><span class="n">hook_context</span><span class="p">,</span> <span class="n">hook_def</span><span class="p">):</span>
+        <span class="n">event_type</span> <span class="o">=</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HOOK_SKIPPED</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">hook_context</span><span class="p">,</span> <span class="s2">&quot;hook_context&quot;</span><span class="p">,</span> <span class="n">HookContext</span><span class="p">)</span>
+
+        <span class="n">event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+            <span class="n">event_type_value</span><span class="o">=</span><span class="n">event_type</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">step_handle</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">handle</span><span class="p">,</span>
+            <span class="n">solid_handle</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">,</span>
+            <span class="n">step_kind_value</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">step</span><span class="o">.</span><span class="n">kind</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">logging_tags</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">logging_tags</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="p">(</span>
+                <span class="s1">&#39;Skipped the execution of hook &quot;</span><span class="si">{hook_name}</span><span class="s1">&quot;. It did not meet its triggering &#39;</span>
+                <span class="s1">&#39;condition during the execution of solid &quot;</span><span class="si">{solid_name}</span><span class="s1">&quot;.&#39;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">hook_name</span><span class="o">=</span><span class="n">hook_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">solid_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">hook_context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">dagster_event</span><span class="o">=</span><span class="n">event</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="n">hook_context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">event</span></div>
+
+
+<span class="k">def</span> <span class="nf">get_step_output_event</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">step_key</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="s2">&quot;events&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">DagsterEvent</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_OUTPUT</span>
+            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">step_key</span> <span class="o">==</span> <span class="n">step_key</span>
+            <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">step_output_data</span><span class="o">.</span><span class="n">output_name</span> <span class="o">==</span> <span class="n">output_name</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="n">event</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">StepMaterializationData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_StepMaterializationData&quot;</span><span class="p">,</span> <span class="s2">&quot;materialization&quot;</span><span class="p">)):</span>
+    <span class="k">pass</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">StepExpectationResultData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_StepExpectationResultData&quot;</span><span class="p">,</span> <span class="s2">&quot;expectation_result&quot;</span><span class="p">)):</span>
+    <span class="k">pass</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">ObjectStoreOperationResultData</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_ObjectStoreOperationResultData&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;op value_name metadata_entries address version mapping_key&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">op</span><span class="p">,</span> <span class="n">value_name</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="p">,</span> <span class="n">address</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mapping_key</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ObjectStoreOperationResultData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">op</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">op</span><span class="p">,</span> <span class="s2">&quot;op&quot;</span><span class="p">),</span>
+            <span class="n">value_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">value_name</span><span class="p">,</span> <span class="s2">&quot;value_name&quot;</span><span class="p">),</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">metadata_entries</span><span class="p">,</span> <span class="s2">&quot;metadata_entries&quot;</span><span class="p">),</span>
+            <span class="n">address</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s2">&quot;address&quot;</span><span class="p">),</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">),</span>
+            <span class="n">mapping_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mapping_key</span><span class="p">,</span> <span class="s2">&quot;mapping_key&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">EngineEventData</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_EngineEventData&quot;</span><span class="p">,</span> <span class="s2">&quot;metadata_entries error marker_start marker_end&quot;</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="c1"># serdes log</span>
+    <span class="c1"># * added optional error</span>
+    <span class="c1"># * added marker_start / marker_end</span>
+    <span class="c1">#</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">marker_start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">marker_end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">EngineEventData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+                <span class="n">metadata_entries</span><span class="p">,</span> <span class="s2">&quot;metadata_entries&quot;</span><span class="p">,</span> <span class="n">EventMetadataEntry</span>
+            <span class="p">),</span>
+            <span class="n">error</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">),</span>
+            <span class="n">marker_start</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">marker_start</span><span class="p">,</span> <span class="s2">&quot;marker_start&quot;</span><span class="p">),</span>
+            <span class="n">marker_end</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">marker_end</span><span class="p">,</span> <span class="s2">&quot;marker_end&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">in_process</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">marker_end</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="s2">&quot;pid&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">step_keys_to_execute</span><span class="p">,</span> <span class="s2">&quot;step_keys_to_execute&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">EngineEventData</span><span class="p">(</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pid</span><span class="p">),</span> <span class="s2">&quot;pid&quot;</span><span class="p">)]</span>
+            <span class="o">+</span> <span class="p">(</span>
+                <span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">step_keys_to_execute</span><span class="p">),</span> <span class="s2">&quot;step_keys&quot;</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="n">step_keys_to_execute</span>
+                <span class="k">else</span> <span class="p">[]</span>
+            <span class="p">),</span>
+            <span class="n">marker_end</span><span class="o">=</span><span class="n">marker_end</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">multiprocess</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="s2">&quot;pid&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">step_keys_to_execute</span><span class="p">,</span> <span class="s2">&quot;step_keys_to_execute&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">EngineEventData</span><span class="p">(</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">pid</span><span class="p">),</span> <span class="s2">&quot;pid&quot;</span><span class="p">)]</span>
+            <span class="o">+</span> <span class="p">(</span>
+                <span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">step_keys_to_execute</span><span class="p">),</span> <span class="s2">&quot;step_keys&quot;</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="n">step_keys_to_execute</span>
+                <span class="k">else</span> <span class="p">[]</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">interrupted</span><span class="p">(</span><span class="n">steps_interrupted</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">steps_interrupted</span><span class="p">,</span> <span class="s2">&quot;steps_interrupted&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">EngineEventData</span><span class="p">(</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">steps_interrupted</span><span class="p">),</span> <span class="s2">&quot;steps_interrupted&quot;</span><span class="p">)]</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">engine_error</span><span class="p">(</span><span class="n">error</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">EngineEventData</span><span class="p">(</span><span class="n">metadata_entries</span><span class="o">=</span><span class="p">[],</span> <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">PipelineInitFailureData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_PipelineInitFailureData&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PipelineInitFailureData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">PipelineFailureData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_PipelineFailureData&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PipelineFailureData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">PipelineCanceledData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_PipelineCanceledData&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PipelineCanceledData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">HookErroredData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_HookErroredData&quot;</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HookErroredData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">error</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">HandledOutputData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_HandledOutputData&quot;</span><span class="p">,</span> <span class="s2">&quot;output_name manager_key&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">output_name</span><span class="p">,</span> <span class="n">manager_key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">HandledOutputData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">output_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">),</span>
+            <span class="n">manager_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">manager_key</span><span class="p">,</span> <span class="s2">&quot;manager_key&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">LoadedInputData</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_LoadedInputData&quot;</span><span class="p">,</span> <span class="s2">&quot;input_name manager_key upstream_output_name upstream_step_key&quot;</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">manager_key</span><span class="p">,</span> <span class="n">upstream_output_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">upstream_step_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">LoadedInputData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">input_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">input_name</span><span class="p">,</span> <span class="s2">&quot;input_name&quot;</span><span class="p">),</span>
+            <span class="n">manager_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">manager_key</span><span class="p">,</span> <span class="s2">&quot;manager_key&quot;</span><span class="p">),</span>
+            <span class="n">upstream_output_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">upstream_output_name</span><span class="p">,</span> <span class="s2">&quot;upstream_output_name&quot;</span><span class="p">),</span>
+            <span class="n">upstream_step_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">upstream_step_key</span><span class="p">,</span> <span class="s2">&quot;upstream_step_key&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<span class="c1">###################################################################################################</span>
+<span class="c1"># THE GRAVEYARD</span>
+<span class="c1">#</span>
+<span class="c1">#            -|-</span>
+<span class="c1">#             |</span>
+<span class="c1">#        _-&#39;~~~~~`-_</span>
+<span class="c1">#      .&#39;           &#39;.</span>
+<span class="c1">#      |    R I P    |</span>
+<span class="c1">#      |             |</span>
+<span class="c1">#      |  Synthetic  |</span>
+<span class="c1">#      |   Process   |</span>
+<span class="c1">#      |   Events    |</span>
+<span class="c1">#      |             |</span>
+<span class="c1">###################################################################################################</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">AssetStoreOperationData</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_AssetStoreOperationData&quot;</span><span class="p">,</span> <span class="s2">&quot;op step_key output_name asset_store_key&quot;</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">AssetStoreOperationType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="c1"># keep this around to prevent issues like https://github.com/dagster-io/dagster/issues/3533</span>
+    <span class="n">SET_ASSET</span> <span class="o">=</span> <span class="s2">&quot;SET_ASSET&quot;</span>
+    <span class="n">GET_ASSET</span> <span class="o">=</span> <span class="s2">&quot;GET_ASSET&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">_handle_back_compat</span><span class="p">(</span><span class="n">event_type_value</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">event_type_value</span> <span class="o">==</span> <span class="s2">&quot;PIPELINE_PROCESS_START&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">EngineEventData</span><span class="p">([])</span>
+    <span class="k">elif</span> <span class="n">event_type_value</span> <span class="o">==</span> <span class="s2">&quot;PIPELINE_PROCESS_STARTED&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">EngineEventData</span><span class="p">([])</span>
+    <span class="k">elif</span> <span class="n">event_type_value</span> <span class="o">==</span> <span class="s2">&quot;PIPELINE_PROCESS_EXITED&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">ENGINE_EVENT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">EngineEventData</span><span class="p">([])</span>
+    <span class="k">elif</span> <span class="n">event_type_value</span> <span class="o">==</span> <span class="s2">&quot;ASSET_STORE_OPERATION&quot;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">event_specific_data</span><span class="o">.</span><span class="n">op</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;GET_ASSET&quot;</span><span class="p">,</span> <span class="n">AssetStoreOperationType</span><span class="o">.</span><span class="n">GET_ASSET</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">LOADED_INPUT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                <span class="n">LoadedInputData</span><span class="p">(</span>
+                    <span class="n">event_specific_data</span><span class="o">.</span><span class="n">output_name</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="o">.</span><span class="n">asset_store_key</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">event_specific_data</span><span class="o">.</span><span class="n">op</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;SET_ASSET&quot;</span><span class="p">,</span> <span class="n">AssetStoreOperationType</span><span class="o">.</span><span class="n">SET_ASSET</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">HANDLED_OUTPUT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                <span class="n">HandledOutputData</span><span class="p">(</span>
+                    <span class="n">event_specific_data</span><span class="o">.</span><span class="n">output_name</span><span class="p">,</span> <span class="n">event_specific_data</span><span class="o">.</span><span class="n">asset_store_key</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">event_type_value</span><span class="p">,</span> <span class="n">event_specific_data</span>
+
+
+<span class="n">register_serdes_tuple_fallbacks</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;PipelineProcessStartedData&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;PipelineProcessExitedData&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;PipelineProcessStartData&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;AssetStoreOperationData&quot;</span><span class="p">:</span> <span class="n">AssetStoreOperationData</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

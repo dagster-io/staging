@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.execution.context.init &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.execution.context.init</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Set</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.resource</span> <span class="kn">import</span> <span class="n">ResourceDefinition</span><span class="p">,</span> <span class="n">ScopedResourcesBuilder</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.log_manager</span> <span class="kn">import</span> <span class="n">DagsterLogManager</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+
+
+<div class="viewcode-block" id="InitResourceContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/modes-resources.html#dagster.InitResourceContext">[docs]</a><span class="k">class</span> <span class="nc">InitResourceContext</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;InitResourceContext&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;resource_config resource_def pipeline_run log_manager resources &quot;</span>
+            <span class="s2">&quot;instance_for_backwards_compat pipeline_def_for_backwards_compat&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Resource-specific initialization context.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        resource_config (Any): The configuration data provided by the environment config. The schema</span>
+<span class="sd">            for this data is defined by the ``config_field`` argument to</span>
+<span class="sd">            :py:class:`ResourceDefinition`.</span>
+<span class="sd">        resource_def (ResourceDefinition): The definition of the resource currently being</span>
+<span class="sd">            constructed.</span>
+<span class="sd">        pipeline_run (PipelineRun): The pipeline run in context.</span>
+<span class="sd">        run_id (str): The id for this run of the pipeline.</span>
+<span class="sd">        log_manager (DagsterLogManager): The log manager for this run of the pipeline</span>
+<span class="sd">        resources (ScopedResources): The resources that are available to the resource that we are</span>
+<span class="sd">            initalizing.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">resource_config</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">resource_def</span><span class="p">:</span> <span class="n">ResourceDefinition</span><span class="p">,</span>
+        <span class="n">pipeline_run</span><span class="p">:</span> <span class="n">PipelineRun</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DagsterLogManager</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">resource_instance_dict</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">instance_for_backwards_compat</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DagsterInstance</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">pipeline_def_for_backwards_compat</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">PipelineDefinition</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">resource_instance_dict</span><span class="p">,</span> <span class="s2">&quot;resource_instance_dict&quot;</span><span class="p">)</span>
+        <span class="n">required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">scoped_resources_builder</span> <span class="o">=</span> <span class="n">ScopedResourcesBuilder</span><span class="p">(</span><span class="n">resource_instance_dict</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InitResourceContext</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">resource_config</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">resource_def</span><span class="p">,</span> <span class="s2">&quot;resource_def&quot;</span><span class="p">,</span> <span class="n">ResourceDefinition</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">),</span>
+            <span class="n">resources</span><span class="o">=</span><span class="n">scoped_resources_builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="p">),</span>
+            <span class="c1"># The following are used internally for adapting intermediate storage defs to resources</span>
+            <span class="n">instance_for_backwards_compat</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">instance_for_backwards_compat</span><span class="p">,</span> <span class="s2">&quot;instance_for_backwards_compat&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span>
+            <span class="p">),</span>
+            <span class="n">pipeline_def_for_backwards_compat</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">pipeline_def_for_backwards_compat</span><span class="p">,</span>
+                <span class="s2">&quot;pipeline_def_for_backwards_compat&quot;</span><span class="p">,</span>
+                <span class="n">PipelineDefinition</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DagsterLogManager</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_manager</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span>
+
+    <span class="k">def</span> <span class="nf">replace_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;InitResourceContext&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">InitResourceContext</span><span class="p">(</span>
+            <span class="n">resource_config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">resource_def</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_def</span><span class="p">,</span>
+            <span class="n">pipeline_run</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">log_manager</span><span class="p">,</span>
+            <span class="n">instance_for_backwards_compat</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">instance_for_backwards_compat</span><span class="p">,</span>
+        <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

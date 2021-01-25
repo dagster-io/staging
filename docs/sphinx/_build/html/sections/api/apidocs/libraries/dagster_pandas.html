@@ -1,0 +1,421 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pandas (dagster_pandas) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Papertrail (dagster_papertrail)" href="dagster_papertrail.html" />
+    <link rel="prev" title="PagerDuty (dagster_pagerduty)" href="dagster_pagerduty.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_pagerduty.html" title="Previous document">PagerDuty (dagster_pagerduty)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_papertrail.html" title="Next document">Papertrail (dagster_papertrail)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="pandas-dagster-pandas">
+<h1>Pandas (dagster_pandas)<a class="headerlink" href="#pandas-dagster-pandas" title="Permalink to this headline">¶</a></h1>
+<p>The <cite>dagster_pandas</cite> library provides utilities for using pandas with Dagster and for implementing
+validation on pandas <cite>DataFrames</cite>. A good place to start with <cite>dagster_pandas</cite> is the <a class="reference external" href="/overview/packages/dagster_pandas">validation
+guide</a>.</p>
+<dl class="function">
+<dt id="dagster_pandas.create_dagster_pandas_dataframe_type">
+<code class="sig-prename descclassname">dagster_pandas.</code><code class="sig-name descname">create_dagster_pandas_dataframe_type</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">description=None</em>, <em class="sig-param">columns=None</em>, <em class="sig-param">event_metadata_fn=None</em>, <em class="sig-param">dataframe_constraints=None</em>, <em class="sig-param">loader=None</em>, <em class="sig-param">materializer=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/data_frame.html#create_dagster_pandas_dataframe_type"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.create_dagster_pandas_dataframe_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Constructs a custom pandas dataframe dagster type.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the dagster pandas type.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A markdown-formatted string, displayed in tooling.</p></li>
+<li><p><strong>columns</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="#dagster_pandas.PandasColumn" title="dagster_pandas.PandasColumn"><em>PandasColumn</em></a><em>]</em><em>]</em>) – A list of <code class="xref py py-class docutils literal notranslate"><span class="pre">PandasColumn</span></code> objects
+which express dataframe column schemas and constraints.</p></li>
+<li><p><strong>event_metadata_fn</strong> (<em>Optional</em><em>[</em><em>func</em><em>]</em>) – A callable which takes your dataframe and returns a list of EventMetadata
+which allow you to express things like summary statistics during runtime.</p></li>
+<li><p><strong>dataframe_constraints</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>DataFrameConstraint</em><em>]</em><em>]</em>) – A list of objects that inherit from
+<code class="xref py py-class docutils literal notranslate"><span class="pre">DataFrameConstraint</span></code>. This allows you to express dataframe-level constraints.</p></li>
+<li><p><strong>loader</strong> (<em>Optional</em><em>[</em><em>DagsterTypeLoader</em><em>]</em>) – An instance of a class that
+inherits from <code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterTypeLoader</span></code>. If None, we will default
+to using <cite>dataframe_loader</cite>.</p></li>
+<li><p><strong>materializer</strong> (<em>Optional</em><em>[</em><em>DagsterTypeMaterializer</em><em>]</em>) – An instance of a class
+that inherits from <code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterTypeMaterializer</span></code>. If None, we will
+default to using <cite>dataframe_materializer</cite>.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster_pandas.RowCountConstraint">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_pandas.</code><code class="sig-name descname">RowCountConstraint</code><span class="sig-paren">(</span><em class="sig-param">num_allowed_rows</em>, <em class="sig-param">error_tolerance=0</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/constraints.html#RowCountConstraint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.RowCountConstraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dataframe constraint that validates the expected count of rows.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_allowed_rows</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – The number of allowed rows in your dataframe.</p></li>
+<li><p><strong>error_tolerance</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>]</em>) – The acceptable threshold if you are not completely certain. Defaults to 0.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster_pandas.StrictColumnsConstraint">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_pandas.</code><code class="sig-name descname">StrictColumnsConstraint</code><span class="sig-paren">(</span><em class="sig-param">strict_column_list</em>, <em class="sig-param">enforce_ordering=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/constraints.html#StrictColumnsConstraint"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.StrictColumnsConstraint" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dataframe constraint that validates column existence and ordering.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>strict_column_list</strong> (<em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The exact list of columns that your dataframe must have.</p></li>
+<li><p><strong>enforce_ordering</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, will enforce that the ordering of column names must match.
+Default is False.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster_pandas.PandasColumn">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_pandas.</code><code class="sig-name descname">PandasColumn</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">constraints=None</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn" title="Permalink to this definition">¶</a></dt>
+<dd><p>The main API for expressing column level schemas and constraints for your custom dataframe
+types.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If th column exists, the validate function will validate the column. Defaults to True.</p></li>
+<li><p><strong>constraints</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>Constraint</em><em>]</em><em>]</em>) – List of constraint objects that indicate the
+validation rules for the pandas column.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.boolean_column">
+<em class="property">static </em><code class="sig-name descname">boolean_column</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.boolean_column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.boolean_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses boolean constraints on boolean dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in the column
+ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the constraint will
+only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.categorical_column">
+<em class="property">static </em><code class="sig-name descname">categorical_column</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">categories</em>, <em class="sig-param">of_types='object'</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.categorical_column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.categorical_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses categorical constraints on specified dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>categories</strong> (<em>List</em><em>[</em><em>Any</em><em>]</em>) – The valid set of buckets that all values in the column must match.</p></li>
+<li><p><strong>of_types</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Set</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em>) – The expected dtype[s] that your categories and values must
+abide by.</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in
+the column ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the
+constraint will only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.datetime_column">
+<em class="property">static </em><code class="sig-name descname">datetime_column</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">min_datetime=Timestamp('1677-09-21 00:12:43.145225')</em>, <em class="sig-param">max_datetime=Timestamp('2262-04-11 23:47:16.854775807')</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.datetime_column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.datetime_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses datetime constraints on ‘datetime64[ns]’ dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>min_datetime</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The lower bound for values you expect in this column.
+Defaults to pandas.Timestamp.min.</p></li>
+<li><p><strong>max_datetime</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The upper bound for values you expect in this column.
+Defaults to pandas.Timestamp.max.</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in the column
+ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the constraint will
+only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.exists">
+<em class="property">static </em><code class="sig-name descname">exists</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.exists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses existence constraints.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in the column
+ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the constraint will
+only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.float_column">
+<em class="property">static </em><code class="sig-name descname">float_column</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">min_value=-inf</em>, <em class="sig-param">max_value=inf</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.float_column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.float_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses numeric constraints on float dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>min_value</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The lower bound for values you expect in this column. Defaults to -float(‘inf’)</p></li>
+<li><p><strong>max_value</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The upper bound for values you expect in this column. Defaults to float(‘inf’)</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in the column
+ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the constraint will
+only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.integer_column">
+<em class="property">static </em><code class="sig-name descname">integer_column</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">min_value=-inf</em>, <em class="sig-param">max_value=inf</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.integer_column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.integer_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses numeric constraints on integer dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>min_value</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The lower bound for values you expect in this column. Defaults to -float(‘inf’)</p></li>
+<li><p><strong>max_value</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The upper bound for values you expect in this column. Defaults to float(‘inf’)</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in the column
+ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the constraint will
+only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.numeric_column">
+<em class="property">static </em><code class="sig-name descname">numeric_column</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">min_value=-inf</em>, <em class="sig-param">max_value=inf</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.numeric_column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.numeric_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses numeric constraints numeric dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>min_value</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The lower bound for values you expect in this column. Defaults to -float(‘inf’)</p></li>
+<li><p><strong>max_value</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a><em>,</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a><em>]</em><em>]</em>) – The upper bound for values you expect in this column. Defaults to float(‘inf’)</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in the column
+ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the constraint will
+only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_pandas.PandasColumn.string_column">
+<em class="property">static </em><code class="sig-name descname">string_column</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">non_nullable=False</em>, <em class="sig-param">unique=False</em>, <em class="sig-param">ignore_missing_vals=False</em>, <em class="sig-param">is_required=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_pandas/validation.html#PandasColumn.string_column"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pandas.PandasColumn.string_column" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simple constructor for PandasColumns that expresses constraints on string dtypes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the column. This must match up with the column name in the dataframe you
+expect to receive.</p></li>
+<li><p><strong>non_nullable</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a constraint that all values in the column
+ought to be non null values.</p></li>
+<li><p><strong>unique</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – If true, this column will enforce a uniqueness constraint on the column values.</p></li>
+<li><p><strong>ignore_missing_vals</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – A flag that is passed into most constraints. If true, the constraint will
+only evaluate non-null data. Ignore_missing_vals and non_nullable cannot both be True.</p></li>
+<li><p><strong>is_required</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Flag indicating the optional/required presence of the column.
+If the column exists the validate function will validate the column. Default to True.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_pandas.DataFrame">
+<code class="sig-prename descclassname">dagster_pandas.</code><code class="sig-name descname">DataFrame</code><em class="property"> = &lt;dagster.core.types.dagster_type.DagsterType object&gt;</em><a class="headerlink" href="#dagster_pandas.DataFrame" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a type in dagster. These can be used in the inputs and outputs of solids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>type_check_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="../execution.html#dagster.TypeCheckContext" title="dagster.TypeCheckContext"><em>TypeCheckContext</em></a><em>, </em><em>Any</em><em>]</em><em>, </em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>, </em><a class="reference internal" href="../solids.html#dagster.TypeCheck" title="dagster.TypeCheck"><em>TypeCheck</em></a><em>]</em><em>]</em><em>]</em>) – The function that defines the type check. It takes the value flowing
+through the input or output of the solid. If it passes, return either
+<code class="docutils literal notranslate"><span class="pre">True</span></code> or a <a class="reference internal" href="../solids.html#dagster.TypeCheck" title="dagster.TypeCheck"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeCheck</span></code></a> with <code class="docutils literal notranslate"><span class="pre">success</span></code> set to <code class="docutils literal notranslate"><span class="pre">True</span></code>. If it fails,
+return either <code class="docutils literal notranslate"><span class="pre">False</span></code> or a <a class="reference internal" href="../solids.html#dagster.TypeCheck" title="dagster.TypeCheck"><code class="xref py py-class docutils literal notranslate"><span class="pre">TypeCheck</span></code></a> with <code class="docutils literal notranslate"><span class="pre">success</span></code> set to <code class="docutils literal notranslate"><span class="pre">False</span></code>.
+The first argument must be named <code class="docutils literal notranslate"><span class="pre">context</span></code> (or, if unused, <code class="docutils literal notranslate"><span class="pre">_</span></code>, <code class="docutils literal notranslate"><span class="pre">_context</span></code>, or <code class="docutils literal notranslate"><span class="pre">context_</span></code>).
+Use <code class="docutils literal notranslate"><span class="pre">required_resource_keys</span></code> for access to resources.</p></li>
+<li><p><strong>key</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – <p>The unique key to identify types programatically.
+The key property always has a value. If you omit key to the argument
+to the init function, it instead receives the value of <code class="docutils literal notranslate"><span class="pre">name</span></code>. If
+neither <code class="docutils literal notranslate"><span class="pre">key</span></code> nor <code class="docutils literal notranslate"><span class="pre">name</span></code> is provided, a <code class="docutils literal notranslate"><span class="pre">CheckError</span></code> is thrown.</p>
+<p>In the case of a generic type such as <code class="docutils literal notranslate"><span class="pre">List</span></code> or <code class="docutils literal notranslate"><span class="pre">Optional</span></code>, this is
+generated programatically based on the type parameters.</p>
+<p>For most use cases, name should be set and the key argument should
+not be specified.</p>
+</p></li>
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A unique name given by a user. If <code class="docutils literal notranslate"><span class="pre">key</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>, <code class="docutils literal notranslate"><span class="pre">key</span></code>
+becomes this value. Name is not given in a case where the user does
+not specify a unique name for this type, such as a generic class.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A markdown-formatted string, displayed in tooling.</p></li>
+<li><p><strong>loader</strong> (<em>Optional</em><em>[</em><em>DagsterTypeLoader</em><em>]</em>) – An instance of a class that
+inherits from <code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterTypeLoader</span></code> and can map config data to a value of
+this type. Specify this argument if you will need to shim values of this type using the
+config machinery. As a rule, you should use the
+<a class="reference internal" href="../types.html#dagster.dagster_type_loader" title="dagster.dagster_type_loader"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;dagster_type_loader</span></code></a> decorator to construct
+these arguments.</p></li>
+<li><p><strong>materializer</strong> (<em>Optional</em><em>[</em><em>DagsterTypeMaterializer</em><em>]</em>) – An instance of a class
+that inherits from <code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterTypeMaterializer</span></code> and can persist values of
+this type. As a rule, you should use the
+<a class="reference internal" href="../types.html#dagster.dagster_type_materializer" title="dagster.dagster_type_materializer"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;dagster_type_materializer</span></code></a>
+decorator to construct these arguments.</p></li>
+<li><p><strong>serialization_strategy</strong> (<em>Optional</em><em>[</em><em>SerializationStrategy</em><em>]</em>) – An instance of a class that
+inherits from <code class="xref py py-class docutils literal notranslate"><span class="pre">SerializationStrategy</span></code>. The default strategy for serializing
+this value when automatically persisting it between execution steps. You should set
+this value if the ordinary serialization machinery (e.g., pickle) will not be adequate
+for this type.</p></li>
+<li><p><strong>auto_plugins</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>Type</em><em>[</em><em>TypeStoragePlugin</em><em>]</em><em>]</em><em>]</em>) – If types must be serialized differently
+depending on the storage being used for intermediates, they should specify this
+argument. In these cases the serialization_strategy argument is not sufficient because
+serialization requires specialized API calls, e.g. to call an S3 API directly instead
+of using a generic file object. See <code class="docutils literal notranslate"><span class="pre">dagster_pyspark.DataFrame</span></code> for an example.</p></li>
+<li><p><strong>required_resource_keys</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Resource keys required by the <code class="docutils literal notranslate"><span class="pre">type_check_fn</span></code>.</p></li>
+<li><p><strong>is_builtin</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Defaults to False. This is used by tools to display or
+filter built-in types (such as <a class="reference internal" href="../types.html#dagster.String" title="dagster.String"><code class="xref py py-class docutils literal notranslate"><span class="pre">String</span></code></a>, <a class="reference internal" href="../types.html#dagster.Int" title="dagster.Int"><code class="xref py py-class docutils literal notranslate"><span class="pre">Int</span></code></a>) to visually distinguish
+them from user-defined types. Meant for internal use.</p></li>
+<li><p><strong>kind</strong> (<em>DagsterTypeKind</em>) – Defaults to None. This is used to determine the kind of runtime type
+for InputDefinition and OutputDefinition type checking.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_pagerduty.html" title="Previous document">PagerDuty (dagster_pagerduty)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_papertrail.html" title="Next document">Papertrail (dagster_papertrail)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

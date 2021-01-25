@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_spark.solids &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_spark.solids</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">InputDefinition</span><span class="p">,</span> <span class="n">Nothing</span><span class="p">,</span> <span class="n">OutputDefinition</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">solid</span>
+
+<span class="kn">from</span> <span class="nn">.configs</span> <span class="kn">import</span> <span class="n">define_spark_config</span>
+
+
+<div class="viewcode-block" id="create_spark_solid"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_spark.html#dagster_spark.create_spark_solid">[docs]</a><span class="k">def</span> <span class="nf">create_spark_solid</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">,</span> <span class="n">main_class</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">([</span><span class="s2">&quot;spark&quot;</span><span class="p">])</span>
+<span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">main_class</span><span class="p">,</span> <span class="s2">&quot;main_class&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="s2">&quot;A parameterized Spark job.&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span><span class="p">)</span>
+
+    <span class="nd">@solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="n">define_spark_config</span><span class="p">(),</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;start&quot;</span><span class="p">,</span> <span class="n">Nothing</span><span class="p">)],</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">Nothing</span><span class="p">)],</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;spark&quot;</span><span class="p">,</span> <span class="s2">&quot;main_class&quot;</span><span class="p">:</span> <span class="n">main_class</span><span class="p">},</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">spark_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>  <span class="c1"># pylint: disable=unused-argument</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">spark</span><span class="o">.</span><span class="n">run_spark_job</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">,</span> <span class="n">main_class</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">spark_solid</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

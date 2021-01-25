@@ -1,0 +1,634 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_dbt.cli.solids &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_dbt.cli.solids</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Array</span><span class="p">,</span>
+    <span class="n">AssetMaterialization</span><span class="p">,</span>
+    <span class="n">Bool</span><span class="p">,</span>
+    <span class="n">EventMetadataEntry</span><span class="p">,</span>
+    <span class="n">InputDefinition</span><span class="p">,</span>
+    <span class="n">Noneable</span><span class="p">,</span>
+    <span class="n">Nothing</span><span class="p">,</span>
+    <span class="n">Output</span><span class="p">,</span>
+    <span class="n">OutputDefinition</span><span class="p">,</span>
+    <span class="n">Permissive</span><span class="p">,</span>
+    <span class="n">StringSource</span><span class="p">,</span>
+    <span class="n">solid</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.config.field</span> <span class="kn">import</span> <span class="n">Field</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental</span>
+
+<span class="kn">from</span> <span class="nn">.types</span> <span class="kn">import</span> <span class="n">DbtCliOutput</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">execute_cli</span><span class="p">,</span> <span class="n">parse_run_results</span>
+
+<span class="n">DEFAULT_DBT_EXECUTABLE</span> <span class="o">=</span> <span class="s2">&quot;dbt&quot;</span>
+
+<span class="c1"># The following config fields correspond to flags that apply to all dbt CLI commands. For details</span>
+<span class="c1"># on dbt CLI flags, see</span>
+<span class="c1"># https://github.com/fishtown-analytics/dbt/blob/1f8e29276e910c697588c43f08bc881379fff178/core/dbt/main.py#L260-L329</span>
+<span class="n">CLI_COMMON_FLAGS_CONFIG_SCHEMA</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;project-dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">StringSource</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Which directory to look in for the dbt_project.yml file. Default is the current &quot;</span>
+            <span class="s2">&quot;working directory and its parents.&quot;</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;profiles-dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">StringSource</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Which directory to look in for the profiles.yml file. Default = $DBT_PROFILES_DIR or &quot;</span>
+            <span class="s2">&quot;$HOME/.dbt&quot;</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;profile&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">StringSource</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Which profile to load. Overrides setting in dbt_project.yml.&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;target&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">StringSource</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Which target to load for the given profile.&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;vars&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">Permissive</span><span class="p">({}),</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;Supply variables to the project. This argument overrides variables defined in your &quot;</span>
+            <span class="s2">&quot;dbt_project.yml file. This argument should be a dictionary, eg. &quot;</span>
+            <span class="s2">&quot;{&#39;my_variable&#39;: &#39;my_value&#39;}&quot;</span>
+        <span class="p">),</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;bypass-cache&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;If set, bypass the adapter-level cache of database state&quot;</span><span class="p">,</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+
+<span class="c1"># The following config fields correspond to options that apply to all CLI solids, but should not be</span>
+<span class="c1"># formatted as CLI flags.</span>
+<span class="n">CLI_COMMON_OPTIONS_CONFIG_SCHEMA</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;warn-error&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;If dbt would normally warn, instead raise an exception. Examples include --models &quot;</span>
+            <span class="s2">&quot;that selects nothing, deprecations, configurations with no associated models, &quot;</span>
+            <span class="s2">&quot;invalid test configurations, and missing sources/refs in tests.&quot;</span>
+        <span class="p">),</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;dbt_executable&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">StringSource</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Path to the dbt executable. Default is </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">DEFAULT_DBT_EXECUTABLE</span><span class="p">),</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="n">DEFAULT_DBT_EXECUTABLE</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s2">&quot;ignore_handled_error&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">&quot;When True, will not raise an exception when the dbt CLI returns error code 1. &quot;</span>
+            <span class="s2">&quot;Default is False.&quot;</span>
+        <span class="p">),</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">}</span>
+
+<span class="n">CLI_CONFIG_SCHEMA</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">CLI_COMMON_FLAGS_CONFIG_SCHEMA</span><span class="p">,</span> <span class="o">**</span><span class="n">CLI_COMMON_OPTIONS_CONFIG_SCHEMA</span><span class="p">}</span>
+
+<span class="n">CLI_COMMON_FLAGS</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">CLI_COMMON_FLAGS_CONFIG_SCHEMA</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+
+<span class="k">def</span> <span class="nf">passthrough_flags_only</span><span class="p">(</span><span class="n">solid_config</span><span class="p">,</span> <span class="n">additional_flags</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="n">flag</span><span class="p">:</span> <span class="n">solid_config</span><span class="p">[</span><span class="n">flag</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">flag</span> <span class="ow">in</span> <span class="p">(</span><span class="n">CLI_COMMON_FLAGS</span> <span class="o">|</span> <span class="nb">set</span><span class="p">(</span><span class="n">additional_flags</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">solid_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">flag</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+    <span class="p">}</span>
+
+
+<div class="viewcode-block" id="dbt_cli_run"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_cli_run">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt run via CLI.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;dbt_output&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DbtCliOutput</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="o">**</span><span class="n">CLI_CONFIG_SCHEMA</span><span class="p">,</span>
+        <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Specify number of threads to use while executing models. Overrides settings &quot;</span>
+                <span class="s2">&quot;in profiles.yml.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to run.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;full-refresh&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If specified, DBT will drop incremental models and fully-recalculate the &quot;</span>
+                <span class="s2">&quot;incremental table from the model definition. (--full-refresh)&quot;</span>
+            <span class="p">),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;fail-fast&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Stop execution upon a first failure. (--fail-fast)&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If True, materializations corresponding to the results of the dbt operation will &quot;</span>
+                <span class="s2">&quot;be yielded when the solid executes. Default: True&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;asset_key_prefix&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Array</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="p">[],</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If provided and yield_materializations is True, these components will be used to &quot;</span>
+                <span class="s2">&quot;prefix the generated asset keys.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">dbt_cli_run</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtCliOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid executes ``dbt run`` via the dbt CLI.&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">..utils</span> <span class="kn">import</span> <span class="n">generate_materializations</span>
+
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="n">execute_cli</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;dbt_executable&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;run&quot;</span><span class="p">,),</span>
+        <span class="n">flags_dict</span><span class="o">=</span><span class="n">passthrough_flags_only</span><span class="p">(</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;threads&quot;</span><span class="p">,</span> <span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="s2">&quot;exclude&quot;</span><span class="p">,</span> <span class="s2">&quot;full-refresh&quot;</span><span class="p">,</span> <span class="s2">&quot;fail-fast&quot;</span><span class="p">)</span>
+        <span class="p">),</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="n">warn_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn-error&quot;</span><span class="p">],</span>
+        <span class="n">ignore_handled_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;ignore_handled_error&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">run_results</span> <span class="o">=</span> <span class="n">parse_run_results</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;project-dir&quot;</span><span class="p">])</span>
+    <span class="n">cli_output_dict</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">run_results</span><span class="p">,</span> <span class="o">**</span><span class="n">cli_output</span><span class="p">}</span>
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="n">DbtCliOutput</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">cli_output_dict</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">materialization</span> <span class="ow">in</span> <span class="n">generate_materializations</span><span class="p">(</span>
+            <span class="n">cli_output</span><span class="p">,</span> <span class="n">asset_key_prefix</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;asset_key_prefix&quot;</span><span class="p">]</span>
+        <span class="p">):</span>
+            <span class="k">yield</span> <span class="n">materialization</span>
+
+    <span class="k">yield</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+        <span class="n">asset_key</span><span class="o">=</span><span class="s2">&quot;dbt_run_cli_output&quot;</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Output from the CLI execution of `dbt run`.&quot;</span><span class="p">,</span>
+        <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">cli_output_dict</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;CLI Output&quot;</span><span class="p">)],</span>
+    <span class="p">)</span>
+
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">cli_output</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;dbt_output&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_cli_test"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_cli_test">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt test via CLI.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;dbt_output&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">DbtCliOutput</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="o">**</span><span class="n">CLI_CONFIG_SCHEMA</span><span class="p">,</span>
+        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Run data tests defined in &quot;tests&quot; directory.&#39;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Run constraint validations from schema.yml files.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;fail-fast&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Stop execution upon a first test failure.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Specify number of threads to use while executing models. Overrides settings &quot;</span>
+                <span class="s2">&quot;in profiles.yml.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to run.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;FIXME&quot;</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">dbt_cli_test</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DbtCliOutput</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid executes ``dbt test`` via the dbt CLI.&quot;&quot;&quot;</span>
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="n">execute_cli</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;dbt_executable&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,),</span>
+        <span class="n">flags_dict</span><span class="o">=</span><span class="n">passthrough_flags_only</span><span class="p">(</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="s2">&quot;schema&quot;</span><span class="p">,</span> <span class="s2">&quot;fail-fast&quot;</span><span class="p">,</span> <span class="s2">&quot;threads&quot;</span><span class="p">,</span> <span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="s2">&quot;exclude&quot;</span><span class="p">)</span>
+        <span class="p">),</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="n">warn_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn-error&quot;</span><span class="p">],</span>
+        <span class="n">ignore_handled_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;ignore_handled_error&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="n">run_results</span> <span class="o">=</span> <span class="n">parse_run_results</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;project-dir&quot;</span><span class="p">])</span>
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="p">{</span><span class="o">**</span><span class="n">run_results</span><span class="p">,</span> <span class="o">**</span><span class="n">cli_output</span><span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">]:</span>
+        <span class="k">yield</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="s2">&quot;dbt_test_cli_output&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Output from the CLI execution of `dbt test`.&quot;</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">cli_output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;CLI Output&quot;</span><span class="p">)],</span>
+        <span class="p">)</span>
+
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">DbtCliOutput</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">cli_output</span><span class="p">),</span> <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;dbt_output&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_cli_snapshot"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_cli_snapshot">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt snapshot via CLI.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">dagster_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="o">**</span><span class="n">CLI_CONFIG_SCHEMA</span><span class="p">,</span>
+        <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Specify number of threads to use while executing models. Overrides settings in &quot;</span>
+                <span class="s2">&quot;profiles.yml.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to run.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;FIXME&quot;</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">dbt_cli_snapshot</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid executes ``dbt snapshot`` via the dbt CLI.&quot;&quot;&quot;</span>
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="n">execute_cli</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;dbt_executable&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;snapshot&quot;</span><span class="p">,),</span>
+        <span class="n">flags_dict</span><span class="o">=</span><span class="n">passthrough_flags_only</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;threads&quot;</span><span class="p">,</span> <span class="s2">&quot;models&quot;</span><span class="p">,</span> <span class="s2">&quot;exclude&quot;</span><span class="p">)),</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="n">warn_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn-error&quot;</span><span class="p">],</span>
+        <span class="n">ignore_handled_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;ignore_handled_error&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">]:</span>
+        <span class="k">yield</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="s2">&quot;dbt_snapshot_cli_output&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Output from the CLI execution of `dbt snapshot`.&quot;</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">cli_output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;CLI Output&quot;</span><span class="p">)],</span>
+        <span class="p">)</span>
+
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">cli_output</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_cli_run_operation"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_cli_run_operation">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt run-operation via CLI.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="o">**</span><span class="n">CLI_CONFIG_SCHEMA</span><span class="p">,</span>
+        <span class="s2">&quot;macro&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Specify the macro to invoke. dbt will call this macro with the supplied &quot;</span>
+                <span class="s2">&quot;arguments and then exit.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;args&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Permissive</span><span class="p">({}),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Supply arguments to the macro. This dictionary will be mapped to the keyword &quot;</span>
+                <span class="s2">&quot;arguments defined in the selected macro. This argument should be a dictionary, &quot;</span>
+                <span class="s2">&quot;eg. {&#39;my_variable&#39;: &#39;my_value&#39;}&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;FIXME&quot;</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">dbt_cli_run_operation</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid executes ``dbt run-operation`` via the dbt CLI.&quot;&quot;&quot;</span>
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="n">execute_cli</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;dbt_executable&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;run-operation&quot;</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;macro&quot;</span><span class="p">]),</span>
+        <span class="n">flags_dict</span><span class="o">=</span><span class="n">passthrough_flags_only</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;args&quot;</span><span class="p">,)),</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="n">warn_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn-error&quot;</span><span class="p">],</span>
+        <span class="n">ignore_handled_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;ignore_handled_error&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">]:</span>
+        <span class="k">yield</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="s2">&quot;dbt_run_operation_cli_output&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Output from the CLI execution of `dbt run-operation`.&quot;</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">cli_output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;CLI Output&quot;</span><span class="p">)],</span>
+        <span class="p">)</span>
+
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">cli_output</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_cli_snapshot_freshness"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_cli_snapshot_freshness">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt source snapshot-freshness via CLI.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="o">**</span><span class="n">CLI_CONFIG_SCHEMA</span><span class="p">,</span>
+        <span class="s2">&quot;select&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Specify the sources to snapshot freshness.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;output&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Specify the output path for the json report. By default, outputs to &quot;</span>
+                <span class="s2">&quot;target/sources.json&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Specify number of threads to use while executing models. Overrides &quot;</span>
+                <span class="s2">&quot;settings in profiles.yml.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;FIXME&quot;</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">dbt_cli_snapshot_freshness</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid executes ``dbt source snapshot-freshness`` via the dbt CLI.&quot;&quot;&quot;</span>
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="n">execute_cli</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;dbt_executable&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;source&quot;</span><span class="p">,</span> <span class="s2">&quot;snapshot-freshness&quot;</span><span class="p">),</span>
+        <span class="n">flags_dict</span><span class="o">=</span><span class="n">passthrough_flags_only</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;select&quot;</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">,</span> <span class="s2">&quot;threads&quot;</span><span class="p">)),</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="n">warn_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn-error&quot;</span><span class="p">],</span>
+        <span class="n">ignore_handled_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;ignore_handled_error&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">]:</span>
+        <span class="k">yield</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="s2">&quot;dbt_source_snapshot-freshness_cli_output&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Output from the CLI execution of `dbt source snapshot-freshness`.&quot;</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">cli_output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;CLI Output&quot;</span><span class="p">)],</span>
+        <span class="p">)</span>
+
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">cli_output</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="dbt_cli_compile"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.dbt_cli_compile">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A solid to invoke dbt compile via CLI.&quot;</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;start_after&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Nothing</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="o">**</span><span class="n">CLI_CONFIG_SCHEMA</span><span class="p">,</span>
+        <span class="s2">&quot;parse-only&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,),</span>
+        <span class="s2">&quot;threads&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">(</span><span class="nb">int</span><span class="p">),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Specify number of threads to use while executing models. Overrides settings &quot;</span>
+                <span class="s2">&quot;in profiles.yml.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;no-version-check&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;Skip the check that dbt&#39;s version matches the one specified in the &quot;</span>
+                <span class="s2">&quot;dbt_project.yml file (&#39;require-dbt-version&#39;)&quot;</span>
+            <span class="p">),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;models&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to run.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;exclude&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The dbt models to exclude.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;selector&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The selector name to use, as defined in your selectors.yml&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Noneable</span><span class="p">([</span><span class="nb">str</span><span class="p">]),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If set, use the given directory as the source for json files to compare with &quot;</span>
+                <span class="s2">&quot;this project.&quot;</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;full-refresh&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;If specified, DBT will drop incremental models and fully-recalculate &quot;</span>
+                <span class="s2">&quot;the incremental table from the model definition. (--full-refresh)&quot;</span>
+            <span class="p">),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;yield_materializations&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">Bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;FIXME&quot;</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;dbt&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">dbt_cli_compile</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This solid executes ``dbt compile`` via the dbt CLI.&quot;&quot;&quot;</span>
+    <span class="n">cli_output</span> <span class="o">=</span> <span class="n">execute_cli</span><span class="p">(</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;dbt_executable&quot;</span><span class="p">],</span>
+        <span class="n">command</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;compile&quot;</span><span class="p">,),</span>
+        <span class="n">flags_dict</span><span class="o">=</span><span class="n">passthrough_flags_only</span><span class="p">(</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">,</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;parse-only&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;threads&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;no-version-check&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;models&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;exclude&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;selector&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;state&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;full-refresh&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+        <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span>
+        <span class="n">warn_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;warn-error&quot;</span><span class="p">],</span>
+        <span class="n">ignore_handled_error</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;ignore_handled_error&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s2">&quot;yield_materializations&quot;</span><span class="p">]:</span>
+        <span class="k">yield</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="s2">&quot;dbt_compile_cli_output&quot;</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Output from the CLI execution of `dbt compile`.&quot;</span><span class="p">,</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span><span class="n">cli_output</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;CLI Output&quot;</span><span class="p">)],</span>
+        <span class="p">)</span>
+
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">cli_output</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

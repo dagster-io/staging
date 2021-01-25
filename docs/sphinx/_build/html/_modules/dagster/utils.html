@@ -1,0 +1,612 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.utils &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.utils</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">contextlib</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">errno</span>
+<span class="kn">import</span> <span class="nn">functools</span>
+<span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">tempfile</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Iterator</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="kn">import</span> <span class="n">warn</span>
+
+<span class="kn">import</span> <span class="nn">_thread</span> <span class="k">as</span> <span class="nn">thread</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterExecutionInterruptedError</span><span class="p">,</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.seven</span> <span class="kn">import</span> <span class="n">IS_WINDOWS</span><span class="p">,</span> <span class="n">multiprocessing</span>
+<span class="kn">from</span> <span class="nn">dagster.seven.abc</span> <span class="kn">import</span> <span class="n">Mapping</span>
+
+<span class="kn">from</span> <span class="nn">.merger</span> <span class="kn">import</span> <span class="n">merge_dicts</span>
+<span class="kn">from</span> <span class="nn">.yaml_utils</span> <span class="kn">import</span> <span class="n">load_yaml_from_glob_list</span><span class="p">,</span> <span class="n">load_yaml_from_globs</span><span class="p">,</span> <span class="n">load_yaml_from_path</span>
+
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;</span> <span class="p">(</span><span class="mi">3</span><span class="p">,):</span>
+    <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>  <span class="c1"># pylint: disable=import-error</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">pathlib2</span> <span class="kn">import</span> <span class="n">Path</span>  <span class="c1"># pylint: disable=import-error</span>
+
+<span class="n">EPOCH</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcfromtimestamp</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="n">PICKLE_PROTOCOL</span> <span class="o">=</span> <span class="mi">4</span>
+
+
+<span class="n">DEFAULT_WORKSPACE_YAML_FILENAME</span> <span class="o">=</span> <span class="s2">&quot;workspace.yaml&quot;</span>
+
+
+<div class="viewcode-block" id="file_relative_path"><a class="viewcode-back" href="../../sections/api/apidocs/utilities.html#dagster.file_relative_path">[docs]</a><span class="k">def</span> <span class="nf">file_relative_path</span><span class="p">(</span><span class="n">dunderfile</span><span class="p">,</span> <span class="n">relative_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This function is useful when one needs to load a file that is</span>
+<span class="sd">    relative to the position of the current file. (Such as when</span>
+<span class="sd">    you encode a configuration file path in source file and want</span>
+<span class="sd">    in runnable in any current working directory)</span>
+
+<span class="sd">    It is meant to be used like the following:</span>
+
+<span class="sd">    file_relative_path(__file__, &#39;path/relative/to/file&#39;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">dunderfile</span><span class="p">,</span> <span class="s2">&quot;dunderfile&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">relative_path</span><span class="p">,</span> <span class="s2">&quot;relative_path&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">dunderfile</span><span class="p">),</span> <span class="n">relative_path</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">script_relative_path</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Useful for testing with local files. Use a path relative to where the</span>
+<span class="sd">    test resides and this function will return the absolute path</span>
+<span class="sd">    of that file. Otherwise it will be relative to script that</span>
+<span class="sd">    ran the test</span>
+
+<span class="sd">    Note: this is function is very, very expensive (on the order of 1</span>
+<span class="sd">    millisecond per invocation) so this should only be used in performance</span>
+<span class="sd">    insensitive contexts. Prefer file_relative_path for anything with</span>
+<span class="sd">    performance constraints.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># from http://bit.ly/2snyC6s</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s2">&quot;file_path&quot;</span><span class="p">)</span>
+    <span class="n">scriptdir</span> <span class="o">=</span> <span class="n">inspect</span><span class="o">.</span><span class="n">stack</span><span class="p">()[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">scriptdir</span><span class="p">)),</span> <span class="n">file_path</span><span class="p">))</span>
+
+
+<span class="c1"># Adapted from https://github.com/okunishinishi/python-stringcase/blob/master/stringcase.py</span>
+<span class="k">def</span> <span class="nf">camelcase</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">string</span><span class="p">,</span> <span class="s2">&quot;string&quot;</span><span class="p">)</span>
+
+    <span class="n">string</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s2">&quot;^[\-_\.]&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">string</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">string</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">string</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">string</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="o">+</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span>
+        <span class="sa">r</span><span class="s2">&quot;[\-_\.\s]([a-z])&quot;</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">matched</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">matched</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="n">string</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">ensure_single_item</span><span class="p">(</span><span class="n">ddict</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">ddict</span><span class="p">,</span> <span class="s2">&quot;ddict&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">ddict</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;ddict&quot;</span><span class="p">,</span> <span class="s2">&quot;Expected dict with single item&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">ddict</span><span class="o">.</span><span class="n">items</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span> <span class="nf">pushd</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">old_cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">path</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">old_cwd</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">safe_isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;&quot;Backport of Python 3.8 os.path.isfile behavior.</span>
+
+<span class="sd">    This is intended to backport https://docs.python.org/dev/whatsnew/3.8.html#os-path. I&#39;m not</span>
+<span class="sd">    sure that there are other ways to provoke this behavior on Unix other than the null byte,</span>
+<span class="sd">    but there are certainly other ways to do it on Windows. Afaict, we won&#39;t mask other</span>
+<span class="sd">    ValueErrors, and the behavior in the status quo ante is rough because we risk throwing an</span>
+<span class="sd">    unexpected, uncaught ValueError from very deep in our logic.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span> <span class="nf">mkdir_p</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">path</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># Python &gt;2.5</span>
+        <span class="k">if</span> <span class="n">exc</span><span class="o">.</span><span class="n">errno</span> <span class="o">==</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span>
+
+
+<span class="k">class</span> <span class="nc">frozendict</span><span class="p">(</span><span class="nb">dict</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__readonly__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Cannot modify ReadOnlyDict&quot;</span><span class="p">)</span>
+
+    <span class="c1"># https://docs.python.org/3/library/pickle.html#object.__reduce__</span>
+    <span class="c1">#</span>
+    <span class="c1"># For a dict, the default behavior for pickle is to iteratively call __setitem__ (see 5th item</span>
+    <span class="c1">#  in __reduce__ tuple). Since we want to disable __setitem__ and still inherit dict, we</span>
+    <span class="c1"># override this behavior by defining __reduce__. We return the 3rd item in the tuple, which is</span>
+    <span class="c1"># passed to __setstate__, allowing us to restore the frozendict.</span>
+
+    <span class="k">def</span> <span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">frozendict</span><span class="p">,</span> <span class="p">(),</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="fm">__setitem__</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="fm">__delitem__</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">pop</span> <span class="o">=</span> <span class="n">__readonly__</span>  <span class="c1"># type: ignore[assignment]</span>
+    <span class="n">popitem</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">clear</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">update</span> <span class="o">=</span> <span class="n">__readonly__</span>  <span class="c1"># type: ignore[assignment]</span>
+    <span class="n">setdefault</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="k">del</span> <span class="n">__readonly__</span>
+
+
+<span class="k">class</span> <span class="nc">frozenlist</span><span class="p">(</span><span class="nb">list</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__readonly__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;Cannot modify ReadOnlyList&quot;</span><span class="p">)</span>
+
+    <span class="c1"># https://docs.python.org/3/library/pickle.html#object.__reduce__</span>
+    <span class="c1">#</span>
+    <span class="c1"># Like frozendict, implement __reduce__ and __setstate__ to handle pickling.</span>
+    <span class="c1"># Otherwise, __setstate__ will be called to restore the frozenlist, causing</span>
+    <span class="c1"># a RuntimeError because frozenlist is not mutable.</span>
+
+    <span class="k">def</span> <span class="nf">__reduce__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">frozenlist</span><span class="p">,</span> <span class="p">(),</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+
+    <span class="fm">__setitem__</span> <span class="o">=</span> <span class="n">__readonly__</span>  <span class="c1"># type: ignore[assignment]</span>
+    <span class="fm">__delitem__</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">append</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">clear</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">extend</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">insert</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">pop</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">remove</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">reverse</span> <span class="o">=</span> <span class="n">__readonly__</span>
+    <span class="n">sort</span> <span class="o">=</span> <span class="n">__readonly__</span>  <span class="c1"># type: ignore[assignment]</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">make_readonly_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">frozenlist</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">make_readonly_value</span><span class="p">,</span> <span class="n">value</span><span class="p">)))</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">frozendict</span><span class="p">({</span><span class="n">key</span><span class="p">:</span> <span class="n">make_readonly_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">value</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">value</span>
+
+
+<span class="k">def</span> <span class="nf">get_prop_or_key</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">Mapping</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">elem</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">list_pull</span><span class="p">(</span><span class="n">alist</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">elem</span><span class="p">:</span> <span class="n">get_prop_or_key</span><span class="p">(</span><span class="n">elem</span><span class="p">,</span> <span class="n">key</span><span class="p">),</span> <span class="n">alist</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">all_none</span><span class="p">(</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">def</span> <span class="nf">check_script</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">return_code</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span> <span class="n">path</span><span class="p">])</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">return_code</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">exc</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="n">return_code</span><span class="p">:</span>
+                <span class="k">return</span>
+        <span class="k">raise</span>
+
+
+<span class="k">def</span> <span class="nf">check_cli_execute_file_pipeline</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">pipeline_fn_name</span><span class="p">,</span> <span class="n">env_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.test_utils</span> <span class="kn">import</span> <span class="n">instance_for_test</span>
+
+    <span class="k">with</span> <span class="n">instance_for_test</span><span class="p">():</span>
+        <span class="n">cli_cmd</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+            <span class="s2">&quot;-m&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;dagster&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;pipeline&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;execute&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;-f&quot;</span><span class="p">,</span>
+            <span class="n">path</span><span class="p">,</span>
+            <span class="s2">&quot;-a&quot;</span><span class="p">,</span>
+            <span class="n">pipeline_fn_name</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">env_file</span><span class="p">:</span>
+            <span class="n">cli_cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-c&quot;</span><span class="p">)</span>
+            <span class="n">cli_cmd</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">env_file</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span><span class="n">cli_cmd</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">cpe</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">cpe</span><span class="p">)</span>  <span class="c1"># pylint: disable=print-call</span>
+            <span class="k">raise</span> <span class="n">cpe</span>
+
+
+<span class="k">def</span> <span class="nf">safe_tempfile_path_unmanaged</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="c1"># This gets a valid temporary file path in the safest possible way, although there is still no</span>
+    <span class="c1"># guarantee that another process will not create a file at this path. The NamedTemporaryFile is</span>
+    <span class="c1"># deleted when the context manager exits and the file object is closed.</span>
+    <span class="c1">#</span>
+    <span class="c1"># This is preferable to using NamedTemporaryFile as a context manager and passing the name</span>
+    <span class="c1"># attribute of the file object around because NamedTemporaryFiles cannot be opened a second time</span>
+    <span class="c1"># if already open on Windows NT or later:</span>
+    <span class="c1"># https://docs.python.org/3.8/library/tempfile.html#tempfile.NamedTemporaryFile</span>
+    <span class="c1"># https://github.com/dagster-io/dagster/issues/1582</span>
+    <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">()</span> <span class="k">as</span> <span class="n">fd</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">fd</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">as_posix</span><span class="p">()</span>
+
+
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span> <span class="nf">safe_tempfile_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">safe_tempfile_path_unmanaged</span><span class="p">()</span>
+        <span class="k">yield</span> <span class="n">path</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">ensure_gen</span><span class="p">(</span><span class="n">thing_or_gen</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isgenerator</span><span class="p">(</span><span class="n">thing_or_gen</span><span class="p">):</span>
+
+        <span class="k">def</span> <span class="nf">_gen_thing</span><span class="p">():</span>
+            <span class="k">yield</span> <span class="n">thing_or_gen</span>
+
+        <span class="k">return</span> <span class="n">_gen_thing</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">thing_or_gen</span>
+
+
+<span class="k">def</span> <span class="nf">ensure_dir</span><span class="p">(</span><span class="n">file_path</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">errno</span> <span class="o">!=</span> <span class="n">errno</span><span class="o">.</span><span class="n">EEXIST</span><span class="p">:</span>
+            <span class="k">raise</span>
+
+
+<span class="k">def</span> <span class="nf">ensure_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">ensure_dir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">touch_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">touch_file</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="n">ensure_dir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">):</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">utime</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_kill_on_event</span><span class="p">(</span><span class="n">termination_event</span><span class="p">):</span>
+    <span class="n">termination_event</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    <span class="n">send_interrupt</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">send_interrupt</span><span class="p">():</span>
+    <span class="k">if</span> <span class="n">IS_WINDOWS</span><span class="p">:</span>
+        <span class="c1"># This will raise a KeyboardInterrupt in python land - meaning this wont be able to</span>
+        <span class="c1"># interrupt things like sleep()</span>
+        <span class="n">thread</span><span class="o">.</span><span class="n">interrupt_main</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># If on unix send an os level signal to interrupt any situation we may be stuck in</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">kill</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">(),</span> <span class="n">signal</span><span class="o">.</span><span class="n">SIGINT</span><span class="p">)</span>
+
+
+<span class="c1"># Function to be invoked by daemon thread in processes which seek to be cancellable.</span>
+<span class="c1"># The motivation for this approach is to be able to exit cleanly on Windows. An alternative</span>
+<span class="c1"># path is to change how the processes are opened and send CTRL_BREAK signals, which at</span>
+<span class="c1"># the time of authoring seemed a more costly approach.</span>
+<span class="c1">#</span>
+<span class="c1"># Reading for the curious:</span>
+<span class="c1">#  * https://stackoverflow.com/questions/35772001/how-to-handle-the-signal-in-python-on-windows-machine</span>
+<span class="c1">#  * https://stefan.sofa-rockers.org/2013/08/15/handling-sub-process-hierarchies-python-linux-os-x/</span>
+<span class="k">def</span> <span class="nf">start_termination_thread</span><span class="p">(</span><span class="n">termination_event</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">termination_event</span><span class="p">,</span> <span class="s2">&quot;termination_event&quot;</span><span class="p">,</span> <span class="n">ttype</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">Event</span><span class="p">()))</span>
+
+    <span class="n">int_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span>
+        <span class="n">target</span><span class="o">=</span><span class="n">_kill_on_event</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">termination_event</span><span class="p">,),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;kill-on-event&quot;</span>
+    <span class="p">)</span>
+    <span class="n">int_thread</span><span class="o">.</span><span class="n">daemon</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">int_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+
+<span class="c1"># Executes the next() function within an instance of the supplied context manager class</span>
+<span class="c1"># (leaving the context before yielding each result)</span>
+<span class="k">def</span> <span class="nf">iterate_with_context</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">iterator</span><span class="p">):</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="c1"># Allow interrupts during user code so that we can terminate slow/hanging steps</span>
+        <span class="k">with</span> <span class="n">context</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">next_output</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">iterator</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+                <span class="k">return</span>
+
+        <span class="k">yield</span> <span class="n">next_output</span>
+
+
+<span class="k">def</span> <span class="nf">datetime_as_float</span><span class="p">(</span><span class="n">dt</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">dt</span><span class="p">,</span> <span class="s2">&quot;dt&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">float</span><span class="p">((</span><span class="n">dt</span> <span class="o">-</span> <span class="n">EPOCH</span><span class="p">)</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">())</span>
+
+
+<span class="c1"># hashable frozen string to string dict</span>
+<span class="k">class</span> <span class="nc">frozentags</span><span class="p">(</span><span class="n">frozendict</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">frozentags</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;self&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">())))</span>
+
+    <span class="k">def</span> <span class="nf">updated_with</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">new_tags</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">new_tags</span><span class="p">,</span> <span class="s2">&quot;new_tags&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">updated</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">new_tags</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">updated</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="k">return</span> <span class="n">frozentags</span><span class="p">(</span><span class="n">updated</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">EventGenerationManager</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Utility class that wraps an event generator function, that also yields a single instance of</span>
+<span class="sd">    a typed object.  All events yielded before the typed object are yielded through the method</span>
+<span class="sd">    `generate_setup_events` and all events yielded after the typed object are yielded through the</span>
+<span class="sd">    method `generate_teardown_events`.</span>
+
+<span class="sd">    This is used to help replace the context managers used in pipeline initialization with</span>
+<span class="sd">    generators so that we can begin emitting initialization events AND construct a pipeline context</span>
+<span class="sd">    object, while managing explicit setup/teardown.</span>
+
+<span class="sd">    This does require calling `generate_setup_events` AND `generate_teardown_events` in order to</span>
+<span class="sd">    get the typed object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">generator</span><span class="p">,</span> <span class="n">object_cls</span><span class="p">,</span> <span class="n">require_object</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">generator</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">generator</span><span class="p">(</span><span class="n">generator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">object_cls</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">type_param</span><span class="p">(</span><span class="n">object_cls</span><span class="p">,</span> <span class="s2">&quot;object_cls&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">require_object</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">require_object</span><span class="p">,</span> <span class="s2">&quot;require_object&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">object</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">did_setup</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">did_teardown</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">generate_setup_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">did_setup</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">while</span> <span class="bp">self</span><span class="o">.</span><span class="n">object</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">obj</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">generator</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">object_cls</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">object</span> <span class="o">=</span> <span class="n">obj</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="n">obj</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">require_object</span><span class="p">:</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">object</span><span class="p">,</span>
+                    <span class="s2">&quot;self.object&quot;</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">object_cls</span><span class="p">,</span>
+                    <span class="s2">&quot;generator never yielded object of type </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">),</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">did_setup</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span><span class="s2">&quot;Called `get_object` before `generate_setup_events`&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">object</span>
+
+    <span class="k">def</span> <span class="nf">generate_teardown_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">did_teardown</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">object</span><span class="p">:</span>
+            <span class="k">yield from</span> <span class="bp">self</span><span class="o">.</span><span class="n">generator</span>
+
+
+<span class="k">def</span> <span class="nf">utc_datetime_from_timestamp</span><span class="p">(</span><span class="n">timestamp</span><span class="p">):</span>
+    <span class="n">tz</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">major</span> <span class="o">&gt;=</span> <span class="mi">3</span> <span class="ow">and</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">minor</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">timezone</span>
+
+        <span class="n">tz</span> <span class="o">=</span> <span class="n">timezone</span><span class="o">.</span><span class="n">utc</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">pytz</span>
+
+        <span class="n">tz</span> <span class="o">=</span> <span class="n">pytz</span><span class="o">.</span><span class="n">utc</span>
+
+    <span class="k">return</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">fromtimestamp</span><span class="p">(</span><span class="n">timestamp</span><span class="p">,</span> <span class="n">tz</span><span class="o">=</span><span class="n">tz</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">is_enum_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="k">return</span> <span class="kc">False</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="nb">issubclass</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span> <span class="n">Enum</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">git_repository_root</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;rev-parse&quot;</span><span class="p">,</span> <span class="s2">&quot;--show-toplevel&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">segfault</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Reliable cross-Python version segfault.</span>
+
+<span class="sd">    https://bugs.python.org/issue1215#msg143236</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">import</span> <span class="nn">ctypes</span>
+
+    <span class="n">ctypes</span><span class="o">.</span><span class="n">string_at</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">find_free_port</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">closing</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">))</span> <span class="k">as</span> <span class="n">s</span><span class="p">:</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+        <span class="n">s</span><span class="o">.</span><span class="n">setsockopt</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SOL_SOCKET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SO_REUSEADDR</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">getsockname</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span>
+
+
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span> <span class="nf">alter_sys_path</span><span class="p">(</span><span class="n">to_add</span><span class="p">,</span> <span class="n">to_remove</span><span class="p">):</span>
+    <span class="n">to_restore</span> <span class="o">=</span> <span class="p">[</span><span class="n">path</span> <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">]</span>
+
+    <span class="c1"># remove paths</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">to_remove</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="c1"># add paths</span>
+    <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">to_add</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">to_restore</span>
+
+
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span> <span class="nf">restore_sys_modules</span><span class="p">():</span>
+    <span class="n">sys_modules</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">to_delete</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">sys_modules</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">to_delete</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">sys</span><span class="o">.</span><span class="n">modules</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">process_is_alive</span><span class="p">(</span><span class="n">pid</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">IS_WINDOWS</span><span class="p">:</span>
+        <span class="kn">import</span> <span class="nn">psutil</span>  <span class="c1"># pylint: disable=import-error</span>
+
+        <span class="k">return</span> <span class="n">psutil</span><span class="o">.</span><span class="n">pid_exists</span><span class="p">(</span><span class="n">pid</span><span class="o">=</span><span class="n">pid</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;ps&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">pid</span><span class="p">)])</span>
+        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">exc</span><span class="o">.</span><span class="n">returncode</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">def</span> <span class="nf">compose</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Compose python functions args such that compose(f, g)(x) is equivalent to f(g(x)).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># reduce using functional composition over all the arguments, with the identity function as</span>
+    <span class="c1"># initializer</span>
+    <span class="k">return</span> <span class="n">functools</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="k">lambda</span> <span class="n">f</span><span class="p">,</span> <span class="n">g</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">f</span><span class="p">(</span><span class="n">g</span><span class="p">(</span><span class="n">x</span><span class="p">)),</span> <span class="n">args</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">dict_without_keys</span><span class="p">(</span><span class="n">ddict</span><span class="p">,</span> <span class="o">*</span><span class="n">keys</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">value</span> <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">ddict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">keys</span><span class="p">)}</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

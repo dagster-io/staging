@@ -1,0 +1,176 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Snowflake (dagster_snowflake) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Spark (dagster_spark)" href="dagster_spark.html" />
+    <link rel="prev" title="Slack (dagster_slack)" href="dagster_slack.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_slack.html" title="Previous document">Slack (dagster_slack)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_spark.html" title="Next document">Spark (dagster_spark)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="snowflake-dagster-snowflake">
+<h1>Snowflake (dagster_snowflake)<a class="headerlink" href="#snowflake-dagster-snowflake" title="Permalink to this headline">¶</a></h1>
+<p>This library provides an integration with the <a class="reference external" href="https://www.snowflake.com/">Snowflake</a> data
+warehouse.</p>
+<p>Presently, it provides a <code class="docutils literal notranslate"><span class="pre">snowflake_resource</span></code>, which is a Dagster resource for configuring
+Snowflake connections and issuing queries.</p>
+<p>To use this library, you should first ensure that you have an appropriate <a class="reference external" href="https://docs.snowflake.net/manuals/user-guide/admin-user-management.html">Snowflake user</a> configured to access
+your data warehouse.</p>
+<dl class="data">
+<dt id="dagster_snowflake.snowflake_resource">
+<code class="sig-prename descclassname">dagster_snowflake.</code><code class="sig-name descname">snowflake_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_snowflake/resources.html#snowflake_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_snowflake.snowflake_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>A resource for connecting to the Snowflake data warehouse.</p>
+<p>A simple example of loading data into Snowflake and subsequently querying that data is shown below:</p>
+<p>Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">execute_pipeline</span><span class="p">,</span> <span class="n">pipeline</span><span class="p">,</span> <span class="n">DependencyDefinition</span><span class="p">,</span> <span class="n">ModeDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster_snowflake</span> <span class="kn">import</span> <span class="n">snowflake_resource</span>
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;snowflake&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">get_one</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">snowflake</span><span class="o">.</span><span class="n">execute_query</span><span class="p">(</span><span class="s1">&#39;SELECT 1&#39;</span><span class="p">)</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;snowflake&#39;</span><span class="p">:</span> <span class="n">snowflake_resource</span><span class="p">})],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">snowflake_pipeline</span><span class="p">():</span>
+    <span class="n">get_one</span><span class="p">()</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">execute_pipeline</span><span class="p">(</span>
+    <span class="n">snowflake_pipeline</span><span class="p">,</span>
+    <span class="p">{</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;snowflake&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">&#39;account&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;SNOWFLAKE_ACCOUNT&#39;</span><span class="p">},</span>
+                    <span class="s1">&#39;user&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;SNOWFLAKE_USER&#39;</span><span class="p">},</span>
+                    <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;SNOWFLAKE_PASSWORD&#39;</span><span class="p">},</span>
+                    <span class="s1">&#39;database&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;SNOWFLAKE_DATABASE&#39;</span><span class="p">},</span>
+                    <span class="s1">&#39;schema&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;SNOWFLAKE_SCHEMA&#39;</span><span class="p">},</span>
+                    <span class="s1">&#39;warehouse&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;SNOWFLAKE_WAREHOUSE&#39;</span><span class="p">},</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster_snowflake.SnowflakeConnection">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_snowflake.</code><code class="sig-name descname">SnowflakeConnection</code><span class="sig-paren">(</span><em class="sig-param">context</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_snowflake/resources.html#SnowflakeConnection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_snowflake.SnowflakeConnection" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="dagster_snowflake.SnowflakeConnection.execute_queries">
+<code class="sig-name descname">execute_queries</code><span class="sig-paren">(</span><em class="sig-param">sql_queries</em>, <em class="sig-param">parameters=None</em>, <em class="sig-param">fetch_results=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_snowflake/resources.html#SnowflakeConnection.execute_queries"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_snowflake.SnowflakeConnection.execute_queries" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="dagster_snowflake.SnowflakeConnection.execute_query">
+<code class="sig-name descname">execute_query</code><span class="sig-paren">(</span><em class="sig-param">sql</em>, <em class="sig-param">parameters=None</em>, <em class="sig-param">fetch_results=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_snowflake/resources.html#SnowflakeConnection.execute_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_snowflake.SnowflakeConnection.execute_query" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="dagster_snowflake.SnowflakeConnection.get_connection">
+<code class="sig-name descname">get_connection</code><span class="sig-paren">(</span><em class="sig-param">raw_conn=True</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_snowflake/resources.html#SnowflakeConnection.get_connection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_snowflake.SnowflakeConnection.get_connection" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="dagster_snowflake.SnowflakeConnection.load_table_from_local_parquet">
+<code class="sig-name descname">load_table_from_local_parquet</code><span class="sig-paren">(</span><em class="sig-param">src</em>, <em class="sig-param">table</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_snowflake/resources.html#SnowflakeConnection.load_table_from_local_parquet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_snowflake.SnowflakeConnection.load_table_from_local_parquet" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_slack.html" title="Previous document">Slack (dagster_slack)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_spark.html" title="Next document">Spark (dagster_spark)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

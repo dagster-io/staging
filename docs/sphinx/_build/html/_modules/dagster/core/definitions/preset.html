@@ -1,0 +1,288 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.preset &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.preset</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.utils</span> <span class="kn">import</span> <span class="n">config_from_files</span><span class="p">,</span> <span class="n">config_from_yaml_strings</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.merger</span> <span class="kn">import</span> <span class="n">deep_merge_dicts</span>
+
+<span class="kn">from</span> <span class="nn">.mode</span> <span class="kn">import</span> <span class="n">DEFAULT_MODE_NAME</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+
+<div class="viewcode-block" id="PresetDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/presets.html#dagster.PresetDefinition">[docs]</a><span class="k">class</span> <span class="nc">PresetDefinition</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_PresetDefinition&quot;</span><span class="p">,</span> <span class="s2">&quot;name run_config solid_selection mode tags&quot;</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Defines a preset configuration in which a pipeline can execute.</span>
+
+<span class="sd">    Presets can be used in Dagit to load predefined configurations into the tool.</span>
+
+<span class="sd">    Presets may also be used from the Python API (in a script, or in test) as follows:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        execute_pipeline(pipeline_def, preset=&#39;example_preset&#39;)</span>
+
+<span class="sd">    Presets may also be used with the command line tools:</span>
+
+<span class="sd">    .. code-block:: shell</span>
+
+<span class="sd">        $ dagster pipeline execute example_pipeline --preset example_preset</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of this preset. Must be unique in the presets defined on a given</span>
+<span class="sd">            pipeline.</span>
+<span class="sd">        run_config (Optional[dict]): A dict representing the config to set with the preset.</span>
+<span class="sd">            This is equivalent to the ``run_config`` argument to :py:func:`execute_pipeline`.</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute with the preset. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The mode to apply when executing this preset. (default: &#39;default&#39;)</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): The tags to apply when executing this preset.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PresetDefinition</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+            <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">,</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+                <span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+            <span class="p">),</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">),</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="PresetDefinition.from_files"><a class="viewcode-back" href="../../../../sections/api/apidocs/presets.html#dagster.PresetDefinition.from_files">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_files</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">config_files</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for presets from YAML files.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of this preset. Must be unique in the presets defined on a given</span>
+<span class="sd">                pipeline.</span>
+<span class="sd">            config_files (Optional[List[str]]): List of paths or glob patterns for yaml files</span>
+<span class="sd">                to load and parse as the environment config for this preset.</span>
+<span class="sd">            solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">                solid names) to execute with the preset. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">            mode (Optional[str]): The mode to apply when executing this preset. (default:</span>
+<span class="sd">                &#39;default&#39;)</span>
+<span class="sd">            tags (Optional[Dict[str, Any]]): The tags to apply when executing this preset.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            PresetDefinition: A PresetDefinition constructed from the provided YAML files.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            DagsterInvariantViolationError: When one of the YAML files is invalid and has a parse</span>
+<span class="sd">                error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="n">config_files</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">config_files</span><span class="p">,</span> <span class="s2">&quot;config_files&quot;</span><span class="p">)</span>
+        <span class="n">solid_selection</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+            <span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">)</span>
+
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">config_from_files</span><span class="p">(</span><span class="n">config_files</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PresetDefinition</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">merged</span><span class="p">,</span> <span class="n">solid_selection</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PresetDefinition.from_yaml_strings"><a class="viewcode-back" href="../../../../sections/api/apidocs/presets.html#dagster.PresetDefinition.from_yaml_strings">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_yaml_strings</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">yaml_strings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor for presets from YAML strings.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of this preset. Must be unique in the presets defined on a given</span>
+<span class="sd">                pipeline.</span>
+<span class="sd">            yaml_strings (Optional[List[str]]): List of yaml strings to parse as the environment</span>
+<span class="sd">                config for this preset.</span>
+<span class="sd">            solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">                solid names) to execute with the preset. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">            mode (Optional[str]): The mode to apply when executing this preset. (default:</span>
+<span class="sd">                &#39;default&#39;)</span>
+<span class="sd">            tags (Optional[Dict[str, Any]]): The tags to apply when executing this preset.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            PresetDefinition: A PresetDefinition constructed from the provided YAML strings</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            DagsterInvariantViolationError: When one of the YAML documents is invalid and has a</span>
+<span class="sd">                parse error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="n">yaml_strings</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">yaml_strings</span><span class="p">,</span> <span class="s2">&quot;yaml_strings&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">solid_selection</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+            <span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="n">mode</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">)</span>
+
+        <span class="n">merged</span> <span class="o">=</span> <span class="n">config_from_yaml_strings</span><span class="p">(</span><span class="n">yaml_strings</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PresetDefinition</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">merged</span><span class="p">,</span> <span class="n">solid_selection</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PresetDefinition.from_pkg_resources"><a class="viewcode-back" href="../../../../sections/api/apidocs/presets.html#dagster.PresetDefinition.from_pkg_resources">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_pkg_resources</span><span class="p">(</span>
+        <span class="n">name</span><span class="p">,</span> <span class="n">pkg_resource_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Load a preset from a package resource, using :py:func:`pkg_resources.resource_string`.</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            PresetDefinition.from_pkg_resources(</span>
+<span class="sd">                name=&#39;local&#39;,</span>
+<span class="sd">                mode=&#39;local&#39;,</span>
+<span class="sd">                pkg_resource_defs=[</span>
+<span class="sd">                    (&#39;dagster_examples.airline_demo.environments&#39;, &#39;local_base.yaml&#39;),</span>
+<span class="sd">                    (&#39;dagster_examples.airline_demo.environments&#39;, &#39;local_warehouse.yaml&#39;),</span>
+<span class="sd">                ],</span>
+<span class="sd">            )</span>
+
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of this preset. Must be unique in the presets defined on a given</span>
+<span class="sd">                pipeline.</span>
+<span class="sd">            pkg_resource_defs (Optional[List[(str, str)]]): List of pkg_resource modules/files to</span>
+<span class="sd">                load as environment config for this preset.</span>
+<span class="sd">            solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">                solid names) to execute with this partition. e.g.</span>
+<span class="sd">                ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">            mode (Optional[str]): The mode to apply when executing this preset. (default:</span>
+<span class="sd">                &#39;default&#39;)</span>
+<span class="sd">            tags (Optional[Dict[str, Any]]): The tags to apply when executing this preset.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            PresetDefinition: A PresetDefinition constructed from the provided YAML strings</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            DagsterInvariantViolationError: When one of the YAML documents is invalid and has a</span>
+<span class="sd">                parse error.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pkg_resource_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+            <span class="n">pkg_resource_defs</span><span class="p">,</span> <span class="s2">&quot;pkg_resource_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">tuple</span>
+        <span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">yaml_strings</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_string</span><span class="p">(</span><span class="o">*</span><span class="n">pkg_resource_def</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">pkg_resource_def</span> <span class="ow">in</span> <span class="n">pkg_resource_defs</span>
+            <span class="p">]</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">ModuleNotFoundError</span><span class="p">,</span> <span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="ne">UnicodeDecodeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Encountered error attempting to parse yaml. Loading YAMLs from &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;package resources </span><span class="si">{</span><span class="n">pkg_resource_defs</span><span class="si">}</span><span class="s2"> &quot;</span>
+                <span class="sa">f</span><span class="s1">&#39;on preset &quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="nn">err</span>
+
+        <span class="k">return</span> <span class="n">PresetDefinition</span><span class="o">.</span><span class="n">from_yaml_strings</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">yaml_strings</span><span class="p">,</span> <span class="n">solid_selection</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">tags</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PresetDefinition.get_environment_yaml"><a class="viewcode-back" href="../../../../sections/api/apidocs/presets.html#dagster.PresetDefinition.get_environment_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">get_environment_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the environment dict set on a preset as YAML.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The environment dict as YAML.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_config</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PresetDefinition.with_additional_config"><a class="viewcode-back" href="../../../../sections/api/apidocs/presets.html#dagster.PresetDefinition.with_additional_config">[docs]</a>    <span class="k">def</span> <span class="nf">with_additional_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_config</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a new PresetDefinition with additional config merged in to the existing config.&quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_dict_param</span><span class="p">(</span><span class="n">run_config</span><span class="p">,</span> <span class="s2">&quot;run_config&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">run_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">PresetDefinition</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">solid_selection</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid_selection</span><span class="p">,</span>
+                <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+                <span class="n">tags</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+                <span class="n">run_config</span><span class="o">=</span><span class="n">deep_merge_dicts</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_config</span><span class="p">,</span> <span class="n">run_config</span><span class="p">),</span>
+            <span class="p">)</span></div></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

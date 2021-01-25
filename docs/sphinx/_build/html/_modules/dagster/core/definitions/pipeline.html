@@ -1,0 +1,901 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.pipeline &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.pipeline</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.solid</span> <span class="kn">import</span> <span class="n">NodeDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DagsterInvalidDefinitionError</span><span class="p">,</span>
+    <span class="n">DagsterInvalidSubsetError</span><span class="p">,</span>
+    <span class="n">DagsterInvariantViolationError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.output_manager</span> <span class="kn">import</span> <span class="n">IOutputManagerDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.root_input_manager</span> <span class="kn">import</span> <span class="n">IInputManagerDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">DagsterTypeKind</span><span class="p">,</span> <span class="n">construct_dagster_type_dictionary</span>
+<span class="kn">from</span> <span class="nn">dagster.core.utils</span> <span class="kn">import</span> <span class="n">str_format_set</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental_arg_warning</span>
+
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">ConfigMapping</span>
+<span class="kn">from</span> <span class="nn">.dependency</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DependencyDefinition</span><span class="p">,</span>
+    <span class="n">MultiDependencyDefinition</span><span class="p">,</span>
+    <span class="n">SolidHandle</span><span class="p">,</span>
+    <span class="n">SolidInvocation</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">.graph</span> <span class="kn">import</span> <span class="n">GraphDefinition</span>
+<span class="kn">from</span> <span class="nn">.hook</span> <span class="kn">import</span> <span class="n">HookDefinition</span>
+<span class="kn">from</span> <span class="nn">.mode</span> <span class="kn">import</span> <span class="n">ModeDefinition</span>
+<span class="kn">from</span> <span class="nn">.preset</span> <span class="kn">import</span> <span class="n">PresetDefinition</span>
+<span class="kn">from</span> <span class="nn">.solid</span> <span class="kn">import</span> <span class="n">NodeDefinition</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">validate_tags</span>
+
+
+<span class="k">def</span> <span class="nf">_anonymous_pipeline_name</span><span class="p">():</span>
+    <span class="k">return</span> <span class="s2">&quot;__pipeline__&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="PipelineDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/pipeline.html#dagster.PipelineDefinition">[docs]</a><span class="k">class</span> <span class="nc">PipelineDefinition</span><span class="p">(</span><span class="n">GraphDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Defines a Dagster pipeline.</span>
+
+<span class="sd">    A pipeline is made up of</span>
+
+<span class="sd">    - Solids, each of which is a single functional unit of data computation.</span>
+<span class="sd">    - Dependencies, which determine how the values produced by solids as their outputs flow from</span>
+<span class="sd">      one solid to another. This tells Dagster how to arrange solids, and potentially multiple</span>
+<span class="sd">      aliased instances of solids, into a directed, acyclic graph (DAG) of compute.</span>
+<span class="sd">    - Modes, which can be used to attach resources, custom loggers, custom system storage</span>
+<span class="sd">      options, and custom executors to a pipeline, and to switch between them.</span>
+<span class="sd">    - Presets, which can be used to ship common combinations of pipeline config options in Python</span>
+<span class="sd">      code, and to switch between them.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        solid_defs (List[SolidDefinition]): The set of solids used in this pipeline.</span>
+<span class="sd">        name (Optional[str]): The name of the pipeline. Must be unique within any</span>
+<span class="sd">            :py:class:`RepositoryDefinition` containing the pipeline.</span>
+<span class="sd">        description (Optional[str]): A human-readable description of the pipeline.</span>
+<span class="sd">        dependencies (Optional[Dict[Union[str, SolidInvocation], Dict[str, DependencyDefinition]]]):</span>
+<span class="sd">            A structure that declares the dependencies of each solid&#39;s inputs on the outputs of</span>
+<span class="sd">            other solids in the pipeline. Keys of the top level dict are either the string names of</span>
+<span class="sd">            solids in the pipeline or, in the case of aliased solids,</span>
+<span class="sd">            :py:class:`SolidInvocations &lt;SolidInvocation&gt;`. Values of the top level dict are</span>
+<span class="sd">            themselves dicts, which map input names belonging to the solid or aliased solid to</span>
+<span class="sd">            :py:class:`DependencyDefinitions &lt;DependencyDefinition&gt;`.</span>
+<span class="sd">        mode_defs (Optional[List[ModeDefinition]]): The set of modes in which this pipeline can</span>
+<span class="sd">            operate. Modes are used to attach resources, custom loggers, custom system storage</span>
+<span class="sd">            options, and custom executors to a pipeline. Modes can be used, e.g., to vary available</span>
+<span class="sd">            resource and logging implementations between local test and production runs.</span>
+<span class="sd">        preset_defs (Optional[List[PresetDefinition]]): A set of preset collections of configuration</span>
+<span class="sd">            options that may be used to execute a pipeline. A preset consists of an environment</span>
+<span class="sd">            dict, an optional subset of solids to execute, and a mode selection. Presets can be used</span>
+<span class="sd">            to ship common combinations of options to pipeline end users in Python code, and can</span>
+<span class="sd">            be selected by tools like Dagit.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Arbitrary metadata for any execution run of the pipeline.</span>
+<span class="sd">            Values that are not strings will be json encoded and must meet the criteria that</span>
+<span class="sd">            `json.loads(json.dumps(value)) == value`.  These tag values may be overwritten by tag</span>
+<span class="sd">            values provided at invocation time.</span>
+<span class="sd">        hook_defs (Optional[Set[HookDefinition]]): A set of hook definitions applied to the</span>
+<span class="sd">            pipeline. When a hook is applied to a pipeline, it will be attached to all solid</span>
+<span class="sd">            instances within the pipeline.</span>
+
+<span class="sd">        _parent_pipeline_def (INTERNAL ONLY): Used for tracking pipelines created using solid subsets.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @lambda_solid</span>
+<span class="sd">            def return_one():</span>
+<span class="sd">                return 1</span>
+
+
+<span class="sd">            @solid(input_defs=[InputDefinition(&#39;num&#39;)], required_resource_keys={&#39;op&#39;})</span>
+<span class="sd">            def apply_op(context, num):</span>
+<span class="sd">                return context.resources.op(num)</span>
+
+<span class="sd">            @resource(config_schema=Int)</span>
+<span class="sd">            def adder_resource(init_context):</span>
+<span class="sd">                return lambda x: x + init_context.resource_config</span>
+
+
+<span class="sd">            add_mode = ModeDefinition(</span>
+<span class="sd">                name=&#39;add_mode&#39;,</span>
+<span class="sd">                resource_defs={&#39;op&#39;: adder_resource},</span>
+<span class="sd">                description=&#39;Mode that adds things&#39;,</span>
+<span class="sd">            )</span>
+
+
+<span class="sd">            add_three_preset = PresetDefinition(</span>
+<span class="sd">                name=&#39;add_three_preset&#39;,</span>
+<span class="sd">                run_config={&#39;resources&#39;: {&#39;op&#39;: {&#39;config&#39;: 3}}},</span>
+<span class="sd">                mode=&#39;add_mode&#39;,</span>
+<span class="sd">            )</span>
+
+
+<span class="sd">            pipeline_def = PipelineDefinition(</span>
+<span class="sd">                name=&#39;basic&#39;,</span>
+<span class="sd">                solid_defs=[return_one, apply_op],</span>
+<span class="sd">                dependencies={&#39;apply_op&#39;: {&#39;num&#39;: DependencyDefinition(&#39;return_one&#39;)}},</span>
+<span class="sd">                mode_defs=[add_mode],</span>
+<span class="sd">                preset_defs=[add_three_preset],</span>
+<span class="sd">            )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">solid_defs</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">dependencies</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mode_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">preset_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">hook_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">input_mappings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_mappings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_mapping</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">positional_inputs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">_parent_pipeline_def</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>  <span class="c1"># https://github.com/dagster-io/dagster/issues/2115</span>
+    <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Pipeline must have a name. Names will be required starting in 0.10.0 or later.&quot;</span>
+            <span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">_anonymous_pipeline_name</span><span class="p">()</span>
+
+        <span class="c1"># For these warnings they check truthiness because they get changed to [] higher</span>
+        <span class="c1"># in the stack for the decorator case</span>
+
+        <span class="k">if</span> <span class="n">input_mappings</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;input_mappings&quot;</span><span class="p">,</span> <span class="s2">&quot;PipelineDefinition&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">output_mappings</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;output_mappings&quot;</span><span class="p">,</span> <span class="s2">&quot;PipelineDefinition&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config_mapping</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;config_mapping&quot;</span><span class="p">,</span> <span class="s2">&quot;PipelineDefinition&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">positional_inputs</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;positional_inputs&quot;</span><span class="p">,</span> <span class="s2">&quot;PipelineDefinition&quot;</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">PipelineDefinition</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">dependencies</span><span class="o">=</span><span class="n">dependencies</span><span class="p">,</span>
+            <span class="n">node_defs</span><span class="o">=</span><span class="n">solid_defs</span><span class="p">,</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">positional_inputs</span><span class="o">=</span><span class="n">positional_inputs</span><span class="p">,</span>
+            <span class="n">input_mappings</span><span class="o">=</span><span class="n">input_mappings</span><span class="p">,</span>
+            <span class="n">output_mappings</span><span class="o">=</span><span class="n">output_mappings</span><span class="p">,</span>
+            <span class="n">config_mapping</span><span class="o">=</span><span class="n">config_mapping</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_current_level_node_defs</span> <span class="o">=</span> <span class="n">solid_defs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tags</span> <span class="o">=</span> <span class="n">validate_tags</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+
+        <span class="n">mode_definitions</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">mode_defs</span><span class="p">,</span> <span class="s2">&quot;mode_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">ModeDefinition</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">mode_definitions</span><span class="p">:</span>
+            <span class="n">mode_definitions</span> <span class="o">=</span> <span class="p">[</span><span class="n">ModeDefinition</span><span class="p">()]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span> <span class="o">=</span> <span class="n">mode_definitions</span>
+
+        <span class="n">seen_modes</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">mode_def</span> <span class="ow">in</span> <span class="n">mode_definitions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mode_def</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">seen_modes</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s1">&#39;Two modes seen with the name &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot; in &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot;. &#39;</span>
+                        <span class="s2">&quot;Modes must have unique names.&quot;</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="n">seen_modes</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type_dict</span> <span class="o">=</span> <span class="n">construct_dagster_type_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_level_node_defs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hook_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span><span class="n">hook_defs</span><span class="p">,</span> <span class="s2">&quot;hook_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">HookDefinition</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_preset_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">preset_defs</span><span class="p">,</span> <span class="s2">&quot;preset_defs&quot;</span><span class="p">,</span> <span class="n">PresetDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">preset</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preset_defs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">preset</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s1">&#39;Two PresetDefinitions seen with the name &quot;</span><span class="si">{name}</span><span class="s1">&quot; in &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot;. &#39;</span>
+                        <span class="s2">&quot;PresetDefinitions must have unique names.&quot;</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">preset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">preset</span><span class="o">.</span><span class="n">mode</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen_modes</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s1">&#39;PresetDefinition &quot;</span><span class="si">{name}</span><span class="s1">&quot; in &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot; &#39;</span>
+                        <span class="s1">&#39;references mode &quot;</span><span class="si">{mode}</span><span class="s1">&quot; which is not defined.&#39;</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">preset</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">preset</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span><span class="p">[</span><span class="n">preset</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">preset</span>
+
+        <span class="c1"># Validate solid resource dependencies</span>
+        <span class="n">_validate_resource_dependencies</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_current_level_node_defs</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type_dict</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dict</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_hook_defs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Validate unsatisfied inputs can be materialized from config</span>
+        <span class="n">_validate_inputs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dependency_structure</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">)</span>
+
+        <span class="c1"># Recursively explore all nodes in the this pipeline</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_node_defs</span> <span class="o">=</span> <span class="n">_build_all_node_defs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_current_level_node_defs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parent_pipeline_def</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+            <span class="n">_parent_pipeline_def</span><span class="p">,</span> <span class="s2">&quot;_parent_pipeline_def&quot;</span><span class="p">,</span> <span class="n">PipelineDefinition</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cached_run_config_schemas</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cached_external_pipeline</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">copy_for_configured</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">config_schema</span><span class="p">,</span> <span class="n">config_or_config_fn</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_config_mapping</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;Only pipelines utilizing config mapping can be pre-configured. The pipeline &quot;</span>
+                <span class="s1">&#39;&quot;</span><span class="si">{graph_name}</span><span class="s1">&quot; does not have a config mapping, and thus has nothing to be &#39;</span>
+                <span class="s2">&quot;configured.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">graph_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+            <span class="n">solid_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_solid_defs</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_name_for_configured_node</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">config_or_config_fn</span><span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">dependencies</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dependencies</span><span class="p">,</span>
+            <span class="n">mode_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">,</span>
+            <span class="n">preset_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">preset_defs</span><span class="p">,</span>
+            <span class="n">hook_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">,</span>
+            <span class="n">input_mappings</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_input_mappings</span><span class="p">,</span>
+            <span class="n">output_mappings</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_output_mappings</span><span class="p">,</span>
+            <span class="n">config_mapping</span><span class="o">=</span><span class="n">ConfigMapping</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_config_mapping</span><span class="o">.</span><span class="n">config_fn</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span>
+            <span class="p">),</span>
+            <span class="n">positional_inputs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">positional_inputs</span><span class="p">,</span>
+            <span class="n">_parent_pipeline_def</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent_pipeline_def</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_run_config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+
+        <span class="n">mode_def</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_mode_definition</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">mode_def</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cached_run_config_schemas</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cached_run_config_schemas</span><span class="p">[</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cached_run_config_schemas</span><span class="p">[</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">_create_run_config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode_def</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cached_run_config_schemas</span><span class="p">[</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mode_definitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">preset_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preset_defs</span>
+
+    <span class="k">def</span> <span class="nf">_get_mode_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">mode_definition</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">mode_definition</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">mode</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">mode_definition</span>
+
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">get_default_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_single_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_multi_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">has_mode_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_mode_definition</span><span class="p">(</span><span class="n">mode</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">get_default_mode_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">get_mode_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mode</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">is_single_mode</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_default_mode</span><span class="p">()</span>
+
+        <span class="n">mode_def</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_mode_definition</span><span class="p">(</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="n">mode_def</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="s2">&quot;Could not find mode </span><span class="si">{mode}</span><span class="s2"> in pipeline </span><span class="si">{name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">mode_def</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">available_modes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">mode_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode_definitions</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">display_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;str: Display name of pipeline.</span>
+
+<span class="sd">        Name suitable for exception messages, logging etc. If pipeline</span>
+<span class="sd">        is unnamed the method will return &quot;&lt;&lt;unnamed&gt;&gt;&quot;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="k">else</span> <span class="s2">&quot;&lt;&lt;unnamed&gt;&gt;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tags</span>
+
+    <span class="k">def</span> <span class="nf">has_dagster_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type_dict</span>
+
+    <span class="k">def</span> <span class="nf">dagster_type_named</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">all_dagster_types</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_type_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">all_solid_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_all_node_defs</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">top_level_solid_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_current_level_node_defs</span>
+
+    <span class="k">def</span> <span class="nf">solid_def_named</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_node_defs</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> not found&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_node_defs</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">has_solid_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_node_defs</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline_subset_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span> <span class="k">if</span> <span class="n">solids_to_execute</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">_get_pipeline_subset_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_presets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">has_preset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span>
+
+    <span class="k">def</span> <span class="nf">get_preset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="s1">&#39;Could not find preset for &quot;</span><span class="si">{name}</span><span class="s1">&quot;. Available presets &#39;</span>
+                    <span class="s1">&#39;for pipeline &quot;</span><span class="si">{pipeline_name}</span><span class="s1">&quot; are </span><span class="si">{preset_names}</span><span class="s1">.&#39;</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">preset_names</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_preset_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pipeline_index</span><span class="p">()</span><span class="o">.</span><span class="n">pipeline_snapshot</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline_snapshot_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pipeline_index</span><span class="p">()</span><span class="o">.</span><span class="n">pipeline_snapshot_id</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline_index</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.snap</span> <span class="kn">import</span> <span class="n">PipelineSnapshot</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.host_representation</span> <span class="kn">import</span> <span class="n">PipelineIndex</span>
+
+        <span class="k">return</span> <span class="n">PipelineIndex</span><span class="p">(</span>
+            <span class="n">PipelineSnapshot</span><span class="o">.</span><span class="n">from_pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_parent_pipeline_snapshot</span><span class="p">()</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_config_schema_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pipeline_snapshot</span><span class="p">()</span><span class="o">.</span><span class="n">config_schema_snapshot</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_subset_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">parent_pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">get_parent_pipeline_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solids_to_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">hook_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hook_defs</span>
+
+    <span class="k">def</span> <span class="nf">get_all_hooks_for_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handle</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Gather all the hooks for the given solid from all places possibly attached with a hook.</span>
+
+<span class="sd">        A hook can be attached to any of the following objects</span>
+<span class="sd">        * Solid (solid invocation)</span>
+<span class="sd">        * PipelineDefinition</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            handle (SolidHandle): The solid&#39;s handle</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            FrozeSet[HookDefinition]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;handle&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">)</span>
+        <span class="n">hook_defs</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="n">current</span> <span class="o">=</span> <span class="n">handle</span>
+        <span class="n">lineage</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="n">current</span><span class="p">:</span>
+            <span class="n">lineage</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">current</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">current</span> <span class="o">=</span> <span class="n">current</span><span class="o">.</span><span class="n">parent</span>
+
+        <span class="c1"># hooks on top-level solid</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+        <span class="n">solid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid_named</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">hook_defs</span> <span class="o">=</span> <span class="n">hook_defs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">solid</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">)</span>
+
+        <span class="c1"># hooks on non-top-level solids</span>
+        <span class="k">while</span> <span class="n">lineage</span><span class="p">:</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">lineage</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="n">solid</span> <span class="o">=</span> <span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">solid_named</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">hook_defs</span> <span class="o">=</span> <span class="n">hook_defs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="n">solid</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">)</span>
+
+        <span class="c1"># hooks applied to a pipeline definition will run on every solid</span>
+        <span class="n">hook_defs</span> <span class="o">=</span> <span class="n">hook_defs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">hook_defs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">with_hooks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_defs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Apply a set of hooks to all solid instances within the pipeline.&quot;&quot;&quot;</span>
+
+        <span class="n">hook_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">hook_defs</span><span class="p">,</span> <span class="s2">&quot;hook_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">HookDefinition</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+            <span class="n">solid_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">top_level_solid_defs</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">dependencies</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dependencies</span><span class="p">,</span>
+            <span class="n">mode_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode_definitions</span><span class="p">,</span>
+            <span class="n">preset_defs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">preset_defs</span><span class="p">,</span>
+            <span class="n">tags</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+            <span class="n">hook_defs</span><span class="o">=</span><span class="n">hook_defs</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">),</span>
+            <span class="n">_parent_pipeline_def</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_parent_pipeline_def</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">PipelineSubsetDefinition</span><span class="p">(</span><span class="n">PipelineDefinition</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solids_to_execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_solid_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># we currently don&#39;t pass the real solid_selection (the solid query list) down here.</span>
+        <span class="c1"># so in the short-term, to make the call sites cleaner, we will convert the solids to execute</span>
+        <span class="c1"># to a list</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_solid_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">parent_pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_pipeline_def</span>
+
+    <span class="k">def</span> <span class="nf">get_parent_pipeline_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parent_pipeline_def</span><span class="o">.</span><span class="n">get_pipeline_snapshot</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_subset_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline_subset_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span><span class="s2">&quot;Pipeline subsets may not be subset again.&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_dep_key_of</span><span class="p">(</span><span class="n">solid</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">SolidInvocation</span><span class="p">(</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_get_pipeline_subset_def</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Build a pipeline which is a subset of another pipeline.</span>
+<span class="sd">    Only includes the solids which are in solids_to_execute.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="s2">&quot;pipeline_def&quot;</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">,</span> <span class="s2">&quot;solids_to_execute&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">solid_name</span> <span class="ow">in</span> <span class="n">solids_to_execute</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">has_solid_named</span><span class="p">(</span><span class="n">solid_name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidSubsetError</span><span class="p">(</span>
+                <span class="s2">&quot;Pipeline </span><span class="si">{pipeline_name}</span><span class="s2"> has no solid named </span><span class="si">{name}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">solid_name</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+    <span class="n">solids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">solid_named</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="p">))</span>
+    <span class="n">deps</span> <span class="o">=</span> <span class="p">{</span><span class="n">_dep_key_of</span><span class="p">(</span><span class="n">solid</span><span class="p">):</span> <span class="p">{}</span> <span class="k">for</span> <span class="n">solid</span> <span class="ow">in</span> <span class="n">solids</span><span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">solid</span> <span class="ow">in</span> <span class="n">solids</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">input_handle</span> <span class="ow">in</span> <span class="n">solid</span><span class="o">.</span><span class="n">input_handles</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">dependency_structure</span><span class="o">.</span><span class="n">has_singular_dep</span><span class="p">(</span><span class="n">input_handle</span><span class="p">):</span>
+                <span class="n">output_handle</span> <span class="o">=</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">dependency_structure</span><span class="o">.</span><span class="n">get_singular_dep</span><span class="p">(</span><span class="n">input_handle</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">output_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">solids_to_execute</span><span class="p">:</span>
+                    <span class="n">deps</span><span class="p">[</span><span class="n">_dep_key_of</span><span class="p">(</span><span class="n">solid</span><span class="p">)][</span><span class="n">input_handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">DependencyDefinition</span><span class="p">(</span>
+                        <span class="n">solid</span><span class="o">=</span><span class="n">output_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output_handle</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span>
+                    <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">dependency_structure</span><span class="o">.</span><span class="n">has_multi_deps</span><span class="p">(</span><span class="n">input_handle</span><span class="p">):</span>
+                <span class="n">output_handles</span> <span class="o">=</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">dependency_structure</span><span class="o">.</span><span class="n">get_multi_deps</span><span class="p">(</span><span class="n">input_handle</span><span class="p">)</span>
+                <span class="n">deps</span><span class="p">[</span><span class="n">_dep_key_of</span><span class="p">(</span><span class="n">solid</span><span class="p">)][</span><span class="n">input_handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">MultiDependencyDefinition</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">DependencyDefinition</span><span class="p">(</span>
+                            <span class="n">solid</span><span class="o">=</span><span class="n">output_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output_handle</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span>
+                        <span class="p">)</span>
+                        <span class="k">for</span> <span class="n">output_handle</span> <span class="ow">in</span> <span class="n">output_handles</span>
+                        <span class="k">if</span> <span class="n">output_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">solids_to_execute</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">sub_pipeline_def</span> <span class="o">=</span> <span class="n">PipelineSubsetDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>  <span class="c1"># should we change the name for subsetted pipeline?</span>
+            <span class="n">solid_defs</span><span class="o">=</span><span class="nb">list</span><span class="p">({</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span> <span class="k">for</span> <span class="n">solid</span> <span class="ow">in</span> <span class="n">solids</span><span class="p">}),</span>
+            <span class="n">mode_defs</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">mode_definitions</span><span class="p">,</span>
+            <span class="n">dependencies</span><span class="o">=</span><span class="n">deps</span><span class="p">,</span>
+            <span class="n">_parent_pipeline_def</span><span class="o">=</span><span class="n">pipeline_def</span><span class="p">,</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+            <span class="n">hook_defs</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">sub_pipeline_def</span>
+    <span class="k">except</span> <span class="n">DagsterInvalidDefinitionError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="c1"># This handles the case when you construct a subset such that an unsatisfied</span>
+        <span class="c1"># input cannot be loaded from config. Instead of throwing a DagsterInvalidDefinitionError,</span>
+        <span class="c1"># we re-raise a DagsterInvalidSubsetError.</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidSubsetError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;The attempted subset </span><span class="si">{</span><span class="n">str_format_set</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">)</span><span class="si">}</span><span class="s2"> for pipeline &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> results in an invalid pipeline&quot;</span>
+        <span class="p">)</span> <span class="kn">from</span> <span class="nn">exc</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_resource_dependencies</span><span class="p">(</span>
+    <span class="n">mode_definitions</span><span class="p">,</span> <span class="n">node_defs</span><span class="p">,</span> <span class="n">dagster_type_dict</span><span class="p">,</span> <span class="n">solid_dict</span><span class="p">,</span> <span class="n">pipeline_hook_defs</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This validation ensures that each pipeline context provides the resources that are required</span>
+<span class="sd">    by each solid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">mode_definitions</span><span class="p">,</span> <span class="s2">&quot;mode_definitions&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">ModeDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">node_defs</span><span class="p">,</span> <span class="s2">&quot;node_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">NodeDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">dagster_type_dict</span><span class="p">,</span> <span class="s2">&quot;dagster_type_dict&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">solid_dict</span><span class="p">,</span> <span class="s2">&quot;solid_dict&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">pipeline_hook_defs</span><span class="p">,</span> <span class="s2">&quot;pipeline_hook_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">HookDefinition</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">mode_def</span> <span class="ow">in</span> <span class="n">mode_definitions</span><span class="p">:</span>
+        <span class="n">mode_resources</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">mode_def</span><span class="o">.</span><span class="n">resource_defs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">for</span> <span class="n">node_def</span> <span class="ow">in</span> <span class="n">node_defs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">node_def</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="s1">&#39;Resource &quot;</span><span class="si">{resource}</span><span class="s1">&quot; is required by solid def </span><span class="si">{node_def_name}</span><span class="s1">, but is not &#39;</span>
+                            <span class="s1">&#39;provided by mode &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot;.&#39;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                            <span class="n">node_def_name</span><span class="o">=</span><span class="n">node_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                            <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+        <span class="n">_validate_type_resource_deps_for_mode</span><span class="p">(</span><span class="n">mode_def</span><span class="p">,</span> <span class="n">mode_resources</span><span class="p">,</span> <span class="n">dagster_type_dict</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">intermediate_storage</span> <span class="ow">in</span> <span class="n">mode_def</span><span class="o">.</span><span class="n">intermediate_storage_defs</span> <span class="ow">or</span> <span class="p">[]:</span>
+            <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">intermediate_storage</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="s2">&quot;Resource &#39;</span><span class="si">{resource}</span><span class="s2">&#39; is required by intermediate storage &quot;</span>
+                            <span class="s2">&quot;&#39;</span><span class="si">{storage_name}</span><span class="s2">&#39;, but is not provided by mode &#39;</span><span class="si">{mode_name}</span><span class="s2">&#39;.&quot;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                            <span class="n">storage_name</span><span class="o">=</span><span class="n">intermediate_storage</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                            <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+        <span class="k">for</span> <span class="n">solid</span> <span class="ow">in</span> <span class="n">solid_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">hook_def</span> <span class="ow">in</span> <span class="n">solid</span><span class="o">.</span><span class="n">hook_defs</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">hook_def</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                            <span class="p">(</span>
+                                <span class="s1">&#39;Resource &quot;</span><span class="si">{resource}</span><span class="s1">&quot; is required by hook &quot;</span><span class="si">{hook_name}</span><span class="s1">&quot;, but is not &#39;</span>
+                                <span class="s1">&#39;provided by mode &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot;.&#39;</span>
+                            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                                <span class="n">hook_name</span><span class="o">=</span><span class="n">hook_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">hook_def</span> <span class="ow">in</span> <span class="n">pipeline_hook_defs</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">hook_def</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="s1">&#39;Resource &quot;</span><span class="si">{resource}</span><span class="s1">&quot; is required by hook &quot;</span><span class="si">{hook_name}</span><span class="s1">&quot;, but is not &#39;</span>
+                            <span class="s1">&#39;provided by mode &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot;.&#39;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                            <span class="n">hook_name</span><span class="o">=</span><span class="n">hook_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                            <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_type_resource_deps_for_mode</span><span class="p">(</span><span class="n">mode_def</span><span class="p">,</span> <span class="n">mode_resources</span><span class="p">,</span> <span class="n">dagster_type_dict</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">dagster_type</span> <span class="ow">in</span> <span class="n">dagster_type_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s1">&#39;Resource &quot;</span><span class="si">{resource}</span><span class="s1">&quot; is required by type &quot;</span><span class="si">{type_name}</span><span class="s1">&quot;, but is not &#39;</span>
+                        <span class="s1">&#39;provided by mode &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot;.&#39;</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                        <span class="n">type_name</span><span class="o">=</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                        <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">if</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">loader</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="s1">&#39;Resource &quot;</span><span class="si">{resource}</span><span class="s1">&quot; is required by the loader on type &#39;</span>
+                            <span class="s1">&#39;&quot;</span><span class="si">{type_name}</span><span class="s1">&quot;, but is not provided by mode &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot;.&#39;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                            <span class="n">type_name</span><span class="o">=</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                            <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+        <span class="k">if</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">materializer</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">materializer</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="s1">&#39;Resource &quot;</span><span class="si">{resource}</span><span class="s1">&quot; is required by the materializer on type &#39;</span>
+                            <span class="s1">&#39;&quot;</span><span class="si">{type_name}</span><span class="s1">&quot;, but is not provided by mode &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot;.&#39;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                            <span class="n">type_name</span><span class="o">=</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                            <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">plugin</span> <span class="ow">in</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">auto_plugins</span><span class="p">:</span>
+            <span class="n">used_by_storage</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">intermediate_storage_def</span><span class="o">.</span><span class="n">name</span>
+                    <span class="k">for</span> <span class="n">intermediate_storage_def</span> <span class="ow">in</span> <span class="n">mode_def</span><span class="o">.</span><span class="n">intermediate_storage_defs</span>
+                    <span class="k">if</span> <span class="n">plugin</span><span class="o">.</span><span class="n">compatible_with_storage_def</span><span class="p">(</span><span class="n">intermediate_storage_def</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">used_by_storage</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">required_resource</span> <span class="ow">in</span> <span class="n">plugin</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="n">required_resource</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">mode_resources</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                            <span class="p">(</span>
+                                <span class="s1">&#39;Resource &quot;</span><span class="si">{resource}</span><span class="s1">&quot; is required by the plugin &quot;</span><span class="si">{plugin_name}</span><span class="s1">&quot;&#39;</span>
+                                <span class="s1">&#39; on type &quot;</span><span class="si">{type_name}</span><span class="s1">&quot; (used with storages </span><span class="si">{storages}</span><span class="s1">), &#39;</span>
+                                <span class="s1">&#39;but is not provided by mode &quot;</span><span class="si">{mode_name}</span><span class="s1">&quot;.&#39;</span>
+                            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">resource</span><span class="o">=</span><span class="n">required_resource</span><span class="p">,</span>
+                                <span class="n">type_name</span><span class="o">=</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                                <span class="n">plugin_name</span><span class="o">=</span><span class="n">plugin</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span>
+                                <span class="n">mode_name</span><span class="o">=</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                <span class="n">storages</span><span class="o">=</span><span class="n">used_by_storage</span><span class="p">,</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_validate_inputs</span><span class="p">(</span><span class="n">dependency_structure</span><span class="p">,</span> <span class="n">solid_dict</span><span class="p">,</span> <span class="n">mode_definitions</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">solid</span> <span class="ow">in</span> <span class="n">solid_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">handle</span> <span class="ow">in</span> <span class="n">solid</span><span class="o">.</span><span class="n">input_handles</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">dependency_structure</span><span class="o">.</span><span class="n">has_deps</span><span class="p">(</span><span class="n">handle</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">mode_def</span> <span class="ow">in</span> <span class="n">mode_definitions</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">source_output_handle</span> <span class="ow">in</span> <span class="n">dependency_structure</span><span class="o">.</span><span class="n">get_deps_list</span><span class="p">(</span><span class="n">handle</span><span class="p">):</span>
+                        <span class="n">output_manager_key</span> <span class="o">=</span> <span class="n">source_output_handle</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">io_manager_key</span>
+                        <span class="n">output_manager_def</span> <span class="o">=</span> <span class="n">mode_def</span><span class="o">.</span><span class="n">resource_defs</span><span class="p">[</span><span class="n">output_manager_key</span><span class="p">]</span>
+                        <span class="c1"># TODO: remove the IOutputManagerDefinition check when asset store</span>
+                        <span class="c1"># API is removed.</span>
+                        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span>
+                            <span class="n">output_manager_def</span><span class="p">,</span> <span class="n">IOutputManagerDefinition</span>
+                        <span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_manager_def</span><span class="p">,</span> <span class="n">IInputManagerDefinition</span><span class="p">):</span>
+                            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                                <span class="sa">f</span><span class="s1">&#39;Input &quot;</span><span class="si">{</span><span class="n">handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot; of solid &quot;</span><span class="si">{</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot; is &#39;</span>
+                                <span class="sa">f</span><span class="s1">&#39;connected to output &quot;</span><span class="si">{</span><span class="n">source_output_handle</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot; &#39;</span>
+                                <span class="sa">f</span><span class="s1">&#39;of solid &quot;</span><span class="si">{</span><span class="n">source_output_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot;. In mode &#39;</span>
+                                <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot;, that output does not have an output &#39;</span>
+                                <span class="sa">f</span><span class="s2">&quot;manager that knows how to load inputs, so we don&#39;t know how &quot;</span>
+                                <span class="sa">f</span><span class="s2">&quot;to load the input. To address this, assign an IOManager to &quot;</span>
+                                <span class="sa">f</span><span class="s2">&quot;the upstream output.&quot;</span>
+                            <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="ow">not</span> <span class="n">handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">loader</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DagsterTypeKind</span><span class="o">.</span><span class="n">NOTHING</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">root_manager_key</span>
+                <span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="s1">&#39;Input &quot;</span><span class="si">{input_name}</span><span class="s1">&quot; in solid &quot;</span><span class="si">{solid_name}</span><span class="s1">&quot; is not connected to &#39;</span>
+                        <span class="s2">&quot;the output of a previous solid and can not be loaded from configuration, &quot;</span>
+                        <span class="s2">&quot;creating an impossible to execute pipeline. &quot;</span>
+                        <span class="s2">&quot;Possible solutions are:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="s1">&#39;  * add a dagster_type_loader for the type &quot;</span><span class="si">{dagster_type}</span><span class="s1">&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                        <span class="s1">&#39;  * connect &quot;</span><span class="si">{input_name}</span><span class="s1">&quot; to the output of another solid</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">solid_name</span><span class="o">=</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                            <span class="n">input_name</span><span class="o">=</span><span class="n">handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                            <span class="n">dagster_type</span><span class="o">=</span><span class="n">handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">display_name</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_build_all_node_defs</span><span class="p">(</span><span class="n">node_defs</span><span class="p">):</span>
+    <span class="n">all_defs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">current_level_node_def</span> <span class="ow">in</span> <span class="n">node_defs</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">node_def</span> <span class="ow">in</span> <span class="n">current_level_node_def</span><span class="o">.</span><span class="n">iterate_node_defs</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">node_def</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">all_defs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">all_defs</span><span class="p">[</span><span class="n">node_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">!=</span> <span class="n">node_def</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="s1">&#39;Detected conflicting solid definitions with the same name &quot;</span><span class="si">{name}</span><span class="s1">&quot;&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">name</span><span class="o">=</span><span class="n">node_def</span><span class="o">.</span><span class="n">name</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">all_defs</span><span class="p">[</span><span class="n">node_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_def</span>
+
+    <span class="k">return</span> <span class="n">all_defs</span>
+
+
+<span class="k">def</span> <span class="nf">_create_run_config_schema</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">mode_definition</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">.environment_configs</span> <span class="kn">import</span> <span class="p">(</span>
+        <span class="n">EnvironmentClassCreationData</span><span class="p">,</span>
+        <span class="n">construct_config_type_dictionary</span><span class="p">,</span>
+        <span class="n">define_environment_cls</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="kn">from</span> <span class="nn">.run_config_schema</span> <span class="kn">import</span> <span class="n">RunConfigSchema</span>
+
+    <span class="c1"># When executing with a subset pipeline, include the missing solids</span>
+    <span class="c1"># from the original pipeline as ignored to allow execution with</span>
+    <span class="c1"># run config that is valid for the original</span>
+    <span class="k">if</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">is_subset_pipeline</span><span class="p">:</span>
+        <span class="n">ignored_solids</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">solid</span>
+            <span class="k">for</span> <span class="n">solid</span> <span class="ow">in</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">parent_pipeline_def</span><span class="o">.</span><span class="n">solids</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">has_solid_named</span><span class="p">(</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ignored_solids</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">environment_type</span> <span class="o">=</span> <span class="n">define_environment_cls</span><span class="p">(</span>
+        <span class="n">EnvironmentClassCreationData</span><span class="p">(</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">solids</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">solids</span><span class="p">,</span>
+            <span class="n">dependency_structure</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">dependency_structure</span><span class="p">,</span>
+            <span class="n">mode_definition</span><span class="o">=</span><span class="n">mode_definition</span><span class="p">,</span>
+            <span class="n">logger_defs</span><span class="o">=</span><span class="n">mode_definition</span><span class="o">.</span><span class="n">loggers</span><span class="p">,</span>
+            <span class="n">ignored_solids</span><span class="o">=</span><span class="n">ignored_solids</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">config_type_dict_by_name</span><span class="p">,</span> <span class="n">config_type_dict_by_key</span> <span class="o">=</span> <span class="n">construct_config_type_dictionary</span><span class="p">(</span>
+        <span class="n">pipeline_def</span><span class="o">.</span><span class="n">all_solid_defs</span><span class="p">,</span> <span class="n">environment_type</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">RunConfigSchema</span><span class="p">(</span>
+        <span class="n">environment_type</span><span class="o">=</span><span class="n">environment_type</span><span class="p">,</span>
+        <span class="n">config_type_dict_by_name</span><span class="o">=</span><span class="n">config_type_dict_by_name</span><span class="p">,</span>
+        <span class="n">config_type_dict_by_key</span><span class="o">=</span><span class="n">config_type_dict_by_key</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

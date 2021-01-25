@@ -1,0 +1,413 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>AWS (dagster_aws) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Azure (dagster_azure)" href="dagster_azure.html" />
+    <link rel="prev" title="Airflow (dagster_airflow)" href="dagster_airflow.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_airflow.html" title="Previous document">Airflow (dagster_airflow)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_azure.html" title="Next document">Azure (dagster_azure)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="aws-dagster-aws">
+<h1>AWS (dagster_aws)<a class="headerlink" href="#aws-dagster-aws" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="s3">
+<h2>S3<a class="headerlink" href="#s3" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster_aws.s3.S3ComputeLogManager">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_aws.s3.</code><code class="sig-name descname">S3ComputeLogManager</code><span class="sig-paren">(</span><em class="sig-param">bucket</em>, <em class="sig-param">local_dir=None</em>, <em class="sig-param">inst_data=None</em>, <em class="sig-param">prefix='dagster'</em>, <em class="sig-param">use_ssl=True</em>, <em class="sig-param">verify=True</em>, <em class="sig-param">verify_cert_path=None</em>, <em class="sig-param">endpoint_url=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_aws/s3/compute_log_manager.html#S3ComputeLogManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.s3.S3ComputeLogManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Logs solid compute function stdout and stderr to S3.</p>
+<p>Users should not instantiate this class directly. Instead, use a YAML block in <code class="docutils literal notranslate"><span class="pre">dagster.yaml</span></code>
+such as the following:</p>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="nt">compute_logs</span><span class="p">:</span>
+  <span class="nt">module</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">dagster_aws.s3.compute_log_manager</span>
+  <span class="nt">class</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">S3ComputeLogManager</span>
+  <span class="nt">config</span><span class="p">:</span>
+    <span class="nt">bucket</span><span class="p">:</span> <span class="s">&quot;mycorp-dagster-compute-logs&quot;</span>
+    <span class="nt">local_dir</span><span class="p">:</span> <span class="s">&quot;/tmp/cool&quot;</span>
+    <span class="nt">prefix</span><span class="p">:</span> <span class="s">&quot;dagster-test-&quot;</span>
+    <span class="nt">use_ssl</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">verify</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+    <span class="nt">verify_cert_path</span><span class="p">:</span> <span class="s">&quot;/path/to/cert/bundle.pem&quot;</span>
+    <span class="nt">endpoint_url</span><span class="p">:</span> <span class="s">&quot;http://alternate-s3-host.io&quot;</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bucket</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the s3 bucket to which to log.</p></li>
+<li><p><strong>local_dir</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Path to the local directory in which to stage logs. Default:
+<code class="docutils literal notranslate"><span class="pre">dagster.seven.get_system_temp_directory()</span></code>.</p></li>
+<li><p><strong>prefix</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Prefix for the log file keys.</p></li>
+<li><p><strong>use_ssl</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Whether or not to use SSL. Default True.</p></li>
+<li><p><strong>verify</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Whether or not to verify SSL certificates. Default True.</p></li>
+<li><p><strong>verify_cert_path</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A filename of the CA cert bundle to use. Only used if
+<cite>verify</cite> set to False.</p></li>
+<li><p><strong>endpoint_url</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Override for the S3 endpoint url.</p></li>
+<li><p><strong>inst_data</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../internals.html#dagster.serdes.ConfigurableClassData" title="dagster.serdes.ConfigurableClassData"><em>ConfigurableClassData</em></a><em>]</em>) – Serializable representation of the compute
+log manager when newed up from config.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster_aws.s3.S3FileCache">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_aws.s3.</code><code class="sig-name descname">S3FileCache</code><span class="sig-paren">(</span><em class="sig-param">s3_bucket</em>, <em class="sig-param">s3_key</em>, <em class="sig-param">s3_session</em>, <em class="sig-param">overwrite=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_aws/s3/file_cache.html#S3FileCache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.s3.S3FileCache" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="dagster_aws.s3.S3FileHandle">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_aws.s3.</code><code class="sig-name descname">S3FileHandle</code><span class="sig-paren">(</span><em class="sig-param">s3_bucket: str</em>, <em class="sig-param">s3_key: str</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_aws/s3/file_manager.html#S3FileHandle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.s3.S3FileHandle" title="Permalink to this definition">¶</a></dt>
+<dd><p>A reference to a file on S3.</p>
+<dl class="method">
+<dt id="dagster_aws.s3.S3FileHandle.path_desc">
+<em class="property">property </em><code class="sig-name descname">path_desc</code><a class="headerlink" href="#dagster_aws.s3.S3FileHandle.path_desc" title="Permalink to this definition">¶</a></dt>
+<dd><p>The file’s S3 URL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_aws.s3.S3FileHandle.s3_bucket">
+<em class="property">property </em><code class="sig-name descname">s3_bucket</code><a class="headerlink" href="#dagster_aws.s3.S3FileHandle.s3_bucket" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the S3 bucket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_aws.s3.S3FileHandle.s3_key">
+<em class="property">property </em><code class="sig-name descname">s3_key</code><a class="headerlink" href="#dagster_aws.s3.S3FileHandle.s3_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The S3 key.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster_aws.s3.S3FileHandle.s3_path">
+<em class="property">property </em><code class="sig-name descname">s3_path</code><a class="headerlink" href="#dagster_aws.s3.S3FileHandle.s3_path" title="Permalink to this definition">¶</a></dt>
+<dd><p>The file’s S3 URL.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_aws.s3.s3_file_manager">
+<code class="sig-prename descclassname">dagster_aws.s3.</code><code class="sig-name descname">s3_file_manager</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_aws/s3/resources.html#s3_file_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.s3.s3_file_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>FileManager that provides abstract access to S3.</p>
+<p>Implements the <a class="reference internal" href="../internals.html#dagster.core.storage.file_manager.FileManager" title="dagster.core.storage.file_manager.FileManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">FileManager</span></code></a> API.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_aws.s3.s3_resource">
+<code class="sig-prename descclassname">dagster_aws.s3.</code><code class="sig-name descname">s3_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_aws/s3/resources.html#s3_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.s3.s3_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resource that gives solids access to S3.</p>
+<p>The underlying S3 session is created by calling <a class="reference external" href="https://boto3.amazonaws.com/v1/documentation/api/latest/reference/core/boto3.html#boto3.resource" title="(in Boto 3 Docs v1.11.12)"><code class="xref py py-func docutils literal notranslate"><span class="pre">boto3.resource('s3')</span></code></a>.</p>
+<p>Attach this resource definition to a <a class="reference internal" href="../modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> in order to make it
+available to your solids.</p>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">ModeDefinition</span><span class="p">,</span> <span class="n">execute_solid</span><span class="p">,</span> <span class="n">solid</span>
+<span class="kn">from</span> <span class="nn">dagster_aws.s3</span> <span class="kn">import</span> <span class="n">s3_resource</span>
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;s3&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">example_s3_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">list_objects_v2</span><span class="p">(</span>
+        <span class="n">Bucket</span><span class="o">=</span><span class="s1">&#39;my-bucket&#39;</span><span class="p">,</span>
+        <span class="n">Prefix</span><span class="o">=</span><span class="s1">&#39;some-key&#39;</span>
+    <span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">execute_solid</span><span class="p">(</span>
+    <span class="n">example_s3_solid</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;s3&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">&#39;region_name&#39;</span><span class="p">:</span> <span class="s1">&#39;us-west-1&#39;</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="n">mode_def</span><span class="o">=</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;s3&#39;</span><span class="p">:</span> <span class="n">s3_resource</span><span class="p">}),</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that your solids must also declare that they require this resource with
+<cite>required_resource_keys</cite>, or it will not be initialized for the execution of their compute
+functions.</p>
+<p>You may configure this resource as follows:</p>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="nt">resources</span><span class="p">:</span>
+  <span class="nt">s3</span><span class="p">:</span>
+    <span class="nt">config</span><span class="p">:</span>
+      <span class="nt">region_name</span><span class="p">:</span> <span class="s">&quot;us-west-1&quot;</span>
+      <span class="c1"># Optional[str]: Specifies a custom region for the S3 session. Default is chosen</span>
+      <span class="c1"># through the ordinary boto credential chain.</span>
+      <span class="nt">use_unsigned_session</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">false</span>
+      <span class="c1"># Optional[bool]: Specifies whether to use an unsigned S3 session. Default: True</span>
+      <span class="nt">endpoint_url</span><span class="p">:</span> <span class="s">&quot;http://localhost&quot;</span>
+      <span class="c1"># Optional[str]: Specifies a custom endpoint for the S3 session. Default is None.</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_aws.s3.S3Coordinate">
+<code class="sig-prename descclassname">dagster_aws.s3.</code><code class="sig-name descname">S3Coordinate</code><em class="property"> DagsterType</em><a class="headerlink" href="#dagster_aws.s3.S3Coordinate" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference internal" href="../types.html#dagster.DagsterType" title="dagster.DagsterType"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.DagsterType</span></code></a> intended to make it easier to pass information about files on S3
+from solid to solid. Objects of this type should be dicts with <code class="docutils literal notranslate"><span class="pre">'bucket'</span></code> and <code class="docutils literal notranslate"><span class="pre">'key'</span></code> keys,
+and may be hydrated from config in the intuitive way, e.g., for an input with the name
+<code class="docutils literal notranslate"><span class="pre">s3_file</span></code>:</p>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="nt">inputs</span><span class="p">:</span>
+  <span class="nt">s3_file</span><span class="p">:</span>
+    <span class="nt">value</span><span class="p">:</span>
+      <span class="nt">bucket</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my-bucket</span>
+      <span class="nt">key</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my-key</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_aws.s3.s3_pickle_io_manager">
+<code class="sig-prename descclassname">dagster_aws.s3.</code><code class="sig-name descname">s3_pickle_io_manager</code><em class="property"> IOManagerDefinition</em><a class="reference internal" href="../../../../_modules/dagster_aws/s3/io_manager.html#s3_pickle_io_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.s3.s3_pickle_io_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Persistent IO manager using S3 for storage.</p>
+<p>Serializes objects via pickling. Suitable for objects storage for distributed executors, so long
+as each execution node has network connectivity and credentials for S3 and the backing bucket.</p>
+<p>Attach this resource definition to a <a class="reference internal" href="../modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a>
+in order to make it available to your pipeline:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">ModeDefinition</span><span class="p">(</span>
+            <span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;io_manager&#39;</span><span class="p">:</span> <span class="n">s3_pickle_io_manager</span><span class="p">,</span> <span class="s2">&quot;s3&quot;</span><span class="p">:</span> <span class="n">s3_resource</span><span class="p">,</span> <span class="o">...</span><span class="p">},</span>
+        <span class="p">),</span> <span class="o">...</span>
+    <span class="p">],</span> <span class="o">...</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>You may configure this storage as follows:</p>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="nt">resources</span><span class="p">:</span>
+    <span class="nt">io_manager</span><span class="p">:</span>
+        <span class="nt">config</span><span class="p">:</span>
+            <span class="nt">s3_bucket</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">my-cool-bucket</span>
+            <span class="nt">s3_prefix</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">good/prefix-for-files-</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="redshift">
+<h2>Redshift<a class="headerlink" href="#redshift" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="dagster_aws.redshift.redshift_resource">
+<code class="sig-prename descclassname">dagster_aws.redshift.</code><code class="sig-name descname">redshift_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_aws/redshift/resources.html#redshift_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.redshift.redshift_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>This resource enables connecting to a Redshift cluster and issuing queries against that
+cluster.</p>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">ModeDefinition</span><span class="p">,</span> <span class="n">execute_solid</span><span class="p">,</span> <span class="n">solid</span>
+<span class="kn">from</span> <span class="nn">dagster_aws.redshift</span> <span class="kn">import</span> <span class="n">redshift_resource</span>
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;redshift&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">example_redshift_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">redshift</span><span class="o">.</span><span class="n">execute_query</span><span class="p">(</span><span class="s1">&#39;SELECT 1&#39;</span><span class="p">,</span> <span class="n">fetch_results</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">execute_solid</span><span class="p">(</span>
+    <span class="n">example_redshift_solid</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;redshift&#39;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s1">&#39;host&#39;</span><span class="p">:</span> <span class="s1">&#39;my-redshift-cluster.us-east-1.redshift.amazonaws.com&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;port&#39;</span><span class="p">:</span> <span class="mi">5439</span><span class="p">,</span>
+                    <span class="s1">&#39;user&#39;</span><span class="p">:</span> <span class="s1">&#39;dagster&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;password&#39;</span><span class="p">:</span> <span class="s1">&#39;dagster&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;database&#39;</span><span class="p">:</span> <span class="s1">&#39;dev&#39;</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+    <span class="n">mode_def</span><span class="o">=</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;redshift&#39;</span><span class="p">:</span> <span class="n">redshift_resource</span><span class="p">}),</span>
+<span class="p">)</span>
+<span class="k">assert</span> <span class="n">result</span><span class="o">.</span><span class="n">output_value</span><span class="p">()</span> <span class="o">==</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,)]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<div class="section" id="testing">
+<h3>Testing<a class="headerlink" href="#testing" title="Permalink to this headline">¶</a></h3>
+<dl class="data">
+<dt id="dagster_aws.redshift.fake_redshift_resource">
+<code class="sig-prename descclassname">dagster_aws.redshift.</code><code class="sig-name descname">fake_redshift_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_aws/redshift/resources.html#fake_redshift_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.redshift.fake_redshift_resource" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+<div class="section" id="emr">
+<h2>EMR<a class="headerlink" href="#emr" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="dagster_aws.emr.emr_pyspark_step_launcher">
+<code class="sig-prename descclassname">dagster_aws.emr.</code><code class="sig-name descname">emr_pyspark_step_launcher</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_aws/emr/pyspark_step_launcher.html#emr_pyspark_step_launcher"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.emr.emr_pyspark_step_launcher" title="Permalink to this definition">¶</a></dt>
+<dd><ul class="simple">
+<li><p><strong>spark_config</strong>:</p></li>
+<li><p><strong>cluster_id</strong>: Name of the job flow (cluster) on which to execute.</p></li>
+<li><p><strong>region_name</strong>: The AWS region that the cluster is in.</p></li>
+<li><p><strong>action_on_failure</strong>: The EMR action to take when the cluster step fails: <a class="reference external" href="https://docs.aws.amazon.com/emr/latest/APIReference/API_StepConfig.html">https://docs.aws.amazon.com/emr/latest/APIReference/API_StepConfig.html</a></p></li>
+<li><p><strong>staging_bucket</strong>: S3 bucket to use for passing files between the plan process and EMR process.</p></li>
+<li><p><strong>staging_prefix</strong>: S3 key prefix inside the staging_bucket to use for files passed the plan process and EMR process</p></li>
+<li><p><strong>wait_for_logs</strong>: If set, the system will wait for EMR logs to appear on S3. Note that logs are copied every 5 minutes, so enabling this will add several minutes to the job runtime.</p></li>
+<li><p><strong>local_pipeline_package_path</strong>: Absolute path to the package that contains the pipeline definition(s) whose steps will execute remotely on EMR. This is a path on the local fileystem of the process executing the pipeline. The expectation is that this package will also be available on the python path of the launched process running the Spark step on EMR, either deployed on step launch via the deploy_pipeline_package option, referenced on s3 via the s3_pipeline_package_path option, or installed on the cluster via bootstrap actions.</p></li>
+<li><p><strong>deploy_local_pipeline_package</strong>: If set, before every step run, the launcher will zip up all the code in local_pipeline_package_path, upload it to s3, and pass it to spark-submit’s –py-files option. This gives the remote process access to up-to-date user code. If not set, the assumption is that some other mechanism is used for distributing code to the EMR cluster. If this option is set to True, s3_pipeline_package_path should not also be set.</p></li>
+<li><p><strong>s3_pipeline_package_path</strong>: If set, this path will be passed to the –py-files option of spark-submit. This should usually be a path to a zip file.  If this option is set, deploy_local_pipeline_package should not be set to True.</p></li>
+</ul>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster_aws.emr.EmrJobRunner">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_aws.emr.</code><code class="sig-name descname">EmrJobRunner</code><span class="sig-paren">(</span><em class="sig-param">region</em>, <em class="sig-param">check_cluster_every=30</em>, <em class="sig-param">aws_access_key_id=None</em>, <em class="sig-param">aws_secret_access_key=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_aws/emr/emr.html#EmrJobRunner"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.emr.EmrJobRunner" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="class">
+<dt id="dagster_aws.emr.EmrError">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_aws.emr.</code><code class="sig-name descname">EmrError</code><a class="reference internal" href="../../../../_modules/dagster_aws/emr/emr.html#EmrError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.emr.EmrError" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="data">
+<dt id="dagster_aws.emr.EmrClusterState">
+<code class="sig-prename descclassname">dagster_aws.emr.</code><code class="sig-name descname">EmrClusterState</code><em class="property"> = &lt;enum 'EmrClusterState'&gt;</em><a class="reference internal" href="../../../../_modules/dagster_aws/emr/types.html#EmrClusterState"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.emr.EmrClusterState" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_aws.emr.EmrStepState">
+<code class="sig-prename descclassname">dagster_aws.emr.</code><code class="sig-name descname">EmrStepState</code><em class="property"> = &lt;enum 'EmrStepState'&gt;</em><a class="reference internal" href="../../../../_modules/dagster_aws/emr/types.html#EmrStepState"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_aws.emr.EmrStepState" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="cloudwatch">
+<h2>CloudWatch<a class="headerlink" href="#cloudwatch" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="dagster_aws.cloudwatch.cloudwatch_logger">
+<code class="sig-prename descclassname">dagster_aws.cloudwatch.</code><code class="sig-name descname">cloudwatch_logger</code><em class="property"> LoggerDefinition</em><a class="headerlink" href="#dagster_aws.cloudwatch.cloudwatch_logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core class for defining loggers.</p>
+<p>Loggers are pipeline-scoped logging handlers, which will be automatically invoked whenever
+solids in a pipeline log messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>logger_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="../loggers.html#dagster.InitLoggerContext" title="dagster.InitLoggerContext"><em>InitLoggerContext</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.8)"><em>logging.Logger</em></a><em>]</em>) – User-provided function to
+instantiate the logger. This logger will be automatically invoked whenever the methods
+on <code class="docutils literal notranslate"><span class="pre">context.log</span></code> are called from within solid compute logic.</p></li>
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="../config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the config. Configuration data available in
+<cite>init_context.logger_config</cite>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of this logger.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_airflow.html" title="Previous document">Airflow (dagster_airflow)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_azure.html" title="Next document">Azure (dagster_azure)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

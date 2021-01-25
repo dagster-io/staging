@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Orchestration on Celery + Kubernetes &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Cron (dagster_cron)" href="dagster_cron.html" />
+    <link rel="prev" title="Orchestration on Celery + Docker" href="dagster_celery_docker.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_celery_docker.html" title="Previous document">Orchestration on Celery + Docker</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_cron.html" title="Next document">Cron (dagster_cron)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="orchestration-on-celery-kubernetes">
+<h1>Orchestration on Celery + Kubernetes<a class="headerlink" href="#orchestration-on-celery-kubernetes" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="apis">
+<h1>APIs<a class="headerlink" href="#apis" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="dagster_celery_k8s.CeleryK8sRunLauncher">
+<em class="property">class </em><code class="sig-prename descclassname">dagster_celery_k8s.</code><code class="sig-name descname">CeleryK8sRunLauncher</code><span class="sig-paren">(</span><em class="sig-param">instance_config_map</em>, <em class="sig-param">dagster_home</em>, <em class="sig-param">postgres_password_secret</em>, <em class="sig-param">load_incluster_config=True</em>, <em class="sig-param">kubeconfig_file=None</em>, <em class="sig-param">broker=None</em>, <em class="sig-param">backend=None</em>, <em class="sig-param">include=None</em>, <em class="sig-param">config_source=None</em>, <em class="sig-param">retries=None</em>, <em class="sig-param">inst_data=None</em>, <em class="sig-param">k8s_client_batch_api=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_celery_k8s/launcher.html#CeleryK8sRunLauncher"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_celery_k8s.CeleryK8sRunLauncher" title="Permalink to this definition">¶</a></dt>
+<dd><p>In contrast to the <code class="xref py py-class docutils literal notranslate"><span class="pre">K8sRunLauncher</span></code>, which launches pipeline runs as single K8s
+Jobs, this run launcher is intended for use in concert with
+<a class="reference internal" href="#dagster_celery_k8s.celery_k8s_job_executor" title="dagster_celery_k8s.celery_k8s_job_executor"><code class="xref py py-func docutils literal notranslate"><span class="pre">dagster_celery_k8s.celery_k8s_job_executor()</span></code></a>.</p>
+<p>With this run launcher, execution is delegated to:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>A run coordinator Kubernetes Job, which traverses the pipeline run execution plan and
+submits steps to Celery queues for execution;</p></li>
+<li><p>The step executions which are submitted to Celery queues are picked up by Celery workers,
+and each step execution spawns a step execution Kubernetes Job. See the implementation
+defined in <code class="xref py py-func docutils literal notranslate"><span class="pre">dagster_celery_k8.executor.create_k8s_job_task()</span></code>.</p></li>
+</ol>
+</div></blockquote>
+<p>You may configure a Dagster instance to use this RunLauncher by adding a section to your
+<code class="docutils literal notranslate"><span class="pre">dagster.yaml</span></code> like the following:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">run_launcher</span><span class="p">:</span>
+  <span class="nt">module</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">dagster_k8s.launcher</span>
+  <span class="nt">class</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">CeleryK8sRunLauncher</span>
+  <span class="nt">config</span><span class="p">:</span>
+    <span class="nt">instance_config_map</span><span class="p">:</span> <span class="s">&quot;dagster-k8s-instance-config-map&quot;</span>
+    <span class="nt">dagster_home</span><span class="p">:</span> <span class="s">&quot;/some/path&quot;</span>
+    <span class="nt">postgres_password_secret</span><span class="p">:</span> <span class="s">&quot;dagster-k8s-pg-password&quot;</span>
+    <span class="nt">broker</span><span class="p">:</span> <span class="s">&quot;some_celery_broker_url&quot;</span>
+    <span class="nt">backend</span><span class="p">:</span> <span class="s">&quot;some_celery_backend_url&quot;</span>
+</pre></div>
+</div>
+<p>As always when using a <a class="reference internal" href="../internals.html#dagster.serdes.ConfigurableClass" title="dagster.serdes.ConfigurableClass"><code class="xref py py-class docutils literal notranslate"><span class="pre">ConfigurableClass</span></code></a>, the values
+under the <code class="docutils literal notranslate"><span class="pre">config</span></code> key of this YAML block will be passed to the constructor. The full list
+of acceptable values is given below by the constructor args.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>instance_config_map</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The <code class="docutils literal notranslate"><span class="pre">name</span></code> of an existing Volume to mount into the pod in
+order to provide a ConfigMap for the Dagster instance. This Volume should contain a
+<code class="docutils literal notranslate"><span class="pre">dagster.yaml</span></code> with appropriate values for run storage, event log storage, etc.</p></li>
+<li><p><strong>dagster_home</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The location of DAGSTER_HOME in the Job container; this is where the
+<code class="docutils literal notranslate"><span class="pre">dagster.yaml</span></code> file will be mounted from the instance ConfigMap specified above.</p></li>
+<li><p><strong>postgres_password_secret</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the Kubernetes Secret where the postgres
+password can be retrieved. Will be mounted and supplied as an environment variable to
+the Job Pod.</p></li>
+<li><p><strong>load_incluster_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em>) – Set this value if you are running the launcher
+within a k8s cluster. If <code class="docutils literal notranslate"><span class="pre">True</span></code>, we assume the launcher is running within the target
+cluster and load config using <code class="docutils literal notranslate"><span class="pre">kubernetes.config.load_incluster_config</span></code>. Otherwise,
+we will use the k8s config specified in <code class="docutils literal notranslate"><span class="pre">kubeconfig_file</span></code> (using
+<code class="docutils literal notranslate"><span class="pre">kubernetes.config.load_kube_config</span></code>) or fall back to the default kubeconfig. Default:
+<code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>kubeconfig_file</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The kubeconfig file from which to load config. Defaults to
+None (using the default kubeconfig).</p></li>
+<li><p><strong>broker</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The URL of the Celery broker.</p></li>
+<li><p><strong>backend</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The URL of the Celery backend.</p></li>
+<li><p><strong>include</strong> (<em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – List of includes for the Celery workers</p></li>
+<li><p><strong>config_source</strong> – (Optional[dict]): Additional settings for the Celery app.</p></li>
+<li><p><strong>retries</strong> – (Optional[dict]): Default retry configuration for Celery tasks.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster_celery_k8s.celery_k8s_job_executor">
+<code class="sig-prename descclassname">dagster_celery_k8s.</code><code class="sig-name descname">celery_k8s_job_executor</code><em class="property"> ExecutorDefinition</em><a class="reference internal" href="../../../../_modules/dagster_celery_k8s/executor.html#celery_k8s_job_executor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_celery_k8s.celery_k8s_job_executor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Celery-based executor which launches tasks as Kubernetes Jobs.</p>
+<p>The Celery executor exposes config settings for the underlying Celery app under
+the <code class="docutils literal notranslate"><span class="pre">config_source</span></code> key. This config corresponds to the “new lowercase settings” introduced
+in Celery version 4.0 and the object constructed from config will be passed to the
+<a class="reference external" href="http://docs.celeryproject.org/en/latest/reference/celery.html#celery.Celery" title="(in Celery v4.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">celery.Celery</span></code></a> constructor as its <code class="docutils literal notranslate"><span class="pre">config_source</span></code> argument.
+(See <a class="reference external" href="https://docs.celeryproject.org/en/latest/userguide/configuration.html">https://docs.celeryproject.org/en/latest/userguide/configuration.html</a> for details.)</p>
+<p>The executor also exposes the <code class="docutils literal notranslate"><span class="pre">broker</span></code>, <cite>backend</cite>, and <code class="docutils literal notranslate"><span class="pre">include</span></code> arguments to the
+<a class="reference external" href="http://docs.celeryproject.org/en/latest/reference/celery.html#celery.Celery" title="(in Celery v4.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">celery.Celery</span></code></a> constructor.</p>
+<p>In the most common case, you may want to modify the <code class="docutils literal notranslate"><span class="pre">broker</span></code> and <code class="docutils literal notranslate"><span class="pre">backend</span></code> (e.g., to use
+Redis instead of RabbitMQ). We expect that <code class="docutils literal notranslate"><span class="pre">config_source</span></code> will be less frequently
+modified, but that when solid executions are especially fast or slow, or when there are
+different requirements around idempotence or retry, it may make sense to execute pipelines
+with variations on these settings.</p>
+<p>If you’d like to configure a Celery Kubernetes Job executor in addition to the
+<a class="reference internal" href="../execution.html#dagster.default_executors" title="dagster.default_executors"><code class="xref py py-class docutils literal notranslate"><span class="pre">default_executors</span></code></a>, you should add it to the <code class="docutils literal notranslate"><span class="pre">executor_defs</span></code> defined on a
+<a class="reference internal" href="../modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> as follows:</p>
+<p>Then you can configure the executor as follows:</p>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="nt">execution</span><span class="p">:</span>
+  <span class="nt">celery-k8s</span><span class="p">:</span>
+    <span class="nt">config</span><span class="p">:</span>
+      <span class="nt">job_image</span><span class="p">:</span> <span class="s">&#39;my_repo.com/image_name:latest&#39;</span>
+      <span class="nt">job_namespace</span><span class="p">:</span> <span class="s">&#39;some-namespace&#39;</span>
+      <span class="nt">broker</span><span class="p">:</span> <span class="s">&#39;pyamqp://guest@localhost//&#39;</span>  <span class="c1"># Optional[str]: The URL of the Celery broker</span>
+      <span class="nt">backend</span><span class="p">:</span> <span class="s">&#39;rpc://&#39;</span> <span class="c1"># Optional[str]: The URL of the Celery results backend</span>
+      <span class="nt">include</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;my_module&#39;</span><span class="p p-Indicator">]</span> <span class="c1"># Optional[List[str]]: Modules every worker should import</span>
+      <span class="nt">config_source</span><span class="p">:</span> <span class="c1"># Dict[str, Any]: Any additional parameters to pass to the</span>
+          <span class="c1">#...       # Celery workers. This dict will be passed as the `config_source`</span>
+          <span class="c1">#...       # argument of celery.Celery().</span>
+</pre></div>
+</div>
+<p>Note that the YAML you provide here must align with the configuration with which the Celery
+workers on which you hope to run were started. If, for example, you point the executor at a
+different broker than the one your workers are listening to, the workers will never be able to
+pick up tasks for execution.</p>
+<p>In deployments where the celery_k8s_job_executor is used all appropriate celery and dagster_celery
+commands must be invoked with the <cite>-A dagster_celery_k8s.app</cite> argument.</p>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_celery_docker.html" title="Previous document">Orchestration on Celery + Docker</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_cron.html" title="Next document">Cron (dagster_cron)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

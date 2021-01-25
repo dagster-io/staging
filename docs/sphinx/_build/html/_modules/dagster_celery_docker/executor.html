@@ -1,0 +1,386 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_celery_docker.executor &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_celery_docker.executor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">docker.client</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DagsterInstance</span><span class="p">,</span>
+    <span class="n">EventMetadataEntry</span><span class="p">,</span>
+    <span class="n">Executor</span><span class="p">,</span>
+    <span class="n">Field</span><span class="p">,</span>
+    <span class="n">StringSource</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">executor</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.cli.api</span> <span class="kn">import</span> <span class="n">ExecuteStepArgs</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.executor</span> <span class="kn">import</span> <span class="n">check_cross_process_constraints</span>
+<span class="kn">from</span> <span class="nn">dagster.core.events</span> <span class="kn">import</span> <span class="n">EngineEventData</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.retries</span> <span class="kn">import</span> <span class="n">Retries</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">pack_value</span><span class="p">,</span> <span class="n">serialize_dagster_namedtuple</span><span class="p">,</span> <span class="n">unpack_value</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">merge_dicts</span>
+<span class="kn">from</span> <span class="nn">dagster_celery.config</span> <span class="kn">import</span> <span class="n">DEFAULT_CONFIG</span><span class="p">,</span> <span class="n">dict_wrapper</span>
+<span class="kn">from</span> <span class="nn">dagster_celery.core_execution_loop</span> <span class="kn">import</span> <span class="n">DELEGATE_MARKER</span><span class="p">,</span> <span class="n">core_celery_execution_loop</span>
+<span class="kn">from</span> <span class="nn">dagster_celery.defaults</span> <span class="kn">import</span> <span class="n">broker_url</span><span class="p">,</span> <span class="n">result_backend</span>
+<span class="kn">from</span> <span class="nn">dagster_celery.executor</span> <span class="kn">import</span> <span class="n">CELERY_CONFIG</span>
+
+<span class="n">CELERY_DOCKER_CONFIG_KEY</span> <span class="o">=</span> <span class="s2">&quot;celery-docker&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">celery_docker_config</span><span class="p">():</span>
+    <span class="n">additional_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;docker&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;image&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                    <span class="n">StringSource</span><span class="p">,</span>
+                    <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The docker image to be used for step execution.&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;registry&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                    <span class="p">{</span>
+                        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">),</span>
+                        <span class="s2">&quot;username&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">),</span>
+                        <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">),</span>
+                    <span class="p">},</span>
+                    <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Information for using a non local/public docker registry&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;env_vars&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                    <span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+                    <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The list of environment variables names to forward from the celery worker in to the docker container&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;network&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                    <span class="nb">str</span><span class="p">,</span>
+                    <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the network this container will be connected to at creation time&quot;</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">},</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The configuration for interacting with docker in the celery worker.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">}</span>
+
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">merge_dicts</span><span class="p">(</span><span class="n">CELERY_CONFIG</span><span class="p">,</span> <span class="n">additional_config</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">cfg</span>
+
+
+<div class="viewcode-block" id="celery_docker_executor"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_celery_docker.html#dagster_celery_docker.celery_docker_executor">[docs]</a><span class="nd">@executor</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">CELERY_DOCKER_CONFIG_KEY</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="n">celery_docker_config</span><span class="p">())</span>
+<span class="k">def</span> <span class="nf">celery_docker_executor</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Celery-based executor which launches tasks in docker containers.</span>
+
+<span class="sd">    The Celery executor exposes config settings for the underlying Celery app under</span>
+<span class="sd">    the ``config_source`` key. This config corresponds to the &quot;new lowercase settings&quot; introduced</span>
+<span class="sd">    in Celery version 4.0 and the object constructed from config will be passed to the</span>
+<span class="sd">    :py:class:`celery.Celery` constructor as its ``config_source`` argument.</span>
+<span class="sd">    (See https://docs.celeryproject.org/en/latest/userguide/configuration.html for details.)</span>
+
+<span class="sd">    The executor also exposes the ``broker``, `backend`, and ``include`` arguments to the</span>
+<span class="sd">    :py:class:`celery.Celery` constructor.</span>
+
+<span class="sd">    In the most common case, you may want to modify the ``broker`` and ``backend`` (e.g., to use</span>
+<span class="sd">    Redis instead of RabbitMQ). We expect that ``config_source`` will be less frequently</span>
+<span class="sd">    modified, but that when solid executions are especially fast or slow, or when there are</span>
+<span class="sd">    different requirements around idempotence or retry, it may make sense to execute pipelines</span>
+<span class="sd">    with variations on these settings.</span>
+
+<span class="sd">    If you&#39;d like to configure a Celery Docker executor in addition to the</span>
+<span class="sd">    :py:class:`~dagster.default_executors`, you should add it to the ``executor_defs`` defined on a</span>
+<span class="sd">    :py:class:`~dagster.ModeDefinition` as follows:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from dagster import ModeDefinition, default_executors, pipeline</span>
+<span class="sd">        from dagster_celery_docker.executor import celery_docker_executor</span>
+
+<span class="sd">        @pipeline(mode_defs=[</span>
+<span class="sd">            ModeDefinition(executor_defs=default_executors + [celery_docker_executor])</span>
+<span class="sd">        ])</span>
+<span class="sd">        def celery_enabled_pipeline():</span>
+<span class="sd">            pass</span>
+
+<span class="sd">    Then you can configure the executor as follows:</span>
+
+<span class="sd">    .. code-block:: YAML</span>
+
+<span class="sd">        execution:</span>
+<span class="sd">          celery-docker:</span>
+<span class="sd">            config:</span>
+
+<span class="sd">              docker:</span>
+<span class="sd">                image: &#39;my_repo.com/image_name:latest&#39;</span>
+<span class="sd">                registry:</span>
+<span class="sd">                  url: &#39;my_repo.com&#39;</span>
+<span class="sd">                  username: &#39;my_user&#39;</span>
+<span class="sd">                  password: {env: &#39;DOCKER_PASSWORD&#39;}</span>
+<span class="sd">                env_vars: [&quot;DAGSTER_HOME&quot;] # environment vars to pass from celery worker to docker</span>
+
+<span class="sd">              broker: &#39;pyamqp://guest@localhost//&#39;  # Optional[str]: The URL of the Celery broker</span>
+<span class="sd">              backend: &#39;rpc://&#39; # Optional[str]: The URL of the Celery results backend</span>
+<span class="sd">              include: [&#39;my_module&#39;] # Optional[List[str]]: Modules every worker should import</span>
+<span class="sd">              config_source: # Dict[str, Any]: Any additional parameters to pass to the</span>
+<span class="sd">                  #...       # Celery workers. This dict will be passed as the `config_source`</span>
+<span class="sd">                  #...       # argument of celery.Celery().</span>
+
+<span class="sd">    Note that the YAML you provide here must align with the configuration with which the Celery</span>
+<span class="sd">    workers on which you hope to run were started. If, for example, you point the executor at a</span>
+<span class="sd">    different broker than the one your workers are listening to, the workers will never be able to</span>
+<span class="sd">    pick up tasks for execution.</span>
+
+<span class="sd">    In deployments where the celery_k8s_job_executor is used all appropriate celery and dagster_celery</span>
+<span class="sd">    commands must be invoked with the `-A dagster_celery_docker.app` argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check_cross_process_constraints</span><span class="p">(</span><span class="n">init_context</span><span class="p">)</span>
+
+    <span class="n">exc_cfg</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">executor_config</span>
+
+    <span class="k">return</span> <span class="n">CeleryDockerExecutor</span><span class="p">(</span>
+        <span class="n">broker</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;broker&quot;</span><span class="p">),</span>
+        <span class="n">backend</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;backend&quot;</span><span class="p">),</span>
+        <span class="n">config_source</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;config_source&quot;</span><span class="p">),</span>
+        <span class="n">include</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;include&quot;</span><span class="p">),</span>
+        <span class="n">retries</span><span class="o">=</span><span class="n">Retries</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;retries&quot;</span><span class="p">)),</span>
+        <span class="n">docker_config</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;docker&quot;</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">CeleryDockerExecutor</span><span class="p">(</span><span class="n">Executor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">retries</span><span class="p">,</span> <span class="n">docker_config</span><span class="p">,</span> <span class="n">broker</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">backend</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">include</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config_source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_retries</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">retries</span><span class="p">,</span> <span class="s2">&quot;retries&quot;</span><span class="p">,</span> <span class="n">Retries</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">broker</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">broker</span><span class="p">,</span> <span class="s2">&quot;broker&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">broker_url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">result_backend</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">include</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">include</span><span class="p">,</span> <span class="s2">&quot;include&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_source</span> <span class="o">=</span> <span class="n">dict_wrapper</span><span class="p">(</span>
+            <span class="nb">dict</span><span class="p">(</span><span class="n">DEFAULT_CONFIG</span><span class="p">,</span> <span class="o">**</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">config_source</span><span class="p">,</span> <span class="s2">&quot;config_source&quot;</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">docker_config</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">docker_config</span><span class="p">,</span> <span class="s2">&quot;docker_config&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">retries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_retries</span>
+
+    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">execution_plan</span><span class="p">):</span>
+
+        <span class="k">return</span> <span class="n">core_celery_execution_loop</span><span class="p">(</span>
+            <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">execution_plan</span><span class="p">,</span> <span class="n">step_execution_fn</span><span class="o">=</span><span class="n">_submit_task_docker</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">app_args</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;broker&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">broker</span><span class="p">,</span>
+            <span class="s2">&quot;backend&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span>
+            <span class="s2">&quot;include&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">,</span>
+            <span class="s2">&quot;config_source&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_source</span><span class="p">,</span>
+            <span class="s2">&quot;retries&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">retries</span><span class="p">,</span>
+        <span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">_submit_task_docker</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">priority</span><span class="p">):</span>
+    <span class="n">execute_step_args</span> <span class="o">=</span> <span class="n">ExecuteStepArgs</span><span class="p">(</span>
+        <span class="n">pipeline_origin</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_python_origin</span><span class="p">(),</span>
+        <span class="n">pipeline_run_id</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+        <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">],</span>
+        <span class="n">instance_ref</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">get_ref</span><span class="p">(),</span>
+        <span class="n">retries_dict</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="o">.</span><span class="n">retries</span><span class="o">.</span><span class="n">for_inner_plan</span><span class="p">()</span><span class="o">.</span><span class="n">to_config</span><span class="p">(),</span>
+    <span class="p">)</span>
+
+    <span class="n">task</span> <span class="o">=</span> <span class="n">create_docker_task</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+    <span class="n">task_signature</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">si</span><span class="p">(</span>
+        <span class="n">execute_step_args_packed</span><span class="o">=</span><span class="n">pack_value</span><span class="p">(</span><span class="n">execute_step_args</span><span class="p">),</span>
+        <span class="n">docker_config</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="o">.</span><span class="n">docker_config</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">task_signature</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span>
+        <span class="n">priority</span><span class="o">=</span><span class="n">priority</span><span class="p">,</span>
+        <span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">,</span>
+        <span class="n">routing_key</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{queue}</span><span class="s2">.execute_step_docker&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">create_docker_task</span><span class="p">(</span><span class="n">celery_app</span><span class="p">,</span> <span class="o">**</span><span class="n">task_kwargs</span><span class="p">):</span>
+    <span class="nd">@celery_app</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;execute_step_docker&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">task_kwargs</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_execute_step_docker</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">execute_step_args_packed</span><span class="p">,</span> <span class="n">docker_config</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run step execution in a Docker container.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">execute_step_args</span> <span class="o">=</span> <span class="n">unpack_value</span><span class="p">(</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">execute_step_args_packed</span><span class="p">,</span> <span class="s2">&quot;execute_step_args_packed&quot;</span><span class="p">,)</span>
+        <span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execute_step_args</span><span class="p">,</span> <span class="s2">&quot;execute_step_args&quot;</span><span class="p">,</span> <span class="n">ExecuteStepArgs</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">docker_config</span><span class="p">,</span> <span class="s2">&quot;docker_config&quot;</span><span class="p">)</span>
+
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">DagsterInstance</span><span class="o">.</span><span class="n">from_ref</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">instance_ref</span><span class="p">)</span>
+        <span class="n">pipeline_run</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_run_by_id</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">pipeline_run_id</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span>
+            <span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">PipelineRun</span><span class="p">,</span>
+            <span class="s2">&quot;Could not load run </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">pipeline_run_id</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">step_keys_str</span> <span class="o">=</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">step_keys_to_execute</span><span class="p">)</span>
+
+        <span class="n">input_json</span> <span class="o">=</span> <span class="n">serialize_dagster_namedtuple</span><span class="p">(</span><span class="n">execute_step_args</span><span class="p">)</span>
+
+        <span class="n">command</span> <span class="o">=</span> <span class="s2">&quot;dagster api execute_step </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">input_json</span><span class="p">))</span>
+
+        <span class="n">docker_image</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">docker_config</span><span class="p">[</span><span class="s2">&quot;image&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">docker_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image&quot;</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">execute_step_args</span><span class="o">.</span><span class="n">pipeline_origin</span><span class="o">.</span><span class="n">repository_origin</span><span class="o">.</span><span class="n">container_image</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">docker_image</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No docker image specified by either the pipeline or the repository&quot;</span><span class="p">)</span>
+
+        <span class="n">client</span> <span class="o">=</span> <span class="n">docker</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">from_env</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">docker_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;registry&quot;</span><span class="p">):</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">login</span><span class="p">(</span>
+                <span class="n">registry</span><span class="o">=</span><span class="n">docker_config</span><span class="p">[</span><span class="s2">&quot;registry&quot;</span><span class="p">][</span><span class="s2">&quot;url&quot;</span><span class="p">],</span>
+                <span class="n">username</span><span class="o">=</span><span class="n">docker_config</span><span class="p">[</span><span class="s2">&quot;registry&quot;</span><span class="p">][</span><span class="s2">&quot;username&quot;</span><span class="p">],</span>
+                <span class="n">password</span><span class="o">=</span><span class="n">docker_config</span><span class="p">[</span><span class="s2">&quot;registry&quot;</span><span class="p">][</span><span class="s2">&quot;password&quot;</span><span class="p">],</span>
+            <span class="p">)</span>
+
+        <span class="c1"># Post event for starting execution</span>
+        <span class="n">engine_event</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+            <span class="s2">&quot;Executing steps </span><span class="si">{}</span><span class="s2"> in Docker container </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">step_keys_str</span><span class="p">,</span> <span class="n">docker_image</span><span class="p">),</span>
+            <span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">EngineEventData</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_keys_str</span><span class="p">,</span> <span class="s2">&quot;Step keys&quot;</span><span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">docker_image</span><span class="p">,</span> <span class="s2">&quot;Image&quot;</span><span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span> <span class="s2">&quot;Celery worker&quot;</span><span class="p">),</span>
+                <span class="p">],</span>
+                <span class="n">marker_end</span><span class="o">=</span><span class="n">DELEGATE_MARKER</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">CeleryDockerExecutor</span><span class="p">,</span>
+            <span class="n">step_key</span><span class="o">=</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">step_keys_to_execute</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">serialized_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">serialize_dagster_namedtuple</span><span class="p">(</span><span class="n">engine_event</span><span class="p">)]</span>
+
+        <span class="n">docker_env</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">docker_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;env_vars&quot;</span><span class="p">):</span>
+            <span class="n">docker_env</span> <span class="o">=</span> <span class="p">{</span><span class="n">env_name</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="n">env_name</span><span class="p">)</span> <span class="k">for</span> <span class="n">env_name</span> <span class="ow">in</span> <span class="n">docker_config</span><span class="p">[</span><span class="s2">&quot;env_vars&quot;</span><span class="p">]}</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">docker_response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">containers</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+                <span class="n">docker_image</span><span class="p">,</span>
+                <span class="n">command</span><span class="o">=</span><span class="n">command</span><span class="p">,</span>
+                <span class="n">detach</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">auto_remove</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="c1"># pass through this worker&#39;s environment for things like AWS creds etc.</span>
+                <span class="n">environment</span><span class="o">=</span><span class="n">docker_env</span><span class="p">,</span>
+                <span class="n">network</span><span class="o">=</span><span class="n">docker_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;network&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="n">res</span> <span class="o">=</span> <span class="n">docker_response</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">docker</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">ContainerError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                <span class="s2">&quot;Failed to run steps </span><span class="si">{}</span><span class="s2"> in Docker container </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">step_keys_str</span><span class="p">,</span> <span class="n">docker_image</span><span class="p">),</span>
+                <span class="n">pipeline_run</span><span class="p">,</span>
+                <span class="n">EngineEventData</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">docker_image</span><span class="p">,</span> <span class="s2">&quot;Job image&quot;</span><span class="p">),</span>
+                        <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">err</span><span class="o">.</span><span class="n">stderr</span><span class="p">,</span> <span class="s2">&quot;Docker stderr&quot;</span><span class="p">),</span>
+                    <span class="p">],</span>
+                <span class="p">),</span>
+                <span class="n">CeleryDockerExecutor</span><span class="p">,</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">step_keys_to_execute</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="p">)</span>
+            <span class="k">raise</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">res</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No response from execute_step in CeleryDockerExecutor&quot;</span><span class="p">)</span>
+
+            <span class="n">serialized_events</span> <span class="o">+=</span> <span class="p">[</span><span class="n">event</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">res</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">event</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">serialized_events</span>
+
+    <span class="k">return</span> <span class="n">_execute_step_docker</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

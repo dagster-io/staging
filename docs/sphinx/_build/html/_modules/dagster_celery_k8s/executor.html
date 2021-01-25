@@ -1,0 +1,608 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_celery_k8s.executor &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_celery_k8s.executor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">time</span>
+
+<span class="kn">import</span> <span class="nn">kubernetes</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DagsterEvent</span><span class="p">,</span>
+    <span class="n">DagsterEventType</span><span class="p">,</span>
+    <span class="n">DagsterInstance</span><span class="p">,</span>
+    <span class="n">EventMetadataEntry</span><span class="p">,</span>
+    <span class="n">Executor</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">executor</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.cli.api</span> <span class="kn">import</span> <span class="n">ExecuteStepArgs</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.executor</span> <span class="kn">import</span> <span class="n">check_cross_process_constraints</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterUnmetExecutorRequirementsError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.events</span> <span class="kn">import</span> <span class="n">EngineEventData</span>
+<span class="kn">from</span> <span class="nn">dagster.core.events.log</span> <span class="kn">import</span> <span class="n">DagsterEventRecord</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.objects</span> <span class="kn">import</span> <span class="n">StepFailureData</span><span class="p">,</span> <span class="n">UserFailureData</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.retries</span> <span class="kn">import</span> <span class="n">Retries</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span><span class="p">,</span> <span class="n">PipelineRunStatus</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">pack_value</span><span class="p">,</span> <span class="n">serialize_dagster_namedtuple</span><span class="p">,</span> <span class="n">unpack_value</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.error</span> <span class="kn">import</span> <span class="n">serializable_error_info_from_exc_info</span>
+<span class="kn">from</span> <span class="nn">dagster_celery.config</span> <span class="kn">import</span> <span class="n">DEFAULT_CONFIG</span><span class="p">,</span> <span class="n">dict_wrapper</span>
+<span class="kn">from</span> <span class="nn">dagster_celery.core_execution_loop</span> <span class="kn">import</span> <span class="n">DELEGATE_MARKER</span>
+<span class="kn">from</span> <span class="nn">dagster_celery.defaults</span> <span class="kn">import</span> <span class="n">broker_url</span><span class="p">,</span> <span class="n">result_backend</span>
+<span class="kn">from</span> <span class="nn">dagster_k8s</span> <span class="kn">import</span> <span class="n">DagsterK8sJobConfig</span><span class="p">,</span> <span class="n">construct_dagster_k8s_job</span>
+<span class="kn">from</span> <span class="nn">dagster_k8s.client</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DagsterK8sAPIRetryLimitExceeded</span><span class="p">,</span>
+    <span class="n">DagsterK8sError</span><span class="p">,</span>
+    <span class="n">DagsterK8sPipelineStatusException</span><span class="p">,</span>
+    <span class="n">DagsterK8sTimeoutError</span><span class="p">,</span>
+    <span class="n">DagsterK8sUnrecoverableAPIError</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster_k8s.job</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">UserDefinedDagsterK8sConfig</span><span class="p">,</span>
+    <span class="n">get_k8s_job_name</span><span class="p">,</span>
+    <span class="n">get_user_defined_k8s_config</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster_k8s.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">delete_job</span><span class="p">,</span>
+    <span class="n">filter_dagster_events_from_pod_logs</span><span class="p">,</span>
+    <span class="n">get_pod_names_in_job</span><span class="p">,</span>
+    <span class="n">retrieve_pod_logs</span><span class="p">,</span>
+    <span class="n">wait_for_job_success</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">CELERY_K8S_CONFIG_KEY</span><span class="p">,</span> <span class="n">celery_k8s_config</span>
+<span class="kn">from</span> <span class="nn">.launcher</span> <span class="kn">import</span> <span class="n">CeleryK8sRunLauncher</span>
+
+
+<div class="viewcode-block" id="celery_k8s_job_executor"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_celery_k8s.html#dagster_celery_k8s.celery_k8s_job_executor">[docs]</a><span class="nd">@executor</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">CELERY_K8S_CONFIG_KEY</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="n">celery_k8s_config</span><span class="p">())</span>
+<span class="k">def</span> <span class="nf">celery_k8s_job_executor</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Celery-based executor which launches tasks as Kubernetes Jobs.</span>
+
+<span class="sd">    The Celery executor exposes config settings for the underlying Celery app under</span>
+<span class="sd">    the ``config_source`` key. This config corresponds to the &quot;new lowercase settings&quot; introduced</span>
+<span class="sd">    in Celery version 4.0 and the object constructed from config will be passed to the</span>
+<span class="sd">    :py:class:`celery.Celery` constructor as its ``config_source`` argument.</span>
+<span class="sd">    (See https://docs.celeryproject.org/en/latest/userguide/configuration.html for details.)</span>
+
+<span class="sd">    The executor also exposes the ``broker``, `backend`, and ``include`` arguments to the</span>
+<span class="sd">    :py:class:`celery.Celery` constructor.</span>
+
+<span class="sd">    In the most common case, you may want to modify the ``broker`` and ``backend`` (e.g., to use</span>
+<span class="sd">    Redis instead of RabbitMQ). We expect that ``config_source`` will be less frequently</span>
+<span class="sd">    modified, but that when solid executions are especially fast or slow, or when there are</span>
+<span class="sd">    different requirements around idempotence or retry, it may make sense to execute pipelines</span>
+<span class="sd">    with variations on these settings.</span>
+
+<span class="sd">    If you&#39;d like to configure a Celery Kubernetes Job executor in addition to the</span>
+<span class="sd">    :py:class:`~dagster.default_executors`, you should add it to the ``executor_defs`` defined on a</span>
+<span class="sd">    :py:class:`~dagster.ModeDefinition` as follows:</span>
+
+<span class="sd">    .. literalinclude:: ../dagster_celery_k8s_tests/example_celery_mode_def.py</span>
+<span class="sd">       :language: python</span>
+
+<span class="sd">    Then you can configure the executor as follows:</span>
+
+<span class="sd">    .. code-block:: YAML</span>
+
+<span class="sd">        execution:</span>
+<span class="sd">          celery-k8s:</span>
+<span class="sd">            config:</span>
+<span class="sd">              job_image: &#39;my_repo.com/image_name:latest&#39;</span>
+<span class="sd">              job_namespace: &#39;some-namespace&#39;</span>
+<span class="sd">              broker: &#39;pyamqp://guest@localhost//&#39;  # Optional[str]: The URL of the Celery broker</span>
+<span class="sd">              backend: &#39;rpc://&#39; # Optional[str]: The URL of the Celery results backend</span>
+<span class="sd">              include: [&#39;my_module&#39;] # Optional[List[str]]: Modules every worker should import</span>
+<span class="sd">              config_source: # Dict[str, Any]: Any additional parameters to pass to the</span>
+<span class="sd">                  #...       # Celery workers. This dict will be passed as the `config_source`</span>
+<span class="sd">                  #...       # argument of celery.Celery().</span>
+
+<span class="sd">    Note that the YAML you provide here must align with the configuration with which the Celery</span>
+<span class="sd">    workers on which you hope to run were started. If, for example, you point the executor at a</span>
+<span class="sd">    different broker than the one your workers are listening to, the workers will never be able to</span>
+<span class="sd">    pick up tasks for execution.</span>
+
+<span class="sd">    In deployments where the celery_k8s_job_executor is used all appropriate celery and dagster_celery</span>
+<span class="sd">    commands must be invoked with the `-A dagster_celery_k8s.app` argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">check_cross_process_constraints</span><span class="p">(</span><span class="n">init_context</span><span class="p">)</span>
+
+    <span class="n">run_launcher</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">run_launcher</span>
+    <span class="n">exc_cfg</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">executor_config</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">run_launcher</span><span class="p">,</span> <span class="n">CeleryK8sRunLauncher</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterUnmetExecutorRequirementsError</span><span class="p">(</span>
+            <span class="s2">&quot;This engine is only compatible with a CeleryK8sRunLauncher; configure the &quot;</span>
+            <span class="s2">&quot;CeleryK8sRunLauncher on your instance to use it.&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="n">job_config</span> <span class="o">=</span> <span class="n">DagsterK8sJobConfig</span><span class="p">(</span>
+        <span class="n">dagster_home</span><span class="o">=</span><span class="n">run_launcher</span><span class="o">.</span><span class="n">dagster_home</span><span class="p">,</span>
+        <span class="n">instance_config_map</span><span class="o">=</span><span class="n">run_launcher</span><span class="o">.</span><span class="n">instance_config_map</span><span class="p">,</span>
+        <span class="n">postgres_password_secret</span><span class="o">=</span><span class="n">run_launcher</span><span class="o">.</span><span class="n">postgres_password_secret</span><span class="p">,</span>
+        <span class="n">job_image</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;job_image&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;DAGSTER_CURRENT_IMAGE&quot;</span><span class="p">),</span>
+        <span class="n">image_pull_policy</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_pull_policy&quot;</span><span class="p">),</span>
+        <span class="n">image_pull_secrets</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;image_pull_secrets&quot;</span><span class="p">),</span>
+        <span class="n">service_account_name</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;service_account_name&quot;</span><span class="p">),</span>
+        <span class="n">env_config_maps</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;env_config_maps&quot;</span><span class="p">),</span>
+        <span class="n">env_secrets</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;env_secrets&quot;</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Set on the instance but overrideable here</span>
+    <span class="n">broker</span> <span class="o">=</span> <span class="n">run_launcher</span><span class="o">.</span><span class="n">broker</span> <span class="ow">or</span> <span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;broker&quot;</span><span class="p">)</span>
+    <span class="n">backend</span> <span class="o">=</span> <span class="n">run_launcher</span><span class="o">.</span><span class="n">backend</span> <span class="ow">or</span> <span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;backend&quot;</span><span class="p">)</span>
+    <span class="n">config_source</span> <span class="o">=</span> <span class="n">run_launcher</span><span class="o">.</span><span class="n">config_source</span> <span class="ow">or</span> <span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;config_source&quot;</span><span class="p">)</span>
+    <span class="n">include</span> <span class="o">=</span> <span class="n">run_launcher</span><span class="o">.</span><span class="n">include</span> <span class="ow">or</span> <span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;include&quot;</span><span class="p">)</span>
+    <span class="n">retries</span> <span class="o">=</span> <span class="n">run_launcher</span><span class="o">.</span><span class="n">retries</span> <span class="ow">or</span> <span class="n">Retries</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;retries&quot;</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">CeleryK8sJobExecutor</span><span class="p">(</span>
+        <span class="n">broker</span><span class="o">=</span><span class="n">broker</span><span class="p">,</span>
+        <span class="n">backend</span><span class="o">=</span><span class="n">backend</span><span class="p">,</span>
+        <span class="n">config_source</span><span class="o">=</span><span class="n">config_source</span><span class="p">,</span>
+        <span class="n">include</span><span class="o">=</span><span class="n">include</span><span class="p">,</span>
+        <span class="n">retries</span><span class="o">=</span><span class="n">retries</span><span class="p">,</span>
+        <span class="n">job_config</span><span class="o">=</span><span class="n">job_config</span><span class="p">,</span>
+        <span class="n">job_namespace</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;job_namespace&quot;</span><span class="p">),</span>
+        <span class="n">load_incluster_config</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;load_incluster_config&quot;</span><span class="p">),</span>
+        <span class="n">kubeconfig_file</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;kubeconfig_file&quot;</span><span class="p">),</span>
+        <span class="n">repo_location_name</span><span class="o">=</span><span class="n">exc_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;repo_location_name&quot;</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">CeleryK8sJobExecutor</span><span class="p">(</span><span class="n">Executor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">retries</span><span class="p">,</span>
+        <span class="n">broker</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">backend</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">include</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_source</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">job_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">job_namespace</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">load_incluster_config</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">kubeconfig_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">repo_location_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">load_incluster_config</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                <span class="n">kubeconfig_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="s2">&quot;`kubeconfig_file` is set but `load_incluster_config` is True.&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">kubeconfig_file</span><span class="p">,</span> <span class="s2">&quot;kubeconfig_file&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_retries</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">retries</span><span class="p">,</span> <span class="s2">&quot;retries&quot;</span><span class="p">,</span> <span class="n">Retries</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">broker</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">broker</span><span class="p">,</span> <span class="s2">&quot;broker&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">broker_url</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">backend</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">backend</span><span class="p">,</span> <span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">result_backend</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">include</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">include</span><span class="p">,</span> <span class="s2">&quot;include&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_source</span> <span class="o">=</span> <span class="n">dict_wrapper</span><span class="p">(</span>
+            <span class="nb">dict</span><span class="p">(</span><span class="n">DEFAULT_CONFIG</span><span class="p">,</span> <span class="o">**</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">config_source</span><span class="p">,</span> <span class="s2">&quot;config_source&quot;</span><span class="p">))</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">job_config</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">job_config</span><span class="p">,</span> <span class="s2">&quot;job_config&quot;</span><span class="p">,</span> <span class="n">DagsterK8sJobConfig</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">job_namespace</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">job_namespace</span><span class="p">,</span> <span class="s2">&quot;job_namespace&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_incluster_config</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span>
+            <span class="n">load_incluster_config</span><span class="p">,</span> <span class="s2">&quot;load_incluster_config&quot;</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">kubeconfig_file</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">kubeconfig_file</span><span class="p">,</span> <span class="s2">&quot;kubeconfig_file&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">repo_location_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">repo_location_name</span><span class="p">,</span> <span class="s2">&quot;repo_location_name&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">retries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_retries</span>
+
+    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">execution_plan</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster_celery.core_execution_loop</span> <span class="kn">import</span> <span class="n">core_celery_execution_loop</span>
+
+        <span class="k">return</span> <span class="n">core_celery_execution_loop</span><span class="p">(</span>
+            <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">execution_plan</span><span class="p">,</span> <span class="n">step_execution_fn</span><span class="o">=</span><span class="n">_submit_task_k8s_job</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">app_args</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;broker&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">broker</span><span class="p">,</span>
+            <span class="s2">&quot;backend&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">backend</span><span class="p">,</span>
+            <span class="s2">&quot;include&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">include</span><span class="p">,</span>
+            <span class="s2">&quot;config_source&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config_source</span><span class="p">,</span>
+            <span class="s2">&quot;retries&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">retries</span><span class="p">,</span>
+        <span class="p">}</span>
+
+
+<span class="k">def</span> <span class="nf">_submit_task_k8s_job</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">queue</span><span class="p">,</span> <span class="n">priority</span><span class="p">):</span>
+    <span class="n">user_defined_k8s_config</span> <span class="o">=</span> <span class="n">get_user_defined_k8s_config</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">tags</span><span class="p">)</span>
+
+    <span class="n">execute_step_args</span> <span class="o">=</span> <span class="n">ExecuteStepArgs</span><span class="p">(</span>
+        <span class="n">pipeline_origin</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_python_origin</span><span class="p">(),</span>
+        <span class="n">pipeline_run_id</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+        <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">],</span>
+        <span class="n">instance_ref</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">get_ref</span><span class="p">(),</span>
+        <span class="n">retries_dict</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="o">.</span><span class="n">retries</span><span class="o">.</span><span class="n">for_inner_plan</span><span class="p">()</span><span class="o">.</span><span class="n">to_config</span><span class="p">(),</span>
+        <span class="n">should_verify_step</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">task</span> <span class="o">=</span> <span class="n">create_k8s_job_task</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+    <span class="n">task_signature</span> <span class="o">=</span> <span class="n">task</span><span class="o">.</span><span class="n">si</span><span class="p">(</span>
+        <span class="n">execute_step_args_packed</span><span class="o">=</span><span class="n">pack_value</span><span class="p">(</span><span class="n">execute_step_args</span><span class="p">),</span>
+        <span class="n">job_config_dict</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="o">.</span><span class="n">job_config</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span>
+        <span class="n">job_namespace</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="o">.</span><span class="n">job_namespace</span><span class="p">,</span>
+        <span class="n">user_defined_k8s_config_dict</span><span class="o">=</span><span class="n">user_defined_k8s_config</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(),</span>
+        <span class="n">load_incluster_config</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="o">.</span><span class="n">load_incluster_config</span><span class="p">,</span>
+        <span class="n">kubeconfig_file</span><span class="o">=</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="o">.</span><span class="n">kubeconfig_file</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">task_signature</span><span class="o">.</span><span class="n">apply_async</span><span class="p">(</span>
+        <span class="n">priority</span><span class="o">=</span><span class="n">priority</span><span class="p">,</span>
+        <span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">,</span>
+        <span class="n">routing_key</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{queue}</span><span class="s2">.execute_step_k8s_job&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">queue</span><span class="o">=</span><span class="n">queue</span><span class="p">),</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">construct_step_failure_event_and_handle</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+    <span class="n">step_failure_event</span> <span class="o">=</span> <span class="n">DagsterEvent</span><span class="p">(</span>
+        <span class="n">event_type_value</span><span class="o">=</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+        <span class="n">event_specific_data</span><span class="o">=</span><span class="n">StepFailureData</span><span class="p">(</span>
+            <span class="n">error</span><span class="o">=</span><span class="n">serializable_error_info_from_exc_info</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()),</span>
+            <span class="n">user_failure_data</span><span class="o">=</span><span class="n">UserFailureData</span><span class="p">(</span><span class="n">label</span><span class="o">=</span><span class="s2">&quot;K8sError&quot;</span><span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">event_record</span> <span class="o">=</span> <span class="n">DagsterEventRecord</span><span class="p">(</span>
+        <span class="n">message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">),</span>
+        <span class="n">user_message</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">err</span><span class="p">),</span>
+        <span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="o">=</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+        <span class="n">error_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+        <span class="n">timestamp</span><span class="o">=</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">(),</span>
+        <span class="n">dagster_event</span><span class="o">=</span><span class="n">step_failure_event</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">instance</span><span class="o">.</span><span class="n">handle_new_event</span><span class="p">(</span><span class="n">event_record</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">step_failure_event</span>
+
+
+<span class="k">def</span> <span class="nf">create_k8s_job_task</span><span class="p">(</span><span class="n">celery_app</span><span class="p">,</span> <span class="o">**</span><span class="n">task_kwargs</span><span class="p">):</span>
+    <span class="nd">@celery_app</span><span class="o">.</span><span class="n">task</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;execute_step_k8s_job&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">task_kwargs</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_execute_step_k8s_job</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">execute_step_args_packed</span><span class="p">,</span>
+        <span class="n">job_config_dict</span><span class="p">,</span>
+        <span class="n">job_namespace</span><span class="p">,</span>
+        <span class="n">load_incluster_config</span><span class="p">,</span>
+        <span class="n">user_defined_k8s_config_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">kubeconfig_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run step execution in a K8s job pod.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">execute_step_args</span> <span class="o">=</span> <span class="n">unpack_value</span><span class="p">(</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">execute_step_args_packed</span><span class="p">,</span> <span class="s2">&quot;execute_step_args_packed&quot;</span><span class="p">,)</span>
+        <span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execute_step_args</span><span class="p">,</span> <span class="s2">&quot;execute_step_args&quot;</span><span class="p">,</span> <span class="n">ExecuteStepArgs</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">step_keys_to_execute</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;Celery K8s task executor can only execute 1 step at a time&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Celery will serialize this as a list</span>
+        <span class="n">job_config</span> <span class="o">=</span> <span class="n">DagsterK8sJobConfig</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">job_config_dict</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">job_config</span><span class="p">,</span> <span class="s2">&quot;job_config&quot;</span><span class="p">,</span> <span class="n">DagsterK8sJobConfig</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">job_namespace</span><span class="p">,</span> <span class="s2">&quot;job_namespace&quot;</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">load_incluster_config</span><span class="p">,</span> <span class="s2">&quot;load_incluster_config&quot;</span><span class="p">)</span>
+
+        <span class="n">user_defined_k8s_config</span> <span class="o">=</span> <span class="n">UserDefinedDagsterK8sConfig</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
+            <span class="n">user_defined_k8s_config_dict</span>
+        <span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+            <span class="n">user_defined_k8s_config</span><span class="p">,</span> <span class="s2">&quot;user_defined_k8s_config&quot;</span><span class="p">,</span> <span class="n">UserDefinedDagsterK8sConfig</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">kubeconfig_file</span><span class="p">,</span> <span class="s2">&quot;kubeconfig_file&quot;</span><span class="p">)</span>
+
+        <span class="c1"># For when launched via DinD or running the cluster</span>
+        <span class="k">if</span> <span class="n">load_incluster_config</span><span class="p">:</span>
+            <span class="n">kubernetes</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">load_incluster_config</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">kubernetes</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">load_kube_config</span><span class="p">(</span><span class="n">kubeconfig_file</span><span class="p">)</span>
+
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">DagsterInstance</span><span class="o">.</span><span class="n">from_ref</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">instance_ref</span><span class="p">)</span>
+        <span class="n">pipeline_run</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">get_run_by_id</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">pipeline_run_id</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span>
+            <span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">PipelineRun</span><span class="p">,</span>
+            <span class="s2">&quot;Could not load run </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">pipeline_run_id</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="n">step_key</span> <span class="o">=</span> <span class="n">execute_step_args</span><span class="o">.</span><span class="n">step_keys_to_execute</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">celery_worker_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">hostname</span>
+        <span class="n">celery_pod_name</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;HOSTNAME&quot;</span><span class="p">)</span>
+        <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+            <span class="s2">&quot;Task for step </span><span class="si">{step_key}</span><span class="s2"> picked up by Celery&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">),</span>
+            <span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">EngineEventData</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">celery_worker_name</span><span class="p">,</span> <span class="s2">&quot;Celery worker name&quot;</span><span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">celery_pod_name</span><span class="p">,</span> <span class="s2">&quot;Celery worker Kubernetes Pod name&quot;</span><span class="p">),</span>
+                <span class="p">]</span>
+            <span class="p">),</span>
+            <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+            <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">pipeline_run</span><span class="o">.</span><span class="n">status</span> <span class="o">!=</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">STARTED</span><span class="p">:</span>
+            <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                <span class="s2">&quot;Not scheduling step because pipeline run status is not STARTED&quot;</span><span class="p">,</span>
+                <span class="n">pipeline_run</span><span class="p">,</span>
+                <span class="n">EngineEventData</span><span class="p">([</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),]),</span>
+                <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="c1"># Ensure we stay below k8s name length limits</span>
+        <span class="n">k8s_name_key</span> <span class="o">=</span> <span class="n">get_k8s_job_name</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">pipeline_run_id</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+
+        <span class="n">retries</span> <span class="o">=</span> <span class="n">Retries</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">retries_dict</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">retries</span><span class="o">.</span><span class="n">get_attempt_count</span><span class="p">(</span><span class="n">step_key</span><span class="p">):</span>
+            <span class="n">attempt_number</span> <span class="o">=</span> <span class="n">retries</span><span class="o">.</span><span class="n">get_attempt_count</span><span class="p">(</span><span class="n">step_key</span><span class="p">)</span>
+            <span class="n">job_name</span> <span class="o">=</span> <span class="s2">&quot;dagster-job-</span><span class="si">%s</span><span class="s2">-</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k8s_name_key</span><span class="p">,</span> <span class="n">attempt_number</span><span class="p">)</span>
+            <span class="n">pod_name</span> <span class="o">=</span> <span class="s2">&quot;dagster-job-</span><span class="si">%s</span><span class="s2">-</span><span class="si">%d</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k8s_name_key</span><span class="p">,</span> <span class="n">attempt_number</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">job_name</span> <span class="o">=</span> <span class="s2">&quot;dagster-job-</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k8s_name_key</span><span class="p">)</span>
+            <span class="n">pod_name</span> <span class="o">=</span> <span class="s2">&quot;dagster-job-</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k8s_name_key</span><span class="p">)</span>
+
+        <span class="n">input_json</span> <span class="o">=</span> <span class="n">serialize_dagster_namedtuple</span><span class="p">(</span><span class="n">execute_step_args</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;dagster&quot;</span><span class="p">,</span> <span class="s2">&quot;api&quot;</span><span class="p">,</span> <span class="s2">&quot;execute_step&quot;</span><span class="p">,</span> <span class="n">input_json</span><span class="p">]</span>
+
+        <span class="n">job</span> <span class="o">=</span> <span class="n">construct_dagster_k8s_job</span><span class="p">(</span>
+            <span class="n">job_config</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">job_name</span><span class="p">,</span> <span class="n">user_defined_k8s_config</span><span class="p">,</span> <span class="n">pod_name</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Running list of events generated from this task execution</span>
+        <span class="n">events</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Post event for starting execution</span>
+        <span class="n">job_name</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">engine_event</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+            <span class="s2">&quot;Executing step </span><span class="si">{}</span><span class="s2"> in Kubernetes job </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="n">job_name</span><span class="p">),</span>
+            <span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">EngineEventData</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="s2">&quot;Kubernetes Job name&quot;</span><span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">job_config</span><span class="o">.</span><span class="n">job_image</span><span class="p">,</span> <span class="s2">&quot;Job image&quot;</span><span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">job_config</span><span class="o">.</span><span class="n">image_pull_policy</span><span class="p">,</span> <span class="s2">&quot;Image pull policy&quot;</span><span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">job_config</span><span class="o">.</span><span class="n">image_pull_secrets</span><span class="p">),</span> <span class="s2">&quot;Image pull secrets&quot;</span>
+                    <span class="p">),</span>
+                    <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">job_config</span><span class="o">.</span><span class="n">service_account_name</span><span class="p">),</span> <span class="s2">&quot;Service account name&quot;</span>
+                    <span class="p">),</span>
+                <span class="p">],</span>
+                <span class="n">marker_end</span><span class="o">=</span><span class="n">DELEGATE_MARKER</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+            <span class="c1"># validated above that step_keys is length 1, and it is not possible to use ETH or</span>
+            <span class="c1"># execution plan in this function (Celery K8s workers should not access to user code)</span>
+            <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">engine_event</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">kubernetes</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">BatchV1Api</span><span class="p">()</span><span class="o">.</span><span class="n">create_namespaced_job</span><span class="p">(</span><span class="n">body</span><span class="o">=</span><span class="n">job</span><span class="p">,</span> <span class="n">namespace</span><span class="o">=</span><span class="n">job_namespace</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">kubernetes</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">reason</span> <span class="o">==</span> <span class="s2">&quot;Conflict&quot;</span><span class="p">:</span>
+                <span class="c1"># There is an existing job with the same name so proceed and see if the existing job succeeded</span>
+                <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                    <span class="s2">&quot;Did not create Kubernetes job </span><span class="si">{}</span><span class="s2"> for step </span><span class="si">{}</span><span class="s2"> since job name already &quot;</span>
+                    <span class="s2">&quot;exists, proceeding with existing job.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="n">step_key</span><span class="p">),</span>
+                    <span class="n">pipeline_run</span><span class="p">,</span>
+                    <span class="n">EngineEventData</span><span class="p">(</span>
+                        <span class="p">[</span>
+                            <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),</span>
+                            <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="s2">&quot;Kubernetes Job name&quot;</span><span class="p">),</span>
+                        <span class="p">],</span>
+                        <span class="n">marker_end</span><span class="o">=</span><span class="n">DELEGATE_MARKER</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+                    <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                    <span class="s2">&quot;Encountered unexpected error while creating Kubernetes job </span><span class="si">{}</span><span class="s2"> for step </span><span class="si">{}</span><span class="s2">, &quot;</span>
+                    <span class="s2">&quot;exiting.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="n">step_key</span><span class="p">),</span>
+                    <span class="n">pipeline_run</span><span class="p">,</span>
+                    <span class="n">EngineEventData</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),],</span>
+                        <span class="n">error</span><span class="o">=</span><span class="n">serializable_error_info_from_exc_info</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()),</span>
+                    <span class="p">),</span>
+                    <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+                    <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">wait_for_job_success</span><span class="p">(</span>
+                <span class="n">job_name</span><span class="o">=</span><span class="n">job_name</span><span class="p">,</span>
+                <span class="n">namespace</span><span class="o">=</span><span class="n">job_namespace</span><span class="p">,</span>
+                <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span>
+                <span class="n">run_id</span><span class="o">=</span><span class="n">execute_step_args</span><span class="o">.</span><span class="n">pipeline_run_id</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">DagsterK8sError</span><span class="p">,</span> <span class="n">DagsterK8sTimeoutError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">step_failure_event</span> <span class="o">=</span> <span class="n">construct_step_failure_event_and_handle</span><span class="p">(</span>
+                <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">,</span> <span class="n">err</span><span class="p">,</span> <span class="n">instance</span><span class="o">=</span><span class="n">instance</span>
+            <span class="p">)</span>
+            <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step_failure_event</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">DagsterK8sPipelineStatusException</span><span class="p">:</span>
+            <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                <span class="s2">&quot;Terminating Kubernetes Job because pipeline run status is not STARTED&quot;</span><span class="p">,</span>
+                <span class="n">pipeline_run</span><span class="p">,</span>
+                <span class="n">EngineEventData</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),</span>
+                        <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="s2">&quot;Kubernetes Job name&quot;</span><span class="p">),</span>
+                        <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">job_namespace</span><span class="p">,</span> <span class="s2">&quot;Kubernetes Job namespace&quot;</span><span class="p">),</span>
+                    <span class="p">]</span>
+                <span class="p">),</span>
+                <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">delete_job</span><span class="p">(</span><span class="n">job_name</span><span class="o">=</span><span class="n">job_name</span><span class="p">,</span> <span class="n">namespace</span><span class="o">=</span><span class="n">job_namespace</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">except</span> <span class="p">(</span>
+            <span class="n">DagsterK8sUnrecoverableAPIError</span><span class="p">,</span>
+            <span class="n">DagsterK8sAPIRetryLimitExceeded</span><span class="p">,</span>
+            <span class="c1"># We shouldn&#39;t see unwrapped APIExceptions anymore, as they should all be wrapped in</span>
+            <span class="c1"># a retry boundary. We still catch it here just in case we missed one so that we can</span>
+            <span class="c1"># report it to the event log</span>
+            <span class="n">kubernetes</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">ApiException</span><span class="p">,</span>
+        <span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                <span class="s2">&quot;Encountered unexpected error while waiting on Kubernetes job </span><span class="si">{}</span><span class="s2"> for step </span><span class="si">{}</span><span class="s2">, &quot;</span>
+                <span class="s2">&quot;exiting.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="n">step_key</span><span class="p">),</span>
+                <span class="n">pipeline_run</span><span class="p">,</span>
+                <span class="n">EngineEventData</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),],</span>
+                    <span class="n">error</span><span class="o">=</span><span class="n">serializable_error_info_from_exc_info</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()),</span>
+                <span class="p">),</span>
+                <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">pod_names</span> <span class="o">=</span> <span class="n">get_pod_names_in_job</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="n">namespace</span><span class="o">=</span><span class="n">job_namespace</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">kubernetes</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                <span class="s2">&quot;Encountered unexpected error retreiving Pods for Kubernetes job </span><span class="si">{}</span><span class="s2"> for step </span><span class="si">{}</span><span class="s2">, &quot;</span>
+                <span class="s2">&quot;exiting.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">job_name</span><span class="p">,</span> <span class="n">step_key</span><span class="p">),</span>
+                <span class="n">pipeline_run</span><span class="p">,</span>
+                <span class="n">EngineEventData</span><span class="p">(</span>
+                    <span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),],</span>
+                    <span class="n">error</span><span class="o">=</span><span class="n">serializable_error_info_from_exc_info</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()),</span>
+                <span class="p">),</span>
+                <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="c1"># Post engine event for log retrieval</span>
+        <span class="n">engine_event</span> <span class="o">=</span> <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+            <span class="s2">&quot;Retrieving logs from Kubernetes Job pods&quot;</span><span class="p">,</span>
+            <span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">EngineEventData</span><span class="p">([</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pod_names</span><span class="p">),</span> <span class="s2">&quot;Pod names&quot;</span><span class="p">)]),</span>
+            <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+            <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">engine_event</span><span class="p">)</span>
+
+        <span class="n">logs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">pod_name</span> <span class="ow">in</span> <span class="n">pod_names</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">raw_logs</span> <span class="o">=</span> <span class="n">retrieve_pod_logs</span><span class="p">(</span><span class="n">pod_name</span><span class="p">,</span> <span class="n">namespace</span><span class="o">=</span><span class="n">job_namespace</span><span class="p">)</span>
+                <span class="n">logs</span> <span class="o">+=</span> <span class="n">raw_logs</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">kubernetes</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">rest</span><span class="o">.</span><span class="n">ApiException</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                    <span class="s2">&quot;Encountered unexpected error while fetching pod logs for Kubernetes job </span><span class="si">{}</span><span class="s2">, &quot;</span>
+                    <span class="s2">&quot;Pod name </span><span class="si">{}</span><span class="s2"> for step </span><span class="si">{}</span><span class="s2">. Will attempt to continue with other pods.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">job_name</span><span class="p">,</span> <span class="n">pod_name</span><span class="p">,</span> <span class="n">step_key</span>
+                    <span class="p">),</span>
+                    <span class="n">pipeline_run</span><span class="p">,</span>
+                    <span class="n">EngineEventData</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;Step key&quot;</span><span class="p">),],</span>
+                        <span class="n">error</span><span class="o">=</span><span class="n">serializable_error_info_from_exc_info</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">()),</span>
+                    <span class="p">),</span>
+                    <span class="n">CeleryK8sJobExecutor</span><span class="p">,</span>
+                    <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="n">events</span> <span class="o">+=</span> <span class="n">filter_dagster_events_from_pod_logs</span><span class="p">(</span><span class="n">logs</span><span class="p">)</span>
+        <span class="n">serialized_events</span> <span class="o">=</span> <span class="p">[</span><span class="n">serialize_dagster_namedtuple</span><span class="p">(</span><span class="n">event</span><span class="p">)</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">events</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">serialized_events</span>
+
+    <span class="k">return</span> <span class="n">_execute_step_k8s_job</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

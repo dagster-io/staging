@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_ge.factory &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_ge.factory</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span>
+
+<span class="kn">import</span> <span class="nn">great_expectations</span> <span class="k">as</span> <span class="nn">ge</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">EventMetadataEntry</span><span class="p">,</span>
+    <span class="n">ExpectationResult</span><span class="p">,</span>
+    <span class="n">InputDefinition</span><span class="p">,</span>
+    <span class="n">Noneable</span><span class="p">,</span>
+    <span class="n">Output</span><span class="p">,</span>
+    <span class="n">OutputDefinition</span><span class="p">,</span>
+    <span class="n">StringSource</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">resource</span><span class="p">,</span>
+    <span class="n">solid</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster_pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+<span class="kn">from</span> <span class="nn">great_expectations.core</span> <span class="kn">import</span> <span class="n">convert_to_json_serializable</span>
+<span class="kn">from</span> <span class="nn">great_expectations.render.page_renderer_util</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">render_multiple_validation_result_pages_markdown</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="nd">@resource</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;ge_root_dir&quot;</span><span class="p">:</span> <span class="n">Noneable</span><span class="p">(</span><span class="n">StringSource</span><span class="p">)})</span>
+<span class="k">def</span> <span class="nf">ge_data_context</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;ge_root_dir&quot;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">ge</span><span class="o">.</span><span class="n">data_context</span><span class="o">.</span><span class="n">DataContext</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">ge</span><span class="o">.</span><span class="n">data_context</span><span class="o">.</span><span class="n">DataContext</span><span class="p">(</span><span class="n">context_root_dir</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;ge_root_dir&quot;</span><span class="p">])</span>
+
+
+<div class="viewcode-block" id="ge_validation_solid_factory"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_ge.html#dagster_ge.ge_validation_solid_factory">[docs]</a><span class="k">def</span> <span class="nf">ge_validation_solid_factory</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">,</span>
+    <span class="n">datasource_name</span><span class="p">,</span>
+    <span class="n">suite_name</span><span class="p">,</span>
+    <span class="n">validation_operator_name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">input_dagster_type</span><span class="o">=</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="n">batch_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Generates solids for interacting with GE.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): the name of the solid</span>
+<span class="sd">        datasource_name (str): the name of your DataSource, see your great_expectations.yml</span>
+<span class="sd">        suite_name (str): the name of your expectation suite, see your great_expectations.yml</span>
+<span class="sd">        validation_operator_name (Optional[str]): what validation operator to run  -- defaults to None,</span>
+<span class="sd">                    which generates an ephemeral validator.</span>
+<span class="sd">                    If you want to save data docs, use &#39;action_list_operator&#39;.</span>
+<span class="sd">                    See https://docs.greatexpectations.io/en/latest/reference/core_concepts/validation_operators_and_actions.html</span>
+<span class="sd">        input_dagster_type (DagsterType): the Dagster type used to type check the input to the</span>
+<span class="sd">                    solid. Defaults to `dagster_pandas.DataFrame`.</span>
+<span class="sd">        batch_kwargs (Optional[dict]): overrides the `batch_kwargs` parameter when calling the</span>
+<span class="sd">                    `ge_data_context`&#39;s `get_batch` method. Defaults to `{&quot;dataset&quot;: dataset}`,</span>
+<span class="sd">                    where `dataset` is the input to the generated solid.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        A solid that takes in a set of data and yields both an expectation with relevant metadata</span>
+<span class="sd">        and an output with all the metadata (for user processing)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">datasource_name</span><span class="p">,</span> <span class="s2">&quot;datasource_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">suite_name</span><span class="p">,</span> <span class="s2">&quot;suite_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">validation_operator_name</span><span class="p">,</span> <span class="s2">&quot;validation_operator_name&quot;</span><span class="p">)</span>
+
+    <span class="n">batch_kwargs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">batch_kwargs</span><span class="p">,</span> <span class="s2">&quot;batch_kwargs&quot;</span><span class="p">)</span>
+
+    <span class="nd">@solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;dataset&quot;</span><span class="p">,</span> <span class="n">input_dagster_type</span><span class="p">)],</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+            <span class="n">OutputDefinition</span><span class="p">(</span>
+                <span class="n">dagster_type</span><span class="o">=</span><span class="nb">dict</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        This solid yields an expectationResult with a structured dict of metadata from the GE suite,</span>
+<span class="s2">        as well as the full result in case a user wants to process it differently.</span>
+<span class="s2">        The structured dict contains both summary stats from the suite as well as expectation by expectation</span>
+<span class="s2">        results/details.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">],</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;ge_data_context&quot;</span><span class="p">},</span>
+        <span class="n">tags</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;kind&quot;</span><span class="p">:</span> <span class="s2">&quot;ge&quot;</span><span class="p">},</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">ge_validation_solid</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">dataset</span><span class="p">):</span>
+        <span class="n">data_context</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">ge_data_context</span>
+        <span class="k">if</span> <span class="n">validation_operator_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">validation_operator</span> <span class="o">=</span> <span class="n">validation_operator_name</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">data_context</span><span class="o">.</span><span class="n">add_validation_operator</span><span class="p">(</span>
+                <span class="s2">&quot;ephemeral_validation&quot;</span><span class="p">,</span>
+                <span class="p">{</span><span class="s2">&quot;class_name&quot;</span><span class="p">:</span> <span class="s2">&quot;ActionListValidationOperator&quot;</span><span class="p">,</span> <span class="s2">&quot;action_list&quot;</span><span class="p">:</span> <span class="p">[]},</span>
+            <span class="p">)</span>
+            <span class="n">validation_operator</span> <span class="o">=</span> <span class="s2">&quot;ephemeral_validation&quot;</span>
+        <span class="n">suite</span> <span class="o">=</span> <span class="n">data_context</span><span class="o">.</span><span class="n">get_expectation_suite</span><span class="p">(</span><span class="n">suite_name</span><span class="p">)</span>
+        <span class="n">final_batch_kwargs</span> <span class="o">=</span> <span class="n">batch_kwargs</span> <span class="ow">or</span> <span class="p">{</span><span class="s2">&quot;dataset&quot;</span><span class="p">:</span> <span class="n">dataset</span><span class="p">}</span>
+        <span class="k">if</span> <span class="s2">&quot;datasource&quot;</span> <span class="ow">in</span> <span class="n">batch_kwargs</span><span class="p">:</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;`datasource` field of `batch_kwargs` will be ignored; use the `datasource_name` &quot;</span>
+                <span class="s2">&quot;parameter of the solid factory instead.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">final_batch_kwargs</span><span class="p">[</span><span class="s2">&quot;datasource&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datasource_name</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="n">data_context</span><span class="o">.</span><span class="n">get_batch</span><span class="p">(</span><span class="n">final_batch_kwargs</span><span class="p">,</span> <span class="n">suite</span><span class="p">)</span>
+        <span class="n">run_id</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;run_name&quot;</span><span class="p">:</span> <span class="n">datasource_name</span> <span class="o">+</span> <span class="s2">&quot; run&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;run_time&quot;</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">(),</span>
+        <span class="p">}</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">data_context</span><span class="o">.</span><span class="n">run_validation_operator</span><span class="p">(</span>
+            <span class="n">validation_operator</span><span class="p">,</span> <span class="n">assets_to_validate</span><span class="o">=</span><span class="p">[</span><span class="n">batch</span><span class="p">],</span> <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span>
+        <span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">convert_to_json_serializable</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">list_validation_results</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">md_str</span> <span class="o">=</span> <span class="n">render_multiple_validation_result_pages_markdown</span><span class="p">(</span>
+            <span class="n">validation_operator_result</span><span class="o">=</span><span class="n">results</span><span class="p">,</span> <span class="n">run_info_at_end</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">meta_stats</span> <span class="o">=</span> <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">md</span><span class="p">(</span><span class="n">md_str</span><span class="o">=</span><span class="n">md_str</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Expectation Results&quot;</span><span class="p">)</span>
+        <span class="k">yield</span> <span class="n">ExpectationResult</span><span class="p">(</span>
+            <span class="n">success</span><span class="o">=</span><span class="n">res</span><span class="p">[</span><span class="s2">&quot;success&quot;</span><span class="p">],</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">meta_stats</span><span class="p">,],</span>
+        <span class="p">)</span>
+        <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ge_validation_solid</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

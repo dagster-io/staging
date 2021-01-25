@@ -1,0 +1,177 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_dbt.cli.types &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_dbt.cli.types</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">usable_as_dagster_type</span>
+
+<span class="kn">from</span> <span class="nn">..types</span> <span class="kn">import</span> <span class="n">DbtResult</span>
+
+
+<div class="viewcode-block" id="DbtCliOutput"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DbtCliOutput">[docs]</a><span class="nd">@usable_as_dagster_type</span>
+<span class="k">class</span> <span class="nc">DbtCliOutput</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_DbtCliOutput&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;result command return_code raw_output num_pass num_warn num_error num_skip num_total&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The results of executing a dbt command, along with additional metadata about the dbt CLI</span>
+<span class="sd">    process that was run.</span>
+
+<span class="sd">    Note that users should not construct instances of this class directly. This class is intended</span>
+<span class="sd">    to be constructed from the JSON output of dbt commands.</span>
+
+<span class="sd">    If the executed dbt command is either ``run`` or ``test``, then the ``.num_*`` attributes will</span>
+<span class="sd">    contain non-``None`` integer values. Otherwise, they will be ``None``.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        command (str): The full shell command that was executed.</span>
+<span class="sd">        return_code (int): The return code of the dbt CLI process.</span>
+<span class="sd">        raw_output (str): The raw output (``stdout``) of the dbt CLI process.</span>
+<span class="sd">        num_pass (Optional[int]): The number of dbt nodes (models) that passed.</span>
+<span class="sd">        num_warn (Optional[int]): The number of dbt nodes (models) that emitted warnings.</span>
+<span class="sd">        num_error (Optional[int]): The number of dbt nodes (models) that emitted errors.</span>
+<span class="sd">        num_skip (Optional[int]): The number of dbt nodes (models) that were skipped.</span>
+<span class="sd">        num_total (Optional[int]): The total number of dbt nodes (models) that were processed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">result</span><span class="p">:</span> <span class="n">DbtResult</span><span class="p">,</span>
+        <span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">return_code</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">raw_output</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">num_pass</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_warn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_skip</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">num_total</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">result</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="s2">&quot;command&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">return_code</span><span class="p">,</span> <span class="s2">&quot;return_code&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">raw_output</span><span class="p">,</span> <span class="s2">&quot;raw_output&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">num_pass</span><span class="p">,</span> <span class="s2">&quot;num_pass&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">num_warn</span><span class="p">,</span> <span class="s2">&quot;num_warn&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">num_error</span><span class="p">,</span> <span class="s2">&quot;num_error&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">num_skip</span><span class="p">,</span> <span class="s2">&quot;num_skip&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">num_total</span><span class="p">,</span> <span class="s2">&quot;num_total&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DbtCliOutput.from_dict"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DbtCliOutput.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;DbtCliOutput&quot;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Constructs an instance of :class:`DbtCliOutput &lt;dagster_dbt.DbtCliOutput&gt;` from a</span>
+<span class="sd">        dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            d (Dict[str, Any]): A dictionary with key-values to construct a :class:`DbtCliOutput</span>
+<span class="sd">                &lt;dagster_dbt.DbtCliOutput&gt;`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DbtCliOutput: An instance of :class:`DbtCliOutput &lt;dagster_dbt.DbtCliOutput&gt;`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">return_code</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">int_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;return_code&quot;</span><span class="p">)</span>
+        <span class="n">raw_output</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;raw_output&quot;</span><span class="p">)</span>
+        <span class="n">num_pass</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;num_pass&quot;</span><span class="p">)</span>
+        <span class="n">num_warn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;num_warn&quot;</span><span class="p">)</span>
+        <span class="n">num_error</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;num_error&quot;</span><span class="p">)</span>
+        <span class="n">num_skip</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;num_skip&quot;</span><span class="p">)</span>
+        <span class="n">num_total</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;num_total&quot;</span><span class="p">)</span>
+        <span class="n">command</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;command&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">result</span><span class="o">=</span><span class="n">DbtResult</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">d</span><span class="p">),</span>
+            <span class="n">return_code</span><span class="o">=</span><span class="n">return_code</span><span class="p">,</span>
+            <span class="n">raw_output</span><span class="o">=</span><span class="n">raw_output</span><span class="p">,</span>
+            <span class="n">num_pass</span><span class="o">=</span><span class="n">num_pass</span><span class="p">,</span>
+            <span class="n">num_warn</span><span class="o">=</span><span class="n">num_warn</span><span class="p">,</span>
+            <span class="n">num_error</span><span class="o">=</span><span class="n">num_error</span><span class="p">,</span>
+            <span class="n">num_skip</span><span class="o">=</span><span class="n">num_skip</span><span class="p">,</span>
+            <span class="n">num_total</span><span class="o">=</span><span class="n">num_total</span><span class="p">,</span>
+            <span class="n">command</span><span class="o">=</span><span class="n">command</span><span class="p">,</span>
+        <span class="p">)</span></div></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

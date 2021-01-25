@@ -1,0 +1,231 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.intermediate_storage &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.intermediate_storage</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.configurable</span> <span class="kn">import</span> <span class="n">ConfigurableDefinition</span>
+
+<span class="kn">from</span> <span class="nn">.definition_config_schema</span> <span class="kn">import</span> <span class="n">convert_user_facing_definition_config_schema</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+
+<div class="viewcode-block" id="IntermediateStorageDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.IntermediateStorageDefinition">[docs]</a><span class="k">class</span> <span class="nc">IntermediateStorageDefinition</span><span class="p">(</span><span class="n">ConfigurableDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Defines intermediate data storage behaviors.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): Name of the storage mode.</span>
+<span class="sd">        is_persistent (bool): Whether the storage is persistent in a way that can cross process/node</span>
+<span class="sd">            boundaries. Re-execution with, for example, the multiprocess executor, or with</span>
+<span class="sd">            dagster-airflow, requires a persistent storage mode.</span>
+<span class="sd">        required_resource_keys(Optional[Set[str]]): The resources that this storage needs at runtime to function.</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the storage&#39;s configuration schema.</span>
+<span class="sd">            Configuration data passed in this schema will be made available to the</span>
+<span class="sd">            ``intermediate_storage_creation_fn`` under ``init_context.intermediate_storage_config``.</span>
+<span class="sd">        intermediate_storage_creation_fn: (Callable[[InitIntermediateStorageContext], IntermediateStorage])</span>
+<span class="sd">            Called to construct the storage. This function should consume the init context and emit</span>
+<span class="sd">            a :py:class:`IntermediateStorage`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">is_persistent</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">intermediate_storage_creation_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_is_persistent</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">is_persistent</span><span class="p">,</span> <span class="s2">&quot;is_persistent&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_schema</span> <span class="o">=</span> <span class="n">convert_user_facing_definition_config_schema</span><span class="p">(</span><span class="n">config_schema</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_intermediate_storage_creation_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span>
+            <span class="n">intermediate_storage_creation_fn</span><span class="p">,</span> <span class="s2">&quot;intermediate_storage_creation_fn&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span>
+                <span class="n">required_resource_keys</span> <span class="k">if</span> <span class="n">required_resource_keys</span> <span class="k">else</span> <span class="nb">set</span><span class="p">(),</span>
+                <span class="s2">&quot;required_resource_keys&quot;</span><span class="p">,</span>
+                <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_persistent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_persistent</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_schema</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">intermediate_storage_creation_fn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_intermediate_storage_creation_fn</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span>
+
+    <span class="k">def</span> <span class="nf">copy_for_configured</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">config_schema</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">IntermediateStorageDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">is_persistent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">is_persistent</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">intermediate_storage_creation_fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">intermediate_storage_creation_fn</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="intermediate_storage"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.intermediate_storage">[docs]</a><span class="k">def</span> <span class="nf">intermediate_storage</span><span class="p">(</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_persistent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates an intermediate storage definition</span>
+
+<span class="sd">    The decorated function will be passed as the ``intermediate_storage_creation_fn`` to a</span>
+<span class="sd">    :py:class:`IntermediateStorageDefinition`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of the intermediate storage.</span>
+<span class="sd">        is_persistent (bool): Whether the storage is persistent in a way that can cross process/node</span>
+<span class="sd">            boundaries. Re-execution with, for example, the multiprocess executor, or with</span>
+<span class="sd">            dagster-airflow, requires a persistent storage mode.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]):</span>
+<span class="sd">            The resources that this storage needs at runtime to function.</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data available in</span>
+<span class="sd">            `init_context.intermediate_storage_config`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">is_persistent</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">config_schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">required_resource_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_IntermediateStorageDecoratorCallable</span><span class="p">()(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_IntermediateStorageDecoratorCallable</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">is_persistent</span><span class="o">=</span><span class="n">is_persistent</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">_IntermediateStorageDecoratorCallable</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">is_persistent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_persistent</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">is_persistent</span><span class="p">,</span> <span class="s2">&quot;is_persistent&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="o">=</span> <span class="n">config_schema</span>  <span class="c1"># will be checked in definition</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">storage_def</span> <span class="o">=</span> <span class="n">IntermediateStorageDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">is_persistent</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">is_persistent</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">intermediate_storage_creation_fn</span><span class="o">=</span><span class="n">fn</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">storage_def</span><span class="p">,</span> <span class="n">wrapped</span><span class="o">=</span><span class="n">fn</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">storage_def</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

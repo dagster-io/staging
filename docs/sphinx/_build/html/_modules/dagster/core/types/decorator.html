@@ -1,0 +1,186 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.types.decorator &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.types.decorator</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+
+<span class="kn">from</span> <span class="nn">.dagster_type</span> <span class="kn">import</span> <span class="n">PythonObjectDagsterType</span><span class="p">,</span> <span class="n">make_python_type_usable_as_dagster_type</span>
+
+
+<div class="viewcode-block" id="usable_as_dagster_type"><a class="viewcode-back" href="../../../../sections/api/apidocs/types.html#dagster.usable_as_dagster_type">[docs]</a><span class="k">def</span> <span class="nf">usable_as_dagster_type</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">loader</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">materializer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">serialization_strategy</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">auto_plugins</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Decorate a Python class to make it usable as a Dagster Type.</span>
+
+<span class="sd">    This is intended to make it straightforward to annotate existing business logic classes to</span>
+<span class="sd">    make them dagster types whose typecheck is an isinstance check against that python class.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        python_type (cls): The python type to make usable as python type.</span>
+<span class="sd">        name (Optional[str]): Name of the new Dagster type. If ``None``, the name (``__name__``) of</span>
+<span class="sd">            the ``python_type`` will be used.</span>
+<span class="sd">        description (Optional[str]): A user-readable description of the type.</span>
+<span class="sd">        loader (Optional[DagsterTypeLoader]): An instance of a class that</span>
+<span class="sd">            inherits from :py:class:`DagsterTypeLoader` and can map config data to a value of</span>
+<span class="sd">            this type. Specify this argument if you will need to shim values of this type using the</span>
+<span class="sd">            config machinery. As a rule, you should use the</span>
+<span class="sd">            :py:func:`@dagster_type_loader &lt;dagster.dagster_type_loader&gt;` decorator to construct</span>
+<span class="sd">            these arguments.</span>
+<span class="sd">        materializer (Optional[DagsterTypeMaterializer]): An instance of a class</span>
+<span class="sd">            that inherits from :py:class:`DagsterTypeMaterializer` and can persist values of</span>
+<span class="sd">            this type. As a rule, you should use the</span>
+<span class="sd">            :py:func:`@dagster_type_materializer &lt;dagster.dagster_type_materializer&gt;`</span>
+<span class="sd">            decorator to construct these arguments.</span>
+<span class="sd">        serialization_strategy (Optional[SerializationStrategy]): An instance of a class that</span>
+<span class="sd">            inherits from :py:class:`SerializationStrategy`. The default strategy for serializing</span>
+<span class="sd">            this value when automatically persisting it between execution steps. You should set</span>
+<span class="sd">            this value if the ordinary serialization machinery (e.g., pickle) will not be adequate</span>
+<span class="sd">            for this type.</span>
+<span class="sd">        auto_plugins (Optional[List[TypeStoragePlugin]]): If types must be serialized differently</span>
+<span class="sd">            depending on the storage being used for intermediates, they should specify this</span>
+<span class="sd">            argument. In these cases the serialization_strategy argument is not sufficient because</span>
+<span class="sd">            serialization requires specialized API calls, e.g. to call an S3 API directly instead</span>
+<span class="sd">            of using a generic file object. See ``dagster_pyspark.DataFrame`` for an example.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        # dagster_aws.s3.file_manager.S3FileHandle</span>
+<span class="sd">        @usable_as_dagster_type</span>
+<span class="sd">        class S3FileHandle(FileHandle):</span>
+<span class="sd">            def __init__(self, s3_bucket, s3_key):</span>
+<span class="sd">                self._s3_bucket = check.str_param(s3_bucket, &#39;s3_bucket&#39;)</span>
+<span class="sd">                self._s3_key = check.str_param(s3_key, &#39;s3_key&#39;)</span>
+
+<span class="sd">            @property</span>
+<span class="sd">            def s3_bucket(self):</span>
+<span class="sd">                return self._s3_bucket</span>
+
+<span class="sd">            @property</span>
+<span class="sd">            def s3_key(self):</span>
+<span class="sd">                return self._s3_key</span>
+
+<span class="sd">            @property</span>
+<span class="sd">            def path_desc(self):</span>
+<span class="sd">                return self.s3_path</span>
+
+<span class="sd">            @property</span>
+<span class="sd">            def s3_path(self):</span>
+<span class="sd">                return &#39;s3://{bucket}/{key}&#39;.format(bucket=self.s3_bucket, key=self.s3_key)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_with_args</span><span class="p">(</span><span class="n">bare_cls</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">type_param</span><span class="p">(</span><span class="n">bare_cls</span><span class="p">,</span> <span class="s2">&quot;bare_cls&quot;</span><span class="p">)</span>
+        <span class="n">new_name</span> <span class="o">=</span> <span class="n">name</span> <span class="k">if</span> <span class="n">name</span> <span class="k">else</span> <span class="n">bare_cls</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">make_python_type_usable_as_dagster_type</span><span class="p">(</span>
+            <span class="n">bare_cls</span><span class="p">,</span>
+            <span class="n">PythonObjectDagsterType</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">new_name</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+                <span class="n">python_type</span><span class="o">=</span><span class="n">bare_cls</span><span class="p">,</span>
+                <span class="n">loader</span><span class="o">=</span><span class="n">loader</span><span class="p">,</span>
+                <span class="n">materializer</span><span class="o">=</span><span class="n">materializer</span><span class="p">,</span>
+                <span class="n">serialization_strategy</span><span class="o">=</span><span class="n">serialization_strategy</span><span class="p">,</span>
+                <span class="n">auto_plugins</span><span class="o">=</span><span class="n">auto_plugins</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">bare_cls</span>
+
+    <span class="c1"># check for no args, no parens case</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">bare_cls</span> <span class="o">=</span> <span class="n">name</span>  <span class="c1"># with no parens, name is actually the decorated class</span>
+        <span class="n">make_python_type_usable_as_dagster_type</span><span class="p">(</span>
+            <span class="n">bare_cls</span><span class="p">,</span>
+            <span class="n">PythonObjectDagsterType</span><span class="p">(</span><span class="n">python_type</span><span class="o">=</span><span class="n">bare_cls</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">bare_cls</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">bare_cls</span>
+
+    <span class="k">return</span> <span class="n">_with_args</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

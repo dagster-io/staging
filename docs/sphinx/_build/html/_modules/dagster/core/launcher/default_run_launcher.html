@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.launcher.default_run_launcher &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.launcher.default_run_launcher</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">import</span> <span class="nn">weakref</span>
+
+<span class="kn">import</span> <span class="nn">grpc</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterLaunchFailedError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.host_representation</span> <span class="kn">import</span> <span class="n">ExternalPipeline</span>
+<span class="kn">from</span> <span class="nn">dagster.core.host_representation.handle</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">GrpcServerRepositoryLocationHandle</span><span class="p">,</span>
+    <span class="n">ManagedGrpcPythonEnvRepositoryLocationHandle</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.tags</span> <span class="kn">import</span> <span class="n">GRPC_INFO_TAG</span>
+<span class="kn">from</span> <span class="nn">dagster.grpc.client</span> <span class="kn">import</span> <span class="n">DagsterGrpcClient</span>
+<span class="kn">from</span> <span class="nn">dagster.grpc.types</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CanCancelExecutionRequest</span><span class="p">,</span>
+    <span class="n">CancelExecutionRequest</span><span class="p">,</span>
+    <span class="n">ExecuteExternalPipelineArgs</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">ConfigurableClass</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">merge_dicts</span>
+
+<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">RunLauncher</span>
+
+<span class="n">GRPC_REPOSITORY_LOCATION_HANDLE_TYPES</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="n">GrpcServerRepositoryLocationHandle</span><span class="p">,</span>
+    <span class="n">ManagedGrpcPythonEnvRepositoryLocationHandle</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="DefaultRunLauncher"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.launcher.DefaultRunLauncher">[docs]</a><span class="k">class</span> <span class="nc">DefaultRunLauncher</span><span class="p">(</span><span class="n">RunLauncher</span><span class="p">,</span> <span class="n">ConfigurableClass</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Launches runs against running GRPC servers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inst_data</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instance_weakref</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span> <span class="o">=</span> <span class="n">inst_data</span>
+
+        <span class="c1"># Used for test cleanup purposes only</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_run_id_to_repository_location_handle_cache</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">inst_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">config_type</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_config_value</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DefaultRunLauncher</span><span class="p">(</span><span class="n">inst_data</span><span class="o">=</span><span class="n">inst_data</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance_weakref</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance_weakref</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_instance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Must only call initialize once&quot;</span><span class="p">)</span>
+        <span class="c1"># Store a weakref to avoid a circular reference / enable GC</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instance_weakref</span> <span class="o">=</span> <span class="n">weakref</span><span class="o">.</span><span class="n">ref</span><span class="p">(</span><span class="n">instance</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">launch_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">run</span><span class="p">,</span> <span class="n">external_pipeline</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">run</span><span class="p">,</span> <span class="s2">&quot;run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">external_pipeline</span><span class="p">,</span> <span class="s2">&quot;external_pipeline&quot;</span><span class="p">,</span> <span class="n">ExternalPipeline</span><span class="p">)</span>
+
+        <span class="n">repository_location_handle</span> <span class="o">=</span> <span class="n">external_pipeline</span><span class="o">.</span><span class="n">repository_handle</span><span class="o">.</span><span class="n">repository_location_handle</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span>
+            <span class="n">repository_location_handle</span><span class="p">,</span>
+            <span class="n">GRPC_REPOSITORY_LOCATION_HANDLE_TYPES</span><span class="p">,</span>
+            <span class="s2">&quot;DefaultRunLauncher: Can&#39;t launch runs for pipeline not loaded from a GRPC server&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">add_run_tags</span><span class="p">(</span>
+            <span class="n">run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+            <span class="p">{</span>
+                <span class="n">GRPC_INFO_TAG</span><span class="p">:</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                    <span class="n">merge_dicts</span><span class="p">(</span>
+                        <span class="p">{</span><span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="n">repository_location_handle</span><span class="o">.</span><span class="n">host</span><span class="p">},</span>
+                        <span class="p">{</span><span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="n">repository_location_handle</span><span class="o">.</span><span class="n">port</span><span class="p">}</span>
+                        <span class="k">if</span> <span class="n">repository_location_handle</span><span class="o">.</span><span class="n">port</span>
+                        <span class="k">else</span> <span class="p">{</span><span class="s2">&quot;socket&quot;</span><span class="p">:</span> <span class="n">repository_location_handle</span><span class="o">.</span><span class="n">socket</span><span class="p">},</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="n">repository_location_handle</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">start_run</span><span class="p">(</span>
+            <span class="n">ExecuteExternalPipelineArgs</span><span class="p">(</span>
+                <span class="n">pipeline_origin</span><span class="o">=</span><span class="n">external_pipeline</span><span class="o">.</span><span class="n">get_external_origin</span><span class="p">(),</span>
+                <span class="n">pipeline_run_id</span><span class="o">=</span><span class="n">run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+                <span class="n">instance_ref</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">get_ref</span><span class="p">(),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="p">(</span>
+                <span class="n">DagsterLaunchFailedError</span><span class="p">(</span>
+                    <span class="n">res</span><span class="o">.</span><span class="n">message</span><span class="p">,</span> <span class="n">serializable_error_info</span><span class="o">=</span><span class="n">res</span><span class="o">.</span><span class="n">serializable_error_info</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_run_id_to_repository_location_handle_cache</span><span class="p">[</span><span class="n">run</span><span class="o">.</span><span class="n">run_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">repository_location_handle</span>
+
+        <span class="k">return</span> <span class="n">run</span>
+
+    <span class="k">def</span> <span class="nf">_get_grpc_client_for_termination</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">run</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">get_run_by_id</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">run</span> <span class="ow">or</span> <span class="n">run</span><span class="o">.</span><span class="n">is_finished</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">run</span><span class="o">.</span><span class="n">tags</span>
+
+        <span class="k">if</span> <span class="n">GRPC_INFO_TAG</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">tags</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">grpc_info</span> <span class="o">=</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">GRPC_INFO_TAG</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">DagsterGrpcClient</span><span class="p">(</span>
+            <span class="n">port</span><span class="o">=</span><span class="n">grpc_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;port&quot;</span><span class="p">),</span> <span class="n">socket</span><span class="o">=</span><span class="n">grpc_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;socket&quot;</span><span class="p">),</span> <span class="n">host</span><span class="o">=</span><span class="n">grpc_info</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;host&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">can_terminate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+
+        <span class="n">client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_grpc_client_for_termination</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">client</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">can_cancel_execution</span><span class="p">(</span><span class="n">CanCancelExecutionRequest</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">),</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">grpc</span><span class="o">.</span><span class="n">_channel</span><span class="o">.</span><span class="n">_InactiveRpcError</span><span class="p">:</span>  <span class="c1"># pylint: disable=protected-access</span>
+            <span class="c1"># Server that created the run may no longer exist</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">can_cancel</span>
+
+    <span class="k">def</span> <span class="nf">terminate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">run</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">get_run_by_id</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">run</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_grpc_client_for_termination</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">client</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">report_engine_event</span><span class="p">(</span>
+                <span class="n">message</span><span class="o">=</span><span class="s2">&quot;Unable to get grpc client to send termination request to.&quot;</span><span class="p">,</span>
+                <span class="n">pipeline_run</span><span class="o">=</span><span class="n">run</span><span class="p">,</span>
+                <span class="bp">cls</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">report_run_canceling</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">cancel_execution</span><span class="p">(</span><span class="n">CancelExecutionRequest</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span>
+
+    <span class="k">def</span> <span class="nf">join</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">30</span><span class="p">):</span>
+        <span class="c1"># If this hasn&#39;t been initialized at all, we can just do a noop</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">total_time</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">interval</span> <span class="o">=</span> <span class="mf">0.01</span>
+
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">active_run_ids</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">run_id</span>
+                <span class="k">for</span> <span class="n">run_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_id_to_repository_location_handle_cache</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">get_run_by_id</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span><span class="o">.</span><span class="n">get_run_by_id</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span><span class="o">.</span><span class="n">is_finished</span>
+                <span class="p">)</span>
+            <span class="p">]</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">active_run_ids</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span>
+
+            <span class="k">if</span> <span class="n">total_time</span> <span class="o">&gt;=</span> <span class="n">timeout</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                    <span class="s2">&quot;Timed out waiting for these runs to finish: </span><span class="si">{active_run_ids}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">active_run_ids</span><span class="o">=</span><span class="nb">repr</span><span class="p">(</span><span class="n">active_run_ids</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="n">total_time</span> <span class="o">+=</span> <span class="n">interval</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">interval</span><span class="p">)</span>
+            <span class="n">interval</span> <span class="o">=</span> <span class="n">interval</span> <span class="o">*</span> <span class="mi">2</span>
+
+    <span class="k">def</span> <span class="nf">cleanup_managed_grpc_servers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Shut down any managed grpc servers that used this run launcher to start a run.</span>
+<span class="sd">        Should only be used for teardown purposes within tests (generally it&#39;s fine for a server</span>
+<span class="sd">        to out-live the host process, since it might be finishing an execution and will</span>
+<span class="sd">        automatically shut itself down once it no longer receives a heartbeat from the host</span>
+<span class="sd">        process). But in tests, gRPC servers access the DagsterInstance during execution, so we need</span>
+<span class="sd">        to shut them down before we can safely remove the temporary directory created for the</span>
+<span class="sd">        DagsterInstance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">repository_location_handle</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_run_id_to_repository_location_handle_cache</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">repository_location_handle</span><span class="p">,</span> <span class="n">ManagedGrpcPythonEnvRepositoryLocationHandle</span><span class="p">):</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                    <span class="n">repository_location_handle</span><span class="o">.</span><span class="n">is_cleaned_up</span><span class="p">,</span>
+                    <span class="s2">&quot;ManagedGrpcPythonRepositoryLocationHandle was not cleaned up &quot;</span>
+                    <span class="s2">&quot;before test teardown. This may indicate that the handle is not &quot;</span>
+                    <span class="s2">&quot;being used as a contextmanager.&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">repository_location_handle</span><span class="o">.</span><span class="n">grpc_server_process</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

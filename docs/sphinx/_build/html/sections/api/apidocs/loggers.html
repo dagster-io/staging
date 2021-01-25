@@ -1,0 +1,197 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Loggers &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Modes &amp; Resources" href="modes-resources.html" />
+    <link rel="prev" title="Internals" href="internals.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="internals.html" title="Previous document">Internals</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="modes-resources.html" title="Next document">Modes &amp; Resources</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="loggers">
+<h1>Loggers<a class="headerlink" href="#loggers" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="dagster.logger">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">logger</code><span class="sig-paren">(</span><em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/logger.html#logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a logger.</p>
+<p>The decorated function should accept an <a class="reference internal" href="#dagster.InitLoggerContext" title="dagster.InitLoggerContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">InitLoggerContext</span></code></a> and return an instance of
+<a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">logging.Logger</span></code></a>. This function will become the <code class="docutils literal notranslate"><span class="pre">logger_fn</span></code> of an underlying
+<a class="reference internal" href="#dagster.LoggerDefinition" title="dagster.LoggerDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">LoggerDefinition</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the config. Configuration data available in
+<cite>init_context.logger_config</cite>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the logger.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.LoggerDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">LoggerDefinition</code><span class="sig-paren">(</span><em class="sig-param">logger_fn</em>, <em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/logger.html#LoggerDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.LoggerDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core class for defining loggers.</p>
+<p>Loggers are pipeline-scoped logging handlers, which will be automatically invoked whenever
+solids in a pipeline log messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>logger_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.InitLoggerContext" title="dagster.InitLoggerContext"><em>InitLoggerContext</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/logging.html#logging.Logger" title="(in Python v3.8)"><em>logging.Logger</em></a><em>]</em>) – User-provided function to
+instantiate the logger. This logger will be automatically invoked whenever the methods
+on <code class="docutils literal notranslate"><span class="pre">context.log</span></code> are called from within solid compute logic.</p></li>
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the config. Configuration data available in
+<cite>init_context.logger_config</cite>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of this logger.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.InitLoggerContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">InitLoggerContext</code><a class="reference internal" href="../../../_modules/dagster/core/execution/context/logger.html#InitLoggerContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.InitLoggerContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Logger-specific initialization context.</p>
+<p>An instance of this class is made available as the first argument to the <code class="docutils literal notranslate"><span class="pre">logger_fn</span></code> decorated
+by <a class="reference internal" href="#dagster.logger" title="dagster.logger"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;logger</span></code></a> or set on a <a class="reference internal" href="#dagster.LoggerDefinition" title="dagster.LoggerDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">LoggerDefinition</span></code></a>.</p>
+<p>Users should not instantiate this class.</p>
+<dl class="attribute">
+<dt id="dagster.InitLoggerContext.logger_config">
+<code class="sig-name descname">logger_config</code><a class="headerlink" href="#dagster.InitLoggerContext.logger_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The configuration data provided by the environment config. The
+schema for this data is defined by <code class="docutils literal notranslate"><span class="pre">config_schema</span></code> on the <a class="reference internal" href="#dagster.LoggerDefinition" title="dagster.LoggerDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">LoggerDefinition</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitLoggerContext.pipeline_def">
+<code class="sig-name descname">pipeline_def</code><a class="headerlink" href="#dagster.InitLoggerContext.pipeline_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pipeline definition currently being executed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition">PipelineDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitLoggerContext.logger_def">
+<code class="sig-name descname">logger_def</code><a class="headerlink" href="#dagster.InitLoggerContext.logger_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The logger definition for the logger being constructed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.LoggerDefinition" title="dagster.LoggerDefinition">LoggerDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitLoggerContext.run_id">
+<code class="sig-name descname">run_id</code><a class="headerlink" href="#dagster.InitLoggerContext.run_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The ID for this run of the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="internals.html" title="Previous document">Internals</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="modes-resources.html" title="Next document">Modes &amp; Resources</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>
