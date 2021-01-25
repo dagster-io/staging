@@ -152,6 +152,7 @@ class _PlanBuilder:
             {step.handle: step for step in self._steps.values()},
             [step.handle for step in self._steps.values()],
             self.environment_config,
+            self.storage_is_persistent(),
         )
 
         if self.step_keys_to_execute is not None:
@@ -218,7 +219,9 @@ class _PlanBuilder:
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
             if isinstance(solid.definition, SolidDefinition):
-                step_outputs = create_step_outputs(solid, handle, self.environment_config)
+                step_outputs = create_step_outputs(
+                    self.pipeline.get_definition(), solid, handle, self.environment_config
+                )
                 tags = solid.definition.tags
 
                 if has_unresolved_input:
@@ -388,11 +391,17 @@ class ExecutionPlan(
             ("resolvable_map", Dict[str, List[UnresolvedStepHandle]]),
             ("step_handles_to_execute", List[StepHandleUnion]),
             ("environment_config", EnvironmentConfig),
+            ("storage_is_persistent", bool),
         ],
     )
 ):
     def __new__(
-        cls, pipeline, step_dict, step_handles_to_execute, environment_config,
+        cls,
+        pipeline,
+        step_dict,
+        step_handles_to_execute,
+        environment_config,
+        storage_is_persistent,
     ):
         check.list_param(
             step_handles_to_execute,
@@ -444,6 +453,7 @@ class ExecutionPlan(
             environment_config=check.inst_param(
                 environment_config, "environment_config", EnvironmentConfig
             ),
+            storage_is_persistent=check.bool_param(storage_is_persistent, "storage_is_persistent"),
         )
 
     @property
@@ -608,7 +618,11 @@ class ExecutionPlan(
             )
 
         return ExecutionPlan(
-            self.pipeline, self.step_dict, step_handles_to_execute, self.environment_config,
+            self.pipeline,
+            self.step_dict,
+            step_handles_to_execute,
+            self.environment_config,
+            self.storage_is_persistent,
         )
 
     def resolve_step_versions(self) -> Dict[str, Optional[str]]:
@@ -716,14 +730,13 @@ class ExecutionPlan(
             StepHandle.parse_from_key(key) for key in execution_plan_snapshot.step_keys_to_execute
         ]
 
-        return ExecutionPlan(pipeline, step_dict, step_handles_to_execute, environment_config)
-
-    @property
-    def storage_is_persistent(self) -> bool:
-        mode_def = self.pipeline_def.get_mode_definition(self.environment_config.mode)
-        return mode_def.get_intermediate_storage_def(
-            self.environment_config.intermediate_storage.intermediate_storage_name
-        ).is_persistent
+        return ExecutionPlan(
+            pipeline,
+            step_dict,
+            step_handles_to_execute,
+            environment_config,
+            execution_plan_snapshot.storage_is_persistent,
+        )
 
     @property
     def artifacts_persisted(self) -> bool:
@@ -743,19 +756,11 @@ class ExecutionPlan(
         if len(self.steps) == 0:
             return False
 
-        mode_def = self.pipeline_def.get_mode_definition(self.environment_config.mode)
         for step in self.get_steps_to_execute_by_level()[0]:
             # check if all its inputs' upstream step outputs have non-in-memory IO manager configured
             for step_input in step.step_inputs:
                 for step_output_handle in step_input.get_step_output_handle_dependencies():
-                    io_manager_key = self.get_manager_key(step_output_handle)
-                    manager_def = mode_def.resource_defs.get(io_manager_key)
-                    if (
-                        # no IO manager is configured
-                        not manager_def
-                        # IO manager is non persistent
-                        or manager_def == mem_io_manager
-                    ):
+                    if not self.get_step_output(step_output_handle).has_persistent_io_manager:
                         return False
         return True
 

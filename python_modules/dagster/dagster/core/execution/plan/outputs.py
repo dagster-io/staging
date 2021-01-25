@@ -18,6 +18,7 @@ class StepOutput(
             ("dagster_type_key", str),
             ("is_required", bool),
             ("should_materialize", Optional[bool]),
+            ("has_persistent_io_manager", Optional[bool]),
         ],
     )
 ):
@@ -30,6 +31,7 @@ class StepOutput(
         dagster_type_key: str,
         is_required: bool,
         should_materialize: Optional[bool] = None,
+        has_persistent_io_manager: Optional[bool] = None,
     ):
         return super(StepOutput, cls).__new__(
             cls,
@@ -38,6 +40,9 @@ class StepOutput(
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             is_required=check.bool_param(is_required, "is_required"),
             should_materialize=check.opt_bool_param(should_materialize, "should_materialize"),
+            has_persistent_io_manager=check.opt_bool_param(
+                has_persistent_io_manager, "has_persistent_io_manager"
+            ),
         )
 
 
