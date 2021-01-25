@@ -108,7 +108,7 @@ interface LaunchButtonDropdownProps {
   primary: LaunchButtonConfiguration;
   options: LaunchButtonConfiguration[];
   disabled?: boolean;
-  tooltip?: string;
+  tooltip?: string | JSX.Element;
   icon?: IconName | undefined;
   runCount: number;
 }
