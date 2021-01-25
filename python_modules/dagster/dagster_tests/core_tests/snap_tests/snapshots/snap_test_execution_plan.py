@@ -31,6 +31,7 @@ snapshots['test_create_execution_plan_with_dep 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Any",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "result",
@@ -100,6 +101,7 @@ snapshots['test_create_execution_plan_with_dep 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Any",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "result",
@@ -123,7 +125,8 @@ snapshots['test_create_execution_plan_with_dep 1'] = '''{
       },
       "tags": {}
     }
-  ]
+  ],
+  "storage_is_persistent": false
 }'''
 
 snapshots['test_create_noop_execution_plan 1'] = '''{
@@ -150,6 +153,7 @@ snapshots['test_create_noop_execution_plan 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Any",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "result",
@@ -173,7 +177,8 @@ snapshots['test_create_noop_execution_plan 1'] = '''{
       },
       "tags": {}
     }
-  ]
+  ],
+  "storage_is_persistent": false
 }'''
 
 snapshots['test_create_noop_execution_plan_with_tags 1'] = '''{
@@ -211,6 +216,7 @@ snapshots['test_create_noop_execution_plan_with_tags 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Any",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "result",
@@ -237,7 +243,8 @@ snapshots['test_create_noop_execution_plan_with_tags 1'] = '''{
         "foo": "bar"
       }
     }
-  ]
+  ],
+  "storage_is_persistent": false
 }'''
 
 snapshots['test_create_with_composite 1'] = '''{
@@ -327,6 +334,7 @@ snapshots['test_create_with_composite 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Any",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "result",
@@ -400,6 +408,7 @@ snapshots['test_create_with_composite 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Int",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "result",
@@ -447,6 +456,7 @@ snapshots['test_create_with_composite 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Int",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "out_num",
@@ -528,6 +538,7 @@ snapshots['test_create_with_composite 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Int",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "result",
@@ -575,6 +586,7 @@ snapshots['test_create_with_composite 1'] = '''{
           "step_output": {
             "__class__": "StepOutput",
             "dagster_type_key": "Int",
+            "has_persistent_io_manager": false,
             "io_manager_key": "io_manager",
             "is_required": true,
             "name": "out_num",
@@ -606,5 +618,6 @@ snapshots['test_create_with_composite 1'] = '''{
       },
       "tags": {}
     }
-  ]
+  ],
+  "storage_is_persistent": false
 }'''
