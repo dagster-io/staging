@@ -194,7 +194,6 @@ class _PlanBuilder:
         self,
         pipeline: IPipeline,
         environment_config: EnvironmentConfig,
-        mode: Optional[str],
         step_keys_to_execute: Optional[List[str]],
         known_state,
     ):
@@ -202,12 +201,11 @@ class _PlanBuilder:
         self.environment_config = check.inst_param(
             environment_config, "environment_config", EnvironmentConfig
         )
-        check.opt_str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", str)
         self.step_keys_to_execute = step_keys_to_execute
         self.mode_definition = (
-            pipeline.get_definition().get_mode_definition(mode)
-            if mode is not None
+            pipeline.get_definition().get_mode_definition(environment_config.mode)
+            if environment_config.mode is not None
             else pipeline.get_definition().get_default_mode()
         )
         self._steps: Dict[str, IExecutionStep] = OrderedDict()
@@ -268,7 +266,6 @@ class _PlanBuilder:
             self.pipeline,
             step_dict,
             step_handles_to_execute,
-            self.environment_config,
             self.known_state,
             _compute_artifacts_persisted(
                 step_dict, step_handles_to_execute, pipeline_def, self.environment_config
@@ -276,7 +273,7 @@ class _PlanBuilder:
         )
 
         if self.step_keys_to_execute is not None:
-            return full_plan.build_subset_plan(self.step_keys_to_execute)
+            return full_plan.build_subset_plan(self.step_keys_to_execute, self.environment_config)
         else:
             return full_plan
 
@@ -595,7 +592,6 @@ class ExecutionPlan(
             ("executable_map", Dict[str, Union[StepHandle, ResolvedFromDynamicStepHandle]]),
             ("resolvable_map", Dict[str, List[UnresolvedStepHandle]]),
             ("step_handles_to_execute", List[StepHandleUnion]),
-            ("environment_config", EnvironmentConfig),
             ("known_state", KnownExecutionState),
             ("artifacts_persisted", bool),
         ],
@@ -606,7 +602,6 @@ class ExecutionPlan(
         pipeline,
         step_dict,
         step_handles_to_execute,
-        environment_config,
         known_state=None,
         artifacts_persisted=False,
     ):
@@ -674,9 +669,6 @@ class ExecutionPlan(
             executable_map=executable_map,
             resolvable_map=resolvable_map,
             step_handles_to_execute=step_handles_to_execute,
-            environment_config=check.inst_param(
-                environment_config, "environment_config", EnvironmentConfig
-            ),
             known_state=check.opt_inst_param(known_state, "known_state", KnownExecutionState),
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
         )
@@ -770,7 +762,11 @@ class ExecutionPlan(
 
         return {key: deps for key, deps in after.items() if key not in previous}
 
-    def build_subset_plan(self, step_keys_to_execute: List[str]) -> "ExecutionPlan":
+    def build_subset_plan(
+        self,
+        step_keys_to_execute: List[str],
+        environment_config: EnvironmentConfig,
+    ) -> "ExecutionPlan":
         check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
         step_handles_to_execute = [StepHandle.parse_from_key(key) for key in step_keys_to_execute]
 
@@ -789,21 +785,22 @@ class ExecutionPlan(
             self.pipeline,
             self.step_dict,
             step_handles_to_execute,
-            self.environment_config,
             self.known_state,
             _compute_artifacts_persisted(
                 self.step_dict,
                 step_handles_to_execute,
                 self.pipeline_def,
-                self.environment_config,
+                environment_config,
             ),
         )
 
-    def resolve_step_versions(self) -> Dict[str, Optional[str]]:
-        return resolve_step_versions_helper(self)
+    def resolve_step_versions(self, environment_config) -> Dict[str, Optional[str]]:
+        return resolve_step_versions_helper(self, environment_config)
 
-    def resolve_step_output_versions(self) -> Dict[StepOutputHandle, Optional[str]]:
-        return resolve_step_output_versions_helper(self)
+    def resolve_step_output_versions(
+        self, environment_config
+    ) -> Dict[StepOutputHandle, Optional[str]]:
+        return resolve_step_output_versions_helper(self, environment_config)
 
     def start(
         self,
@@ -841,7 +838,6 @@ class ExecutionPlan(
     def build(
         pipeline: IPipeline,
         environment_config: EnvironmentConfig,
-        mode: Optional[str] = None,
         step_keys_to_execute: Optional[List[str]] = None,
         known_state=None,
     ) -> "ExecutionPlan":
@@ -855,14 +851,12 @@ class ExecutionPlan(
         """
         check.inst_param(pipeline, "pipeline", IPipeline)
         check.inst_param(environment_config, "environment_config", EnvironmentConfig)
-        check.opt_str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
         check.opt_inst_param(known_state, "known_state", KnownExecutionState)
 
         plan_builder = _PlanBuilder(
             pipeline,
-            environment_config,
-            mode=mode,
+            environment_config=environment_config,
             step_keys_to_execute=step_keys_to_execute,
             known_state=known_state,
         )
@@ -906,7 +900,6 @@ class ExecutionPlan(
         pipeline,
         pipeline_name,
         execution_plan_snapshot,
-        environment_config,
     ):
         step_dict = {}
 
@@ -957,7 +950,6 @@ class ExecutionPlan(
             pipeline,
             step_dict,
             step_handles_to_execute,
-            environment_config,
             execution_plan_snapshot.initial_known_state,
             execution_plan_snapshot.artifacts_persisted,
         )
