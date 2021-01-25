@@ -356,7 +356,9 @@ def _create_step_events_for_output(
     )
 
     version = (
-        step_context.execution_plan.resolve_step_output_versions().get(step_output_handle)
+        step_context.execution_plan.resolve_step_output_versions(
+            step_context.environment_config
+        ).get(step_output_handle)
         if MEMOIZED_RUN_TAG in step_context.pipeline.get_definition().tags
         else None
     )
