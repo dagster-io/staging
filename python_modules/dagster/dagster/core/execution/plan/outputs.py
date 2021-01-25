@@ -19,6 +19,7 @@ class StepOutput(
             ("is_required", bool),
             ("io_manager_key", str),
             ("should_materialize", Optional[bool]),
+            ("has_persistent_io_manager", Optional[bool]),
         ],
     )
 ):
@@ -32,6 +33,7 @@ class StepOutput(
         is_required: bool,
         io_manager_key: str,
         should_materialize: Optional[bool] = None,
+        has_persistent_io_manager: Optional[bool] = None,
     ):
         return super(StepOutput, cls).__new__(
             cls,
@@ -41,6 +43,9 @@ class StepOutput(
             is_required=check.bool_param(is_required, "is_required"),
             io_manager_key=check.str_param(io_manager_key, "io_manager_key"),
             should_materialize=check.opt_bool_param(should_materialize, "should_materialize"),
+            has_persistent_io_manager=check.opt_bool_param(
+                has_persistent_io_manager, "has_persistent_io_manager"
+            ),
         )
 
 

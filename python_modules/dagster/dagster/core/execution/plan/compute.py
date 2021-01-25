@@ -6,13 +6,17 @@ from dagster.core.definitions import (
     DynamicOutput,
     ExpectationResult,
     Materialization,
+    ModeDefinition,
     Output,
+    OutputDefinition,
+    PipelineDefinition,
     Solid,
     SolidHandle,
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
+from dagster.core.storage.mem_io_manager import mem_io_manager
 from dagster.core.system_config.objects import EnvironmentConfig
 
 from .outputs import StepOutput
@@ -23,8 +27,12 @@ SolidOutputUnion = Union[
 
 
 def create_step_outputs(
-    solid: Solid, handle: SolidHandle, environment_config: EnvironmentConfig
+    pipeline_def: PipelineDefinition,
+    solid: Solid,
+    handle: SolidHandle,
+    environment_config: EnvironmentConfig,
 ) -> List[StepOutput]:
+    check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
 
@@ -36,6 +44,8 @@ def create_step_outputs(
         current_handle = current_handle.parent
         config_output_names = config_output_names.union(solid_config.outputs.output_names)
 
+    mode_def = pipeline_def.get_mode_definition(environment_config.mode)
+
     return [
         StepOutput(
             solid_handle=handle,
@@ -44,9 +54,17 @@ def create_step_outputs(
             is_required=output_def.is_required,
             io_manager_key=output_def.io_manager_key,
             should_materialize=output_def.name in config_output_names,
+            has_persistent_io_manager=_compute_has_persistent_io_manager(mode_def, output_def),
         )
         for name, output_def in solid.definition.output_dict.items()
     ]
+
+
+def _compute_has_persistent_io_manager(mode_def: ModeDefinition, output_def: OutputDefinition):
+    manager_def = mode_def.resource_defs.get(output_def.io_manager_key)
+    # pylint: disable=comparison-with-callable
+
+    return manager_def and manager_def != mem_io_manager
 
 
 def _yield_compute_results(

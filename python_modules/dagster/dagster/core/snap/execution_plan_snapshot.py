@@ -23,12 +23,19 @@ def create_execution_plan_snapshot_id(execution_plan_snapshot):
 class ExecutionPlanSnapshot(
     namedtuple(
         "_ExecutionPlanSnapshot",
-        "steps artifacts_persisted pipeline_snapshot_id step_keys_to_execute",
+        "steps artifacts_persisted pipeline_snapshot_id step_keys_to_execute storage_is_persistent",
     )
 ):
     # serdes log
     # added step_keys_to_execute
-    def __new__(cls, steps, artifacts_persisted, pipeline_snapshot_id, step_keys_to_execute=None):
+    def __new__(
+        cls,
+        steps,
+        artifacts_persisted,
+        pipeline_snapshot_id,
+        step_keys_to_execute=None,
+        storage_is_persistent=None,
+    ):
         return super(ExecutionPlanSnapshot, cls).__new__(
             cls,
             steps=check.list_param(steps, "steps", of_type=ExecutionStepSnap),
@@ -36,6 +43,9 @@ class ExecutionPlanSnapshot(
             pipeline_snapshot_id=check.str_param(pipeline_snapshot_id, "pipeline_snapshot_id"),
             step_keys_to_execute=check.opt_list_param(
                 step_keys_to_execute, "step_keys_to_execute", of_type=str
+            ),
+            storage_is_persistent=check.opt_bool_param(
+                storage_is_persistent, "storage_is_persistent"
             ),
         )
 
@@ -197,4 +207,5 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
         artifacts_persisted=execution_plan.artifacts_persisted,
         pipeline_snapshot_id=pipeline_snapshot_id,
         step_keys_to_execute=execution_plan.step_keys_to_execute,
+        storage_is_persistent=execution_plan.storage_is_persistent,
     )
