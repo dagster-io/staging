@@ -20,9 +20,9 @@ def assert_documented_exports(module_name, module, whitelist=None):
         export_index = json.load(f)
         documented_exports = set(export_index[module_name])
         undocumented_exports = set(all_exports).difference(documented_exports).difference(whitelist)
-        assert len(undocumented_exports) == 0, "Top level exports {} are not documented".format(
-            undocumented_exports
-        )
+        assert (
+            len(undocumented_exports) == 0
+        ), f"Top level exports {undocumented_exports} are not documented"
 
 
 def test_documented_exports():

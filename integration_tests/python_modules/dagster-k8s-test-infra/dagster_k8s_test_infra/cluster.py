@@ -70,8 +70,8 @@ def define_cluster_provider_fixture(additional_kind_images=None):
                         client = docker.from_env()
                         client.images.get(docker_image)
                         print(  # pylint: disable=print-call
-                            "Found existing image tagged {image}, skipping image build. To rebuild, first run: "
-                            "docker rmi {image}".format(image=docker_image)
+                            f"Found existing image tagged {docker_image}, skipping image build. "
+                            f"To rebuild, first run: docker rmi {docker_image}"
                         )
                     except docker.errors.ImageNotFound:
                         build_and_tag_test_image(docker_image)
@@ -126,7 +126,7 @@ def local_port_forward_postgres(namespace):
                 "--namespace",
                 namespace,
                 postgres_pod_name,
-                "{forward_port}:5432".format(forward_port=forward_port),
+                f"{forward_port}:5432",
             ],
             # Squelch the verbose "Handling connection for..." messages
             stdout=subprocess.DEVNULL,
@@ -172,9 +172,7 @@ def dagster_instance_with_k8s_scheduler(
     with local_port_forward_postgres(
         namespace=helm_namespace_for_k8s_run_launcher
     ) as local_forward_port:
-        postgres_url = "postgresql://test:test@localhost:{local_forward_port}/test".format(
-            local_forward_port=local_forward_port
-        )
+        postgres_url = f"postgresql://test:test@localhost:{local_forward_port}/test"
         print("Local Postgres forwarding URL: ", postgres_url)
 
         instance = DagsterInstance(
@@ -202,9 +200,7 @@ def dagster_instance_for_user_deployments(
     with local_port_forward_postgres(
         namespace=helm_namespace_for_user_deployments
     ) as local_forward_port:
-        postgres_url = "postgresql://test:test@localhost:{local_forward_port}/test".format(
-            local_forward_port=local_forward_port
-        )
+        postgres_url = f"postgresql://test:test@localhost:{local_forward_port}/test"
         print("Local Postgres forwarding URL: ", postgres_url)
 
         instance = DagsterInstance(
@@ -226,9 +222,7 @@ def dagster_instance_for_daemon(
     tempdir = DagsterInstance.temp_storage()
 
     with local_port_forward_postgres(namespace=helm_namespace_for_daemon) as local_forward_port:
-        postgres_url = "postgresql://test:test@localhost:{local_forward_port}/test".format(
-            local_forward_port=local_forward_port
-        )
+        postgres_url = f"postgresql://test:test@localhost:{local_forward_port}/test"
         print("Local Postgres forwarding URL: ", postgres_url)
 
         instance = DagsterInstance(
@@ -252,9 +246,7 @@ def dagster_instance_for_k8s_run_launcher(helm_namespace_for_k8s_run_launcher, r
     with local_port_forward_postgres(
         namespace=helm_namespace_for_k8s_run_launcher
     ) as local_forward_port:
-        postgres_url = "postgresql://test:test@localhost:{local_forward_port}/test".format(
-            local_forward_port=local_forward_port
-        )
+        postgres_url = f"postgresql://test:test@localhost:{local_forward_port}/test"
         print("Local Postgres forwarding URL: ", postgres_url)
 
         instance = DagsterInstance(
@@ -275,9 +267,7 @@ def dagster_instance(helm_namespace, run_launcher):  # pylint: disable=redefined
     tempdir = DagsterInstance.temp_storage()
 
     with local_port_forward_postgres(namespace=helm_namespace) as local_forward_port:
-        postgres_url = "postgresql://test:test@localhost:{local_forward_port}/test".format(
-            local_forward_port=local_forward_port
-        )
+        postgres_url = f"postgresql://test:test@localhost:{local_forward_port}/test"
         print("Local Postgres forwarding URL: ", postgres_url)
 
         instance = DagsterInstance(

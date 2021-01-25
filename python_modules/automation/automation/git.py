@@ -9,11 +9,7 @@ def git_check_status():
     changes = subprocess.check_output(["git", "status", "--porcelain"]).decode("utf-8").strip()
 
     if changes != "":
-        raise Exception(
-            "Bailing: Cannot publish with changes present in git repo:\n{changes}".format(
-                changes=changes
-            )
-        )
+        raise Exception(f"Bailing: Cannot publish with changes present in git repo:\n{changes}")
 
 
 def git_user():
@@ -33,9 +29,7 @@ def git_push(tag=None, dry_run=True, cwd=None):
                 [
                     "git",
                     "push",
-                    "https://{github_username}:{github_token}@github.com/dagster-io/dagster.git".format(
-                        github_username=github_username, github_token=github_token
-                    ),
+                    f"https://{github_username}:{github_token}@github.com/dagster-io/dagster.git",
                     tag,
                 ],
                 dry_run=dry_run,
@@ -45,9 +39,7 @@ def git_push(tag=None, dry_run=True, cwd=None):
             [
                 "git",
                 "push",
-                "https://{github_username}:{github_token}@github.com/dagster-io/dagster.git".format(
-                    github_username=github_username, github_token=github_token
-                ),
+                f"https://{github_username}:{github_token}@github.com/dagster-io/dagster.git",
             ],
             dry_run=dry_run,
             cwd=cwd,
@@ -120,7 +112,7 @@ def set_git_tag(tag, signed=False, dry_run=True):
             raise Exception(
                 "Bailing: cannot sign tag. You may find "
                 "https://stackoverflow.com/q/39494631/324449 helpful. Original error "
-                "output:\n{output}".format(output=str(exc_info.output))
+                f"output:\n{exc_info.output}"
             )
 
         match = re.search(
@@ -140,11 +132,9 @@ def set_git_tag(tag, signed=False, dry_run=True):
 def git_commit_updates(repo_dir, message):
     cmds = [
         "git add -A",
-        'git commit -m "{}"'.format(message),
+        f'git commit -m "{message}"',
     ]
 
-    print(  # pylint: disable=print-call
-        "Committing to {} with message {}".format(repo_dir, message)
-    )
+    print(f"Committing to {repo_dir} with message {message}")  # pylint: disable=print-call
     for cmd in cmds:
         subprocess.call(cmd, cwd=repo_dir, shell=True)

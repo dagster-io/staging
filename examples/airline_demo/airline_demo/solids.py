@@ -89,12 +89,11 @@ def sql_solid(name, select_statement, materialization_strategy, table_name=None,
     }
 
     if materialization_strategy not in materialization_strategy_output_types:
+        materialization_strategies = str(list(materialization_strategy_output_types.keys()))
+
         raise Exception(
-            "Invalid materialization strategy {materialization_strategy}, must "
-            "be one of {materialization_strategies}".format(
-                materialization_strategy=materialization_strategy,
-                materialization_strategies=str(list(materialization_strategy_output_types.keys())),
-            )
+            f"Invalid materialization strategy {materialization_strategy}, must "
+            f"be one of {materialization_strategies}"
         )
 
     if materialization_strategy == "table":
@@ -108,15 +107,13 @@ def sql_solid(name, select_statement, materialization_strategy, table_name=None,
         "'table', this is the string name of the new table created by the solid."
     )
 
-    description = """This solid executes the following SQL statement:
-    {select_statement}""".format(
-        select_statement=select_statement
-    )
+    description = f"""This solid executes the following SQL statement:
+    {select_statement}"""
 
     # n.b., we will eventually want to make this resources key configurable
     sql_statement = (
-        "drop table if exists {table_name};\n" "create table {table_name} as {select_statement};"
-    ).format(table_name=table_name, select_statement=select_statement)
+        f"drop table if exists {table_name};\ncreate table {table_name} as {select_statement};"
+    )
 
     # start_solids_marker_1
     @solid(
@@ -143,9 +140,7 @@ def sql_solid(name, select_statement, materialization_strategy, table_name=None,
             str:
                 The table name of the newly materialized SQL select statement.
         """
-        context.log.info(
-            "Executing sql statement:\n{sql_statement}".format(sql_statement=sql_statement)
-        )
+        context.log.info(f"Executing sql statement:\n{sql_statement}")
         context.resources.db_info.engine.execute(text(sql_statement))
         yield Output(value=table_name, output_name="result")
 
@@ -197,7 +192,7 @@ def rename_spark_dataframe_columns(data_frame, fn):
 def do_prefix_column_names(df, prefix):
     check.inst_param(df, "df", DataFrame)
     check.str_param(prefix, "prefix")
-    return rename_spark_dataframe_columns(df, lambda c: "{prefix}{c}".format(prefix=prefix, c=c))
+    return rename_spark_dataframe_columns(df, lambda c: f"{prefix}{c}")
 
 
 @solid(
@@ -235,10 +230,10 @@ def load_data_to_database_from_spark(context, data_frame):
 
     table_name = context.solid_config["table_name"]
     yield AssetMaterialization(
-        asset_key="table:{table_name}".format(table_name=table_name),
+        asset_key=f"table:{table_name}",
         description=(
-            "Persisted table {table_name} in database configured in the db_info resource."
-        ).format(table_name=table_name),
+            f"Persisted table {table_name} in database configured in the db_info resource."
+        ),
         metadata_entries=[
             EventMetadataEntry.text(label="Host", text=context.resources.db_info.host),
             EventMetadataEntry.text(label="Db", text=context.resources.db_info.db_name),

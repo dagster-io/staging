@@ -26,7 +26,7 @@ def load_cereals(_):
 )
 def add_sugar_per_cup(context, cereals):
     delay = context.solid_config["delay"]
-    context.log.info("Simulating computation for {sec} seconds!".format(sec=delay))
+    context.log.info(f"Simulating computation for {delay} seconds!")
     time.sleep(delay)
     df = cereals[["name"]]
     df["sugar_per_cup"] = cereals["sugars"] / cereals["cups"]

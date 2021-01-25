@@ -17,7 +17,7 @@ from dagster.seven import mock
 
 def execute_solid_with_resources(solid_def, resource_defs, run_config):
     @pipeline(
-        name="{}_solid_test".format(solid_def.name),
+        name=f"{solid_def.name}_solid_test",
         mode_defs=[ModeDefinition(resource_defs=resource_defs)],
     )
     def test_pipeline():

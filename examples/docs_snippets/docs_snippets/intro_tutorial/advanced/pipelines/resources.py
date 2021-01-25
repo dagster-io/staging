@@ -56,7 +56,7 @@ def read_csv(context, csv_path):
     with open(csv_path, "r") as fd:
         lines = [row for row in csv.DictReader(fd)]
 
-    context.log.info("Read {n_lines} lines".format(n_lines=len(lines)))
+    context.log.info(f"Read {len(lines)} lines")
     return lines
 
 

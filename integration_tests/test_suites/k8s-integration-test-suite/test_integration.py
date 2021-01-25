@@ -53,7 +53,7 @@ def test_k8s_run_launcher_default(
         job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
     )
 
-    assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+    assert "PIPELINE_SUCCESS" in result, f"no match, result: {result}"
 
 
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
@@ -148,7 +148,7 @@ def test_failing_k8s_run_launcher(
         job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
     )
 
-    assert "PIPELINE_SUCCESS" not in result, "no match, result: {}".format(result)
+    assert "PIPELINE_SUCCESS" not in result, f"no match, result: {result}"
 
     event_records = dagster_instance_for_k8s_run_launcher.all_logs(run.run_id)
 

@@ -147,7 +147,7 @@ def test_even_type_materialization_config():
             ff.write(str(value))
             return AssetMaterialization(
                 "path",
-                "Wrote out value to {path}".format(path=path),
+                f"Wrote out value to {path}",
                 metadata_entries=[EventMetadataEntry.text("path", path)],
             )
 

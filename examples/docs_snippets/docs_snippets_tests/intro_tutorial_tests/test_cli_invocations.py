@@ -250,9 +250,7 @@ def load_dagit_for_workspace_cli_args(n_pipelines=1, **kwargs):
 
         client = app.test_client()
 
-        res = client.get(
-            "/graphql?query={query_string}".format(query_string=PIPELINES_OR_ERROR_QUERY)
-        )
+        res = client.get(f"/graphql?query={PIPELINES_OR_ERROR_QUERY}")
         json_res = json.loads(res.data.decode("utf-8"))
         assert "data" in json_res
         assert "repositoriesOrError" in json_res["data"]

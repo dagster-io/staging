@@ -111,9 +111,7 @@ def test_deploy_docker():
                 raise Exception("Timed out waiting for dagit server to be available")
 
             try:
-                sanity_check = requests.get(
-                    "http://{dagit_host}:3000/dagit_info".format(dagit_host=dagit_host)
-                )
+                sanity_check = requests.get(f"http://{dagit_host}:3000/dagit_info")
                 assert "dagit" in sanity_check.text
                 break
             except requests.exceptions.ConnectionError:
@@ -122,9 +120,7 @@ def test_deploy_docker():
             time.sleep(1)
 
         res = requests.get(
-            "http://{dagit_host}:3000/graphql?query={query_string}".format(
-                dagit_host=dagit_host, query_string=PIPELINES_OR_ERROR_QUERY,
-            )
+            f"http://{dagit_host}:3000/graphql?query={PIPELINES_OR_ERROR_QUERY}"
         ).json()
 
         data = res.get("data")
@@ -149,12 +145,10 @@ def test_deploy_docker():
             }
         }
 
+        query = LAUNCH_PIPELINE_MUTATION
+        variables = json.dumps(variables)
         launch_res = requests.post(
-            "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
-                dagit_host=dagit_host,
-                query_string=LAUNCH_PIPELINE_MUTATION,
-                variables=json.dumps(variables),
-            )
+            f"http://{dagit_host}:3000/graphql?query={query}&variables={variables}"
         ).json()
 
         assert (
@@ -172,12 +166,9 @@ def test_deploy_docker():
             if time.time() - start_time > 60:
                 raise Exception("Timed out waiting for launched run to complete")
 
+            variables = json.dumps({"runId": run_id})
             run_res = requests.get(
-                "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
-                    dagit_host=dagit_host,
-                    query_string=RUN_QUERY,
-                    variables=json.dumps({"runId": run_id}),
-                )
+                f"http://{dagit_host}:3000/graphql?query={RUN_QUERY}&variables={variables}"
             ).json()
 
             status = run_res["data"]["pipelineRunOrError"]["status"]

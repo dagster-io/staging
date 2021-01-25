@@ -60,9 +60,7 @@ class StepBuilder:
 
     def on_python_image(self, image, env=None):
         settings = self._base_docker_settings()
-        settings["image"] = "{account_id}.dkr.ecr.us-west-2.amazonaws.com/{image}".format(
-            account_id=AWS_ACCOUNT_ID, image=image
-        )
+        settings["image"] = f"{AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/{image}"
         settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
         settings["network"] = "kind"
         settings["environment"] = ["BUILDKITE"] + (env or [])
@@ -78,26 +76,16 @@ class StepBuilder:
 
     def on_unit_image(self, ver, env=None):
         if ver not in SupportedPythons:
-            raise Exception("Unsupported python version for unit image {ver}".format(ver=ver))
+            raise Exception(f"Unsupported python version for unit image {ver}")
 
-        return self.on_python_image(
-            image="buildkite-unit:py{python_version}-{image_version}".format(
-                python_version=ver, image_version=UNIT_IMAGE_VERSION
-            ),
-            env=env,
-        )
+        return self.on_python_image(image=f"buildkite-unit:py{ver}-{UNIT_IMAGE_VERSION}", env=env)
 
     def on_integration_image(self, ver, env=None):
         if ver not in SupportedPythons:
-            raise Exception(
-                "Unsupported python version for integration image {ver}".format(ver=ver)
-            )
+            raise Exception(f"Unsupported python version for integration image {ver}")
 
         return self.on_python_image(
-            image="buildkite-integration:py{python_version}-{image_version}".format(
-                python_version=ver, image_version=INTEGRATION_IMAGE_VERSION
-            ),
-            env=env,
+            image=f"buildkite-integration:py{ver}-{INTEGRATION_IMAGE_VERSION}", env=env
         )
 
     def with_timeout(self, num_minutes):

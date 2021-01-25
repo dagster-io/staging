@@ -11,15 +11,11 @@ DbInfo = namedtuple("DbInfo", "engine url jdbc_url dialect load_table host db_na
 def create_redshift_db_url(username, password, hostname, port, db_name, jdbc=True):
     if jdbc:
         db_url = (
-            "jdbc:postgresql://{hostname}:{port}/{db_name}?"
-            "user={username}&password={password}".format(
-                username=username, password=password, hostname=hostname, port=port, db_name=db_name
-            )
+            f"jdbc:postgresql://{hostname}:{port}/{db_name}?user={username}&password={password}"
         )
+
     else:
-        db_url = "redshift+psycopg2://{username}:{password}@{hostname}:{port}/{db_name}".format(
-            username=username, password=password, hostname=hostname, port=port, db_name=db_name
-        )
+        db_url = f"redshift+psycopg2://{username}:{password}@{hostname}:{port}/{db_name}"
     return db_url
 
 
@@ -30,15 +26,10 @@ def create_redshift_engine(db_url):
 def create_postgres_db_url(username, password, hostname, port, db_name, jdbc=True):
     if jdbc:
         db_url = (
-            "jdbc:postgresql://{hostname}:{port}/{db_name}?"
-            "user={username}&password={password}".format(
-                username=username, password=password, hostname=hostname, port=port, db_name=db_name
-            )
+            f"jdbc:postgresql://{hostname}:{port}/{db_name}?user={username}&password={password}"
         )
     else:
-        db_url = "postgresql://{username}:{password}@{hostname}:{port}/{db_name}".format(
-            username=username, password=password, hostname=hostname, port=port, db_name=db_name
-        )
+        db_url = f"postgresql://{username}:{password}@{hostname}:{port}/{db_name}"
     return db_url
 
 

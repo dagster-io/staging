@@ -183,7 +183,7 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
     check.bool_param(should_cleanup, "should_cleanup")
     check.str_param(helm_install_name, "helm_install_name")
 
-    print("--- \033[32m:helm: Installing Helm chart {}\033[0m".format(helm_install_name))
+    print(f"--- \033[32m:helm: Installing Helm chart {helm_install_name}\033[0m")
 
     try:
         helm_config_yaml = yaml.dump(helm_config, default_flow_style=False)
@@ -267,9 +267,7 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
         else:
             assert (
                 len(pod_names) == 0
-            ), "celery-worker pods {pod_names} exists when celery is not enabled.".format(
-                pod_names=pod_names
-            )
+            ), f"celery-worker pods {pod_names} exists when celery is not enabled."
 
         if helm_config.get("userDeployments") and helm_config.get("userDeployments", {}).get(
             "enabled"

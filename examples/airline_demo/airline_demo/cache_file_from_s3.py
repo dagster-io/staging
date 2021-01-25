@@ -48,13 +48,13 @@ def cache_file_from_s3(context, s3_coordinate: S3Coordinate) -> FileHandle:
                 Bucket=s3_coordinate["bucket"], Key=s3_coordinate["key"], Filename=tmp_file
             )
 
-            context.log.info("File downloaded to {}".format(tmp_file))
+            context.log.info(f"File downloaded to {tmp_file}")
 
             with open(tmp_file, "rb") as tmp_file_object:
                 file_cache.write_file_object(target_key, tmp_file_object)
-                context.log.info("File handle written at : {}".format(target_file_handle.path_desc))
+                context.log.info(f"File handle written at : {target_file_handle.path_desc}")
     else:
-        context.log.info("File {} already present in cache".format(target_file_handle.path_desc))
+        context.log.info(f"File {target_file_handle.path_desc} already present in cache")
 
     yield ExpectationResult(
         success=file_cache.has_file_object(target_key),
