@@ -71,19 +71,17 @@ class _PlanBuilder:
         self,
         pipeline: IPipeline,
         environment_config: EnvironmentConfig,
-        mode: Optional[str],
         step_keys_to_execute: Optional[List[str]],
     ):
         self.pipeline = check.inst_param(pipeline, "pipeline", IPipeline)
         self.environment_config = check.inst_param(
             environment_config, "environment_config", EnvironmentConfig
         )
-        check.opt_str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", str)
         self.step_keys_to_execute = step_keys_to_execute
         self.mode_definition = (
-            pipeline.get_definition().get_mode_definition(mode)
-            if mode is not None
+            pipeline.get_definition().get_mode_definition(environment_config.mode)
+            if environment_config.mode is not None
             else pipeline.get_definition().get_default_mode()
         )
         self._steps: Dict[str, ExecutionStepUnion] = OrderedDict()
@@ -137,9 +135,9 @@ class _PlanBuilder:
 
         full_plan = ExecutionPlan(
             self.pipeline,
+            self.pipeline_name,
             {step.handle: step for step in self._steps.values()},
             [step.handle for step in self._steps.values()],
-            self.environment_config,
             self.storage_is_persistent(),
         )
 
@@ -374,22 +372,17 @@ class ExecutionPlan(
         "_ExecutionPlan",
         [
             ("pipeline", IPipeline),
+            ("pipeline_name", str),
             ("step_dict", Dict[StepHandleUnion, ExecutionStepUnion]),
             ("executable_map", Dict[str, Union[StepHandle, ResolvedFromDynamicStepHandle]]),
             ("resolvable_map", Dict[str, List[UnresolvedStepHandle]]),
             ("step_handles_to_execute", List[StepHandleUnion]),
-            ("environment_config", EnvironmentConfig),
             ("storage_is_persistent", bool),
         ],
     )
 ):
     def __new__(
-        cls,
-        pipeline,
-        step_dict,
-        step_handles_to_execute,
-        environment_config,
-        storage_is_persistent,
+        cls, pipeline, pipeline_name, step_dict, step_handles_to_execute, storage_is_persistent,
     ):
         check.list_param(
             step_handles_to_execute,
@@ -429,6 +422,7 @@ class ExecutionPlan(
         return super(ExecutionPlan, cls).__new__(
             cls,
             pipeline=check.inst_param(pipeline, "pipeline", IPipeline),
+            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
             step_dict=check.dict_param(
                 step_dict,
                 "step_dict",
@@ -438,9 +432,6 @@ class ExecutionPlan(
             executable_map=executable_map,
             resolvable_map=resolvable_map,
             step_handles_to_execute=step_handles_to_execute,
-            environment_config=check.inst_param(
-                environment_config, "environment_config", EnvironmentConfig
-            ),
             storage_is_persistent=check.bool_param(storage_is_persistent, "storage_is_persistent"),
         )
 
@@ -599,17 +590,19 @@ class ExecutionPlan(
 
         return ExecutionPlan(
             self.pipeline,
+            self.pipeline_name,
             self.step_dict,
             step_handles_to_execute,
-            self.environment_config,
             self.storage_is_persistent,
         )
 
-    def resolve_step_versions(self) -> Dict[str, Optional[str]]:
-        return resolve_step_versions_helper(self)
+    def resolve_step_versions(self, environment_config) -> Dict[str, Optional[str]]:
+        return resolve_step_versions_helper(self, environment_config)
 
-    def resolve_step_output_versions(self) -> Dict[StepOutputHandle, Optional[str]]:
-        return resolve_step_output_versions_helper(self)
+    def resolve_step_output_versions(
+        self, environment_config
+    ) -> Dict[StepOutputHandle, Optional[str]]:
+        return resolve_step_output_versions_helper(self, environment_config)
 
     def start(
         self, retries: Retries, sort_key_fn: Optional[Callable[[ExecutionStep], float]] = None,
@@ -639,7 +632,6 @@ class ExecutionPlan(
     def build(
         pipeline: IPipeline,
         environment_config: EnvironmentConfig,
-        mode: Optional[str] = None,
         step_keys_to_execute: Optional[List[str]] = None,
     ) -> "ExecutionPlan":
         """Here we build a new ExecutionPlan from a pipeline definition and the environment config.
@@ -652,11 +644,10 @@ class ExecutionPlan(
         """
         check.inst_param(pipeline, "pipeline", IPipeline)
         check.inst_param(environment_config, "environment_config", EnvironmentConfig)
-        check.opt_str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
 
         plan_builder = _PlanBuilder(
-            pipeline, environment_config, mode=mode, step_keys_to_execute=step_keys_to_execute,
+            pipeline, environment_config, step_keys_to_execute=step_keys_to_execute,
         )
 
         # Finally, we build and return the execution plan
@@ -680,7 +671,7 @@ class ExecutionPlan(
 
     @staticmethod
     def rebuild_from_snapshot(
-        pipeline, pipeline_name, execution_plan_snapshot, environment_config,
+        pipeline, pipeline_name, execution_plan_snapshot,
     ):
         step_dict = {}
 
@@ -712,9 +703,9 @@ class ExecutionPlan(
 
         return ExecutionPlan(
             pipeline,
+            pipeline_name,
             step_dict,
             step_handles_to_execute,
-            environment_config,
             execution_plan_snapshot.storage_is_persistent,
         )
 
