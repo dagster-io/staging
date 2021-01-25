@@ -16,7 +16,6 @@ from dagster.core.execution.resolve_versions import resolve_memoized_execution_p
 from dagster.core.execution.retries import RetryMode
 from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.selector import parse_step_selection
-from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshot
 from dagster.core.storage.mem_io_manager import InMemoryIOManager
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -103,12 +102,12 @@ def execute_run_iterator(
             pipeline_run.execution_plan_snapshot_id
         )
 
-        execution_plan = rebuild_execution_plan_from_snapshot(
+        execution_plan = ExecutionPlan.rebuild_from_snapshot(
             pipeline,
-            run_config=pipeline_run.run_config,
-            mode=pipeline_run.mode,
-            execution_plan_snapshot=execution_plan_snapshot,
+            pipeline_run.pipeline_name,
+            execution_plan_snapshot,
         )
+
     else:
         execution_plan = create_execution_plan(
             pipeline,
@@ -198,27 +197,36 @@ def execute_run(
                 pipeline_run.solids_to_execute
             )
 
+    environment_config = None
+
     if pipeline_run.execution_plan_snapshot_id:
         execution_plan_snapshot = instance.get_execution_plan_snapshot(
             pipeline_run.execution_plan_snapshot_id
         )
-        execution_plan = rebuild_execution_plan_from_snapshot(
+        execution_plan = ExecutionPlan.rebuild_from_snapshot(
             pipeline,
-            pipeline_run.run_config,
-            pipeline_run.mode,
+            pipeline_run.pipeline_name,
             execution_plan_snapshot,
         )
     else:
-        execution_plan = create_execution_plan(
+        environment_config = EnvironmentConfig.build(
+            pipeline.get_definition(), pipeline_run.run_config, pipeline_run.mode
+        )
+
+        execution_plan = ExecutionPlan.build(
             pipeline,
-            run_config=pipeline_run.run_config,
-            mode=pipeline_run.mode,
+            environment_config,
             step_keys_to_execute=pipeline_run.step_keys_to_execute,
         )
 
     if is_memoized_run(pipeline_run.tags):
+        if not environment_config:
+            environment_config = EnvironmentConfig.build(
+                pipeline.get_definition(), pipeline_run.run_config, pipeline_run.mode
+            )
+
         execution_plan = resolve_memoized_execution_plan(
-            execution_plan, pipeline_run.run_config, instance
+            execution_plan, pipeline_run.run_config, instance, environment_config
         )
 
     _execute_run_iterable = ExecuteRunWithPlanIterable(
@@ -717,22 +725,6 @@ def _check_pipeline(pipeline: Union[PipelineDefinition, IPipeline]) -> IPipeline
     return pipeline
 
 
-def rebuild_execution_plan_from_snapshot(
-    pipeline: IPipeline,
-    run_config: Optional[dict],
-    mode: Optional[str],
-    execution_plan_snapshot: ExecutionPlanSnapshot,
-) -> ExecutionPlan:
-    pipeline_def = pipeline.get_definition()
-    environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode)
-    return ExecutionPlan.rebuild_from_snapshot(
-        pipeline,
-        pipeline_def.name,
-        execution_plan_snapshot,
-        environment_config,
-    )
-
-
 def create_execution_plan(
     pipeline: Union[IPipeline, PipelineDefinition],
     run_config: Optional[dict] = None,
@@ -752,7 +744,6 @@ def create_execution_plan(
     return ExecutionPlan.build(
         pipeline,
         environment_config,
-        mode=mode,
         step_keys_to_execute=step_keys_to_execute,
         known_state=known_state,
     )
