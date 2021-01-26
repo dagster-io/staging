@@ -1,44 +1,52 @@
 from dagster import check
 from dagster.core.definitions.events import AssetKey
 from dagster.core.events import DagsterEventType
-from dagster_graphql.implementation.utils import capture_dauphin_error
+
+from .utils import capture_error
 
 
-@capture_dauphin_error
+@capture_error
 def get_assets(graphene_info, prefix_path):
+    from ..schema.errors import AssetsNotSupportedError
+    from ..schema.pipelines.pipeline import Asset
+    from ..schema.roots.assets import AssetConnection
+
     instance = graphene_info.context.instance
     if not instance.is_asset_aware:
-        return graphene_info.schema.type_named("AssetsNotSupportedError")(
+        return AssetsNotSupportedError(
             message="The configured event log storage is not asset aware."
         )
 
     asset_keys = instance.all_asset_keys(prefix_path=prefix_path)
-    return graphene_info.schema.type_named("AssetConnection")(
-        nodes=[graphene_info.schema.type_named("Asset")(key=asset_key) for asset_key in asset_keys]
-    )
+    return AssetConnection(nodes=[Asset(key=asset_key) for asset_key in asset_keys])
 
 
 def get_asset(graphene_info, asset_key):
+    from ..schema.errors import AssetNotFoundError, AssetsNotSupportedError
+    from ..schema.pipelines.pipeline import Asset
+
     check.inst_param(asset_key, "asset_key", AssetKey)
     instance = graphene_info.context.instance
     if not instance.is_asset_aware:
-        return graphene_info.schema.type_named("AssetsNotSupportedError")(
+        return AssetsNotSupportedError(
             message="The configured event log storage is not asset aware."
         )
 
     if not instance.has_asset_key(asset_key):
-        return graphene_info.schema.type_named("AssetNotFoundError")(asset_key=asset_key)
+        return AssetNotFoundError(asset_key=asset_key)
 
-    return graphene_info.schema.type_named("Asset")(key=asset_key)
+    return Asset(key=asset_key)
 
 
 def get_asset_events(graphene_info, asset_key, partitions=None, cursor=None, limit=None):
+    from ..schema.errors import AssetsNotSupportedError
+
     check.inst_param(asset_key, "asset_key", AssetKey)
     check.opt_str_param(cursor, "cursor")
     check.opt_int_param(limit, "limit")
     instance = graphene_info.context.instance
     if not instance.is_asset_aware:
-        return graphene_info.schema.type_named("AssetsNotSupportedError")(
+        return AssetsNotSupportedError(
             message="The configured event log storage is not asset aware."
         )
     events = instance.events_for_asset_key(asset_key, partitions, cursor, limit)
@@ -51,10 +59,12 @@ def get_asset_events(graphene_info, asset_key, partitions=None, cursor=None, lim
 
 
 def get_asset_run_ids(graphene_info, asset_key):
+    from ..schema.errors import AssetsNotSupportedError
+
     check.inst_param(asset_key, "asset_key", AssetKey)
     instance = graphene_info.context.instance
     if not instance.is_asset_aware:
-        return graphene_info.schema.type_named("AssetsNotSupportedError")(
+        return AssetsNotSupportedError(
             message="The configured event log storage is not asset aware."
         )
 
@@ -62,6 +72,8 @@ def get_asset_run_ids(graphene_info, asset_key):
 
 
 def get_assets_for_run_id(graphene_info, run_id):
+    from ..schema.pipelines.pipeline import Asset
+
     check.str_param(run_id, "run_id")
 
     records = graphene_info.context.instance.all_logs(run_id)
@@ -70,4 +82,4 @@ def get_assets_for_run_id(graphene_info, run_id):
         for record in records
         if record.is_dagster_event and record.dagster_event.asset_key
     ]
-    return [graphene_info.schema.type_named("Asset")(key=asset_key) for asset_key in asset_keys]
+    return [Asset(key=asset_key) for asset_key in asset_keys]
