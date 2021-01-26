@@ -8,7 +8,7 @@ from dagster.core.execution.context.system import HookContext
 def send_slack_message_on_failure(
     channel: str, message_fn: Callable[[HookContext], str] = failure_message
 ):
-    @failure_hook(required_resource_keys={'slack'})
+    @failure_hook(required_resource_keys={"slack"})
     def _hook(context: HookContext):
         context.resources.slack.chat_postMessage(channel=channel, text=message_fn(context))
 
@@ -48,7 +48,7 @@ def send_slack_message_on_success(
 
     """
 
-    @success_hook(required_resource_keys={'slack'})
+    @success_hook(required_resource_keys={"slack"})
     def _hook(context: HookContext):
         context.resources.slack.chat_postMessage(channel=channel, text=message_fn(context))
 

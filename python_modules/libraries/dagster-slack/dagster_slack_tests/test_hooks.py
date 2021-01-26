@@ -20,12 +20,12 @@ def test_failure_hook_on_solid_instance(mock_urllib_http_request):
 
     @pipeline(mode_defs=[ModeDefinition(resource_defs={"slack": slack_resource})])
     def a_pipeline():
-        pass_solid.with_hooks(hook_defs={send_slack_message_on_failure('#foo')})()
+        pass_solid.with_hooks(hook_defs={send_slack_message_on_failure("#foo")})()
         pass_solid.alias("solid_with_hook").with_hooks(
-            hook_defs={send_slack_message_on_failure('#foo')}
+            hook_defs={send_slack_message_on_failure("#foo")}
         )()
         fail_solid.alias("fail_solid_without_hook")()
-        fail_solid.with_hooks(hook_defs={send_slack_message_on_failure('#foo')})()
+        fail_solid.with_hooks(hook_defs={send_slack_message_on_failure("#foo")})()
 
     result = execute_pipeline(
         a_pipeline,
@@ -78,12 +78,12 @@ def test_success_hook_on_solid_instance(mock_urllib_http_request):
 
     @pipeline(mode_defs=[ModeDefinition(resource_defs={"slack": slack_resource})])
     def a_pipeline():
-        pass_solid.with_hooks(hook_defs={send_slack_message_on_success('#foo')})()
+        pass_solid.with_hooks(hook_defs={send_slack_message_on_success("#foo")})()
         pass_solid.alias("solid_with_hook").with_hooks(
-            hook_defs={send_slack_message_on_success('#foo')}
+            hook_defs={send_slack_message_on_success("#foo")}
         )()
         pass_solid.alias("solid_without_hook")()
-        fail_solid.with_hooks(hook_defs={send_slack_message_on_success('#foo')})()
+        fail_solid.with_hooks(hook_defs={send_slack_message_on_success("#foo")})()
 
     result = execute_pipeline(
         a_pipeline,
