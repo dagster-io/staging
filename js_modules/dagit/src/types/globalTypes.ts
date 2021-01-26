@@ -28,6 +28,14 @@ export enum EvaluationErrorReason {
   SELECTOR_FIELD_ERROR = "SELECTOR_FIELD_ERROR",
 }
 
+export enum GrapheneLogLevel {
+  CRITICAL = "CRITICAL",
+  DEBUG = "DEBUG",
+  ERROR = "ERROR",
+  INFO = "INFO",
+  WARNING = "WARNING",
+}
+
 export enum JobStatus {
   RUNNING = "RUNNING",
   STOPPED = "STOPPED",
@@ -50,14 +58,6 @@ export enum LocationStateChangeEventType {
   LOCATION_ERROR = "LOCATION_ERROR",
   LOCATION_RECONNECTED = "LOCATION_RECONNECTED",
   LOCATION_UPDATED = "LOCATION_UPDATED",
-}
-
-export enum LogLevel {
-  CRITICAL = "CRITICAL",
-  DEBUG = "DEBUG",
-  ERROR = "ERROR",
-  INFO = "INFO",
-  WARNING = "WARNING",
 }
 
 export enum ObjectStoreOperationType {

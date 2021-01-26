@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { LogLevel, ObjectStoreOperationType } from "./../../types/globalTypes";
+import { GrapheneLogLevel, ObjectStoreOperationType } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: LogsScrollingTableMessageFragment
@@ -14,7 +14,7 @@ export interface LogsScrollingTableMessageFragment_ExecutionStepSkippedEvent {
   __typename: "ExecutionStepSkippedEvent" | "ExecutionStepStartEvent" | "ExecutionStepSuccessEvent" | "ExecutionStepUpForRetryEvent" | "ExecutionStepRestartEvent" | "LogMessageEvent" | "PipelineStartEvent" | "PipelineEnqueuedEvent" | "PipelineDequeuedEvent" | "PipelineStartingEvent" | "PipelineCancelingEvent" | "PipelineCanceledEvent" | "PipelineSuccessEvent" | "HookCompletedEvent" | "HookSkippedEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
 }
 
@@ -94,7 +94,7 @@ export interface LogsScrollingTableMessageFragment_StepMaterializationEvent {
   __typename: "StepMaterializationEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   materialization: LogsScrollingTableMessageFragment_StepMaterializationEvent_materialization;
 }
@@ -116,7 +116,7 @@ export interface LogsScrollingTableMessageFragment_PipelineInitFailureEvent {
   __typename: "PipelineInitFailureEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   error: LogsScrollingTableMessageFragment_PipelineInitFailureEvent_error;
 }
@@ -138,7 +138,7 @@ export interface LogsScrollingTableMessageFragment_PipelineFailureEvent {
   __typename: "PipelineFailureEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   pipelineFailureError: LogsScrollingTableMessageFragment_PipelineFailureEvent_pipelineFailureError | null;
 }
@@ -224,7 +224,7 @@ export interface LogsScrollingTableMessageFragment_ExecutionStepFailureEvent {
   __typename: "ExecutionStepFailureEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   error: LogsScrollingTableMessageFragment_ExecutionStepFailureEvent_error;
   failureMetadata: LogsScrollingTableMessageFragment_ExecutionStepFailureEvent_failureMetadata | null;
@@ -301,7 +301,7 @@ export interface LogsScrollingTableMessageFragment_ExecutionStepInputEvent {
   __typename: "ExecutionStepInputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   inputName: string;
   typeCheck: LogsScrollingTableMessageFragment_ExecutionStepInputEvent_typeCheck;
@@ -378,7 +378,7 @@ export interface LogsScrollingTableMessageFragment_ExecutionStepOutputEvent {
   __typename: "ExecutionStepOutputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   outputName: string;
   typeCheck: LogsScrollingTableMessageFragment_ExecutionStepOutputEvent_typeCheck;
@@ -455,7 +455,7 @@ export interface LogsScrollingTableMessageFragment_StepExpectationResultEvent {
   __typename: "StepExpectationResultEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   expectationResult: LogsScrollingTableMessageFragment_StepExpectationResultEvent_expectationResult;
 }
@@ -529,7 +529,7 @@ export interface LogsScrollingTableMessageFragment_ObjectStoreOperationEvent {
   __typename: "ObjectStoreOperationEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   operationResult: LogsScrollingTableMessageFragment_ObjectStoreOperationEvent_operationResult;
 }
@@ -538,7 +538,7 @@ export interface LogsScrollingTableMessageFragment_HandledOutputEvent {
   __typename: "HandledOutputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   outputName: string;
   managerKey: string;
@@ -548,7 +548,7 @@ export interface LogsScrollingTableMessageFragment_LoadedInputEvent {
   __typename: "LoadedInputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   inputName: string;
   managerKey: string;
@@ -632,7 +632,7 @@ export interface LogsScrollingTableMessageFragment_EngineEvent {
   __typename: "EngineEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   metadataEntries: LogsScrollingTableMessageFragment_EngineEvent_metadataEntries[];
   engineError: LogsScrollingTableMessageFragment_EngineEvent_engineError | null;
@@ -655,7 +655,7 @@ export interface LogsScrollingTableMessageFragment_HookErroredEvent {
   __typename: "HookErroredEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   error: LogsScrollingTableMessageFragment_HookErroredEvent_error;
 }

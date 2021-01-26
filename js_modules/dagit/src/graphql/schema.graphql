@@ -4,7 +4,7 @@ type Query {
   repositoryOrError(repositorySelector: RepositorySelector!): RepositoryOrError!
   repositoryLocationsOrError: RepositoryLocationsOrError!
   pipelineOrError(params: PipelineSelector!): PipelineOrError!
-  pipelineSnapshotOrError(snapshotId: String, activePipelineSelector: PipelineSelector): PipelineSnapshotOrError!
+  pipelineSnapshotOrError(snapshotId: String, activePipelineSelector: PipelineSelector): SnapshotOrError!
   scheduler: SchedulerOrError!
   scheduleOrError(scheduleSelector: ScheduleSelector!): ScheduleOrError!
   schedulesOrError(repositorySelector: RepositorySelector!): SchedulesOrError!
@@ -420,7 +420,7 @@ type StepMaterializationEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   materialization: Materialization!
@@ -431,12 +431,12 @@ interface MessageEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
 
-enum LogLevel {
+enum GrapheneLogLevel {
   CRITICAL
   ERROR
   INFO
@@ -654,10 +654,10 @@ input RepositorySelector {
 union RepositoryLocationsOrError = RepositoryLocationConnection | PythonError
 
 type RepositoryLocationConnection {
-  nodes: [RepositoryLocationOrLoadFailure!]!
+  nodes: [LocationOrLoadFailure!]!
 }
 
-union RepositoryLocationOrLoadFailure = RepositoryLocation | RepositoryLocationLoadFailure
+union LocationOrLoadFailure = RepositoryLocation | RepositoryLocationLoadFailure
 
 type RepositoryLocationLoadFailure {
   id: ID!
@@ -679,7 +679,7 @@ input PipelineSelector {
   solidSelection: [String!]
 }
 
-union PipelineSnapshotOrError = PipelineSnapshot | PipelineSnapshotNotFoundError | PipelineNotFoundError | PythonError
+union SnapshotOrError = PipelineNotFoundError | PipelineSnapshot | PipelineSnapshotNotFoundError | PythonError
 
 type PipelineSnapshot implements IPipelineSnapshot & PipelineReference {
   name: String!
@@ -1062,7 +1062,7 @@ type ExecutionStepFailureEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   error: PythonError!
@@ -1079,7 +1079,7 @@ type ExecutionStepInputEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   inputName: String!
@@ -1097,7 +1097,7 @@ type ExecutionStepOutputEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   outputName: String!
@@ -1108,7 +1108,7 @@ type ExecutionStepSkippedEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
@@ -1117,7 +1117,7 @@ type ExecutionStepStartEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
@@ -1126,7 +1126,7 @@ type ExecutionStepSuccessEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
@@ -1135,7 +1135,7 @@ type ExecutionStepUpForRetryEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   error: PythonError!
@@ -1146,7 +1146,7 @@ type ExecutionStepRestartEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
@@ -1155,7 +1155,7 @@ type LogMessageEvent implements MessageEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
@@ -1164,7 +1164,7 @@ type PipelineFailureEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1179,7 +1179,7 @@ type PipelineInitFailureEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1190,7 +1190,7 @@ type PipelineStartEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1200,7 +1200,7 @@ type PipelineEnqueuedEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1210,7 +1210,7 @@ type PipelineDequeuedEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1220,7 +1220,7 @@ type PipelineStartingEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1230,7 +1230,7 @@ type PipelineCancelingEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1240,7 +1240,7 @@ type PipelineCanceledEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1250,7 +1250,7 @@ type PipelineSuccessEvent implements MessageEvent & PipelineEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   pipelineName: String!
@@ -1260,7 +1260,7 @@ type HandledOutputEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   outputName: String!
@@ -1271,7 +1271,7 @@ type LoadedInputEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   inputName: String!
@@ -1284,7 +1284,7 @@ type ObjectStoreOperationEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   operationResult: ObjectStoreOperationResult!
@@ -1308,7 +1308,7 @@ type StepExpectationResultEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   expectationResult: ExpectationResult!
@@ -1318,7 +1318,7 @@ type EngineEvent implements MessageEvent & DisplayableEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   label: String!
@@ -1333,7 +1333,7 @@ type HookCompletedEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
@@ -1342,7 +1342,7 @@ type HookSkippedEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
 }
@@ -1351,7 +1351,7 @@ type HookErroredEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
   timestamp: String!
-  level: LogLevel!
+  level: GrapheneLogLevel!
   stepKey: String
   solidHandleID: String
   error: PythonError!
@@ -1387,48 +1387,143 @@ enum LocationStateChangeEventType {
   LOCATION_ERROR
 }
 
-type RegularConfigType implements ConfigType {
-  key: String!
+type EventFloatMetadataEntry implements EventMetadataEntry {
+  label: String!
   description: String
-  recursiveConfigTypes: [ConfigType!]!
-  typeParamKeys: [String!]!
-  isSelector: Boolean!
-  givenName: String!
+  floatValue: Float!
 }
 
-type ArrayConfigType implements ConfigType & WrappingConfigType {
-  key: String!
+type EventIntMetadataEntry implements EventMetadataEntry {
+  label: String!
   description: String
-  recursiveConfigTypes: [ConfigType!]!
-  typeParamKeys: [String!]!
-  isSelector: Boolean!
-  ofType: ConfigType!
+  intValue: Int!
 }
 
-interface WrappingConfigType {
-  ofType: ConfigType!
+type EventJsonMetadataEntry implements EventMetadataEntry {
+  label: String!
+  description: String
+  jsonString: String!
 }
 
-type ScalarUnionConfigType implements ConfigType {
-  key: String!
+type EventMarkdownMetadataEntry implements EventMetadataEntry {
+  label: String!
   description: String
-  recursiveConfigTypes: [ConfigType!]!
-  typeParamKeys: [String!]!
-  isSelector: Boolean!
-  scalarType: ConfigType!
-  nonScalarType: ConfigType!
-  scalarTypeKey: String!
-  nonScalarTypeKey: String!
+  mdStr: String!
 }
 
-type NullableConfigType implements ConfigType & WrappingConfigType {
-  key: String!
+type EventPathMetadataEntry implements EventMetadataEntry {
+  label: String!
   description: String
-  recursiveConfigTypes: [ConfigType!]!
-  typeParamKeys: [String!]!
-  isSelector: Boolean!
-  ofType: ConfigType!
+  path: String!
 }
+
+type EventPythonArtifactMetadataEntry implements EventMetadataEntry {
+  label: String!
+  description: String
+  module: String!
+  name: String!
+}
+
+type EventTextMetadataEntry implements EventMetadataEntry {
+  label: String!
+  description: String
+  text: String!
+}
+
+type EventUrlMetadataEntry implements EventMetadataEntry {
+  label: String!
+  description: String
+  url: String!
+}
+
+type MissingRunIdErrorEvent {
+  invalidRunId: String!
+}
+
+type ConfigTypeNotFoundError implements Error {
+  message: String!
+  pipeline: Pipeline!
+  configTypeName: String!
+}
+
+type FieldNotDefinedConfigError implements PipelineConfigValidationError {
+  message: String!
+  path: [String!]!
+  stack: EvaluationStack!
+  reason: EvaluationErrorReason!
+  fieldName: String!
+}
+
+type FieldsNotDefinedConfigError implements PipelineConfigValidationError {
+  message: String!
+  path: [String!]!
+  stack: EvaluationStack!
+  reason: EvaluationErrorReason!
+  fieldNames: [String!]!
+}
+
+type MissingFieldConfigError implements PipelineConfigValidationError {
+  message: String!
+  path: [String!]!
+  stack: EvaluationStack!
+  reason: EvaluationErrorReason!
+  field: ConfigTypeField!
+}
+
+type MissingFieldsConfigError implements PipelineConfigValidationError {
+  message: String!
+  path: [String!]!
+  stack: EvaluationStack!
+  reason: EvaluationErrorReason!
+  fields: [ConfigTypeField!]!
+}
+
+type RuntimeMismatchConfigError implements PipelineConfigValidationError {
+  message: String!
+  path: [String!]!
+  stack: EvaluationStack!
+  reason: EvaluationErrorReason!
+  valueRep: String
+}
+
+type SelectorTypeConfigError implements PipelineConfigValidationError {
+  message: String!
+  path: [String!]!
+  stack: EvaluationStack!
+  reason: EvaluationErrorReason!
+  incomingFields: [String!]!
+}
+
+type UnknownPipeline implements PipelineReference {
+  name: String!
+  solidSelection: [String!]
+}
+
+type DeleteRunMutation {
+  Output: DeletePipelineRunResult!
+}
+
+type LaunchPartitionBackfillMutation {
+  Output: PartitionBackfillResult!
+}
+
+type LaunchPipelineExecutionMutation {
+  Output: LaunchPipelineExecutionResult!
+}
+
+type LaunchPipelineReexecutionMutation {
+  Output: LaunchPipelineReexecutionResult!
+}
+
+type ReloadRepositoryLocationMutation {
+  Output: ReloadRepositoryLocationMutationResult!
+}
+
+type TerminatePipelineExecutionMutation {
+  Output: TerminatePipelineExecutionResult!
+}
+
+union ConfigTypeOrError = EnumConfigType | CompositeConfigType | RegularConfigType | PipelineNotFoundError | ConfigTypeNotFoundError | PythonError
 
 type EnumConfigType implements ConfigType {
   key: String!
@@ -1454,58 +1549,47 @@ type CompositeConfigType implements ConfigType {
   fields: [ConfigTypeField!]!
 }
 
-type RuntimeMismatchConfigError implements PipelineConfigValidationError {
-  message: String!
-  path: [String!]!
-  stack: EvaluationStack!
-  reason: EvaluationErrorReason!
-  valueRep: String
+type RegularConfigType implements ConfigType {
+  key: String!
+  description: String
+  recursiveConfigTypes: [ConfigType!]!
+  typeParamKeys: [String!]!
+  isSelector: Boolean!
+  givenName: String!
 }
 
-type MissingFieldConfigError implements PipelineConfigValidationError {
-  message: String!
-  path: [String!]!
-  stack: EvaluationStack!
-  reason: EvaluationErrorReason!
-  field: ConfigTypeField!
+type ArrayConfigType implements ConfigType & WrappingConfigType {
+  key: String!
+  description: String
+  recursiveConfigTypes: [ConfigType!]!
+  typeParamKeys: [String!]!
+  isSelector: Boolean!
+  ofType: ConfigType!
 }
 
-type MissingFieldsConfigError implements PipelineConfigValidationError {
-  message: String!
-  path: [String!]!
-  stack: EvaluationStack!
-  reason: EvaluationErrorReason!
-  fields: [ConfigTypeField!]!
+interface WrappingConfigType {
+  ofType: ConfigType!
 }
 
-type FieldNotDefinedConfigError implements PipelineConfigValidationError {
-  message: String!
-  path: [String!]!
-  stack: EvaluationStack!
-  reason: EvaluationErrorReason!
-  fieldName: String!
+type NullableConfigType implements ConfigType & WrappingConfigType {
+  key: String!
+  description: String
+  recursiveConfigTypes: [ConfigType!]!
+  typeParamKeys: [String!]!
+  isSelector: Boolean!
+  ofType: ConfigType!
 }
 
-type FieldsNotDefinedConfigError implements PipelineConfigValidationError {
-  message: String!
-  path: [String!]!
-  stack: EvaluationStack!
-  reason: EvaluationErrorReason!
-  fieldNames: [String!]!
-}
-
-type SelectorTypeConfigError implements PipelineConfigValidationError {
-  message: String!
-  path: [String!]!
-  stack: EvaluationStack!
-  reason: EvaluationErrorReason!
-  incomingFields: [String!]!
-}
-
-type ConfigTypeNotFoundError implements Error {
-  message: String!
-  pipeline: Pipeline!
-  configTypeName: String!
+type ScalarUnionConfigType implements ConfigType {
+  key: String!
+  description: String
+  recursiveConfigTypes: [ConfigType!]!
+  typeParamKeys: [String!]!
+  isSelector: Boolean!
+  scalarType: ConfigType!
+  nonScalarType: ConfigType!
+  scalarTypeKey: String!
+  nonScalarTypeKey: String!
 }
 
 type ListDagsterType implements DagsterType & WrappingDagsterType {
@@ -1542,6 +1626,45 @@ type NullableDagsterType implements DagsterType & WrappingDagsterType {
   ofType: DagsterType!
 }
 
+input MarshalledInput {
+  inputName: String!
+  key: String!
+}
+
+input MarshalledOutput {
+  outputName: String!
+  key: String!
+}
+
+input Retries {
+  mode: String
+  retriesPreviousAttempts: [RetriesPreviousAttempts]
+}
+
+input RetriesPreviousAttempts {
+  key: String
+  count: Int
+}
+
+input StepExecution {
+  stepKey: String!
+  marshalledInputs: [MarshalledInput!]
+  marshalledOutputs: [MarshalledOutput!]
+}
+
+input StepOutputHandle {
+  stepKey: String!
+  outputName: String!
+}
+
+type RunGroups {
+  results: [RunGroup!]!
+}
+
+type StopSensorMutation {
+  Output: StopSensorMutationResultOrError!
+}
+
 type CompositeSolidDefinition implements ISolidDefinition & SolidContainer {
   name: String!
   description: String
@@ -1562,86 +1685,4 @@ type InputMapping {
 type OutputMapping {
   mappedOutput: Output!
   definition: OutputDefinition!
-}
-
-type UnknownPipeline implements PipelineReference {
-  name: String!
-  solidSelection: [String!]
-}
-
-type MissingRunIdErrorEvent {
-  invalidRunId: String!
-}
-
-type EventPathMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  path: String!
-}
-
-type EventJsonMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  jsonString: String!
-}
-
-type EventTextMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  text: String!
-}
-
-type EventUrlMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  url: String!
-}
-
-type EventMarkdownMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  mdStr: String!
-}
-
-type EventPythonArtifactMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  module: String!
-  name: String!
-}
-
-type EventFloatMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  floatValue: Float!
-}
-
-type EventIntMetadataEntry implements EventMetadataEntry {
-  label: String!
-  description: String
-  intValue: Int!
-}
-
-type ScheduleTick {
-  tickId: String!
-  status: JobTickStatus!
-  timestamp: Float!
-  tickSpecificData: ScheduleTickSpecificData
-}
-
-union ScheduleTickSpecificData = ScheduleTickSuccessData | ScheduleTickFailureData
-
-type ScheduleTickSuccessData {
-  run: PipelineRun
-}
-
-type ScheduleTickFailureData {
-  error: PythonError!
-}
-
-type ScheduleTickStatsSnapshot {
-  ticksStarted: Int!
-  ticksSucceeded: Int!
-  ticksSkipped: Int!
-  ticksFailed: Int!
 }
