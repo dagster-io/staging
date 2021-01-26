@@ -1,2 +1,2 @@
 build:
-	pushd sphinx; popd; python pack_json.py
+	pushd sphinx; make clean; make json; popd; python pack_json.py
