@@ -30,6 +30,8 @@ class DagstermillExecutionContext(AbstractComputeExecutionContext):
         self.solid_name = check.str_param(solid_name, "solid_name")
         self._solid_config = solid_config
 
+        self._environment_config = self._pipeline_context.build_environment_config()
+
     def has_tag(self, key: str) -> bool:
         """Check if a logging tag is defined on the context.
 
@@ -67,7 +69,7 @@ class DagstermillExecutionContext(AbstractComputeExecutionContext):
     @property
     def environment_config(self) -> EnvironmentConfig:
         """:class:`dagster.EnvironmentConfig`: The environment_config for the context"""
-        return self._pipeline_context.environment_config
+        return self._environment_config
 
     @property
     def logging_tags(self) -> Dict[str, str]:
