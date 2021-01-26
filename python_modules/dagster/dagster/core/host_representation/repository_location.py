@@ -302,6 +302,101 @@ class InProcessRepositoryLocation(RepositoryLocation):
         )
 
 
+class DagsterCloudRepositoryLocation(RepositoryLocation):
+    def __init__(self, repository_location_handle):
+        self._handle = check.inst_param(
+            repository_location_handle,
+            "repository_location_handle",
+            DagsterCloudRepositoryLocationHandle,
+        )
+
+        self._handle = repository_location_handle
+
+        # External repositories and pipelines are serialized and stored
+        # in the dagster cloud DB
+        self.external_repositories = {
+            repo.name: repo for repo in fetch_serialized_repositories_from_cloud_db()
+        }
+
+    def is_reload_supported(self):
+        # Reloading refreshes the serialized repositoires in the dagster cloud DB
+        return True
+
+    def get_repository(self, name):
+        check.str_param(name, "name")
+        return self.external_repositories[name]
+
+    def has_repository(self, name):
+        return name in self.external_repositories
+
+    def get_repositories(self):
+        return self.external_repositories
+
+    @property
+    def name(self):
+        return self._handle.location_name
+
+    @property
+    def location_handle(self):
+        return self._handle
+
+    def get_external_execution_plan(
+        self, external_pipeline, run_config, mode, step_keys_to_execute
+    ):
+        check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+        check.dict_param(run_config, "run_config")
+        check.str_param(mode, "mode")
+        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+
+        # The daemon could also do this in the user cloud at run launch time,
+        # but still using it as an example
+
+        # Probably wouldn't use the literal gRPC args here
+        execution_plan_snapshot_args = ExecutionPlanSnapshotArgs(
+            pipeline_origin=pipeline_origin,
+            solid_selection=solid_selection,
+            run_config=run_config,
+            mode=mode,
+            step_keys_to_execute=step_keys_to_execute,
+            pipeline_snapshot_id=pipeline_snapshot_id,
+        )
+        # Write this to a queue that the daemon is reading from, with a timeout
+
+        # Use async to make this non-blocking?
+        execution_plan_snapshot_or_error = self.handle.send_daemon_request(
+            "ExternalExecutionPlan", execution_plan_snapshot_args
+        )
+
+        if isinstance(execution_plan_snapshot_or_error, ExecutionPlanSnapshotErrorData):
+            return execution_plan_snapshot_or_error
+
+        return ExternalExecutionPlan(
+            execution_plan_snapshot=execution_plan_snapshot_or_error,
+            represented_pipeline=external_pipeline,
+        )
+
+    def get_subset_external_pipeline_result(self, selector):
+        check.inst_param(selector, "selector", PipelineSelector)
+        check.invariant(
+            selector.location_name == self.name,
+            "PipelineSelector location_name mismatch, got {selector.location_name} expected {self.name}".format(
+                self=self, selector=selector
+            ),
+        )
+
+        external_repository = self.external_repositories[selector.repository_name]
+        pipeline_handle = PipelineHandle(selector.pipeline_name, external_repository.handle)
+
+        snapshot_args = PipelineSubsetSnapshotArgs(
+            pipeline_origin=pipeline_handle.get_external_origin(),
+            solid_selection=selector.solid_selection,
+        )
+
+        return self.handle.send_daemon_request("ExternalPipelineSubset", snapshot_args)
+
+    # And so on for the rest of the APIs
+
+
 class GrpcServerRepositoryLocation(RepositoryLocation):
     def __init__(self, repository_location_handle):
         check.param_invariant(

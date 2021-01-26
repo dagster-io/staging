@@ -87,6 +87,15 @@ class _RepositoryLocationHandleManager:
         return self
 
     def get_external_pipeline_from_run(self, pipeline_run):
+        # This part would need to change a bit. We would need to translate
+        # from the DagsterCloudRepositoryLocationOrigin used in the host process,
+
+        # to a GrpcServerRepositoryLocaitonOrigin that will work in the user process.
+        # There are various ways to do this, depending on whether we're OK uploading host
+        # and port information to the central dagster cloud DB? If we are, it should be
+        # pretty trivial to translate to a GrpcServerRepositoryLocationOrigin that we could
+        # then use to actually launch the run.
+
         repo_location_origin = (
             pipeline_run.external_pipeline_origin.external_repository_origin.repository_location_origin
         )

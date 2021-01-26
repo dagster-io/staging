@@ -67,6 +67,28 @@ class RepositoryLocationHandle(ABC):
         pass
 
 
+# On dagit startup in dagster cloud, we add one of these to the workspace based on the
+# repository locations that the user has registered
+class DagsterCloudRepositoryLocationHandle(RepositoryLocationHandle):
+
+    # Repres
+    def __init__(self, origin):
+        self.origin = check.inst_param(origin, "origin", DagsterCloudRepositoryLocationOrigin)
+        self.queue_client = new DagsterCloudMessageQueueClient()
+
+    def send_daemon_request(self, request_name, request_args):
+
+        # Dagster Cloud API has a queue that the daemon reads from
+        request_id = str(uuid.uuid4())
+        self.queue_client.add_request(
+            self.origin.location_name, request_id, request_name, request_args
+        )
+        while (True): # Add timeout
+            if self.queue_client.has_response(request_id):
+                return self.queue_client.get_response(request_id)
+            time.sleep(0.2)
+
+
 class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
     """
     Represents a gRPC server that Dagster is not responsible for managing.

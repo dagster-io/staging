@@ -143,6 +143,22 @@ class ManagedGrpcPythonEnvRepositoryLocationOrigin(
 
 
 @whitelist_for_serdes
+class DagsterCloudRepositoryLocationOrigin(
+    namedtuple(
+        "_DagsterCloudRepositoryLocationOrigin", "location_name user_cloud_host user_cloud_port"
+    ),
+    RepositoryLocationOrigin,
+):
+    def __new__(cls, location_name, user_cloud_host, user_cloud_port):
+        return super(DagsterCloudRepositoryLocationOrigin, cls).__new__(
+            cls,
+            check.str_param(location_name, "location_name"),
+            check.str_param(user_cloud_host, "user_cloud_host"),
+            check.str_param(user_cloud_port, "user_cloud_port"),
+        )
+
+
+@whitelist_for_serdes
 class GrpcServerRepositoryLocationOrigin(
     namedtuple("_GrpcServerRepositoryLocationOrigin", "host port socket location_name"),
     RepositoryLocationOrigin,
