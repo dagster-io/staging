@@ -1,35 +1,34 @@
 from datetime import datetime
 
+import graphene
 from dagster import check
-from dagster.core.host_representation import ExternalSensor, SensorSelector
-from dagster.core.scheduler.job import JobState, JobStatus
+from dagster.core.host_representation import ExternalSensor
+from dagster.core.host_representation import SensorSelector as DagsterSensorSelector
+from dagster.core.scheduler.job import JobState as DagsterJobState
+from dagster.core.scheduler.job import JobStatus
 from dagster.utils import datetime_as_float
-from dagster_graphql import dauphin
-from dagster_graphql.implementation.fetch_sensors import start_sensor, stop_sensor
-from dagster_graphql.schema.errors import (
-    DauphinPythonError,
-    DauphinRepositoryNotFoundError,
-    DauphinSensorNotFoundError,
-)
+
+from ..implementation.fetch_sensors import start_sensor, stop_sensor
+from .errors import PythonError, RepositoryNotFoundError, SensorNotFoundError
+from .inputs import SensorSelector
+from .jobs import FutureJobTick, JobState
+from .util import non_null_list
 
 SENSOR_DAEMON_INTERVAL = 30
 
 
-class DauphinSensor(dauphin.ObjectType):
-    class Meta:
-        name = "Sensor"
-
-    id = dauphin.NonNull(dauphin.ID)
-    jobOriginId = dauphin.NonNull(dauphin.String)
-    name = dauphin.NonNull(dauphin.String)
-    pipelineName = dauphin.NonNull(dauphin.String)
-    solidSelection = dauphin.List(dauphin.String)
-    mode = dauphin.NonNull(dauphin.String)
-    sensorState = dauphin.NonNull("JobState")
-    nextTick = dauphin.Field("FutureJobTick")
+class Sensor(graphene.ObjectType):
+    id = graphene.NonNull(graphene.ID)
+    jobOriginId = graphene.NonNull(graphene.String)
+    name = graphene.NonNull(graphene.String)
+    pipelineName = graphene.NonNull(graphene.String)
+    solidSelection = graphene.List(graphene.String)
+    mode = graphene.NonNull(graphene.String)
+    sensorState = graphene.NonNull(JobState)
+    nextTick = graphene.Field(FutureJobTick)
 
     def resolve_id(self, _):
-        return "%s:%s" % (self.name, self.pipelineName)
+        return f"{self.name}:{self.pipelineName}"
 
     def __init__(self, graphene_info, external_sensor):
         self._external_sensor = check.inst_param(external_sensor, "external_sensor", ExternalSensor)
@@ -42,7 +41,7 @@ class DauphinSensor(dauphin.ObjectType):
             # have a stored database row yet
             self._sensor_state = self._external_sensor.get_default_job_state()
 
-        super(DauphinSensor, self).__init__(
+        super(Sensor, self).__init__(
             name=external_sensor.name,
             jobOriginId=external_sensor.get_external_origin_id(),
             pipelineName=external_sensor.pipeline_name,
@@ -50,8 +49,8 @@ class DauphinSensor(dauphin.ObjectType):
             mode=external_sensor.mode,
         )
 
-    def resolve_sensorState(self, graphene_info):
-        return graphene_info.schema.type_named("JobState")(self._sensor_state)
+    def resolve_sensorState(self, _graphene_info):
+        return JobState(self._sensor_state)
 
     def resolve_nextTick(self, graphene_info):
         if self._sensor_state.status != JobStatus.RUNNING:
@@ -66,75 +65,75 @@ class DauphinSensor(dauphin.ObjectType):
         next_timestamp = latest_tick.timestamp + SENSOR_DAEMON_INTERVAL
         if next_timestamp < datetime_as_float(datetime.now()):
             return None
-        return graphene_info.schema.type_named("FutureJobTick")(self._sensor_state, next_timestamp)
+        return FutureJobTick(self._sensor_state, next_timestamp)
 
 
-class DauphinSensorOrError(dauphin.Union):
+class SensorOrError(graphene.Union):
     class Meta:
-        name = "SensorOrError"
         types = (
-            "Sensor",
-            DauphinSensorNotFoundError,
-            DauphinPythonError,
+            Sensor,
+            SensorNotFoundError,
+            PythonError,
         )
 
 
-class DauphinSensors(dauphin.ObjectType):
+class Sensors(graphene.ObjectType):
+    results = non_null_list(Sensor)
+
+
+class SensorsOrError(graphene.Union):
     class Meta:
-        name = "Sensors"
-
-    results = dauphin.non_null_list("Sensor")
+        types = (Sensors, RepositoryNotFoundError, PythonError)
 
 
-class DauphinSensorsOrError(dauphin.Union):
-    class Meta:
-        name = "SensorsOrError"
-        types = (DauphinSensors, DauphinRepositoryNotFoundError, DauphinPythonError)
-
-
-class DauphinStartSensorMutation(dauphin.Mutation):
-    class Meta:
-        name = "StartSensorMutation"
-
+class StartSensorMutation(graphene.Mutation):
     class Arguments:
-        sensor_selector = dauphin.NonNull("SensorSelector")
+        sensor_selector = graphene.NonNull(SensorSelector)
 
-    Output = dauphin.NonNull("SensorOrError")
+    Output = graphene.NonNull(SensorOrError)
 
     def mutate(self, graphene_info, sensor_selector):
-        return start_sensor(graphene_info, SensorSelector.from_graphql_input(sensor_selector))
+        return start_sensor(
+            graphene_info, DagsterSensorSelector.from_graphql_input(sensor_selector)
+        )
 
 
-class DauphinStopSensorMutation(dauphin.Mutation):
+class StopSensorMutationResult(graphene.ObjectType):
+    jobState = graphene.Field(JobState)
+
+    def __init__(self, job_state):
+        super().__init__()
+        self._job_state = check.inst_param(job_state, "job_state", DagsterJobState)
+
+    def resolve_jobState(self, _graphene_info):
+        if not self._job_state:
+            return None
+
+        return JobState(job_state=self._job_state)
+
+
+class StopSensorMutationResultOrError(graphene.Union):
     class Meta:
-        name = "StopSensorMutation"
+        types = (StopSensorMutationResult, PythonError)
 
+
+class StopSensorMutation(graphene.Mutation):
     class Arguments:
-        job_origin_id = dauphin.NonNull(dauphin.String)
+        job_origin_id = graphene.NonNull(graphene.String)
 
-    Output = dauphin.NonNull("StopSensorMutationResultOrError")
+    Output = graphene.NonNull(StopSensorMutationResultOrError)
 
     def mutate(self, graphene_info, job_origin_id):
         return stop_sensor(graphene_info, job_origin_id)
 
 
-class DauphinStopSensorMutationResult(dauphin.ObjectType):
-    class Meta:
-        name = "StopSensorMutationResult"
-
-    jobState = dauphin.Field("JobState")
-
-    def __init__(self, job_state):
-        self._job_state = check.inst_param(job_state, "job_state", JobState)
-
-    def resolve_jobState(self, graphene_info):
-        if not self._job_state:
-            return None
-
-        return graphene_info.schema.type_named("JobState")(job_state=self._job_state)
-
-
-class DauphinStopSensorMutationResultOrError(dauphin.Union):
-    class Meta:
-        name = "StopSensorMutationResultOrError"
-        types = ("StopSensorMutationResult", "PythonError")
+types = [
+    Sensor,
+    SensorOrError,
+    Sensors,
+    SensorsOrError,
+    StopSensorMutation,
+    StopSensorMutationResult,
+    StopSensorMutationResultOrError,
+    StopSensorMutation,
+]
