@@ -8,7 +8,10 @@ from dagster.core.definitions.pipeline import PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.context.system import SystemPipelineExecutionContext
+from dagster.core.execution.context.system import (
+    PipelineExecutionContext,
+    SystemPipelineExecutionContext,
+)
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
@@ -26,6 +29,7 @@ from dagster.utils.interrupts import capture_interrupts
 
 from .context_creation_pipeline import (
     ExecutionContextManager,
+    HostModePipelineExecutionContextManager,
     PipelineExecutionContextManager,
     PlanExecutionContextManager,
     scoped_pipeline_context,
@@ -133,6 +137,7 @@ def execute_run(
     pipeline_run: PipelineRun,
     instance: DagsterInstance,
     raise_on_error: bool = False,
+    host_mode: bool = False,  # No loading user code until steps
 ) -> PipelineExecutionResult:
     """Executes an existing pipeline run synchronously.
 
@@ -174,8 +179,8 @@ def execute_run(
             pipeline_run.pipeline_name, pipeline_run.run_id, pipeline_run.status
         ),
     )
-    pipeline_def = pipeline.get_definition()
     if pipeline_run.solids_to_execute:
+        pipeline_def = pipeline.get_definition()
         if isinstance(pipeline_def, PipelineSubsetDefinition):
             check.invariant(
                 pipeline_run.solids_to_execute == pipeline.solids_to_execute,
@@ -222,7 +227,15 @@ def execute_run(
     _execute_run_iterable = _ExecuteRunWithPlanIterable(
         execution_plan=execution_plan,
         iterator=_pipeline_execution_iterator,
-        execution_context_manager=PipelineExecutionContextManager(
+        execution_context_manager=HostModePipelineExecutionContextManager(
+            execution_plan=execution_plan,
+            pipeline_run=pipeline_run,
+            instance=instance,
+            run_config=pipeline_run.run_config,
+            raise_on_error=raise_on_error,
+        )
+        if host_mode
+        else PipelineExecutionContextManager(
             execution_plan=execution_plan,
             pipeline_run=pipeline_run,
             instance=instance,
@@ -232,6 +245,8 @@ def execute_run(
     )
     event_list = list(_execute_run_iterable)
     pipeline_context = _execute_run_iterable.pipeline_context
+
+    return
 
     # workaround for mem_io_manager to work in reconstruct_context, e.g. result.result_for_solid
     # in-memory values dict will get lost when the resource is re-initiated in reconstruct_context
@@ -722,16 +737,16 @@ def create_execution_plan(
 
 
 def _pipeline_execution_iterator(
-    pipeline_context: SystemPipelineExecutionContext, execution_plan: ExecutionPlan
+    pipeline_context: PipelineExecutionContext, execution_plan: ExecutionPlan
 ) -> Iterator[DagsterEvent]:
     """A complete execution of a pipeline. Yields pipeline start, success,
     and failure events.
 
     Args:
-        pipeline_context (SystemPipelineExecutionContext):
+        pipeline_context (PipelineExecutionContext):
         execution_plan (ExecutionPlan):
     """
-    check.inst_param(pipeline_context, "pipeline_context", SystemPipelineExecutionContext)
+    check.inst_param(pipeline_context, "pipeline_context", PipelineExecutionContext)
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
 
     yield DagsterEvent.pipeline_start(pipeline_context)

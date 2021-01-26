@@ -15,6 +15,7 @@ from dagster.core.definitions import (
 from dagster.core.definitions.events import ObjectStoreOperationType
 from dagster.core.execution.context.system import (
     HookContext,
+    PipelineExecutionContext,
     SystemExecutionContext,
     SystemStepExecutionContext,
 )
@@ -236,7 +237,7 @@ class DagsterEvent(
     def from_pipeline(
         event_type, pipeline_context, message=None, event_specific_data=None, step_handle=None
     ):
-        check.inst_param(pipeline_context, "pipeline_context", SystemExecutionContext)
+        check.inst_param(pipeline_context, "pipeline_context", PipelineExecutionContext)
         check.opt_inst_param(
             step_handle, "step_handle", (StepHandle, ResolvedFromDynamicStepHandle)
         )
