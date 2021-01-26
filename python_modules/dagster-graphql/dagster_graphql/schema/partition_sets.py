@@ -1,9 +1,9 @@
+import graphene
 from dagster import check
 from dagster.core.host_representation import ExternalPartitionSet, RepositoryHandle
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster.core.storage.tags import PARTITION_NAME_TAG, PARTITION_SET_TAG
 from dagster.utils import merge_dicts
-from dagster_graphql import dauphin
 from dagster_graphql.implementation.fetch_partition_sets import (
     get_partition_by_name,
     get_partition_config,
@@ -12,30 +12,61 @@ from dagster_graphql.implementation.fetch_partition_sets import (
     get_partitions,
 )
 from dagster_graphql.implementation.fetch_runs import get_runs
-from dagster_graphql.schema.errors import (
-    DauphinPartitionSetNotFoundError,
-    DauphinPipelineNotFoundError,
-    DauphinPythonError,
-)
+
+from .errors import PartitionSetNotFoundError, PipelineNotFoundError, PythonError
+from .pipelines.status import PipelineRunStatus
+from .runs import PipelineRun
+from .tags import PipelineTag
+from .util import non_null_list
 
 
-class DauphinPartition(dauphin.ObjectType):
+class PartitionTags(graphene.ObjectType):
+    results = non_null_list(PipelineTag)
+
+
+class PartitionRunConfig(graphene.ObjectType):
+    yaml = graphene.NonNull(graphene.String)
+
+
+class PartitionRunConfigOrError(graphene.Union):
     class Meta:
-        name = "Partition"
+        types = (PartitionRunConfig, PythonError)
 
-    name = dauphin.NonNull(dauphin.String)
-    partition_set_name = dauphin.NonNull(dauphin.String)
-    solid_selection = dauphin.List(dauphin.NonNull(dauphin.String))
-    mode = dauphin.NonNull(dauphin.String)
-    runConfigOrError = dauphin.NonNull("PartitionRunConfigOrError")
-    tagsOrError = dauphin.NonNull("PartitionTagsOrError")
-    runs = dauphin.Field(
-        dauphin.non_null_list("PipelineRun"),
-        filter=dauphin.Argument("PipelineRunsFilter"),
-        cursor=dauphin.String(),
-        limit=dauphin.Int(),
+
+class PartitionStatus(graphene.ObjectType):
+    id = graphene.NonNull(graphene.String)
+    partitionName = graphene.NonNull(graphene.String)
+    runStatus = graphene.Field(PipelineRunStatus)
+
+
+class PartitionStatuses(graphene.ObjectType):
+    results = non_null_list(PartitionStatus)
+
+
+class PartitionStatusesOrError(graphene.Union):
+    class Meta:
+        types = (PartitionStatuses, PythonError)
+
+
+class PartitionTagsOrError(graphene.Union):
+    class Meta:
+        types = (PartitionTags, PythonError)
+
+
+class Partition(graphene.ObjectType):
+    name = graphene.NonNull(graphene.String)
+    partition_set_name = graphene.NonNull(graphene.String)
+    solid_selection = graphene.List(graphene.NonNull(graphene.String))
+    mode = graphene.NonNull(graphene.String)
+    runConfigOrError = graphene.NonNull(PartitionRunConfigOrError)
+    tagsOrError = graphene.NonNull(PartitionTagsOrError)
+    runs = graphene.Field(
+        non_null_list(PipelineRun),
+        filter=graphene.Argument(PipelineRunsFilter),
+        cursor=graphene.String(),
+        limit=graphene.Int(),
     )
-    status = dauphin.Field("PipelineRunStatus")
+    status = graphene.Field(PipelineRunStatus)
 
     def __init__(self, external_repository_handle, external_partition_set, partition_name):
         self._external_repository_handle = check.inst_param(
@@ -46,7 +77,7 @@ class DauphinPartition(dauphin.ObjectType):
         )
         self._partition_name = check.str_param(partition_name, "partition_name")
 
-        super(DauphinPartition, self).__init__(
+        super(Partition, self).__init__(
             name=partition_name,
             partition_set_name=external_partition_set.name,
             solid_selection=external_partition_set.solid_selection,
@@ -91,30 +122,29 @@ class DauphinPartition(dauphin.ObjectType):
         )
 
 
-class DauphinPartitions(dauphin.ObjectType):
+class Partitions(graphene.ObjectType):
+    results = non_null_list(Partition)
+
+
+class PartitionsOrError(graphene.Union):
     class Meta:
-        name = "Partitions"
-
-    results = dauphin.non_null_list("Partition")
+        types = (Partitions, PythonError)
 
 
-class DauphinPartitionSet(dauphin.ObjectType):
-    class Meta:
-        name = "PartitionSet"
-
-    id = dauphin.NonNull(dauphin.ID)
-    name = dauphin.NonNull(dauphin.String)
-    pipeline_name = dauphin.NonNull(dauphin.String)
-    solid_selection = dauphin.List(dauphin.NonNull(dauphin.String))
-    mode = dauphin.NonNull(dauphin.String)
-    partitionsOrError = dauphin.Field(
-        dauphin.NonNull("PartitionsOrError"),
-        cursor=dauphin.String(),
-        limit=dauphin.Int(),
-        reverse=dauphin.Boolean(),
+class PartitionSet(graphene.ObjectType):
+    id = graphene.NonNull(graphene.ID)
+    name = graphene.NonNull(graphene.String)
+    pipeline_name = graphene.NonNull(graphene.String)
+    solid_selection = graphene.List(graphene.NonNull(graphene.String))
+    mode = graphene.NonNull(graphene.String)
+    partitionsOrError = graphene.Field(
+        graphene.NonNull(PartitionsOrError),
+        cursor=graphene.String(),
+        limit=graphene.Int(),
+        reverse=graphene.Boolean(),
     )
-    partition = dauphin.Field("Partition", partition_name=dauphin.NonNull(dauphin.String))
-    partitionStatusesOrError = dauphin.NonNull("PartitionStatusesOrError")
+    partition = graphene.Field(Partition, partition_name=graphene.NonNull(graphene.String))
+    partitionStatusesOrError = graphene.NonNull(PartitionStatusesOrError)
 
     def __init__(self, external_repository_handle, external_partition_set):
         self._external_repository_handle = check.inst_param(
@@ -124,7 +154,7 @@ class DauphinPartitionSet(dauphin.ObjectType):
             external_partition_set, "external_partition_set", ExternalPartitionSet
         )
 
-        super(DauphinPartitionSet, self).__init__(
+        super(PartitionSet, self).__init__(
             name=external_partition_set.name,
             pipeline_name=external_partition_set.pipeline_name,
             solid_selection=external_partition_set.solid_selection,
@@ -158,74 +188,15 @@ class DauphinPartitionSet(dauphin.ObjectType):
         )
 
 
-class DapuphinPartitionSetOrError(dauphin.Union):
+class PartitionSetOrError(graphene.Union):
     class Meta:
-        name = "PartitionSetOrError"
-        types = ("PartitionSet", DauphinPartitionSetNotFoundError, DauphinPythonError)
+        types = (PartitionSet, PartitionSetNotFoundError, PythonError)
 
 
-class DauphinPartitionSets(dauphin.ObjectType):
+class PartitionSets(graphene.ObjectType):
+    results = non_null_list(PartitionSet)
+
+
+class PartitionSetsOrError(graphene.Union):
     class Meta:
-        name = "PartitionSets"
-
-    results = dauphin.non_null_list("PartitionSet")
-
-
-class DauphinPartitionTags(dauphin.ObjectType):
-    class Meta:
-        name = "PartitionTags"
-
-    results = dauphin.non_null_list("PipelineTag")
-
-
-class DauphinPartitionRunConfig(dauphin.ObjectType):
-    class Meta:
-        name = "PartitionRunConfig"
-
-    yaml = dauphin.NonNull(dauphin.String)
-
-
-class DauphinPartitionSetsOrError(dauphin.Union):
-    class Meta:
-        name = "PartitionSetsOrError"
-        types = (DauphinPartitionSets, DauphinPipelineNotFoundError, DauphinPythonError)
-
-
-class DauphinPartitionsOrError(dauphin.Union):
-    class Meta:
-        name = "PartitionsOrError"
-        types = (DauphinPartitions, DauphinPythonError)
-
-
-class DauphinPartitionTagsOrError(dauphin.Union):
-    class Meta:
-        name = "PartitionTagsOrError"
-        types = (DauphinPartitionTags, DauphinPythonError)
-
-
-class DauphinPartitionRunConfigOrError(dauphin.Union):
-    class Meta:
-        name = "PartitionRunConfigOrError"
-        types = (DauphinPartitionRunConfig, DauphinPythonError)
-
-
-class DauphinPartitionStatus(dauphin.ObjectType):
-    class Meta:
-        name = "PartitionStatus"
-
-    id = dauphin.NonNull(dauphin.String)
-    partitionName = dauphin.NonNull(dauphin.String)
-    runStatus = dauphin.Field("PipelineRunStatus")
-
-
-class DauphinPartitionStatuses(dauphin.ObjectType):
-    class Meta:
-        name = "PartitionStatuses"
-
-    results = dauphin.non_null_list("PartitionStatus")
-
-
-class DauphinPartitionStatusesOrError(dauphin.Union):
-    class Meta:
-        name = "PartitionStatusesOrError"
-        types = (DauphinPartitionStatuses, DauphinPythonError)
+        types = (PartitionSets, PipelineNotFoundError, PythonError)

@@ -1,34 +1,68 @@
+import graphene
 from dagster import check
 from dagster.core.definitions.job import JobType
-from dagster.core.scheduler.job import (
-    JobState,
-    JobStatus,
-    JobTick,
-    JobTickStatus,
-    ScheduleJobData,
-    SensorJobData,
-)
+from dagster.core.scheduler.job import JobState as DagsterJobState
+from dagster.core.scheduler.job import JobStatus as DagsterJobStatus
+from dagster.core.scheduler.job import JobTick as DagsterJobTick
+from dagster.core.scheduler.job import JobTickStatus as DagsterJobTickStatus
+from dagster.core.scheduler.job import JobType as DagsterJobType
+from dagster.core.scheduler.job import ScheduleJobData as DagsterScheduleJobData
+from dagster.core.scheduler.job import SensorJobData as DagsterSensorJobData
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
-from dagster_graphql import dauphin
+
+from .errors import PythonError
+from .repository_origin import RepositoryOrigin
+from .runs import PipelineRun
+from .util import non_null_list
+
+JobType = graphene.Enum.from_enum(DagsterJobType)
+JobStatus = graphene.Enum.from_enum(DagsterJobStatus)
+JobTickStatus = graphene.Enum.from_enum(DagsterJobTickStatus)
 
 
-class DauphinJobTick(dauphin.ObjectType):
+class SensorJobData(graphene.ObjectType):
+    lastTickTimestamp = graphene.Float()
+    lastRunKey = graphene.String()
+
+    def __init__(self, job_specific_data):
+        check.inst_param(job_specific_data, "job_specific_data", SensorJobData)
+        super().__init__(
+            lastTickTimestamp=job_specific_data.last_tick_timestamp,
+            lastRunKey=job_specific_data.last_run_key,
+        )
+
+
+class ScheduleJobData(graphene.ObjectType):
+    cronSchedule = graphene.NonNull(graphene.String)
+    startTimestamp = graphene.Float()
+
+    def __init__(self, job_specific_data):
+        check.inst_param(job_specific_data, "job_specific_data", ScheduleJobData)
+        super().__init__(
+            cronSchedule=job_specific_data.cron_schedule,
+            startTimestamp=job_specific_data.start_timestamp,
+        )
+
+
+class JobSpecificData(graphene.Union):
     class Meta:
-        name = "JobTick"
+        types = (SensorJobData, ScheduleJobData)
 
-    id = dauphin.NonNull(dauphin.ID)
-    status = dauphin.NonNull("JobTickStatus")
-    timestamp = dauphin.NonNull(dauphin.Float)
-    runIds = dauphin.non_null_list(dauphin.String)
-    error = dauphin.Field("PythonError")
-    skipReason = dauphin.String()
 
-    runs = dauphin.non_null_list("PipelineRun")
+class JobTick(graphene.ObjectType):
+    id = graphene.NonNull(graphene.ID)
+    status = graphene.NonNull(JobTickStatus)
+    timestamp = graphene.NonNull(graphene.Float)
+    runIds = non_null_list(graphene.String)
+    error = graphene.Field(PythonError)
+    skipReason = graphene.String()
+
+    runs = non_null_list(PipelineRun)
 
     def __init__(self, _, job_tick):
-        self._job_tick = check.inst_param(job_tick, "job_tick", JobTick)
+        self._job_tick = check.inst_param(job_tick, "job_tick", DagsterJobTick)
 
-        super(DauphinJobTick, self).__init__(
+        super(JobTick, self).__init__(
             status=job_tick.status,
             timestamp=job_tick.timestamp,
             runIds=job_tick.run_ids,
@@ -42,50 +76,39 @@ class DauphinJobTick(dauphin.ObjectType):
     def resolve_runs(self, graphene_info):
         instance = graphene_info.context.instance
         return [
-            graphene_info.schema.type_named("PipelineRun")(instance.get_run_by_id(run_id))
+            PipelineRun(instance.get_run_by_id(run_id))
             for run_id in self._job_tick.run_ids
             if instance.has_run(run_id)
         ]
 
 
-class DauphinFutureJobTick(dauphin.ObjectType):
-    class Meta(object):
-        name = "FutureJobTick"
-
-    timestamp = dauphin.NonNull(dauphin.Float)
+class FutureJobTick(graphene.ObjectType):
+    timestamp = graphene.NonNull(graphene.Float)
 
     def __init__(self, timestamp):
-        super(DauphinFutureJobTick, self).__init__(
-            timestamp=check.float_param(timestamp, "timestamp"),
-        )
+        super().__init__(timestamp=check.float_param(timestamp, "timestamp"))
 
 
-class DauphinFutureJobTicks(dauphin.ObjectType):
-    class Meta(object):
-        name = "FutureJobTicks"
-
-    results = dauphin.non_null_list("FutureJobTick")
-    cursor = dauphin.NonNull(dauphin.Float)
+class FutureJobTicks(graphene.ObjectType):
+    results = non_null_list(FutureJobTick)
+    cursor = graphene.NonNull(graphene.Float)
 
 
-class DauphinJobState(dauphin.ObjectType):
-    class Meta:
-        name = "JobState"
-
-    id = dauphin.NonNull(dauphin.ID)
-    name = dauphin.NonNull(dauphin.String)
-    jobType = dauphin.NonNull("JobType")
-    status = dauphin.NonNull("JobStatus")
-    repositoryOrigin = dauphin.NonNull("RepositoryOrigin")
-    jobSpecificData = dauphin.Field("JobSpecificData")
-    runs = dauphin.Field(dauphin.non_null_list("PipelineRun"), limit=dauphin.Int())
-    runsCount = dauphin.NonNull(dauphin.Int)
-    ticks = dauphin.Field(dauphin.non_null_list("JobTick"), limit=dauphin.Int())
-    runningCount = dauphin.NonNull(dauphin.Int)  # remove with cron scheduler
+class JobState(graphene.ObjectType):
+    id = graphene.NonNull(graphene.ID)
+    name = graphene.NonNull(graphene.String)
+    jobType = graphene.NonNull(JobType)
+    status = graphene.NonNull(JobStatus)
+    repositoryOrigin = graphene.NonNull(RepositoryOrigin)
+    jobSpecificData = graphene.Field(JobSpecificData)
+    runs = graphene.Field(non_null_list(PipelineRun), limit=graphene.Int())
+    runsCount = graphene.NonNull(graphene.Int)
+    ticks = graphene.Field(non_null_list(JobTick), limit=graphene.Int())
+    runningCount = graphene.NonNull(graphene.Int)  # remove with cron scheduler
 
     def __init__(self, job_state):
         self._job_state = check.inst_param(job_state, "job_state", JobState)
-        super(DauphinJobState, self).__init__(
+        super().__init__(
             id=job_state.job_origin_id,
             name=job_state.name,
             jobType=job_state.job_type,
@@ -94,21 +117,17 @@ class DauphinJobState(dauphin.ObjectType):
 
     def resolve_repositoryOrigin(self, graphene_info):
         origin = self._job_state.origin.external_repository_origin
-        return graphene_info.schema.type_named("RepositoryOrigin")(origin)
+        return RepositoryOrigin(origin)
 
     def resolve_jobSpecificData(self, graphene_info):
         if not self._job_state.job_specific_data:
             return None
 
         if self._job_state.job_type == JobType.SENSOR:
-            return graphene_info.schema.type_named("SensorJobData")(
-                self._job_state.job_specific_data
-            )
+            return SensorJobData(self._job_state.job_specific_data)
 
         if self._job_state.job_type == JobType.SCHEDULE:
-            return graphene_info.schema.type_named("ScheduleJobData")(
-                self._job_state.job_specific_data
-            )
+            return ScheduleJobData(self._job_state.job_specific_data)
 
         return None
 
@@ -118,7 +137,7 @@ class DauphinJobState(dauphin.ObjectType):
         else:
             filters = PipelineRunsFilter.for_schedule(self._job_state)
         return [
-            graphene_info.schema.type_named("PipelineRun")(r)
+            PipelineRun(r)
             for r in graphene_info.context.instance.get_runs(
                 filters=filters, limit=kwargs.get("limit"),
             )
@@ -137,7 +156,7 @@ class DauphinJobState(dauphin.ObjectType):
         if limit:
             ticks = ticks[:limit]
 
-        return [graphene_info.schema.type_named("JobTick")(graphene_info, tick) for tick in ticks]
+        return [JobTick(graphene_info, tick) for tick in ticks]
 
     def resolve_runningCount(self, graphene_info):
         if self._job_state.job_type == JobType.SENSOR:
@@ -148,55 +167,10 @@ class DauphinJobState(dauphin.ObjectType):
             )
 
 
-class DauphinJobSpecificData(dauphin.Union):
+class JobStates(graphene.ObjectType):
+    results = non_null_list(JobState)
+
+
+class JobStatesOrError(graphene.Union):
     class Meta:
-        name = "JobSpecificData"
-        types = ("SensorJobData", "ScheduleJobData")
-
-
-class DauphinSensorJobData(dauphin.ObjectType):
-    class Meta:
-        name = "SensorJobData"
-
-    lastTickTimestamp = dauphin.Float()
-    lastRunKey = dauphin.String()
-
-    def __init__(self, job_specific_data):
-        check.inst_param(job_specific_data, "job_specific_data", SensorJobData)
-        super(DauphinSensorJobData, self).__init__(
-            lastTickTimestamp=job_specific_data.last_tick_timestamp,
-            lastRunKey=job_specific_data.last_run_key,
-        )
-
-
-class DauphinScheduleJobData(dauphin.ObjectType):
-    class Meta:
-        name = "ScheduleJobData"
-
-    cronSchedule = dauphin.NonNull(dauphin.String)
-    startTimestamp = dauphin.Float()
-
-    def __init__(self, job_specific_data):
-        check.inst_param(job_specific_data, "job_specific_data", ScheduleJobData)
-        super(DauphinScheduleJobData, self).__init__(
-            cronSchedule=job_specific_data.cron_schedule,
-            startTimestamp=job_specific_data.start_timestamp,
-        )
-
-
-class DauphinJobStatesOrError(dauphin.Union):
-    class Meta:
-        name = "JobStatesOrError"
-        types = ("JobStates", "PythonError")
-
-
-class DauphinJobStates(dauphin.ObjectType):
-    class Meta:
-        name = "JobStates"
-
-    results = dauphin.non_null_list("JobState")
-
-
-DauphinJobType = dauphin.Enum.from_enum(JobType)
-DauphinJobStatus = dauphin.Enum.from_enum(JobStatus)
-DauphinJobTickStatus = dauphin.Enum.from_enum(JobTickStatus)
+        types = (JobStates, PythonError)

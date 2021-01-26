@@ -1,11 +1,14 @@
+import graphene
 from dagster import check
 from dagster.config.config_type import ConfigTypeKind
 from dagster.config.snap import get_recursive_type_keys
 from dagster.core.snap import ConfigFieldSnap, ConfigSchemaSnapshot, ConfigTypeSnap
-from dagster_graphql import dauphin
+
+from .errors import PipelineNotFoundError, PythonError
+from .util import non_null_list
 
 
-def to_dauphin_config_type(config_schema_snapshot, config_type_key):
+def to_config_type(config_schema_snapshot, config_type_key):
     check.inst_param(config_schema_snapshot, "config_schema_snapshot", ConfigSchemaSnapshot)
     check.str_param(config_type_key, "config_type_key")
 
@@ -13,17 +16,17 @@ def to_dauphin_config_type(config_schema_snapshot, config_type_key):
     kind = config_type_snap.kind
 
     if kind == ConfigTypeKind.ENUM:
-        return DauphinEnumConfigType(config_schema_snapshot, config_type_snap)
+        return EnumConfigType(config_schema_snapshot, config_type_snap)
     elif ConfigTypeKind.has_fields(kind):
-        return DauphinCompositeConfigType(config_schema_snapshot, config_type_snap)
+        return CompositeConfigType(config_schema_snapshot, config_type_snap)
     elif kind == ConfigTypeKind.ARRAY:
-        return DauphinArrayConfigType(config_schema_snapshot, config_type_snap)
+        return ArrayConfigType(config_schema_snapshot, config_type_snap)
     elif kind == ConfigTypeKind.NONEABLE:
-        return DauphinNullableConfigType(config_schema_snapshot, config_type_snap)
+        return NullableConfigType(config_schema_snapshot, config_type_snap)
     elif kind == ConfigTypeKind.ANY or kind == ConfigTypeKind.SCALAR:
-        return DauphinRegularConfigType(config_schema_snapshot, config_type_snap)
+        return RegularConfigType(config_schema_snapshot, config_type_snap)
     elif kind == ConfigTypeKind.SCALAR_UNION:
-        return DauphinScalarUnionConfigType(config_schema_snapshot, config_type_snap)
+        return ScalarUnionConfigType(config_schema_snapshot, config_type_snap)
     else:
         check.failed("Should never reach")
 
@@ -37,15 +40,12 @@ def _ctor_kwargs_for_snap(config_type_snap):
     )
 
 
-class DauphinConfigType(dauphin.Interface):
-    class Meta:
-        name = "ConfigType"
+class ConfigType(graphene.Interface):
+    key = graphene.NonNull(graphene.String)
+    description = graphene.String()
 
-    key = dauphin.NonNull(dauphin.String)
-    description = dauphin.String()
-
-    recursive_config_types = dauphin.Field(
-        dauphin.non_null_list("ConfigType"),
+    recursive_config_types = graphene.Field(
+        non_null_list("ConfigType"),
         description="""
 This is an odd and problematic field. It recursively goes down to
 get all the types contained within a type. The case where it is horrible
@@ -63,15 +63,15 @@ want to be able to render them, but without fetching the entire schema.
 We use this capability when rendering the sidebar.
     """,
     )
-    type_param_keys = dauphin.Field(
-        dauphin.non_null_list(dauphin.String),
+    type_param_keys = graphene.Field(
+        non_null_list(graphene.String),
         description="""
 This returns the keys for type parameters of any closed generic type,
 (e.g. List, Optional). This should be used for reconstructing and
 navigating the full schema client-side and not innerTypes.
     """,
     )
-    is_selector = dauphin.NonNull(dauphin.Boolean)
+    is_selector = graphene.NonNull(graphene.Boolean)
 
 
 class ConfigTypeMixin:
@@ -87,52 +87,44 @@ class ConfigTypeMixin:
     def resolve_recursive_config_types(self, _graphene_info):
         return list(
             map(
-                lambda key: to_dauphin_config_type(self._config_schema_snapshot, key),
+                lambda key: to_config_type(self._config_schema_snapshot, key),
                 get_recursive_type_keys(self._config_type_snap, self._config_schema_snapshot),
             )
         )
 
 
-class DauphinRegularConfigType(ConfigTypeMixin, dauphin.ObjectType):
+class RegularConfigType(ConfigTypeMixin, graphene.ObjectType):
     class Meta:
-        name = "RegularConfigType"
-        interfaces = [DauphinConfigType]
+        interfaces = (ConfigType,)
         description = "Regular is an odd name in this context. It really means Scalar or Any."
 
-    given_name = dauphin.NonNull(dauphin.String)
+    given_name = graphene.NonNull(graphene.String)
 
     def resolve_given_name(self, _):
         return self._config_type_snap.given_name
 
 
-class DauphinWrappingConfigType(dauphin.Interface):
+class WrappingConfigType(graphene.Interface):
+    of_type = graphene.Field(graphene.NonNull(ConfigType))
+
+
+class ArrayConfigType(ConfigTypeMixin, graphene.ObjectType):
     class Meta:
-        name = "WrappingConfigType"
-
-    of_type = dauphin.Field(dauphin.NonNull(DauphinConfigType))
-
-
-class DauphinArrayConfigType(ConfigTypeMixin, dauphin.ObjectType):
-    class Meta:
-        name = "ArrayConfigType"
-        interfaces = [DauphinConfigType, DauphinWrappingConfigType]
+        interfaces = (ConfigType, WrappingConfigType)
 
     def resolve_of_type(self, _graphene_info):
-        return to_dauphin_config_type(
-            self._config_schema_snapshot, self._config_type_snap.inner_type_key,
-        )
+        return to_config_type(self._config_schema_snapshot, self._config_type_snap.inner_type_key,)
 
 
-class DauphinScalarUnionConfigType(ConfigTypeMixin, dauphin.ObjectType):
+class ScalarUnionConfigType(ConfigTypeMixin, graphene.ObjectType):
     class Meta:
-        name = "ScalarUnionConfigType"
-        interfaces = [DauphinConfigType]
+        interfaces = (ConfigType,)
 
-    scalar_type = dauphin.NonNull(DauphinConfigType)
-    non_scalar_type = dauphin.NonNull(DauphinConfigType)
+    scalar_type = graphene.NonNull(ConfigType)
+    non_scalar_type = graphene.NonNull(ConfigType)
 
-    scalar_type_key = dauphin.NonNull(dauphin.String)
-    non_scalar_type_key = dauphin.NonNull(dauphin.String)
+    scalar_type_key = graphene.NonNull(graphene.String)
+    non_scalar_type_key = graphene.NonNull(graphene.String)
 
     def get_scalar_type_key(self):
         return self._config_type_snap.scalar_type_key
@@ -147,34 +139,35 @@ class DauphinScalarUnionConfigType(ConfigTypeMixin, dauphin.ObjectType):
         return self.get_non_scalar_type_key()
 
     def resolve_scalar_type(self, _):
-        return to_dauphin_config_type(self._config_schema_snapshot, self.get_scalar_type_key())
+        return to_config_type(self._config_schema_snapshot, self.get_scalar_type_key())
 
     def resolve_non_scalar_type(self, _):
-        return to_dauphin_config_type(self._config_schema_snapshot, self.get_non_scalar_type_key())
+        return to_config_type(self._config_schema_snapshot, self.get_non_scalar_type_key())
 
 
-class DauphinNullableConfigType(ConfigTypeMixin, dauphin.ObjectType):
+class NullableConfigType(ConfigTypeMixin, graphene.ObjectType):
     class Meta:
-        name = "NullableConfigType"
-        interfaces = [DauphinConfigType, DauphinWrappingConfigType]
+        interfaces = (ConfigType, WrappingConfigType)
 
     def resolve_of_type(self, _graphene_info):
-        return to_dauphin_config_type(
-            self._config_schema_snapshot, self._config_type_snap.inner_type_key
-        )
+        return to_config_type(self._config_schema_snapshot, self._config_type_snap.inner_type_key)
 
 
-class DauphinEnumConfigType(ConfigTypeMixin, dauphin.ObjectType):
+class EnumConfigValue(graphene.ObjectType):
+    value = graphene.NonNull(graphene.String)
+    description = graphene.String()
+
+
+class EnumConfigType(ConfigTypeMixin, graphene.ObjectType):
     class Meta:
-        name = "EnumConfigType"
-        interfaces = [DauphinConfigType]
+        interfaces = (ConfigType,)
 
-    values = dauphin.non_null_list("EnumConfigValue")
-    given_name = dauphin.NonNull(dauphin.String)
+    values = non_null_list(EnumConfigValue)
+    given_name = graphene.NonNull(graphene.String)
 
     def resolve_values(self, _graphene_info):
         return [
-            DauphinEnumConfigValue(value=ev.value, description=ev.description)
+            EnumConfigValue(value=ev.value, description=ev.description)
             for ev in self._config_type_snap.enum_values
         ]
 
@@ -182,42 +175,12 @@ class DauphinEnumConfigType(ConfigTypeMixin, dauphin.ObjectType):
         return self._config_type_snap.given_name
 
 
-class DauphinEnumConfigValue(dauphin.ObjectType):
-    class Meta:
-        name = "EnumConfigValue"
-
-    value = dauphin.NonNull(dauphin.String)
-    description = dauphin.String()
-
-
-class DauphinCompositeConfigType(ConfigTypeMixin, dauphin.ObjectType):
-    class Meta:
-        name = "CompositeConfigType"
-        interfaces = [DauphinConfigType]
-
-    fields = dauphin.non_null_list("ConfigTypeField")
-
-    def resolve_fields(self, _graphene_info):
-        return sorted(
-            [
-                DauphinConfigTypeField(
-                    config_schema_snapshot=self._config_schema_snapshot, field_snap=field_snap,
-                )
-                for field_snap in self._config_type_snap.fields
-            ],
-            key=lambda field: field.name,
-        )
-
-
-class DauphinConfigTypeField(dauphin.ObjectType):
-    class Meta:
-        name = "ConfigTypeField"
-
-    name = dauphin.NonNull(dauphin.String)
-    description = dauphin.String()
-    config_type = dauphin.NonNull("ConfigType")
-    config_type_key = dauphin.NonNull(dauphin.String)
-    is_required = dauphin.NonNull(dauphin.Boolean)
+class ConfigTypeField(graphene.ObjectType):
+    name = graphene.NonNull(graphene.String)
+    description = graphene.String()
+    config_type = graphene.NonNull(ConfigType)
+    config_type_key = graphene.NonNull(graphene.String)
+    is_required = graphene.NonNull(graphene.Boolean)
 
     def resolve_config_type_key(self, _):
         return self._field_snap.type_key
@@ -227,11 +190,29 @@ class DauphinConfigTypeField(dauphin.ObjectType):
             config_schema_snapshot, "config_schema_snapshot", ConfigSchemaSnapshot
         )
         self._field_snap = check.inst_param(field_snap, "field_snap", ConfigFieldSnap)
-        super(DauphinConfigTypeField, self).__init__(
+        super(ConfigTypeField, self).__init__(
             name=field_snap.name,
             description=field_snap.description,
             is_required=field_snap.is_required,
         )
 
     def resolve_config_type(self, _graphene_info):
-        return to_dauphin_config_type(self._config_schema_snapshot, self._field_snap.type_key)
+        return to_config_type(self._config_schema_snapshot, self._field_snap.type_key)
+
+
+class CompositeConfigType(ConfigTypeMixin, graphene.ObjectType):
+    class Meta:
+        interfaces = (ConfigType,)
+
+    fields = non_null_list(ConfigTypeField)
+
+    def resolve_fields(self, _graphene_info):
+        return sorted(
+            [
+                ConfigTypeField(
+                    config_schema_snapshot=self._config_schema_snapshot, field_snap=field_snap,
+                )
+                for field_snap in self._config_type_snap.fields
+            ],
+            key=lambda field: field.name,
+        )
