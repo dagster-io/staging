@@ -4,6 +4,7 @@ Not every property on these should be exposed to random Jane or Joe dagster user
 so we have a different layer of objects that encode the explicit public API
 in the user_context module
 """
+from abc import ABC, abstractmethod, abstractproperty
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
@@ -36,9 +37,228 @@ if TYPE_CHECKING:
     from dagster.core.execution.plan.plan import ExecutionPlan
 
 
-class SystemExecutionContextData(
+class PipelineExecutionContext(ABC):
+    """
+    Context with data that can be used during pipeline or step execution, in both host mode
+    (where the process can't load any user code and has to rely on the ExecutionPlan)
+    and user mode (where the process can load any user code)
+    """
+
+    @abstractproperty
+    def pipeline_run(self) -> PipelineRun:
+        pass
+
+    @abstractproperty
+    def run_id(self) -> str:
+        return self.pipeline_run.run_id
+
+    @abstractproperty
+    def run_config(self) -> dict:
+        return self.pipeline_run.run_config
+
+    @abstractproperty
+    def pipeline(self) -> IPipeline:
+        # Host mode can load the IPipeline but not its underlying definition
+        pass
+
+    @abstractproperty
+    def pipeline_name(self) -> str:
+        pass
+
+    @abstractproperty
+    def instance(self) -> "DagsterInstance":
+        pass
+
+    @abstractproperty
+    def raise_on_error(self) -> bool:
+        pass
+
+    @abstractproperty
+    def retry_mode(self) -> RetryMode:
+        pass
+
+    @abstractproperty
+    def execution_plan(self):
+        pass
+
+    @abstractproperty
+    def log(self) -> DagsterLogManager:
+        pass
+
+    @abstractproperty
+    def logging_tags(self) -> Dict[str, str]:
+        pass
+
+    @abstractmethod
+    def has_tag(self, key: str) -> bool:
+        pass
+
+    @abstractmethod
+    def get_tag(self, key: str) -> Optional[str]:
+        pass
+
+
+class RunWorkerExecutionContext(PipelineExecutionContext):
+    @abstractproperty
+    def executor(self) -> Executor:
+        pass
+
+
+class BaseStepExecutionContext(PipelineExecutionContext):
+    @abstractproperty
+    def step(self) -> ExecutionStep:
+        pass
+
+    @property
+    def solid_handle(self) -> "SolidHandle":
+        return self.step.solid_handle
+
+
+class HostModeExecutionContextData(
     namedtuple(
-        "_SystemExecutionContextData",
+        "_HostModeExecutionContextData",
+        ("pipeline_run execution_plan instance raise_on_error retry_mode"),
+    )
+):
+    def __new__(
+        cls,
+        pipeline_run: PipelineRun,
+        execution_plan: "ExecutionPlan",
+        instance: "DagsterInstance",
+        raise_on_error: bool,
+        retry_mode: RetryMode,
+    ):
+        from dagster.core.instance import DagsterInstance
+        from dagster.core.execution.plan.plan import ExecutionPlan
+
+        return super(HostModeExecutionContextData, cls).__new__(
+            cls,
+            pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
+            execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
+            instance=check.inst_param(instance, "instance", DagsterInstance),
+            raise_on_error=check.bool_param(raise_on_error, "raise_on_error"),
+            retry_mode=check.inst_param(retry_mode, "retry_mode", RetryMode),
+        )
+
+
+class HostModeExecutionContext:
+    __slots__ = ["_execution_context_data", "_log_manager"]
+
+    def __init__(
+        self,
+        execution_context_data: HostModeExecutionContextData,
+        log_manager: DagsterLogManager,
+    ):
+        self._execution_context_data = check.inst_param(
+            execution_context_data, "execution_context_data", HostModeExecutionContextData
+        )
+
+        self._log_manager = check.inst_param(log_manager, "log_manager", DagsterLogManager)
+
+    @property
+    def pipeline_run(self) -> PipelineRun:
+        return self._execution_context_data.pipeline_run
+
+    @property
+    def run_id(self) -> str:
+        return self.pipeline_run.run_id
+
+    @property
+    def run_config(self) -> dict:
+        return self.pipeline_run.run_config
+
+    @property
+    def pipeline(self) -> IPipeline:
+        return self._execution_context_data.execution_plan.pipeline
+
+    @property
+    def pipeline_name(self) -> str:
+        return self.pipeline_run.pipeline_name
+
+    @property
+    def instance(self) -> "DagsterInstance":
+        return self._execution_context_data.instance
+
+    @property
+    def raise_on_error(self) -> bool:
+        return self._execution_context_data.raise_on_error
+
+    @property
+    def execution_plan(self) -> "ExecutionPlan":
+        return self._execution_context_data.execution_plan
+
+    @property
+    def log(self) -> DagsterLogManager:
+        return self._log_manager
+
+    @property
+    def logging_tags(self) -> Dict[str, str]:
+        return self.log.logging_tags
+
+    def has_tag(self, key: str) -> bool:
+        check.str_param(key, "key")
+        return key in self.logging_tags
+
+    def get_tag(self, key: str) -> Optional[str]:
+        check.str_param(key, "key")
+        return self.logging_tags.get(key)
+
+    def for_step(self, step: ExecutionStep) -> "BaseStepExecutionContext":
+        return HostModeStepExecutionContext(
+            execution_context_data=self._execution_context_data,
+            log_manager=self._log_manager.with_tags(**step.logging_tags),
+            step=step,
+        )
+
+    @property
+    def retry_mode(self) -> RetryMode:
+        return self._execution_context_data.retry_mode
+
+
+class HostModeRunWorkerExecutionContext(HostModeExecutionContext, RunWorkerExecutionContext):
+    __slots__ = ["_executor"]
+
+    def __init__(
+        self,
+        execution_context_data: HostModeExecutionContextData,
+        log_manager: DagsterLogManager,
+        executor: Executor,
+    ):
+        super(HostModeRunWorkerExecutionContext, self).__init__(
+            execution_context_data=execution_context_data,
+            log_manager=log_manager,
+        )
+        self._executor = check.inst_param(executor, "executor", Executor)
+
+    @property
+    def executor(self) -> Executor:
+        return self._executor
+
+
+# For logging events about steps within a host run worker
+class HostModeStepExecutionContext(HostModeExecutionContext, BaseStepExecutionContext):
+    __slots__ = ["_step"]
+
+    def __init__(
+        self,
+        execution_context_data: HostModeExecutionContextData,
+        log_manager: DagsterLogManager,
+        step: ExecutionStep,
+    ):
+        self._step = check.inst_param(step, "step", ExecutionStep)
+        super(HostModeStepExecutionContext, self).__init__(
+            execution_context_data,
+            log_manager,
+        )
+
+    @property
+    def step(self) -> ExecutionStep:
+        return self._step
+
+
+class UserCodeExecutionContextData(
+    namedtuple(
+        "_UserCodeExecutionContextData",
         (
             "pipeline_run scoped_resources_builder environment_config pipeline "
             "mode_def intermediate_storage_def instance intermediate_storage "
@@ -47,7 +267,7 @@ class SystemExecutionContextData(
     )
 ):
     """
-    SystemExecutionContextData is the data that remains constant throughout the entire
+    UserCodeExecutionContextData is the data that remains constant throughout the entire
     execution of a pipeline or plan.
     """
 
@@ -70,7 +290,7 @@ class SystemExecutionContextData(
         from dagster.core.instance import DagsterInstance
         from dagster.core.execution.plan.plan import ExecutionPlan
 
-        return super(SystemExecutionContextData, cls).__new__(
+        return super(UserCodeExecutionContextData, cls).__new__(
             cls,
             pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
             scoped_resources_builder=check.inst_param(
@@ -111,12 +331,12 @@ class SystemExecutionContext:
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
     ):
         self._execution_context_data = check.inst_param(
-            execution_context_data, "execution_context_data", SystemExecutionContextData
+            execution_context_data, "execution_context_data", UserCodeExecutionContextData
         )
         self._log_manager = check.inst_param(log_manager, "log_manager", DagsterLogManager)
 
@@ -205,7 +425,7 @@ class SystemExecutionContext:
         check.str_param(key, "key")
         return self.logging_tags.get(key)
 
-    def for_step(self, step: ExecutionStep) -> "SystemStepExecutionContext":
+    def for_step(self, step: ExecutionStep) -> "BaseStepExecutionContext":
 
         check.inst_param(step, "step", ExecutionStep)
 
@@ -220,12 +440,12 @@ class SystemExecutionContext:
         return TypeCheckContext(self._execution_context_data, self.log, dagster_type)
 
 
-class SystemPipelineExecutionContext(SystemExecutionContext):
+class SystemPipelineExecutionContext(SystemExecutionContext, RunWorkerExecutionContext):
     __slots__ = ["_executor"]
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         executor: Executor,
         output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
@@ -240,12 +460,12 @@ class SystemPipelineExecutionContext(SystemExecutionContext):
         return self._executor
 
 
-class SystemStepExecutionContext(SystemExecutionContext):
+class SystemStepExecutionContext(SystemExecutionContext, BaseStepExecutionContext):
     __slots__ = ["_step", "_resources", "_required_resource_keys", "_step_launcher"]
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         step: ExecutionStep,
         output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
@@ -291,10 +511,6 @@ class SystemStepExecutionContext(SystemExecutionContext):
     @property
     def step_launcher(self) -> Optional[StepLauncher]:
         return self._step_launcher
-
-    @property
-    def solid_handle(self) -> "SolidHandle":
-        return self._step.solid_handle
 
     @property
     def solid_def(self) -> SolidDefinition:
@@ -415,7 +631,7 @@ class TypeCheckContext(SystemExecutionContext):
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         dagster_type: DagsterType,
     ):
@@ -444,7 +660,7 @@ class HookContext(SystemExecutionContext):
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         hook_def: HookDefinition,
         step: ExecutionStep,
