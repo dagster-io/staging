@@ -10,11 +10,13 @@ from dagster.core.definitions import (
     RetryRequested,
     SolidHandle,
 )
+from dagster.core.definitions.events import AssetKey
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
     DagsterTypeLoadingError,
     user_code_error_boundary,
 )
+from dagster.core.storage.asset_io_manager import AssetIOManager
 from dagster.core.storage.io_manager import IOManager
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.serdes import whitelist_for_serdes
@@ -117,6 +119,10 @@ class StepInputSource(ABC):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
+    @abstractmethod
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        raise NotImplementedError()
+
 
 class FromRootInputManager(
     NamedTuple("_FromRootInputManager", [("solid_handle", SolidHandle), ("input_name", str)],),
@@ -155,6 +161,9 @@ class FromRootInputManager(
     def required_resource_keys(self, pipeline_def: PipelineDefinition) -> Set[str]:
         input_def = self.get_input_def(pipeline_def)
         return {input_def.root_manager_key}
+
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return []
 
 
 class FromStepOutput(
@@ -256,6 +265,15 @@ class FromStepOutput(
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        source_handle = self.step_output_handle
+        input_manager = step_context.get_io_manager(source_handle)
+        load_context = self.get_load_context(step_context)
+        if isinstance(input_manager, AssetIOManager):
+            return [input_manager.get_asset_key(load_context.upstream_output)]
+        else:
+            return []
+
 
 def _generate_error_boundary_msg_for_step_input(
     context: "SystemStepExecutionContext", input_name: str
@@ -317,6 +335,9 @@ class FromConfig(
         dagster_type = solid_def.input_def_named(self.input_name).dagster_type
         return dagster_type.loader.compute_loaded_input_version(config_data)
 
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return []
+
 
 class FromDefaultValue(
     NamedTuple("_FromDefaultValue", [("solid_handle", SolidHandle), ("input_name", str)],),
@@ -342,6 +363,9 @@ class FromDefaultValue(
         environment_config: EnvironmentConfig,
     ) -> Optional[str]:
         return join_and_hash(repr(self._load_value(pipeline_def)))
+
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return []
 
 
 class FromMultipleSources(
@@ -427,6 +451,13 @@ class FromMultipleSources(
                 for inner_source in self.sources
             ]
         )
+
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return [
+            asset_key
+            for source in self.sources
+            for asset_key in source.get_asset_keys(step_context)
+        ]
 
 
 def _load_input_with_input_manager(input_manager: "InputManager", context: "InputContext"):
