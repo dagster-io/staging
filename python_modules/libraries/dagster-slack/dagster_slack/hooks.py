@@ -22,7 +22,9 @@ def _default_success_message(context: HookContext) -> str:
 
 
 def slack_on_failure(
-    channel: str, message_fn: Callable[[HookContext], str] = _default_failure_message
+    channel: str,
+    message_fn: Callable[[HookContext], str] = _default_failure_message,
+    dagit_base_url: Optional[str] = None,
 ):
     """Create a hook on step failure events that will message the given Slack channel.
 
@@ -30,11 +32,13 @@ def slack_on_failure(
         channel (str): The channel to send the message to (e.g. "#my_channel")
         message_fn (Optional(Callable[[HookContext], str])): Function which takes in the HookContext
             outputs the message you want to send.
+        dagit_base_url: (Optional[str]): The base url of your Dagit instance. Specify this to allow
+            messages to include deeplinks to the specific pipeline run that triggered the hook.
 
     Examples:
         .. code-block:: python
 
-            @slack_on_failure("#foo")
+            @slack_on_failure("#foo", dagit_base_url="http://localhost:3000")
             @pipeline(...)
             def my_pipeline():
                 pass
@@ -42,7 +46,9 @@ def slack_on_failure(
         .. code-block:: python
 
             def my_message_fn(context: HookContext) -> str:
-                return "TODO: come up with something somewhat interesting"
+                return "Solid {solid_name} failed!".format(
+                    solid_name=context.solid
+                )
 
             @solid
             def a_solid(context):
@@ -56,7 +62,13 @@ def slack_on_failure(
 
     @failure_hook(required_resource_keys={"slack"})
     def _hook(context: HookContext):
-        context.resources.slack.chat_postMessage(channel=channel, text=message_fn(context))
+        text = message_fn(context)
+        if dagit_base_url:
+            text += "\n<{base_url}/instance/runs/{run_id}|View in Dagit>".format(
+                base_url=dagit_base_url, run_id=context.run_id
+            )
+
+        context.resources.slack.chat_postMessage(channel=channel, text=text)
 
     return _hook
 
@@ -78,7 +90,7 @@ def slack_on_success(
     Examples:
         .. code-block:: python
 
-            @slack_on_success("#foo", dagit_base_url="http://localhost:3000/")
+            @slack_on_success("#foo", dagit_base_url="http://localhost:3000")
             @pipeline(...)
             def my_pipeline():
                 pass
@@ -104,7 +116,7 @@ def slack_on_success(
     def _hook(context: HookContext):
         text = message_fn(context)
         if dagit_base_url:
-            text += "\n<{base_url}instance/runs/{run_id}|View in Dagit>".format(
+            text += "\n<{base_url}/instance/runs/{run_id}|View in Dagit>".format(
                 base_url=dagit_base_url, run_id=context.run_id
             )
 
