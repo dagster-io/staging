@@ -1,12 +1,21 @@
 from typing import List
 
-# from ..defines import SupportedPython
-# from ..step_builder import StepBuilder
+from ..defines import SupportedPython
+from ..step_builder import StepBuilder
 
 
 def docs_steps() -> List[dict]:
     return [
-        # No docs tests for now
+        StepBuilder("docs sphinx build")
+        .run(
+            "pip install -e python_modules/automation",
+            "pip install -r docs-requirements.txt -qqq",
+            "pushd docs; make build",
+            "git diff --exit-code",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
+        # Old docs tests to refactor and bring back
         # StepBuilder("docs validate-libraries")
         # .run("pip install -e python_modules/automation", "dagster-docs validate-libraries")
         # .on_integration_image(SupportedPython.V3_7)
