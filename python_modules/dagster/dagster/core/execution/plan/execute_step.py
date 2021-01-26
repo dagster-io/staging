@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, Iterator, Optional, Set, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Union
 
 from dagster import check
 from dagster.core.definitions import (
@@ -11,7 +11,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
-from dagster.core.definitions.events import DynamicOutput
+from dagster.core.definitions.events import AssetKey, DynamicOutput, EventMetadataEntry
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,
     DagsterExecutionStepExecutionError,
@@ -27,6 +27,7 @@ from dagster.core.execution.context.system import SystemStepExecutionContext, Ty
 from dagster.core.execution.plan.inputs import StepInputData
 from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
+from dagster.core.storage.asset_io_manager import AssetIOManager
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind
 from dagster.utils import ensure_gen, iterate_with_context
@@ -263,10 +264,13 @@ def core_dagster_event_sequence_for_step(
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
+    input_asset_keys = []
 
     for step_input in step_context.step.step_inputs:
         if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
             continue
+
+        input_asset_keys.extend(step_input.source.get_asset_keys(step_context))
 
         for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
             if isinstance(event_or_input_value, DagsterEvent):
@@ -293,7 +297,7 @@ def core_dagster_event_sequence_for_step(
         ):
 
             if isinstance(user_event, (Output, DynamicOutput)):
-                for evt in _type_check_and_store_output(step_context, user_event):
+                for evt in _type_check_and_store_output(step_context, user_event, input_asset_keys):
                     yield evt
             elif isinstance(user_event, (AssetMaterialization, Materialization)):
                 yield DagsterEvent.step_materialization(step_context, user_event)
@@ -312,7 +316,9 @@ def core_dagster_event_sequence_for_step(
 
 
 def _type_check_and_store_output(
-    step_context: SystemStepExecutionContext, output: Union[DynamicOutput, Output]
+    step_context: SystemStepExecutionContext,
+    output: Union[DynamicOutput, Output],
+    input_asset_keys: List[AssetKey],
 ) -> Iterator[DagsterEvent]:
 
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
@@ -333,7 +339,7 @@ def _type_check_and_store_output(
     for output_event in _type_check_output(step_context, step_output_handle, output, version):
         yield output_event
 
-    for evt in _store_output(step_context, step_output_handle, output):
+    for evt in _store_output(step_context, step_output_handle, output, input_asset_keys):
         yield evt
 
     for evt in _create_type_materializations(step_context, output.output_name, output.value):
@@ -343,7 +349,7 @@ def _type_check_and_store_output(
 def _materializations_to_events(
     step_context: SystemStepExecutionContext,
     step_output_handle: StepOutputHandle,
-    materializations: Iterator[AssetMaterialization],
+    materializations: Iterator[Union[AssetMaterialization, EventMetadataEntry]],
 ) -> Iterator[DagsterEvent]:
     if materializations is not None:
         for materialization in ensure_gen(materializations):
@@ -367,11 +373,13 @@ def _store_output(
     step_context: SystemStepExecutionContext,
     step_output_handle: StepOutputHandle,
     output: Union[Output, DynamicOutput],
+    input_asset_keys: List[AssetKey],
 ) -> Iterator[DagsterEvent]:
     step_output = step_context.step.step_output_named(output.output_name)
     output_def = step_output.output_def
     output_manager = step_context.get_io_manager(step_output_handle)
     output_context = step_context.get_output_context(step_output_handle)
+
     with user_code_error_boundary(
         DagsterExecutionHandleOutputError,
         control_flow_exceptions=[Failure, RetryRequested],
@@ -383,10 +391,30 @@ def _store_output(
         step_key=step_context.step.key,
         output_name=output_context.name,
     ):
-        materializations = output_manager.handle_output(output_context, output.value)
+        metadata_entries_or_materializations = output_manager.handle_output(
+            output_context, output.value
+        )
 
-    for evt in _materializations_to_events(step_context, step_output_handle, materializations):
-        yield evt
+    asset_key: Optional[AssetKey] = None
+    if isinstance(output_manager, AssetIOManager):
+        asset_key = output_manager.get_asset_key(output_context)
+
+    if asset_key:
+        yield DagsterEvent.step_materialization(
+            step_context,
+            AssetMaterialization(
+                asset_key=asset_key,
+                parent_asset_keys=input_asset_keys,
+                metadata_entries=list(metadata_entries_or_materializations or [])
+                + output.metadata_entries
+                or [],
+            ),
+        )
+    else:
+        for evt in _materializations_to_events(
+            step_context, step_output_handle, metadata_entries_or_materializations,
+        ):
+            yield evt
 
     yield DagsterEvent.handled_output(
         step_context,
