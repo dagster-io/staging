@@ -1,6 +1,6 @@
 from dagster.core.utils import check_dagster_package_version
 
-from .hooks import send_slack_message_on_failure, send_slack_message_on_success
+from .hooks import slack_on_failure, slack_on_success
 from .resources import slack_resource
 from .version import __version__
 

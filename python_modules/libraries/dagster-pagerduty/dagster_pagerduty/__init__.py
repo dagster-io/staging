@@ -1,6 +1,6 @@
 from dagster.core.utils import check_dagster_package_version
 
-from .hooks import trigger_pagerduty_alert_on_failure
+from .hooks import pagerduty_on_failure
 from .resources import pagerduty_resource
 from .version import __version__
 

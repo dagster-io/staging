@@ -212,17 +212,3 @@ def failure_hook(name=None, required_resource_keys=None):
         return wrapper(name)
 
     return wrapper
-
-
-def failure_message(context) -> str:
-    return _status_message(context, status="failed")
-
-
-def success_message(context) -> str:
-    return _status_message(context, status="succeeded")
-
-
-def _status_message(context, status: str) -> str:
-    return "Solid {solid_name} on pipeline {pipeline_name} {status}!".format(
-        solid_name=context.solid.name, pipeline_name=context.step.pipeline_name, status=status
-    )
