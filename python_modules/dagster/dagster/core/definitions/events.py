@@ -469,7 +469,7 @@ EntryDataUnion = (
 )
 
 
-class Output(namedtuple("_Output", "value output_name")):
+class Output(namedtuple("_Output", "value output_name metadata_entries")):
     """Event corresponding to one of a solid's outputs.
 
     Solid compute functions must explicitly yield events of this type when they have more than
@@ -486,8 +486,15 @@ class Output(namedtuple("_Output", "value output_name")):
             "result")
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT):
-        return super(Output, cls).__new__(cls, value, check.str_param(output_name, "output_name"),)
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+        return super(Output, cls).__new__(
+            cls,
+            value,
+            check.str_param(output_name, "output_name"),
+            metadata_entries=check.opt_list_param(
+                metadata_entries, "metadata_entries", of_type=EventMetadataEntry
+            ),
+        )
 
 
 class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name")):
@@ -517,7 +524,10 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name"
 
 @whitelist_for_persistence
 class AssetMaterialization(
-    namedtuple("_AssetMaterialization", "asset_key description metadata_entries partition"),
+    namedtuple(
+        "_AssetMaterialization",
+        "asset_key description metadata_entries partition parent_asset_keys",
+    ),
     Persistable,
 ):
     """Event indicating that a solid has materialized an asset.
@@ -540,7 +550,14 @@ class AssetMaterialization(
         partition (Optional[str]): The name of the partition that was materialized.
     """
 
-    def __new__(cls, asset_key, description=None, metadata_entries=None, partition=None):
+    def __new__(
+        cls,
+        asset_key,
+        description=None,
+        metadata_entries=None,
+        partition=None,
+        parent_asset_keys=None,
+    ):
         if isinstance(asset_key, AssetKey):
             check.inst_param(asset_key, "asset_key", AssetKey)
         elif isinstance(asset_key, str):
@@ -557,9 +574,12 @@ class AssetMaterialization(
             asset_key=asset_key,
             description=check.opt_str_param(description, "description"),
             metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
+                metadata_entries, "metadata_entries", of_type=EventMetadataEntry
             ),
             partition=check.opt_str_param(partition, "partition"),
+            parent_asset_keys=check.opt_list_param(
+                parent_asset_keys, "parent_asset_keys", of_type=AssetKey
+            ),
         )
 
     @property
