@@ -29,7 +29,14 @@ startAfter:start_pipeline_marker_1
 endBefore:end_pipeline_marker_1
 ```
 
-### Partition set based schedules [recommended]
+### Partition-based schedules
+
+Partition-based schedules are useful when it's important for a successful run to exist for every scheduler tick.
+For example, if each run fills in a single partition of a data warehouse table, basing your schedule
+on a partition set allows you to track which partitions have corresponding runs and fill in gaps
+when runs fail.
+
+Partition-based schedules require a `start_date` that indicates when the set of partitions begins.
 
 You can create a schedule that is composed using an underlying partition set made up of `datetime`s.
 The decorated schedule function should take in a `datetime` and return the run config for the
@@ -47,11 +54,16 @@ startAfter: start_part
 endBefore: end_part
 ```
 
-### Cron-string based schedules
+### Non-partition-based schedules
 
-You can also use the <PyObject module="dagster" object="schedule" displayText="@schedule"/>
-decorator to define a schedule with an arbitrary cron string. This decorator takes a cron string
-and a pipeline name as input, and should decorate a function that takes in a
+Non-partition-based schedules are useful when it's only important for a run to exist for the most
+recent scheduler tick. For example, if each run drops and recreates a data warehouse table, then
+there's usually no need to kick off runs corresponding to historical ticks - those runs would just
+have the same effect as a run for the most recent tick.
+
+The <PyObject module="dagster" object="schedule" displayText="@schedule"/>
+decorator defines a non-partitioned-based schedule with an arbitrary cron string. This decorator
+should decorate a function that takes in a
 `ScheduleExecutionContext` and returns run config for your run. The schedule will not create a
 partition set, but you can access the execution time for your schedule by using the
 `scheduled_execution_time` property on the passed-in `ScheduleExecutionContext` (assuming you're
