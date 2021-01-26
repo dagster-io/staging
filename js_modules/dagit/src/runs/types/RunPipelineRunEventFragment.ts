@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { LogLevel, ObjectStoreOperationType } from "./../../types/globalTypes";
+import { GrapheneLogLevel, ObjectStoreOperationType } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: RunPipelineRunEventFragment
@@ -14,7 +14,7 @@ export interface RunPipelineRunEventFragment_ExecutionStepSkippedEvent {
   __typename: "ExecutionStepSkippedEvent" | "ExecutionStepStartEvent" | "ExecutionStepSuccessEvent" | "ExecutionStepUpForRetryEvent" | "ExecutionStepRestartEvent" | "LogMessageEvent" | "PipelineStartEvent" | "PipelineEnqueuedEvent" | "PipelineDequeuedEvent" | "PipelineStartingEvent" | "PipelineCancelingEvent" | "PipelineCanceledEvent" | "PipelineSuccessEvent" | "HookCompletedEvent" | "HookSkippedEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
 }
 
@@ -94,7 +94,7 @@ export interface RunPipelineRunEventFragment_StepMaterializationEvent {
   __typename: "StepMaterializationEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   materialization: RunPipelineRunEventFragment_StepMaterializationEvent_materialization;
 }
@@ -116,7 +116,7 @@ export interface RunPipelineRunEventFragment_PipelineInitFailureEvent {
   __typename: "PipelineInitFailureEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   error: RunPipelineRunEventFragment_PipelineInitFailureEvent_error;
 }
@@ -138,7 +138,7 @@ export interface RunPipelineRunEventFragment_PipelineFailureEvent {
   __typename: "PipelineFailureEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   pipelineFailureError: RunPipelineRunEventFragment_PipelineFailureEvent_pipelineFailureError | null;
 }
@@ -224,7 +224,7 @@ export interface RunPipelineRunEventFragment_ExecutionStepFailureEvent {
   __typename: "ExecutionStepFailureEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   error: RunPipelineRunEventFragment_ExecutionStepFailureEvent_error;
   failureMetadata: RunPipelineRunEventFragment_ExecutionStepFailureEvent_failureMetadata | null;
@@ -301,7 +301,7 @@ export interface RunPipelineRunEventFragment_ExecutionStepInputEvent {
   __typename: "ExecutionStepInputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   inputName: string;
   typeCheck: RunPipelineRunEventFragment_ExecutionStepInputEvent_typeCheck;
@@ -378,7 +378,7 @@ export interface RunPipelineRunEventFragment_ExecutionStepOutputEvent {
   __typename: "ExecutionStepOutputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   outputName: string;
   typeCheck: RunPipelineRunEventFragment_ExecutionStepOutputEvent_typeCheck;
@@ -455,7 +455,7 @@ export interface RunPipelineRunEventFragment_StepExpectationResultEvent {
   __typename: "StepExpectationResultEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   expectationResult: RunPipelineRunEventFragment_StepExpectationResultEvent_expectationResult;
 }
@@ -529,7 +529,7 @@ export interface RunPipelineRunEventFragment_ObjectStoreOperationEvent {
   __typename: "ObjectStoreOperationEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   operationResult: RunPipelineRunEventFragment_ObjectStoreOperationEvent_operationResult;
 }
@@ -538,7 +538,7 @@ export interface RunPipelineRunEventFragment_HandledOutputEvent {
   __typename: "HandledOutputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   outputName: string;
   managerKey: string;
@@ -548,7 +548,7 @@ export interface RunPipelineRunEventFragment_LoadedInputEvent {
   __typename: "LoadedInputEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   inputName: string;
   managerKey: string;
@@ -632,7 +632,7 @@ export interface RunPipelineRunEventFragment_EngineEvent {
   __typename: "EngineEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   metadataEntries: RunPipelineRunEventFragment_EngineEvent_metadataEntries[];
   engineError: RunPipelineRunEventFragment_EngineEvent_engineError | null;
@@ -657,7 +657,7 @@ export interface RunPipelineRunEventFragment_HookErroredEvent {
   __typename: "HookErroredEvent";
   message: string;
   timestamp: string;
-  level: LogLevel;
+  level: GrapheneLogLevel;
   stepKey: string | null;
   error: RunPipelineRunEventFragment_HookErroredEvent_error;
 }
