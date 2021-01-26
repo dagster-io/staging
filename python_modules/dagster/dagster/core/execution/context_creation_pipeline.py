@@ -1,5 +1,5 @@
 import sys
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractproperty
 from collections import namedtuple
 from contextlib import contextmanager
 
@@ -30,6 +30,7 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 
 from .context.logger import InitLoggerContext
 from .context.system import (
+    HostModePipelineExecutionContext,
     SystemExecutionContext,
     SystemExecutionContextData,
     SystemPipelineExecutionContext,
@@ -112,49 +113,13 @@ def create_context_creation_data(
 class ExecutionContextManager(ABC):
     def __init__(
         self,
-        execution_plan,
-        run_config,
-        pipeline_run,
-        instance,
-        scoped_resources_builder_cm=None,
-        intermediate_storage=None,
+        event_generator,
         raise_on_error=False,
-        resource_instances_to_override=None,
-        output_capture=None,
     ):
-        scoped_resources_builder_cm = check.opt_callable_param(
-            scoped_resources_builder_cm,
-            "scoped_resources_builder_cm",
-            default=resource_initialization_manager,
-        )
-        generator = self.event_generator(
-            execution_plan,
-            run_config,
-            pipeline_run,
-            instance,
-            scoped_resources_builder_cm,
-            intermediate_storage,
-            raise_on_error,
-            resource_instances_to_override,
-            output_capture,
-        )
-
-        self._manager = EventGenerationManager(generator, self.context_type, raise_on_error)
+        self._manager = EventGenerationManager(event_generator, self.context_type, raise_on_error)
 
     @abstractproperty
     def context_type(self):
-        pass
-
-    @abstractmethod
-    def construct_context(
-        self,
-        context_creation_data,
-        scoped_resources_builder,
-        intermediate_storage,
-        log_manager,
-        raise_on_error,
-        output_capture,
-    ):
         pass
 
     def prepare_context(self):  # ode to Preparable
@@ -166,118 +131,255 @@ class ExecutionContextManager(ABC):
     def shutdown_context(self):
         return self._manager.generate_teardown_events()
 
-    def event_generator(
+    def get_generator(self):
+        return self._manager.generator
+
+
+def host_mode_execution_context_event_generator(
+    execution_plan, run_config, pipeline_run, instance, raise_on_error
+):
+    check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
+
+    check.dict_param(run_config, "run_config", key_type=str)
+    check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
+    check.inst_param(instance, "instance", DagsterInstance)
+    check.bool_param(raise_on_error, "raise_on_error")
+
+    execution_context = None
+
+    loggers = []
+
+    # Should these be configurable from the run config (without loading
+    # the full EnvironmentConfig??)
+
+    for (logger_def, logger_config) in default_system_loggers():
+        loggers.append(
+            logger_def.logger_fn(
+                InitLoggerContext(
+                    logger_config,
+                    pipeline_def=None,
+                    logger_def=logger_def,
+                    run_id=pipeline_run.run_id,
+                )
+            )
+        )
+
+    loggers.append(instance.get_logger())
+
+    log_manager = DagsterLogManager(
+        run_id=pipeline_run.run_id,
+        logging_tags=_get_logging_tags(pipeline_run),
+        loggers=loggers,
+    )
+
+    # Create an executor (again how do we pull config from run_config
+    # without going through the full EnvironmentConfig.build flow)
+    try:
+        from dagster.core.executor.multiprocess import MultiprocessExecutor
+
+        executor = MultiprocessExecutor(
+            pipeline=execution_plan.pipeline,
+            max_concurrent=4,
+            retries=RetryMode.DISABLED,
+        )
+
+        execution_context = HostModePipelineExecutionContext(
+            pipeline_run=pipeline_run,
+            execution_plan=execution_plan,
+            instance=instance,
+            log_manager=log_manager,
+            raise_on_error=raise_on_error,
+            executor=executor,
+        )
+
+        yield execution_context
+
+    except DagsterError as dagster_error:
+        if execution_context is None:
+            user_facing_exc_info = (
+                # pylint does not know original_exc_info exists is is_user_code_error is true
+                # pylint: disable=no-member
+                dagster_error.original_exc_info
+                if dagster_error.is_user_code_error
+                else sys.exc_info()
+            )
+            error_info = serializable_error_info_from_exc_info(user_facing_exc_info)
+
+            yield DagsterEvent.pipeline_init_failure(
+                pipeline_name=pipeline_run.pipeline_name,
+                failure_data=PipelineInitFailureData(error=error_info),
+                log_manager=log_manager,
+            )
+        else:
+            # pipeline teardown failure
+            raise dagster_error
+
+        if raise_on_error:
+            raise dagster_error
+
+
+def user_code_execution_context_event_generator(
+    construct_context_fn,
+    execution_plan,
+    run_config,
+    pipeline_run,
+    instance,
+    scoped_resources_builder_cm,
+    intermediate_storage=None,
+    raise_on_error=False,
+    resource_instances_to_override=None,
+    output_capture=None,
+):
+    scoped_resources_builder_cm = check.opt_callable_param(
+        scoped_resources_builder_cm,
+        "scoped_resources_builder_cm",
+        default=resource_initialization_manager,
+    )
+
+    execution_plan = check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
+    pipeline_def = execution_plan.pipeline.get_definition()
+
+    run_config = check.dict_param(run_config, "run_config", key_type=str)
+    pipeline_run = check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
+    instance = check.inst_param(instance, "instance", DagsterInstance)
+
+    intermediate_storage = check.opt_inst_param(
+        intermediate_storage, "intermediate_storage_data", IntermediateStorage
+    )
+    raise_on_error = check.bool_param(raise_on_error, "raise_on_error")
+    resource_instances_to_override = check.opt_dict_param(
+        resource_instances_to_override, "resource_instances_to_override"
+    )
+
+    execution_context = None
+    resources_manager = None
+
+    try:
+        context_creation_data = create_context_creation_data(
+            execution_plan,
+            run_config,
+            pipeline_run,
+            instance,
+        )
+
+        log_manager = create_log_manager(context_creation_data)
+        resource_defs = execution_plan.pipeline_def.get_mode_definition(
+            context_creation_data.environment_config.mode
+        ).resource_defs
+        resources_manager = scoped_resources_builder_cm(
+            resource_defs=resource_defs,
+            resource_configs=context_creation_data.environment_config.resources,
+            log_manager=log_manager,
+            execution_plan=execution_plan,
+            pipeline_run=context_creation_data.pipeline_run,
+            resource_keys_to_init=context_creation_data.resource_keys_to_init,
+            instance=instance,
+            resource_instances_to_override=resource_instances_to_override,
+            emit_persistent_events=True,
+        )
+        yield from resources_manager.generate_setup_events()
+        scoped_resources_builder = check.inst(
+            resources_manager.get_object(), ScopedResourcesBuilder
+        )
+
+        intermediate_storage = create_intermediate_storage(
+            context_creation_data,
+            intermediate_storage,
+            scoped_resources_builder,
+        )
+
+        execution_context = construct_context_fn(
+            context_creation_data=context_creation_data,
+            scoped_resources_builder=scoped_resources_builder,
+            log_manager=log_manager,
+            intermediate_storage=intermediate_storage,
+            raise_on_error=raise_on_error,
+            output_capture=output_capture,
+        )
+
+        _validate_plan_with_context(execution_context, execution_plan)
+
+        yield execution_context
+        yield from resources_manager.generate_teardown_events()
+    except DagsterError as dagster_error:
+        if execution_context is None:
+            user_facing_exc_info = (
+                # pylint does not know original_exc_info exists is is_user_code_error is true
+                # pylint: disable=no-member
+                dagster_error.original_exc_info
+                if dagster_error.is_user_code_error
+                else sys.exc_info()
+            )
+            error_info = serializable_error_info_from_exc_info(user_facing_exc_info)
+
+            yield DagsterEvent.pipeline_init_failure(
+                pipeline_name=pipeline_def.name,
+                failure_data=PipelineInitFailureData(error=error_info),
+                log_manager=_create_context_free_log_manager(instance, pipeline_run, pipeline_def),
+            )
+            if resources_manager:
+                yield from resources_manager.generate_teardown_events()
+        else:
+            # pipeline teardown failure
+            raise dagster_error
+
+        if raise_on_error:
+            raise dagster_error
+
+
+class HostModePipelineExecutionContextManager(ExecutionContextManager):
+    def __init__(
         self,
         execution_plan,
         run_config,
         pipeline_run,
         instance,
-        scoped_resources_builder_cm,
+        raise_on_error=False,
+    ):
+        super(HostModePipelineExecutionContextManager, self).__init__(
+            host_mode_execution_context_event_generator(
+                execution_plan,
+                run_config,
+                pipeline_run,
+                instance,
+                raise_on_error,
+            )
+        )
+
+    @property
+    def context_type(self):
+        return HostModePipelineExecutionContext
+
+
+class PipelineExecutionContextManager(ExecutionContextManager):
+    def __init__(
+        self,
+        execution_plan,
+        run_config,
+        pipeline_run,
+        instance,
+        scoped_resources_builder_cm=None,
         intermediate_storage=None,
         raise_on_error=False,
         resource_instances_to_override=None,
         output_capture=None,
     ):
-        execution_plan = check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
-        pipeline_def = execution_plan.pipeline.get_definition()
 
-        run_config = check.dict_param(run_config, "run_config", key_type=str)
-        pipeline_run = check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
-        instance = check.inst_param(instance, "instance", DagsterInstance)
-
-        scoped_resources_builder_cm = check.callable_param(
-            scoped_resources_builder_cm, "scoped_resources_builder_cm"
-        )
-        intermediate_storage = check.opt_inst_param(
-            intermediate_storage, "intermediate_storage_data", IntermediateStorage
-        )
-        raise_on_error = check.bool_param(raise_on_error, "raise_on_error")
-        resource_instances_to_override = check.opt_dict_param(
-            resource_instances_to_override, "resource_instances_to_override"
-        )
-
-        execution_context = None
-        resources_manager = None
-
-        try:
-            context_creation_data = create_context_creation_data(
+        super(PipelineExecutionContextManager, self).__init__(
+            user_code_execution_context_event_generator(
+                self.construct_context,
                 execution_plan,
                 run_config,
                 pipeline_run,
                 instance,
-            )
-
-            log_manager = create_log_manager(context_creation_data)
-            resource_defs = execution_plan.pipeline_def.get_mode_definition(
-                context_creation_data.environment_config.mode
-            ).resource_defs
-            resources_manager = scoped_resources_builder_cm(
-                resource_defs=resource_defs,
-                resource_configs=context_creation_data.environment_config.resources,
-                log_manager=log_manager,
-                execution_plan=execution_plan,
-                pipeline_run=context_creation_data.pipeline_run,
-                resource_keys_to_init=context_creation_data.resource_keys_to_init,
-                instance=instance,
-                resource_instances_to_override=resource_instances_to_override,
-                emit_persistent_events=True,
-            )
-            yield from resources_manager.generate_setup_events()
-            scoped_resources_builder = check.inst(
-                resources_manager.get_object(), ScopedResourcesBuilder
-            )
-
-            intermediate_storage = create_intermediate_storage(
-                context_creation_data,
+                scoped_resources_builder_cm,
                 intermediate_storage,
-                scoped_resources_builder,
+                raise_on_error,
+                resource_instances_to_override,
+                output_capture,
             )
+        )
 
-            execution_context = self.construct_context(
-                context_creation_data=context_creation_data,
-                scoped_resources_builder=scoped_resources_builder,
-                log_manager=log_manager,
-                intermediate_storage=intermediate_storage,
-                raise_on_error=raise_on_error,
-                output_capture=output_capture,
-            )
-
-            _validate_plan_with_context(execution_context, execution_plan)
-
-            yield execution_context
-            yield from resources_manager.generate_teardown_events()
-        except DagsterError as dagster_error:
-            if execution_context is None:
-                user_facing_exc_info = (
-                    # pylint does not know original_exc_info exists is is_user_code_error is true
-                    # pylint: disable=no-member
-                    dagster_error.original_exc_info
-                    if dagster_error.is_user_code_error
-                    else sys.exc_info()
-                )
-                error_info = serializable_error_info_from_exc_info(user_facing_exc_info)
-
-                yield DagsterEvent.pipeline_init_failure(
-                    pipeline_name=pipeline_def.name,
-                    failure_data=PipelineInitFailureData(error=error_info),
-                    log_manager=_create_context_free_log_manager(
-                        instance, pipeline_run, pipeline_def
-                    ),
-                )
-                if resources_manager:
-                    yield from resources_manager.generate_teardown_events()
-            else:
-                # pipeline teardown failure
-                raise dagster_error
-
-            if raise_on_error:
-                raise dagster_error
-
-    def get_generator(self):
-        return self._manager.generator
-
-
-class PipelineExecutionContextManager(ExecutionContextManager):
     @property
     def context_type(self):
         return SystemPipelineExecutionContext
@@ -323,12 +425,15 @@ class PlanExecutionContextManager(ExecutionContextManager):
     ):
         self._retry_mode = check.inst_param(retry_mode, "retry_mode", RetryMode)
         super(PlanExecutionContextManager, self).__init__(
-            execution_plan=execution_plan,
-            run_config=run_config,
-            pipeline_run=pipeline_run,
-            instance=instance,
-            scoped_resources_builder_cm=scoped_resources_builder_cm,
-            raise_on_error=raise_on_error,
+            user_code_execution_context_event_generator(
+                self.construct_context,
+                execution_plan,
+                run_config,
+                pipeline_run,
+                instance,
+                scoped_resources_builder_cm,
+                raise_on_error=raise_on_error,
+            )
         )
 
     @property
@@ -543,7 +648,7 @@ def create_log_manager(context_creation_data):
 
     return DagsterLogManager(
         run_id=pipeline_run.run_id,
-        logging_tags=get_logging_tags(pipeline_run, context_creation_data.pipeline_def),
+        logging_tags=_get_logging_tags(pipeline_run),
         loggers=loggers,
     )
 
@@ -573,16 +678,12 @@ def _create_context_free_log_manager(instance, pipeline_run, pipeline_def):
             )
         ]
 
-    return DagsterLogManager(
-        pipeline_run.run_id, get_logging_tags(pipeline_run, pipeline_def), loggers
-    )
+    return DagsterLogManager(pipeline_run.run_id, _get_logging_tags(pipeline_run), loggers)
 
 
-def get_logging_tags(pipeline_run, pipeline_def):
+def _get_logging_tags(pipeline_run):
     check.opt_inst_param(pipeline_run, "pipeline_run", PipelineRun)
-    check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
-
     return merge_dicts(
-        {"pipeline": pipeline_def.name},
+        {"pipeline": pipeline_run.pipeline_name},
         pipeline_run.tags if pipeline_run and pipeline_run.tags else {},
     )

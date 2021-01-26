@@ -6,7 +6,7 @@ from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterSubprocessError
 from dagster.core.events import DagsterEvent, EngineEventData
 from dagster.core.execution.api import create_execution_plan, execute_plan_iterator
-from dagster.core.execution.context.system import SystemPipelineExecutionContext
+from dagster.core.execution.context.system import PipelineExecutionContext
 from dagster.core.execution.plan.objects import StepFailureData
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
@@ -28,7 +28,7 @@ from .child_process_executor import (
 DELEGATE_MARKER = "multiprocess_subprocess_init"
 
 
-class InProcessExecutorChildProcessCommand(ChildProcessCommand):
+class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
     def __init__(
         self,
         run_config,
@@ -86,7 +86,6 @@ class InProcessExecutorChildProcessCommand(ChildProcessCommand):
 
 class MultiprocessExecutor(Executor):
     def __init__(self, pipeline, retries, max_concurrent=None):
-
         self.pipeline = check.inst_param(pipeline, "pipeline", ReconstructablePipeline)
         self._retries = check.inst_param(retries, "retries", RetryMode)
         max_concurrent = max_concurrent if max_concurrent else multiprocessing.cpu_count()
@@ -97,7 +96,7 @@ class MultiprocessExecutor(Executor):
         return self._retries
 
     def execute(self, pipeline_context, execution_plan):
-        check.inst_param(pipeline_context, "pipeline_context", SystemPipelineExecutionContext)
+        check.inst_param(pipeline_context, "pipeline_context", PipelineExecutionContext)
         check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
 
         limit = self.max_concurrent
@@ -145,10 +144,9 @@ class MultiprocessExecutor(Executor):
                             break
 
                         for step in steps:
-                            step_context = pipeline_context.for_step(step)
                             term_events[step.key] = multiprocessing.Event()
                             active_iters[step.key] = self.execute_step_out_of_process(
-                                step_context,
+                                pipeline_context,
                                 step,
                                 errors,
                                 term_events,
@@ -179,6 +177,7 @@ class MultiprocessExecutor(Executor):
                                 EngineEventData.engine_error(serializable_error),
                                 step_handle=active_execution.get_step_by_key(key).handle,
                             )
+                            # this throws in host mode, need to fix
                             step_failure_event = DagsterEvent.step_failure_event(
                                 step_context=pipeline_context.for_step(
                                     active_execution.get_step_by_key(key)
@@ -243,12 +242,12 @@ class MultiprocessExecutor(Executor):
             event_specific_data=EngineEventData.multiprocess(os.getpid()),
         )
 
-    def execute_step_out_of_process(self, step_context, step, errors, term_events, known_state):
-        command = InProcessExecutorChildProcessCommand(
-            run_config=step_context.run_config,
-            pipeline_run=step_context.pipeline_run,
+    def execute_step_out_of_process(self, pipeline_context, step, errors, term_events, known_state):
+        command = MultiprocessExecutorChildProcessCommand(
+            run_config=pipeline_context.run_config,
+            pipeline_run=pipeline_context.pipeline_run,
             step_key=step.key,
-            instance_ref=step_context.instance.get_ref(),
+            instance_ref=pipeline_context.instance.get_ref(),
             term_event=term_events[step.key],
             recon_pipeline=self.pipeline,
             retry_mode=self.retries,
@@ -256,7 +255,7 @@ class MultiprocessExecutor(Executor):
         )
 
         yield DagsterEvent.engine_event(
-            step_context,
+            pipeline_context,
             "Launching subprocess for {}".format(step.key),
             EngineEventData(marker_start=DELEGATE_MARKER),
             step_handle=step.handle,
