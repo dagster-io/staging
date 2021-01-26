@@ -1,15 +1,5 @@
 import {gql, NetworkStatus} from '@apollo/client';
-import {
-  Callout,
-  Colors,
-  Divider,
-  Icon,
-  NonIdealState,
-  Spinner,
-  Tab,
-  Tabs,
-  Tag,
-} from '@blueprintjs/core';
+import {Callout, Colors, Divider, Icon, NonIdealState, Tab, Tabs, Tag} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import isEqual from 'lodash/isEqual';
 import * as React from 'react';
@@ -141,7 +131,7 @@ export const RunsRoot: React.FC<RouteComponentProps> = () => {
                   <Group direction="row" spacing={4} alignItems="center">
                     <div>Queued</div>
                     <CountTag
-                      loading={queryResult.loading}
+                      loading={queryResult.loading && !queryResult.data}
                       fragment={
                         queryResult.data?.queuedCount?.__typename === 'PipelineRuns'
                           ? queryResult.data?.queuedCount
@@ -163,7 +153,7 @@ export const RunsRoot: React.FC<RouteComponentProps> = () => {
                   <Group direction="row" spacing={4} alignItems="center">
                     <div>In progress</div>
                     <CountTag
-                      loading={queryResult.loading}
+                      loading={queryResult.loading && !queryResult.data}
                       fragment={
                         queryResult.data?.inProgressCount?.__typename === 'PipelineRuns'
                           ? queryResult.data?.inProgressCount
@@ -323,7 +313,7 @@ const CountTag = (props: CountTagProps) => {
   if (loading) {
     return (
       <CountTagStyled minimal intent="none">
-        <Spinner size={10} />
+        –
       </CountTagStyled>
     );
   }

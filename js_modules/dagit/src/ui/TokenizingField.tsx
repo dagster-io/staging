@@ -342,7 +342,7 @@ export const TokenizingField: React.FunctionComponent<TokenizingFieldProps> = ({
         tagProps={{minimal: true}}
         placeholder={placeholder || 'Filter...'}
         rightElement={
-          loading ? (
+          loading && open ? (
             <div style={{padding: 3}}>
               <Spinner size={17} />
             </div>
