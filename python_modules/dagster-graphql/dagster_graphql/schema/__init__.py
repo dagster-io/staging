@@ -1,24 +1,9 @@
-from dagster_graphql import dauphin
+import graphene
+
+from .roots.mutation import Mutation
+from .roots.query import Query
+from .roots.subscription import Subscription
 
 
 def create_schema():
-    # dauphin depends on import-based side effects
-    # pylint: disable=W0611
-    from . import (
-        assets,
-        config_types,
-        dagster_types,
-        errors,
-        execution,
-        external,
-        jobs,
-        paging,
-        partition_sets,
-        pipelines,
-        roots,
-        runs,
-        schedules,
-        sensors,
-    )
-
-    return dauphin.create_schema()
+    return graphene.Schema(query=Query, mutation=Mutation, subscription=Subscription)
