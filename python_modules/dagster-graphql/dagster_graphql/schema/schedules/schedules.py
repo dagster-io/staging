@@ -1,55 +1,34 @@
+import graphene
 import pendulum
 from dagster import check
 from dagster.core.host_representation import ExternalSchedule
 from dagster.seven import get_current_datetime_in_utc, get_timestamp_from_utc_datetime
-from dagster_graphql import dauphin
-from dagster_graphql.schema.errors import (
-    DauphinPythonError,
-    DauphinRepositoryNotFoundError,
-    DauphinScheduleNotFoundError,
-)
+
+from ..errors import PythonError, RepositoryNotFoundError, ScheduleNotFoundError
+from ..jobs import FutureJobTick, FutureJobTicks, JobState
+from ..util import non_null_list
 
 
-class DauphinScheduleOrError(dauphin.Union):
-    class Meta:
-        name = "ScheduleOrError"
-        types = ("Schedule", DauphinScheduleNotFoundError, DauphinPythonError)
+class Schedule(graphene.ObjectType):
+    id = graphene.NonNull(graphene.ID)
+    name = graphene.NonNull(graphene.String)
+    cron_schedule = graphene.NonNull(graphene.String)
+    pipeline_name = graphene.NonNull(graphene.String)
+    solid_selection = graphene.List(graphene.String)
+    mode = graphene.NonNull(graphene.String)
+    execution_timezone = graphene.Field(graphene.String)
+    scheduleState = graphene.NonNull(JobState)
+    partition_set = graphene.Field("dagster_graphql.schema.partition_sets.PartitionSet")
 
-
-class DauphinSchedules(dauphin.ObjectType):
-    class Meta:
-        name = "Schedules"
-
-    results = dauphin.non_null_list("Schedule")
-
-
-class DauphinSchedulesOrError(dauphin.Union):
-    class Meta:
-        name = "SchedulesOrError"
-        types = (DauphinSchedules, DauphinRepositoryNotFoundError, DauphinPythonError)
-
-
-class DauphinSchedule(dauphin.ObjectType):
-    class Meta:
-        name = "Schedule"
-
-    id = dauphin.NonNull(dauphin.ID)
-    name = dauphin.NonNull(dauphin.String)
-    cron_schedule = dauphin.NonNull(dauphin.String)
-    pipeline_name = dauphin.NonNull(dauphin.String)
-    solid_selection = dauphin.List(dauphin.String)
-    mode = dauphin.NonNull(dauphin.String)
-    execution_timezone = dauphin.Field(dauphin.String)
-    scheduleState = dauphin.NonNull("JobState")
-    partition_set = dauphin.Field("PartitionSet")
-
-    futureTicks = dauphin.NonNull("FutureJobTicks", cursor=dauphin.Float(), limit=dauphin.Int())
-    futureTick = dauphin.NonNull("FutureJobTick", tick_timestamp=dauphin.NonNull(dauphin.Int))
+    futureTicks = graphene.NonNull(FutureJobTicks, cursor=graphene.Float(), limit=graphene.Int())
+    futureTick = graphene.NonNull(FutureJobTick, tick_timestamp=graphene.NonNull(graphene.Int))
 
     def resolve_id(self, _):
         return "%s:%s" % (self.name, self.pipeline_name)
 
     def resolve_partition_set(self, graphene_info):
+        from ..partition_sets import PartitionSet
+
         if self._external_schedule.partition_set_name is None:
             return None
 
@@ -60,12 +39,12 @@ class DauphinSchedule(dauphin.ObjectType):
             self._external_schedule.partition_set_name
         )
 
-        return graphene_info.schema.type_named("PartitionSet")(
+        return PartitionSet(
             external_repository_handle=repository.handle,
             external_partition_set=external_partition_set,
         )
 
-    def resolve_futureTicks(self, graphene_info, **kwargs):
+    def resolve_futureTicks(self, _graphene_info, **kwargs):
         cursor = kwargs.get(
             "cursor", get_timestamp_from_utc_datetime(get_current_datetime_in_utc())
         )
@@ -77,19 +56,12 @@ class DauphinSchedule(dauphin.ObjectType):
         for _ in range(limit):
             tick_times.append(next(time_iter).timestamp())
 
-        future_ticks = [
-            graphene_info.schema.type_named("FutureJobTick")(self._schedule_state, tick_time)
-            for tick_time in tick_times
-        ]
+        future_ticks = [FutureJobTick(self._schedule_state, tick_time) for tick_time in tick_times]
 
-        return graphene_info.schema.type_named("FutureJobTicks")(
-            results=future_ticks, cursor=tick_times[-1] + 1
-        )
+        return FutureJobTicks(results=future_ticks, cursor=tick_times[-1] + 1)
 
     def resolve_futureTick(self, graphene_info, tick_timestamp):
-        return graphene_info.schema.type_named("FutureJobTick")(
-            self._schedule_state, float(tick_timestamp)
-        )
+        return FutureJobTick(self._schedule_state, float(tick_timestamp))
 
     def __init__(self, graphene_info, external_schedule):
         self._external_schedule = check.inst_param(
@@ -106,16 +78,30 @@ class DauphinSchedule(dauphin.ObjectType):
                 graphene_info.context.instance
             )
 
-        super(DauphinSchedule, self).__init__(
+        super(Schedule, self).__init__(
             name=external_schedule.name,
             cron_schedule=external_schedule.cron_schedule,
             pipeline_name=external_schedule.pipeline_name,
             solid_selection=external_schedule.solid_selection,
             mode=external_schedule.mode,
-            scheduleState=graphene_info.schema.type_named("JobState")(self._schedule_state),
+            scheduleState=JobState(self._schedule_state),
             execution_timezone=(
                 self._external_schedule.execution_timezone
                 if self._external_schedule.execution_timezone
                 else pendulum.now().timezone.name
             ),
         )
+
+
+class ScheduleOrError(graphene.Union):
+    class Meta:
+        types = (Schedule, ScheduleNotFoundError, PythonError)
+
+
+class Schedules(graphene.ObjectType):
+    results = non_null_list(Schedule)
+
+
+class SchedulesOrError(graphene.Union):
+    class Meta:
+        types = (Schedules, RepositoryNotFoundError, PythonError)
