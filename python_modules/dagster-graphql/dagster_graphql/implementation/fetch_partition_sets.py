@@ -13,11 +13,13 @@ from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster.core.storage.tags import PARTITION_NAME_TAG, PARTITION_SET_TAG, TagType, get_tag_type
 from graphql.execution.base import ResolveInfo
 
-from .utils import capture_dauphin_error
+from .utils import capture_error
 
 
-@capture_dauphin_error
+@capture_error
 def get_partition_sets_or_error(graphene_info, repository_selector, pipeline_name):
+    from ..schema.partition_sets import PartitionSet, PartitionSets
+
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.inst_param(repository_selector, "repository_selector", RepositorySelector)
     check.str_param(pipeline_name, "pipeline_name")
@@ -29,9 +31,9 @@ def get_partition_sets_or_error(graphene_info, repository_selector, pipeline_nam
         if partition_set.pipeline_name == pipeline_name
     ]
 
-    return graphene_info.schema.type_named("PartitionSets")(
+    return PartitionSets(
         results=[
-            graphene_info.schema.type_named("PartitionSet")(
+            PartitionSet(
                 external_repository_handle=repository.handle, external_partition_set=partition_set,
             )
             for partition_set in sorted(
@@ -46,8 +48,10 @@ def get_partition_sets_or_error(graphene_info, repository_selector, pipeline_nam
     )
 
 
-@capture_dauphin_error
+@capture_error
 def get_partition_set(graphene_info, repository_selector, partition_set_name):
+    from ..schema.partition_sets import PartitionSet, PartitionSetNotFoundError
+
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.inst_param(repository_selector, "repository_selector", RepositorySelector)
     check.str_param(partition_set_name, "partition_set_name")
@@ -56,20 +60,22 @@ def get_partition_set(graphene_info, repository_selector, partition_set_name):
     partition_sets = repository.get_external_partition_sets()
     for partition_set in partition_sets:
         if partition_set.name == partition_set_name:
-            return graphene_info.schema.type_named("PartitionSet")(
+            return PartitionSet(
                 external_repository_handle=repository.handle, external_partition_set=partition_set,
             )
 
-    return graphene_info.schema.type_named("PartitionSetNotFoundError")(partition_set_name)
+    return PartitionSetNotFoundError(partition_set_name)
 
 
-@capture_dauphin_error
+@capture_error
 def get_partition_by_name(graphene_info, repository_handle, partition_set, partition_name):
+    from ..schema.partition_sets import Partition
+
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.inst_param(partition_set, "partition_set", ExternalPartitionSet)
     check.str_param(partition_name, "partition_name")
-    return graphene_info.schema.type_named("Partition")(
+    return Partition(
         external_repository_handle=repository_handle,
         external_partition_set=partition_set,
         partition_name=partition_name,
@@ -77,6 +83,9 @@ def get_partition_by_name(graphene_info, repository_handle, partition_set, parti
 
 
 def get_partition_config(graphene_info, repository_handle, partition_set_name, partition_name):
+    from ..schema.errors import PythonError
+    from ..schema.partition_sets import PartitionRunConfig
+
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(partition_set_name, "partition_set_name")
     check.str_param(partition_name, "partition_name")
@@ -86,15 +95,17 @@ def get_partition_config(graphene_info, repository_handle, partition_set_name, p
     )
 
     if isinstance(result, ExternalPartitionConfigData):
-        return graphene_info.schema.type_named("PartitionRunConfig")(
-            yaml=yaml.safe_dump(result.run_config, default_flow_style=False)
-        )
+        return PartitionRunConfig(yaml=yaml.safe_dump(result.run_config, default_flow_style=False))
     else:
-        return graphene_info.schema.type_named("PythonError")(result.error)
+        return PythonError(result.error)
 
 
-@capture_dauphin_error
+@capture_error
 def get_partition_tags(graphene_info, repository_handle, partition_set_name, partition_name):
+    from ..schema.errors import PythonError
+    from ..schema.partition_sets import PartitionTags
+    from ..schema.tags import PipelineTag
+
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(partition_set_name, "partition_set_name")
     check.str_param(partition_name, "partition_name")
@@ -104,21 +115,24 @@ def get_partition_tags(graphene_info, repository_handle, partition_set_name, par
     )
 
     if isinstance(result, ExternalPartitionTagsData):
-        return graphene_info.schema.type_named("PartitionTags")(
+        return PartitionTags(
             results=[
-                graphene_info.schema.type_named("PipelineTag")(key=key, value=value)
+                PipelineTag(key=key, value=value)
                 for key, value in result.tags.items()
                 if get_tag_type(key) != TagType.HIDDEN
             ]
         )
     else:
-        return graphene_info.schema.type_named("PythonError")(result.error)
+        return PythonError(result.error)
 
 
-@capture_dauphin_error
+@capture_error
 def get_partitions(
     graphene_info, repository_handle, partition_set, cursor=None, limit=None, reverse=False
 ):
+    from ..schema.errors import PythonError
+    from ..schema.partition_sets import Partition, Partitions
+
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.inst_param(partition_set, "partition_set", ExternalPartitionSet)
     result = graphene_info.context.get_external_partition_names(
@@ -130,9 +144,9 @@ def get_partitions(
             result.partition_names, cursor, limit, reverse
         )
 
-        return graphene_info.schema.type_named("Partitions")(
+        return Partitions(
             results=[
-                graphene_info.schema.type_named("Partition")(
+                Partition(
                     external_partition_set=partition_set,
                     external_repository_handle=repository_handle,
                     partition_name=partition_name,
@@ -143,7 +157,7 @@ def get_partitions(
 
     else:
         assert isinstance(result, ExternalPartitionExecutionErrorData)
-        return graphene_info.schema.type_named("PythonError")(result.error)
+        return PythonError(result.error)
 
 
 def _apply_cursor_limit_reverse(items, cursor, limit, reverse):
@@ -168,8 +182,10 @@ def _apply_cursor_limit_reverse(items, cursor, limit, reverse):
     return items[max(start, 0) : end]
 
 
-@capture_dauphin_error
+@capture_error
 def get_partition_set_partition_statuses(graphene_info, repository_handle, partition_set_name):
+    from ..schema.partition_sets import PartitionStatus, PartitionStatuses
+
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(partition_set_name, "partition_set_name")
     result = graphene_info.context.get_external_partition_names(
@@ -187,9 +203,9 @@ def get_partition_set_partition_statuses(graphene_info, repository_handle, parti
             continue
         runs_by_partition[partition_name] = run
 
-    return graphene_info.schema.type_named("PartitionStatuses")(
+    return PartitionStatuses(
         results=[
-            graphene_info.schema.type_named("PartitionStatus")(
+            PartitionStatus(
                 id=f"{partition_set_name}:{partition_name}",
                 partitionName=partition_name,
                 runStatus=runs_by_partition[partition_name].status
