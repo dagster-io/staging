@@ -5,6 +5,8 @@ import path from "path";
 import { promises as fs } from "fs";
 import matter from "gray-matter";
 import MDXComponents from "../components/MDXComponents";
+import codeTransformer from "util/codeTransformer";
+import rehypePrism from "@mapbox/rehype-prism";
 
 const components: MdxRemote.Components = MDXComponents;
 
@@ -42,8 +44,8 @@ export async function getServerSideProps({ params, locale }) {
     const mdxSource = await renderToString(content, {
       components,
       mdxOptions: {
-        remarkPlugins: [],
-        rehypePlugins: [],
+        remarkPlugins: [codeTransformer],
+        rehypePlugins: [rehypePrism],
       },
       scope: data,
     });
