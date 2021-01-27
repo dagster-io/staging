@@ -1,7 +1,7 @@
 from typing import List
 
-# from ..defines import SupportedPython
-# from ..step_builder import StepBuilder
+from ..defines import SupportedPython
+from ..step_builder import StepBuilder
 
 
 def docs_steps() -> List[dict]:
@@ -16,4 +16,15 @@ def docs_steps() -> List[dict]:
         # )
         # .on_integration_image(SupportedPython.V3_7)
         # .build(),
+        StepBuilder("docs code snapshots")
+        .run(
+            "pushd docs; make snapshot",
+            "git diff --exit-code",
+            # "[[ $? = 1 ]] && echo -e 'Snapshot failed'; echo 'This test is failing because you have either "
+            # "(1) Updated the code used in a literalinclude or "
+            # "(2) Updated a literalinclude snapshot instead of updating the reference. "
+            # "Run `make snapshots` in the `/docs` directory to fix this error.'",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
     ]
