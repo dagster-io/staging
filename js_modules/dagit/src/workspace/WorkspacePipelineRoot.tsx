@@ -4,7 +4,7 @@ import {Link, Redirect, useLocation, useRouteMatch} from 'react-router-dom';
 
 import {TopNav} from 'src/nav/TopNav';
 import {explorerPathFromString} from 'src/pipelines/PipelinePathUtils';
-import {LoadingWithProgress} from 'src/ui/Loading';
+import {LoadingSpinner} from 'src/ui/Loading';
 import {Page} from 'src/ui/Page';
 import {Table} from 'src/ui/Table';
 import {optionToRepoAddress, useRepositoryOptions} from 'src/workspace/WorkspaceContext';
@@ -27,7 +27,7 @@ export const WorkspacePipelineRoot: React.FC<Props> = (props) => {
   const {loading, options} = useRepositoryOptions();
 
   if (loading) {
-    return <LoadingWithProgress />;
+    return <LoadingSpinner purpose="page" />;
   }
 
   const reposWithMatch = findRepoContainingPipeline(options, pipelineName);
