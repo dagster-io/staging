@@ -1,13 +1,12 @@
-# Project Template: Domain-driven
+# Project Template: Single-Repo
 
 ## Contents
 
 | Name | Description |
 |-|-|
-| `my_project` | A Python module that contains submodules for domain-specific Dagster code |
+| `my_project` | A Python module that contains Dagster code |
 | `my_project_tests` | A Python module that contains tests for `my_project` code |
 | `README.md` | A project README |
-| `workspace.yaml` | A list of Dagster repository locations. See the [Overview on Workspaces](https://docs.dagster.io/overview/repositories-workspaces/workspaces) for details. |
 
 ## Getting up and running
 
@@ -28,7 +27,7 @@ dagster-daemon run
 2. **In a different terminal**, start the Dagit process:
 
 ```bash
-dagit -w workspace.yaml -d dev
+dagit -m my_project.repository -d dev
 ```
 
 ### Local Testing
