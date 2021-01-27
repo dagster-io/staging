@@ -274,8 +274,7 @@ pipelineRun:
   # env:
   #   ENV_ONE: one
   #   ENV_TWO: two
-  env:
-    YOUR_ENV_VAR: ""
+  env: {}
 
 ####################################################################################################
 # Scheduler: Configuration for the scheduler
@@ -393,6 +392,7 @@ runLauncher:
       workerQueues:
         - name: "dagster"
           replicaCount: 2
+          labels: {}
 
       # Additional environment variables to set on the celery/job containers
       # A Kubernetes ConfigMap will be created with these environment variables. See:
@@ -553,6 +553,17 @@ flower:
     type: ClusterIP
     annotations: {}
     port: 5555
+
+  # Additional environment variables to set.
+  # A Kubernetes ConfigMap will be created with these environment variables. See:
+  # https://kubernetes.io/docs/concepts/configuration/configmap/
+  #
+  # Example:
+  #
+  # env:
+  #   ENV_ONE: one
+  #   ENV_TWO: two
+  env: {}
 
   # Support Node, affinity and tolerations for Flower pod assignment. See:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
