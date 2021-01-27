@@ -1268,6 +1268,9 @@
                 "name": {
                     "title": "Name",
                     "type": "string"
+                },
+                "labels": {
+                    "$ref": "#/definitions/Labels"
                 }
             },
             "required": [
