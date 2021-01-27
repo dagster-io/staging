@@ -1,15 +1,5 @@
 import {gql, NetworkStatus} from '@apollo/client';
-import {
-  Callout,
-  Colors,
-  Divider,
-  Icon,
-  NonIdealState,
-  Spinner,
-  Tab,
-  Tabs,
-  Tag,
-} from '@blueprintjs/core';
+import {Callout, Colors, Divider, Icon, NonIdealState, Tab, Tabs, Tag} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import isEqual from 'lodash/isEqual';
 import * as React from 'react';
@@ -39,6 +29,7 @@ import {Group} from 'src/ui/Group';
 import {Loading} from 'src/ui/Loading';
 import {Page} from 'src/ui/Page';
 import {RefreshableCountdown} from 'src/ui/RefreshableCountdown';
+import {Spinner} from 'src/ui/Spinner';
 import {Heading} from 'src/ui/Text';
 import {TokenizingFieldValue} from 'src/ui/TokenizingField';
 
@@ -323,7 +314,7 @@ const CountTag = (props: CountTagProps) => {
   if (loading) {
     return (
       <CountTagStyled minimal intent="none">
-        <Spinner size={10} />
+        <Spinner purpose="caption-text" />
       </CountTagStyled>
     );
   }

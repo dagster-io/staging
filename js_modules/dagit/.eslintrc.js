@@ -40,7 +40,19 @@ module.exports = {
         'newlines-between': 'always',
       },
     ],
-    'no-restricted-imports': ['error', {patterns: ['./*', '../*']}],
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: ['./*', '../*'],
+        paths: [
+          {
+            name: '@blueprintjs/core',
+            importNames: ['Spinner'],
+            message: 'Please use Spinner from src/ui/Spinner instead.',
+          },
+        ],
+      },
+    ],
     'react/prefer-stateless-function': 'error',
     'react/prop-types': 'off',
     'react/display-name': 'off',

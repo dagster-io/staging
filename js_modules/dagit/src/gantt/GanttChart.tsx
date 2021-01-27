@@ -1,5 +1,5 @@
 import {gql} from '@apollo/client';
-import {Checkbox, Colors, Icon, NonIdealState, Spinner} from '@blueprintjs/core';
+import {Checkbox, Colors, Icon, NonIdealState} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import isEqual from 'lodash/isEqual';
 import * as React from 'react';
@@ -49,6 +49,7 @@ import {StepSelection} from 'src/runs/StepSelection';
 import {Box} from 'src/ui/Box';
 import {GraphQueryInput} from 'src/ui/GraphQueryInput';
 import {Group} from 'src/ui/Group';
+import {Spinner} from 'src/ui/Spinner';
 import {SplitPanelContainer} from 'src/ui/SplitPanelContainer';
 
 export {GanttChartMode} from 'src/gantt/Constants';
@@ -794,7 +795,7 @@ GanttChart.LoadingState = ({runId}: {runId: string}) => (
     <SplitPanelContainer
       identifier="gantt-split"
       axis="horizontal"
-      first={<NonIdealState icon={<Spinner size={24} />} />}
+      first={<NonIdealState icon={<Spinner purpose="section" />} />}
       firstInitialPercent={70}
       second={
         <GanttStatusPanel
