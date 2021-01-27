@@ -1,4 +1,4 @@
-from dBgster import repository
+from dagster import repository
 
 from .pipelines import my_pipeline_B
 from .schedules import my_hourly_schedule_B

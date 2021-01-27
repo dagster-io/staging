@@ -1,3 +1,4 @@
 load_from:
-    - python_module: "domainA"
-    - python_module: "domainB"
+    - python_module: "my_project.domainA"
+    - python_module: "my_project.domainB"
+    - python_module: "my_project.repository"
