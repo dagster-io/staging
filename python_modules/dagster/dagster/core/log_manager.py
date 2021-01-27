@@ -11,11 +11,13 @@ from dagster.utils.error import SerializableErrorInfo
 DAGSTER_META_KEY = "dagster_meta"
 
 
-PYTHON_LOGGING_LEVELS_MAPPING = frozendict(
+PYTHON_LOGGING_LEVELS_MAPPING: frozendict[str, int] = frozendict(
     OrderedDict({"CRITICAL": 50, "ERROR": 40, "WARNING": 30, "INFO": 20, "DEBUG": 10})
 )
 
-PYTHON_LOGGING_LEVELS_ALIASES = frozendict(OrderedDict({"FATAL": "CRITICAL", "WARN": "WARNING"}))
+PYTHON_LOGGING_LEVELS_ALIASES: frozendict[str, str] = frozendict(
+    OrderedDict({"FATAL": "CRITICAL", "WARN": "WARNING"})
+)
 
 PYTHON_LOGGING_LEVELS_NAMES = frozenset(
     [
