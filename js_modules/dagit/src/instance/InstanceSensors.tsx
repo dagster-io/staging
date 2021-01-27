@@ -12,6 +12,7 @@ import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
 import {Loading} from 'src/ui/Loading';
 import {Subheading} from 'src/ui/Text';
+import {memoRepoAddress} from 'src/workspace/memoRepoAddress';
 
 interface Props {
   queryData: QueryResult<InstanceHealthQuery>;
@@ -45,7 +46,7 @@ export const InstanceSensors = (props: Props) => {
                 <Group direction="column" spacing={12} key={repository.name}>
                   <Subheading>{`${repository.name}@${repository.location.name}`}</Subheading>
                   <SensorsTable
-                    repoAddress={{name: repository.name, location: repository.location.name}}
+                    repoAddress={memoRepoAddress(repository.name, repository.location.name)}
                     sensors={repository.sensors}
                   />
                 </Group>

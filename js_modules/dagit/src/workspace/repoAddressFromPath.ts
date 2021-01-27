@@ -1,11 +1,11 @@
-import {memoize} from 'src/app/Util';
+import {memoRepoAddress} from 'src/workspace/memoRepoAddress';
 import {RepoAddress} from 'src/workspace/types';
 
-export const repoAddressFromPath = memoize<string, RepoAddress | null>((path: string) => {
+export const repoAddressFromPath = (path: string): RepoAddress | null => {
   const postSplit = path.split('@');
   if (postSplit.length === 2) {
     const [name, location] = postSplit;
-    return {name, location};
+    return memoRepoAddress(name, location);
   }
   return null;
-});
+};
