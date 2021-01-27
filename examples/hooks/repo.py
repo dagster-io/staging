@@ -1,5 +1,7 @@
 import yaml
+# start_repo_marker_0
 from dagster import (
+    HookContext,
     ModeDefinition,
     ResourceDefinition,
     execute_pipeline,
@@ -13,23 +15,22 @@ from dagster import (
 from dagster.seven import mock
 from dagster_slack import slack_resource
 
-slack_resource_mock = mock.MagicMock()
 
-
-# start_repo_marker_0
 @success_hook(required_resource_keys={"slack"})
-def slack_message_on_success(context):
-    message = "Solid {} finished successfully".format(context.solid.name)
+def slack_message_on_success(context: HookContext):
+    message = f"Solid {context.solid.name} finished successfully"
     context.resources.slack.chat.post_message(channel="#foo", text=message)
 
 
 @failure_hook(required_resource_keys={"slack"})
 def slack_message_on_failure(context):
-    message = "Solid {} failed".format(context.solid.name)
+    message = f"Solid {context.solid.name} failed"
     context.resources.slack.chat.post_message(channel="#foo", text=message)
 
 
 # end_repo_marker_0
+
+slack_resource_mock = mock.MagicMock()
 
 
 @solid
