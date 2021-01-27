@@ -1,5 +1,5 @@
 import {gql, useQuery} from '@apollo/client';
-import {Colors, Spinner} from '@blueprintjs/core';
+import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import {Line, ChartComponentProps} from 'react-chartjs-2';
 
@@ -13,6 +13,7 @@ import {
 import {JobTickStatus} from 'src/types/globalTypes';
 import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
+import {Spinner} from 'src/ui/Spinner';
 import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
 import {RepoAddress} from 'src/workspace/types';
 
@@ -47,7 +48,7 @@ export const SensorTimeline: React.FC<{
   });
 
   if (!data || data?.sensorOrError.__typename !== 'Sensor') {
-    return <Spinner />;
+    return <Spinner purpose="section" />;
   }
 
   const {

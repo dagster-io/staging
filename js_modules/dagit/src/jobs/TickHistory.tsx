@@ -1,5 +1,5 @@
 import {gql, useQuery} from '@apollo/client';
-import {Button, Checkbox, Classes, Colors, Dialog, Spinner, Tabs, Tab} from '@blueprintjs/core';
+import {Button, Checkbox, Classes, Colors, Dialog, Tabs, Tab} from '@blueprintjs/core';
 import {TimeUnit} from 'chart.js';
 import moment from 'moment-timezone';
 import * as React from 'react';
@@ -19,6 +19,7 @@ import {JobTickStatus, JobType} from 'src/types/globalTypes';
 import {Box} from 'src/ui/Box';
 import {ButtonLink} from 'src/ui/ButtonLink';
 import {Group} from 'src/ui/Group';
+import {Spinner} from 'src/ui/Spinner';
 import {Subheading} from 'src/ui/Text';
 import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
 import {RepoAddress} from 'src/workspace/types';
@@ -71,7 +72,11 @@ export const ScheduleTickHistory: React.FC<{
   });
 
   if (!data || data?.scheduleOrError.__typename !== 'Schedule') {
-    return <Spinner />;
+    return (
+      <Box margin={{vertical: 20}}>
+        <Spinner purpose="section" />
+      </Box>
+    );
   }
 
   return (
@@ -107,7 +112,7 @@ export const SensorTickHistory: React.FC<{
   });
 
   if (!data || data?.sensorOrError.__typename !== 'Sensor') {
-    return <Spinner />;
+    return <Spinner purpose="section" />;
   }
 
   return (
