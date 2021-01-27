@@ -1,10 +1,10 @@
-# Project Template: Dagster-style
+# Project Template: Domain-driven
 
 ## Contents
 
 | Name | Description |
 |-|-|
-| `my_project` | A Python module that contains Dagster code |
+| `my_project` | A Python module that contains submodules for domain-specific Dagster code |
 | `my_project_tests` | A Python module that contains tests for `my_project` code |
 | `README.md` | A project README |
 | `workspace.yaml` | A list of Dagster repository locations. See the [Overview on Workspaces](https://docs.dagster.io/overview/repositories-workspaces/workspaces) for details. |

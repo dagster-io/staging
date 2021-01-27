@@ -1,4 +1,4 @@
-# Project Template: Dagster-style
+# Project Template: Flat
 
 ## Contents
 
