@@ -6,7 +6,7 @@ from dagster import Int, Output, OutputDefinition, SolidDefinition, solid
 # start_solid_definition_marker_0
 @solid
 def my_solid(context):
-    return 1
+    return 2
 
 
 # end_solid_definition_marker_0
