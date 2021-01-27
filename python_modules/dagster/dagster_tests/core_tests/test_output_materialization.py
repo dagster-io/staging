@@ -190,6 +190,7 @@ def test_basic_materialization_event():
             filter(lambda de: de.event_type == DagsterEventType.STEP_MATERIALIZATION, step_events)
         )[0]
 
+        assert mat_event.event_specific_data.output_name == "result"
         mat = mat_event.event_specific_data.materialization
 
         assert len(mat.metadata_entries) == 1
@@ -354,16 +355,12 @@ def test_basic_yield_multiple_materializations():
     )
     assert result.success
 
-    event_types = [event.event_type_value for event in result.event_list]
-    assert 2 == (
-        sum(
-            [
-                True
-                for event_type in event_types
-                if event_type == DagsterEventType.STEP_MATERIALIZATION.value
-            ]
-        )
-    )
+    materialization_events = [
+        event for event in result.event_list if event.event_type_value == "STEP_MATERIALIZATION"
+    ]
+    assert len(materialization_events) == 2
+    for event in materialization_events:
+        assert event.event_specific_data.output_name == "result"
 
 
 @dagster_type_materializer(Int)

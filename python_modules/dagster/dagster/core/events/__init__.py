@@ -3,6 +3,7 @@ import logging
 import os
 from collections import namedtuple
 from enum import Enum
+from typing import NamedTuple, Union
 
 from dagster import check
 from dagster.core.definitions import (
@@ -600,14 +601,18 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def step_materialization(step_context, materialization):
+    def step_materialization(
+        step_context,
+        materialization: Union[Materialization, AssetMaterialization],
+        output_name: str,
+    ):
         check.inst_param(
             materialization, "materialization", (AssetMaterialization, Materialization)
         )
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_MATERIALIZATION,
             step_context=step_context,
-            event_specific_data=StepMaterializationData(materialization),
+            event_specific_data=StepMaterializationData(materialization, output_name),
             message=materialization.description
             if materialization.description
             else "Materialized value{label_clause}.".format(
@@ -994,7 +999,12 @@ def get_step_output_event(events, step_key, output_name="result"):
 
 
 @whitelist_for_serdes
-class StepMaterializationData(namedtuple("_StepMaterializationData", "materialization")):
+class StepMaterializationData(
+    NamedTuple(
+        "_StepMaterializationData",
+        [("materialization", Union[Materialization, AssetMaterialization]), ("output_name", str)],
+    )
+):
     pass
 
 

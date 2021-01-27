@@ -232,6 +232,8 @@ def test_multi_materialization():
         filter(lambda evt: evt.is_step_materialization, result.event_list)
     )
     assert len(step_materialization_events) == 2
+    for event in step_materialization_events:
+        assert event.event_specific_data.output_name == "result"
 
 
 def test_different_io_managers():

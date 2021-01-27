@@ -123,6 +123,10 @@ class ExecutionStep(
         return list(self.step_output_dict.values())
 
     @property
+    def step_output_names(self) -> List[str]:
+        return [step_output.name for step_output in self.step_outputs]
+
+    @property
     def step_inputs(self) -> List[StepInput]:
         return list(self.step_input_dict.values())
 

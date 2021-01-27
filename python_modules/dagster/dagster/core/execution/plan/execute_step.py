@@ -48,7 +48,6 @@ def _step_output_error_checked_user_event_sequence(
     check.generator_param(user_event_sequence, "user_event_sequence")
 
     step = step_context.step
-    output_names = list([output_def.name for output_def in step.step_outputs])
     seen_outputs: Set[str] = set()
     seen_mapping_keys: Dict[str, Set[str]] = defaultdict(set)
 
@@ -64,7 +63,9 @@ def _step_output_error_checked_user_event_sequence(
                 'Core compute for solid "{handle}" returned an output '
                 '"{output.output_name}" that does not exist. The available '
                 "outputs are {output_names}".format(
-                    handle=str(step.solid_handle), output=output, output_names=output_names
+                    handle=str(step.solid_handle),
+                    output=output,
+                    output_names=step.step_output_names,
                 )
             )
 
@@ -296,7 +297,19 @@ def core_dagster_event_sequence_for_step(
                 for evt in _type_check_and_store_output(step_context, user_event):
                     yield evt
             elif isinstance(user_event, (AssetMaterialization, Materialization)):
-                yield DagsterEvent.step_materialization(step_context, user_event)
+                step = step_context.step
+                if user_event.output_name is not None and not step.has_step_output(
+                    user_event.output_name
+                ):
+                    raise DagsterInvariantViolationError(
+                        f'Core compute for solid "{str(step.solid_handle)}" yielded an '
+                        f'AssetMaterialization for output "{user_event.output_name}", which does '
+                        f"not exist. The available outputs are {step.step_output_names}."
+                    )
+
+                yield DagsterEvent.step_materialization(
+                    step_context, user_event, user_event.output_name
+                )
             elif isinstance(user_event, ExpectationResult):
                 yield DagsterEvent.step_expectation_result(step_context, user_event)
             else:
@@ -360,7 +373,21 @@ def _materializations_to_events(
                     )
                 )
 
-            yield DagsterEvent.step_materialization(step_context, materialization)
+            if (
+                materialization.output_name is not None
+                and materialization.output_name != step_output_handle.output_name
+            ):
+                raise DagsterInvariantViolationError(
+                    f'While handling output "{step_output_handle.output_name}" for step '
+                    f'"{step_output_handle.step_key}", the IOManager handle_output method yielded an '
+                    f'AssetMaterialization with output_name "{materialization.output_name}". The '
+                    f"output_name on the AssetMaterialization must be either None or the name of "
+                    f"the step output being handled."
+                )
+
+            yield DagsterEvent.step_materialization(
+                step_context, materialization, step_output_handle.output_name
+            )
 
 
 def _store_output(
@@ -449,7 +476,21 @@ def _create_type_materializations(
                             )
                         )
 
-                    yield DagsterEvent.step_materialization(step_context, materialization)
+                    if (
+                        materialization.output_name is not None
+                        and materialization.output_name != output_name
+                    ):
+                        raise DagsterInvariantViolationError(
+                            f'While handling output "{output_name}" for step "{step.key}", '
+                            f'materialize_runtime_values on type "{dagster_type.display_name} yielded an "'
+                            f'AssetMaterialization with output_name "{materialization.output_name}". The '
+                            f"output_name on the AssetMaterialization must be either None or the name of "
+                            f"the step output being handled."
+                        )
+
+                    yield DagsterEvent.step_materialization(
+                        step_context, materialization, output_name
+                    )
 
 
 def _user_event_sequence_for_step_compute_fn(
