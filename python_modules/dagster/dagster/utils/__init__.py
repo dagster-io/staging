@@ -13,7 +13,9 @@ import tempfile
 import threading
 from collections import namedtuple
 from enum import Enum
-from typing import Iterator
+from typing import Dict, Generic, Iterator
+from typing import Mapping as MappingType
+from typing import TypeVar
 from warnings import warn
 
 import _thread as thread
@@ -132,7 +134,11 @@ def mkdir_p(path):
             raise
 
 
-class frozendict(dict):
+_KT = TypeVar("_KT")
+_VT = TypeVar("_VT")
+
+
+class frozendict(Dict[_KT, _VT], Generic[_KT, _VT]):
     def __readonly__(self, *args, **kwargs):
         raise RuntimeError("Cannot modify ReadOnlyDict")
 
