@@ -17,10 +17,10 @@ def mysql_instance_for_test(dunder_file, container_name, overrides=None):
     with TemporaryDirectory() as temp_dir:
         with TestMySQLInstance.docker_service_up_or_skip(
             file_relative_path(dunder_file, "docker-compose.yml"), container_name,
-        ) as pg_conn_string:
-            TestMySQLInstance.clean_run_storage(pg_conn_string)
-            TestMySQLInstance.clean_event_log_storage(pg_conn_string)
-            TestMySQLInstance.clean_schedule_storage(pg_conn_string)
+        ) as mysql_connection_string:
+            TestMySQLInstance.clean_run_storage(mysql_connection_string)
+            TestMySQLInstance.clean_event_log_storage(mysql_connection_string)
+            TestMySQLInstance.clean_schedule_storage(mysql_connection_string)
             with instance_for_test_tempdir(
                 temp_dir,
                 overrides=merge_dicts(
@@ -28,17 +28,17 @@ def mysql_instance_for_test(dunder_file, container_name, overrides=None):
                         "run_storage": {
                             "module": "dagster_mysql.run_storage.run_storage",
                             "class": "MySQLRunStorage",
-                            "config": {"mysql_url": pg_conn_string},
+                            "config": {"mysql_url": mysql_connection_string},
                         },
                         "event_log_storage": {
                             "module": "dagster_mysql.event_log.event_log",
                             "class": "MySQLEventLogStorage",
-                            "config": {"mysql_url": pg_conn_string},
+                            "config": {"mysql_url": mysql_connection_string},
                         },
                         "schedule_storage": {
                             "module": "dagster_mysql.schedule_storage.schedule_storage",
                             "class": "MySQLScheduleStorage",
-                            "config": {"mysql_url": pg_conn_string},
+                            "config": {"mysql_url": mysql_connection_string},
                         },
                     },
                     overrides if overrides else {},

@@ -4,6 +4,9 @@ import pkgutil
 
 import dagster
 import sqlalchemy as sa
+from sqlalchemy.sql.schema import Column
+from sqlalchemy.sql.sqltypes import Text
+from sqlalchemy.types import VARCHAR
 
 
 def check_schema_compat(schema):
@@ -15,14 +18,34 @@ def check_schema_compat(schema):
         if isinstance(obj, sa.Table):
             print(name, obj)
             for column in obj.columns:
-                print(f"  -{column}: {column.type}")
-                if isinstance(column.type, sa.types.VARCHAR):
-                    raise Exception(
-                        f"Column {column} is type VARCHAR; cannot use bare db.String type as "
-                        "it is incompatible with certain databases (MySQL). Use either a "
-                        "fixed-length db.String(123) or db.Text instead."
-                    )
+                print(f"  -{column}: {column.type};")
+                if isinstance(column, Column):
+                    validate_column_in_db_schema(column)
+                # if isinstance(column.type, sa.types.VARCHAR):
+                #     raise Exception(
+                #         f"Column {column} is type VARCHAR; cannot use bare db.String type as "
+                #         "it is incompatible with certain databases (MySQL). Use either a "
+                #         "fixed-length db.String(123) or db.Text instead."
+                #     )
             print()
+
+
+def validate_column_in_db_schema(column: Column):
+    """This function is used to validate individual DB columns in a given schema
+    """
+    if isinstance(column.type, VARCHAR):
+        raise Exception(
+            f"Column {column} is type VARCHAR; cannot use bare db.String type as "
+            "it is incompatible with certain databases (MySQL). Use either a "
+            "fixed-length db.String(123) or db.Text instead."
+        )
+    elif isinstance(column.type, Text) and column.unique:
+        raise Exception(
+            f"Column {column} is type TEXT and has a UNIQUE constraint; "
+            "cannot use bare db.Text type w/ a UNIQUE constaint "
+            "since it is incompatible with certain databases (MySQL). "
+            "Use a fixed-length db.String(123) instead."
+        )
 
 
 if __name__ == "__main__":
