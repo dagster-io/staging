@@ -175,6 +175,9 @@ def test_delete_postgres_event_log(conn_string):
 
 
 def test_basic_get_logs_for_run_cursor(conn_string):
+
+    print("HELLO! " + conn_string)
+
     event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
 
     @solid
