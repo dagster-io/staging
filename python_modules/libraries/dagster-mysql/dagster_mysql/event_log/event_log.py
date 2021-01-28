@@ -1,5 +1,6 @@
 import threading
 from collections import namedtuple
+from typing import Callable, List, MutableMapping, NamedTuple
 
 import sqlalchemy as db
 from dagster import check
@@ -65,12 +66,8 @@ class MySQLEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
 
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold an open connection and set statement_timeout
-        self._engine = create_engine(
-            self.mysql_url,
-            isolation_level="AUTOCOMMIT",
-            pool_size=1,
-            connect_args={"options": mysql_statement_timeout(statement_timeout)},
-        )
+        # TODO: statement_timeout doesn't seem to exist in mysql. Alternatives?
+        self._engine = create_engine(self.mysql_url, isolation_level="AUTOCOMMIT", pool_size=1)
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)
@@ -132,7 +129,7 @@ class MySQLEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
 
     def has_secondary_index(self, name, run_id=None):
         if name not in self._secondary_index_cache:
-            self._secondary_index_cache[name] = super(
+            self._secondary_index_cache[name] = super(  # pylint: disable=E1121
                 MySQLEventLogStorage, self
             ).has_secondary_index(name, run_id)
         return self._secondary_index_cache[name]
@@ -183,106 +180,124 @@ POLLING_CADENCE = 0.25
 TERMINATE_EVENT_LOOP = "TERMINATE_EVENT_LOOP"
 
 
-def watcher_thread(conn_string, run_id_dict, handlers_dict, dict_lock, watcher_thread_exit):
-    pass
-    # TODO
-    # try:
-    # for notif in await_pg_notifications(
-    #     conn_string,
-    #     channels=[CHANNEL_NAME],
-    #     timeout=POLLING_CADENCE,
-    #     yield_on_timeout=True,
-    #     exit_event=watcher_thread_exit,
-    # ):
-    #     if notif is None:
-    #         if watcher_thread_exit.is_set():
-    #             break
-    #     else:
-    #         run_id, index_str = notif.payload.split("_")
-    #         if run_id not in run_id_dict:
-    #             continue
-
-    #         index = int(index_str)
-    #         with dict_lock:
-    #             handlers = handlers_dict.get(run_id, [])
-
-    #         engine = create_engine(
-    #             conn_string, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
-    #         )
-    #         try:
-    #             res = engine.execute(
-    #                 db.select([SqlEventLogStorageTable.c.event]).where(
-    #                     SqlEventLogStorageTable.c.id == index
-    #                 ),
-    #             )
-    #             dagster_event = deserialize_json_to_dagster_namedtuple(res.fetchone()[0])
-    #         finally:
-    #             engine.dispose()
-
-    #         for (cursor, callback) in handlers:
-    #             if index >= cursor:
-    #                 callback(dagster_event)
-    # except Exception:  # pylint: disable=broad-except
-    #     pass
+class CallbackAfterCursor(NamedTuple):
+    start_cursor: int
+    callback: Callable[[EventRecord], None]
 
 
 class MySQLEventWatcher:
-    def __init__(self, conn_string):
-        self._run_id_dict = {}
-        self._handlers_dict = {}
-        self._dict_lock = threading.Lock()
-        self._conn_string = conn_string
-        self._watcher_thread_exit = None
-        self._watcher_thread = None
+    '''MySQL-based Event Log Watcher; uses one thread per watched run_id
+    '''
 
-    def has_run_id(self, run_id):
+    def __init__(self, conn_str: str):
+        # TODO: should this be held in the MySQLEventLogStorage class? probably.
+        # look into a fn call similar to 'optimize_for_dagit'
+        check.str_param(conn_str, "conn_str")
+        self._engine: db.engine.Engine = create_engine(conn_str, isolation_level="AUTOCOMMIT")
+
+        # INVARIANT: dict_lock protects _run_id_to_watcher_dict
+        self._dict_lock: threading.Lock = threading.Lock()
+        self._run_id_to_watcher_dict: MutableMapping[str, MySQLRunIdEventWatcherThread] = {}
+
+    def has_run_id(self, run_id: str) -> bool:
+        run_id = check.str_param(run_id, "run_id")
         with self._dict_lock:
-            _has_run_id = run_id in self._run_id_dict
+            _has_run_id = run_id in self._run_id_to_watcher_dict
         return _has_run_id
 
-    def watch_run(self, run_id, start_cursor, callback):
-        if not self._watcher_thread:
-            self._watcher_thread_exit = threading.Event()
-            self._watcher_thread = threading.Thread(
-                target=watcher_thread,
-                args=(
-                    self._conn_string,
-                    self._run_id_dict,
-                    self._handlers_dict,
-                    self._dict_lock,
-                    self._watcher_thread_exit,
-                ),
-            )
-            self._watcher_thread.daemon = True
-            self._watcher_thread.start()
-
+    def watch_run(self, run_id: str, start_cursor: int, callback: Callable[[EventRecord], None]):
+        run_id = check.str_param(run_id, "run_id")
+        start_cursor = check.int_param(start_cursor, "start_cursor")
+        callback = check.callable_param(callback, "callback")
         with self._dict_lock:
-            if run_id in self._run_id_dict:
-                self._handlers_dict[run_id].append((start_cursor, callback))
-            else:
-                # See: https://docs.python.org/2/library/multiprocessing.html#multiprocessing.managers.SyncManager
-                run_id_dict = self._run_id_dict
-                run_id_dict[run_id] = None
-                self._run_id_dict = run_id_dict
-                self._handlers_dict[run_id] = [(start_cursor, callback)]
+            if run_id not in self._run_id_to_watcher_dict:
+                self._run_id_to_watcher_dict[run_id] = MySQLRunIdEventWatcherThread(
+                    self._engine, run_id
+                )
+                self._run_id_to_watcher_dict[run_id].daemon = True
+                self._run_id_to_watcher_dict[run_id].start()
 
-    def unwatch_run(self, run_id, handler):
+            self._run_id_to_watcher_dict[run_id].add_callback(start_cursor, callback)
+
+    def unwatch_run(self, run_id: str, handler: Callable[[EventRecord], None]):
+        run_id = check.str_param(run_id, "run_id")
+        handler = check.callable_param(handler, "handler")
         with self._dict_lock:
-            if run_id in self._run_id_dict:
-                self._handlers_dict[run_id] = [
-                    (start_cursor, callback)
-                    for (start_cursor, callback) in self._handlers_dict[run_id]
-                    if callback != handler
-                ]
-            if not self._handlers_dict[run_id]:
-                del self._handlers_dict[run_id]
-                run_id_dict = self._run_id_dict
-                del run_id_dict[run_id]
-                self._run_id_dict = run_id_dict
+            if run_id in self._run_id_to_watcher_dict:
+                self._run_id_to_watcher_dict[run_id].remove_callback(handler)
+                if self._run_id_to_watcher_dict[run_id].should_thread_exit.is_set():
+                    del self._run_id_to_watcher_dict[run_id]
 
     def close(self):
-        if self._watcher_thread:
-            self._watcher_thread_exit.set()
-            self._watcher_thread.join()
-            self._watcher_thread_exit = None
-            self._watcher_thread = None
+        with self._dict_lock:
+            for watcher_thread in self._run_id_to_watcher_dict:
+                watcher_thread.should_thread_exit.set()
+            for watcher_thread in self._run_id_to_watcher_dict:
+                watcher_thread.join()
+
+
+class MySQLRunIdEventWatcherThread(threading.Thread):
+    '''subclass of Thread that watches a given run_id for new Events in a MySQL DB.
+
+    Exits when `self.should_thread_exit` is set.
+
+    '''
+
+    def __init__(self, engine: db.engine.Engine, run_id: str):
+        super(threading.Thread, self).__init__()  # pylint: disable=E1003
+        self._engine = check.inst_param(engine, "engine", db.engine.Engine)
+        self._run_id = check.str_param(run_id, "run_id")
+        self._callback_fn_list: List[CallbackAfterCursor] = []
+        self._should_thread_exit = threading.Event()
+        self.name = f"mysql-event-watch-run-id-{self._run_id}"
+
+    @property
+    def should_thread_exit(self) -> threading.Event:
+        return self._should_thread_exit
+
+    def add_callback(self, start_event_id_cursor: int, callback: Callable[[EventRecord], None]):
+        '''Add a callback to execute on event_ids > start_event_id_cursor
+
+        Args:
+            start_event_id_cursor (int): minimum event_id for the callback to execute
+            callback (Callable[[EventRecord], None]): callback to update the Dagster UI
+        '''
+        start_event_id_cursor = check.int_param(start_event_id_cursor, "start_event_id_cursor")
+        callback = check.callable_param(callback, "callback")
+        self._callback_fn_list.append(CallbackAfterCursor(start_event_id_cursor, callback))
+
+    def remove_callback(self, callback: Callable[[EventRecord], None]):
+        '''Remove a callback from the list of callbacks to execute on new Events
+
+        Also stop tracking run id if appropriate
+
+        Args:
+            callback (Callable[[EventRecord], None]): callback to remove from list of callbacks
+        '''
+        callback = check.callable_param(callback, "callback")
+        self._callback_fn_list = [
+            callback_with_cursor
+            for callback_with_cursor in self._callback_fn_list
+            if callback_with_cursor.callback != callback
+        ]
+        if not self._callback_fn_list:
+            # no Observers remaining
+            self._should_thread_exit.set()
+
+    def run(self):
+        with self._engine.connect() as conn:
+            res: db.engine.ResultProxy = conn.execute(
+                db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event]).where(
+                    SqlEventLogStorageTable.c.run_id == self._run_id
+                )
+            )
+            while not self._should_thread_exit.wait(POLLING_CADENCE):
+                for record in res.fetchall():
+                    # TODO: this isn't right, new data won't be fetched within calls
+                    # however, a cursor-based approach seems like the right approach here.
+                    # I'll just modify the query for now (greater ids since the primary key is autoincremented)
+                    index: int = record[0]
+                    dagster_event: EventRecord = deserialize_json_to_dagster_namedtuple(record[1])
+                    for callback_with_cursor in self._callback_fn_list:
+                        if callback_with_cursor.start_cursor <= index:
+                            callback_with_cursor.callback(dagster_event)

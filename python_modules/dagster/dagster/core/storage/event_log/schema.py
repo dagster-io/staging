@@ -1,5 +1,9 @@
 import sqlalchemy as db
 
+## TODO: @compiles directive? and type-subclassing
+
+UNIQUE_VARCHAR_LEN: int = 512
+
 SqlEventLogStorageMetadata = db.MetaData()
 
 SqlEventLogStorageTable = db.Table(
@@ -19,7 +23,7 @@ SecondaryIndexMigrationTable = db.Table(
     "secondary_indexes",
     SqlEventLogStorageMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
-    db.Column("name", db.Text, unique=True),
+    db.Column("name", db.String(UNIQUE_VARCHAR_LEN), unique=True),
     db.Column("create_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
     db.Column("migration_completed", db.DateTime),
 )
@@ -28,7 +32,7 @@ AssetKeyTable = db.Table(
     "asset_keys",
     SqlEventLogStorageMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
-    db.Column("asset_key", db.Text, unique=True),
+    db.Column("asset_key", db.String(UNIQUE_VARCHAR_LEN), unique=True),
     db.Column("create_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
 )
 
