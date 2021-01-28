@@ -47,6 +47,8 @@ class DauphinPipelineRunStatsSnapshot(dauphin.ObjectType):
     stepsFailed = dauphin.NonNull(dauphin.Int)
     materializations = dauphin.NonNull(dauphin.Int)
     expectations = dauphin.NonNull(dauphin.Int)
+    enqueuedTime = dauphin.Field(dauphin.Float)
+    launchTime = dauphin.Field(dauphin.Float)
     startTime = dauphin.Field(dauphin.Float)
     endTime = dauphin.Field(dauphin.Float)
 
@@ -58,6 +60,8 @@ class DauphinPipelineRunStatsSnapshot(dauphin.ObjectType):
             stepsFailed=stats.steps_failed,
             materializations=stats.materializations,
             expectations=stats.expectations,
+            enqueuedTime=stats.enqueued_time,
+            launchTime=stats.launch_time,
             startTime=stats.start_time,
             endTime=stats.end_time,
         )
