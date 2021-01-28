@@ -95,37 +95,6 @@ The type system truly shines once the
 type check expresses richer behavior, such as column-level schema on a
 dataframe. The dagster-pandas library offers that capability through <PyObject module="dagster_pandas" object="create_dagster_pandas_dataframe_type" />.
 
-## Loading from Config
-
-When executing a pipeline or
-solid whose data are not produced by a dependency - e.g. for a
-solid at the beginning of a pipeline or execution subset - the data
-needs to come from somewhere. This can be specified by config.
-
-The type must declare its interaction with the config system. This means
-declaring the input schema and a function which the validated config
-value and produces a valid in-memory value to be passed to the schema.
-This process is referred to as loading.
-
-```python literalinclude
-file:/docs_snippets/docs_snippets_tests/intro_tutorial_tests/test_type_guide.py
-lineno-start:1
-startAfter:start_type_loader
-endBefore:end_type_loader
-```
-
-With this the input can be specified via config as below:
-
-```python literalinclude
-file:/docs_snippets/docs_snippets_tests/intro_tutorial_tests/test_type_guide.py
-lineno-start:1
-startAfter:start_via_config
-endBefore:end_via_config
-```
-
-Output values can also be materialized to a user-controlled location
-using config in a similar fashion.
-
 ## Dagster Type Use Cases
 
 Inputs and Outputs can represent, via the type system:
