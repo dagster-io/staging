@@ -19,8 +19,8 @@ DAEMON_HEARTBEAT_INTERVAL_SECONDS = 30
 # Default interval at which daemons run
 DEFAULT_DAEMON_INTERVAL_SECONDS = 30
 
-# Interval at which sensors daemon evaluations are run
-SENSOR_DAEMON_INTERVAL = DEFAULT_DAEMON_INTERVAL_SECONDS
+# Default interval at which sensor daemon evaluations are run
+DEFAULT_SENSOR_DAEMON_INTERVAL = DEFAULT_DAEMON_INTERVAL_SECONDS
 
 
 def _sorted_quoted(strings):
@@ -51,7 +51,14 @@ class DagsterDaemonController:
                 )
             )
 
-        self._add_daemon(SensorDaemon(instance, interval_seconds=SENSOR_DAEMON_INTERVAL,))
+        self._add_daemon(
+            SensorDaemon(
+                instance,
+                interval_seconds=instance.sensor_settings.get(
+                    "interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL
+                ),
+            )
+        )
 
         if isinstance(instance.run_coordinator, QueuedRunCoordinator):
             max_concurrent_runs = instance.run_coordinator.max_concurrent_runs
