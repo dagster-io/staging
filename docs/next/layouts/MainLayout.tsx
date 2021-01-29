@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { Children, useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { NextSeo } from "next-seo";
 
 const SearchBar = ({ openSearch, setSearchTerm }) => {
   return (
@@ -98,10 +99,7 @@ const SearchResults = ({ searchTerm }) => {
                 </a>
               </nav>
               <div className="mr-4">
-                <div
-                  className="px-3 py-2 font-medium text-sm rounded-md"
-                  aria-current="page"
-                >
+                <div className="px-3 py-2 font-medium text-sm rounded-md" aria-current="page">
                   {results} Results
                 </div>
               </div>
@@ -144,10 +142,7 @@ const FeedbackModal = ({ closeFeedback }: { closeFeedback: () => void }) => {
               <div className="flex-1 h-0 overflow-y-auto">
                 <div className="py-6 px-4 bg-indigo-700 sm:px-6">
                   <div className="flex items-center justify-between">
-                    <h2
-                      id="slide-over-heading"
-                      className="text-lg font-medium text-white"
-                    >
+                    <h2 id="slide-over-heading" className="text-lg font-medium text-white">
                       Submit Feedback
                     </h2>
                     <div className="ml-3 h-7 flex items-center">
@@ -177,8 +172,8 @@ const FeedbackModal = ({ closeFeedback }: { closeFeedback: () => void }) => {
                   </div>
                   <div className="mt-1">
                     <p className="text-sm text-indigo-300">
-                      Feedback helps us improve our documentation so you can be
-                      more productive. Please let us know about anything!
+                      Feedback helps us improve our documentation so you can be more productive.
+                      Please let us know about anything!
                     </p>
                   </div>
                 </div>
@@ -199,9 +194,7 @@ const FeedbackModal = ({ closeFeedback }: { closeFeedback: () => void }) => {
                             id="project_name"
                             className="block w-full shadow-sm sm:text-sm focus:ring-indigo-500 focus:border-indigo-500 border-gray-300 rounded-md"
                             value={currentPage}
-                            onChange={(event) =>
-                              setCurrentPage(event.target.value)
-                            }
+                            onChange={(event) => setCurrentPage(event.target.value)}
                           />
                         </div>
                       </div>
@@ -224,9 +217,7 @@ const FeedbackModal = ({ closeFeedback }: { closeFeedback: () => void }) => {
                       </div>
 
                       <fieldset>
-                        <legend className="sr-only">
-                          Submit as Public Github Issue
-                        </legend>
+                        <legend className="sr-only">Submit as Public Github Issue</legend>
                         <div className="bg-white rounded-md -space-y-px">
                           {/* On: "bg-indigo-50 border-indigo-200 z-10", Off: "border-gray-200" */}
                           <div className="relative border rounded-tl-md rounded-tr-md p-4 flex">
@@ -249,8 +240,7 @@ const FeedbackModal = ({ closeFeedback }: { closeFeedback: () => void }) => {
                               </span>
                               {/* On: "text-indigo-700", Off: "text-gray-500" */}
                               <span className="block text-sm">
-                                Submit this feedback to our public issue tracker
-                                at{" "}
+                                Submit this feedback to our public issue tracker at{" "}
                                 <a href="#" className="underline">
                                   https://github.com/dagster-io/dagster/issues
                                 </a>
@@ -350,11 +340,8 @@ const Layout = ({ children }) => {
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [openFeedback, setOpenFeedback] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const {
-    asPath,
-    locale: version,
-    defaultLocale: defaultVersion,
-  } = useRouter();
+  const { asPath, locale: version, defaultLocale: defaultVersion } = useRouter();
+  const { frontMatter } = children.props;
 
   const openSearch = () => {
     setIsSearching(true);
@@ -378,22 +365,17 @@ const Layout = ({ children }) => {
 
   return (
     <>
+      <NextSeo title={frontMatter.title} description={frontMatter.description} />
       {openFeedback && <FeedbackModal closeFeedback={closeFeedback} />}
       <div className="h-screen flex overflow-hidden bg-white">
         <Sidebar />
-        <main
-          className="flex-1 overflow-y-auto focus:outline-none"
-          tabIndex={0}
-        >
+        <main className="flex-1 overflow-y-auto focus:outline-none" tabIndex={0}>
           <div className="relative max-w-4xl mx-auto md:px-8 xl:px-0">
             <div className="pt-10 pb-16">
               <div className="px-4 sm:px-6 md:px-0">
                 <div className="flex space-x-4 items-baseline">
                   <div className="flex-1">
-                    <SearchBar
-                      openSearch={openSearch}
-                      setSearchTerm={setSearchTerm}
-                    />
+                    <SearchBar openSearch={openSearch} setSearchTerm={setSearchTerm} />
                   </div>
                   <button
                     onClick={() => setOpenFeedback(true)}
@@ -431,17 +413,14 @@ const Layout = ({ children }) => {
                           <div className="mt-2 text-sm text-gray-500">
                             {version === "master" ? (
                               <p>
-                                This documentation is for an unreleased version
-                                ({version}) of Dagster. The content here is not
-                                guaranteed to be correct or stable. You can view
-                                the version of this page rom our latest release
-                                below.
+                                This documentation is for an unreleased version ({version}) of
+                                Dagster. The content here is not guaranteed to be correct or stable.
+                                You can view the version of this page rom our latest release below.
                               </p>
                             ) : (
                               <p>
-                                This documentation is for an older version (
-                                {version}) of Dagster. A new version of this
-                                page is available for our latest
+                                This documentation is for an older version ({version}) of Dagster. A
+                                new version of this page is available for our latest
                               </p>
                             )}
                           </div>
@@ -449,8 +428,7 @@ const Layout = ({ children }) => {
                             <Link href={asPath} locale={defaultVersion}>
                               <a className="font-medium text-indigo-600 hover:text-indigo-500">
                                 {" "}
-                                View Latest Documentation{" "}
-                                <span aria-hidden="true">→</span>
+                                View Latest Documentation <span aria-hidden="true">→</span>
                               </a>
                             </Link>
                           </div>
