@@ -153,6 +153,7 @@ def get_sensor_next_tick(graphene_info, sensor_state):
         return None
 
     next_timestamp = latest_tick.timestamp + external_sensor.min_interval_seconds
+
     if next_timestamp < get_timestamp_from_utc_datetime(get_current_datetime_in_utc()):
         return None
     return GrapheneFutureJobTick(sensor_state, next_timestamp)
