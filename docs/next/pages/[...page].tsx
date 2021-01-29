@@ -5,6 +5,7 @@ import path from "path";
 import { promises as fs } from "fs";
 import matter from "gray-matter";
 import MDXComponents from "../components/MDXComponents";
+import { NextSeo } from "next-seo";
 
 const components: MdxRemote.Components = MDXComponents;
 
@@ -18,7 +19,15 @@ interface Props {
 
 export default function ExamplePage({ mdxSource, frontMatter }: Props) {
   const content = hydrate(mdxSource, { components });
-  return <div className="prose max-w-none">{content}</div>;
+  return (
+    <>
+      <NextSeo
+        title={frontMatter.title}
+        description={frontMatter.description}
+      />
+      <div className="prose max-w-none">{content}</div>
+    </>
+  );
 }
 
 const basePathForVersion = (version: string) => {
