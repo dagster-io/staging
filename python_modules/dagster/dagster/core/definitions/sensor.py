@@ -10,6 +10,10 @@ from .job import JobContext, JobDefinition, JobType, RunRequest, SkipReason
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
 
 
+def get_sensor_daemon_interval(instance):
+    return instance.sensor_settings.get("interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL)
+
+
 class SensorExecutionContext(JobContext):
     """Sensor execution context.
 
@@ -57,10 +61,11 @@ class SensorDefinition(JobDefinition):
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute when the sensor runs. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The mode to apply when executing this sensor. (default: 'default')
-        minimum_interval_seconds (Optional[str]): The minimum number of seconds that will elapse
+        minimum_interval_seconds (Optional[int]): The minimum number of seconds that will elapse
             between sensor evaluations.  Practically, the time elapsed between sensor evaluations
-            will be the shortest multiple of the sensor daemon evaluation interval (30 seconds) that
-            is greater than or equal to this value.
+            will be the shortest multiple of the sensor daemon evaluation interval (default 30 seconds) that
+            is greater than or equal to this value. If not set, this value defaults to the configured
+            sensor daemon interval.
     """
 
     __slots__ = [

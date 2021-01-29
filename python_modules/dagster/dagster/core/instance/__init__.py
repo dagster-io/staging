@@ -465,6 +465,10 @@ class DagsterInstance:
         else:
             return dagster_telemetry_enabled_default
 
+    @property
+    def sensor_settings(self):
+        return self.get_settings("sensor_settings") or {}
+
     def upgrade(self, print_fn=lambda _: None):
         with upgrading_instance(self):
 
@@ -1318,7 +1322,7 @@ class DagsterInstance:
                     external_sensor.get_external_origin(),
                     JobType.SENSOR,
                     JobStatus.RUNNING,
-                    SensorJobData(min_interval=external_sensor.min_interval_seconds),
+                    SensorJobData(min_interval=external_sensor.get_min_interval_seconds(self)),
                 )
             )
         elif job_state.status != JobStatus.RUNNING:
@@ -1327,7 +1331,7 @@ class DagsterInstance:
                 job_state.with_status(JobStatus.RUNNING).with_data(
                     SensorJobData(
                         last_tick_timestamp=datetime.utcnow().timestamp(),
-                        min_interval=external_sensor.min_interval_seconds,
+                        min_interval=external_sensor.get_min_interval_seconds(self),
                     )
                 )
             )

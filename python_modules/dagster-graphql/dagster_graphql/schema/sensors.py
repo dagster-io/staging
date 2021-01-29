@@ -47,7 +47,9 @@ class GrapheneSensor(graphene.ObjectType):
             pipelineName=external_sensor.pipeline_name,
             solidSelection=external_sensor.solid_selection,
             mode=external_sensor.mode,
-            minIntervalSeconds=external_sensor.min_interval_seconds,
+            minIntervalSeconds=external_sensor.get_min_interval_seconds(
+                graphene_info.context.instance
+            ),
         )
 
     def resolve_id(self, _):

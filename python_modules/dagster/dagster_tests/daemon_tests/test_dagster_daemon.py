@@ -140,3 +140,21 @@ def test_different_intervals(caplog):
 
         assert controller.get_daemon_last_iteration_time(run_daemon.daemon_type()) == next_time
         assert _run_coordinator_ran(caplog)
+
+
+def test_sensor_intervals():
+    with instance_for_test(overrides={"sensor_settings": {"interval_seconds": 5}}) as instance:
+
+        init_time = pendulum.now("UTC")
+        controller = DagsterDaemonController(instance)
+
+        controller.run_iteration(init_time)
+        assert controller.get_daemon_last_iteration_time(DaemonType.SENSOR) == init_time
+
+        next_time = init_time + datetime.timedelta(seconds=1)
+        controller.run_iteration(next_time)
+        assert controller.get_daemon_last_iteration_time(DaemonType.SENSOR) == init_time
+
+        next_time = next_time + datetime.timedelta(seconds=5)
+        controller.run_iteration(next_time)
+        assert controller.get_daemon_last_iteration_time(DaemonType.SENSOR) == next_time
