@@ -73,7 +73,7 @@ class SensorLaunchContext:
                     SensorJobData(
                         last_tick_timestamp=self._tick.timestamp,
                         last_run_key=last_run_key,
-                        min_interval=self._external_sensor.min_interval_seconds,
+                        min_interval=self._external_sensor.get_min_interval_seconds(self._instance),
                     )
                 )
             )
