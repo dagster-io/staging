@@ -167,7 +167,7 @@ class InstanceRef(
             ConfigurableClassData("dagster", "DefaultRunLauncher", yaml.dump({}),),
         )
 
-        settings_keys = {"telemetry"}
+        settings_keys = {"telemetry", "sensors"}
         settings = {key: config_value.get(key) for key in settings_keys}
 
         return InstanceRef(
