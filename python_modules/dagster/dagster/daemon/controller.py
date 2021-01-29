@@ -49,7 +49,14 @@ class DagsterDaemonController:
                 )
             )
 
-        self._add_daemon(SensorDaemon(instance, interval_seconds=DEFAULT_SENSOR_DAEMON_INTERVAL,))
+        self._add_daemon(
+            SensorDaemon(
+                instance,
+                interval_seconds=instance.sensor_settings.get(
+                    "interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL
+                ),
+            )
+        )
 
         if isinstance(instance.run_coordinator, QueuedRunCoordinator):
             max_concurrent_runs = instance.run_coordinator.max_concurrent_runs
