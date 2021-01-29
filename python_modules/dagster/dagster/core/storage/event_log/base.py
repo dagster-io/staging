@@ -29,13 +29,11 @@ class EventLogStorage(ABC):
     """
 
     @abstractmethod
-    def get_logs_for_run(self, run_id: str, cursor: Optional[int] = -1) -> Iterable[EventRecord]:
+    def get_logs_for_run(self, run_id: str) -> Iterable[EventRecord]:
         """Get all of the logs corresponding to a run.
 
         Args:
             run_id (str): The id of the run for which to fetch logs.
-            cursor (Optional[int]): Zero-indexed logs will be returned starting from cursor + 1,
-                i.e., if cursor is -1, all logs will be returned. (default: -1)
         """
 
     def get_stats_for_run(self, run_id: str) -> PipelineRunStatsSnapshot:
