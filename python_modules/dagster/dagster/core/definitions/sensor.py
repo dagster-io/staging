@@ -10,6 +10,10 @@ from .job import JobContext, JobDefinition, JobType, RunRequest, SkipReason
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
 
 
+def get_sensor_daemon_interval(instance):
+    return instance.sensor_settings.get("interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL)
+
+
 class SensorExecutionContext(JobContext):
     """Sensor execution context.
 

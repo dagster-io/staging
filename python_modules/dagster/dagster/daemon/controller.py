@@ -3,7 +3,7 @@ import uuid
 
 import pendulum
 from dagster import check
-from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
+from dagster.core.definitions.sensor import get_sensor_daemon_interval
 from dagster.core.run_coordinator import QueuedRunCoordinator
 from dagster.core.scheduler import DagsterDaemonScheduler
 from dagster.daemon.daemon import SchedulerDaemon, SensorDaemon, get_default_daemon_logger
@@ -49,7 +49,9 @@ class DagsterDaemonController:
                 )
             )
 
-        self._add_daemon(SensorDaemon(instance, interval_seconds=DEFAULT_SENSOR_DAEMON_INTERVAL,))
+        self._add_daemon(
+            SensorDaemon(instance, interval_seconds=get_sensor_daemon_interval(instance),)
+        )
 
         if isinstance(instance.run_coordinator, QueuedRunCoordinator):
             max_concurrent_runs = instance.run_coordinator.max_concurrent_runs

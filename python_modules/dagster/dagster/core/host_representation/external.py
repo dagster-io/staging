@@ -3,7 +3,7 @@ from collections import OrderedDict
 
 from dagster import check
 from dagster.core.definitions.job import JobType
-from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
+from dagster.core.definitions.sensor import get_sensor_daemon_interval
 from dagster.core.execution.plan.handle import ResolvedFromDynamicStepHandle, StepHandle
 from dagster.core.origin import PipelinePythonOrigin
 from dagster.core.snap import ExecutionPlanSnapshot
@@ -494,14 +494,13 @@ class ExternalSensor:
     def mode(self):
         return self._external_sensor_data.mode
 
-    @property
-    def min_interval_seconds(self):
+    def get_min_interval_seconds(self, instance):
         if (
             isinstance(self._external_sensor_data, ExternalSensorData)
             and self._external_sensor_data.min_interval
         ):
             return self._external_sensor_data.min_interval
-        return DEFAULT_SENSOR_DAEMON_INTERVAL
+        return get_sensor_daemon_interval(instance)
 
     def get_external_origin(self):
         return self._handle.get_external_origin()
@@ -516,7 +515,7 @@ class ExternalSensor:
             self.get_external_origin(),
             JobType.SENSOR,
             JobStatus.STOPPED,
-            SensorJobData(min_interval=self.min_interval_seconds),
+            SensorJobData(min_interval=self.get_min_interval_seconds(_instance)),
         )
 
 
