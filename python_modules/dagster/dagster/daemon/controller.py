@@ -6,6 +6,7 @@ from dagster import check
 from dagster.core.run_coordinator import QueuedRunCoordinator
 from dagster.core.scheduler import DagsterDaemonScheduler
 from dagster.daemon.daemon import SchedulerDaemon, SensorDaemon, get_default_daemon_logger
+from dagster.daemon.dagster_cloud.message_queue_daemon import MessageQueueDaemon
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
 from dagster.daemon.types import DaemonHeartbeat, DaemonStatus, DaemonType
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
@@ -41,7 +42,7 @@ class DagsterDaemonController:
 
         self._logger = get_default_daemon_logger("dagster-daemon")
 
-        if isinstance(instance.scheduler, DagsterDaemonScheduler):
+        if isinstance(instance.scheduler, DagsterDaemonScheduler) and False:
             max_catchup_runs = instance.scheduler.max_catchup_runs
             self._add_daemon(
                 SchedulerDaemon(
@@ -51,9 +52,13 @@ class DagsterDaemonController:
                 )
             )
 
-        self._add_daemon(SensorDaemon(instance, interval_seconds=SENSOR_DAEMON_INTERVAL,))
+        #        self._add_daemon(SensorDaemon(instance, interval_seconds=SENSOR_DAEMON_INTERVAL,))
 
-        if isinstance(instance.run_coordinator, QueuedRunCoordinator):
+        # This will need to be in a different thread with a much faster iteration time
+        # so that the scheduler/sensor/queue loop can't block it
+        self._add_daemon(MessageQueueDaemon(instance))
+
+        if isinstance(instance.run_coordinator, QueuedRunCoordinator) and False:
             max_concurrent_runs = instance.run_coordinator.max_concurrent_runs
             tag_concurrency_limits = instance.run_coordinator.tag_concurrency_limits
             self._add_daemon(
@@ -65,7 +70,7 @@ class DagsterDaemonController:
                 )
             )
 
-        assert set(required_daemons(instance)) == self._daemons.keys()
+        #        assert set(required_daemons(instance)) == self._daemons.keys()
 
         if not self._daemons:
             raise Exception("No daemons configured on the DagsterInstance")

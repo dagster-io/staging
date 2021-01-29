@@ -12,6 +12,7 @@ class DaemonType(Enum):
     SENSOR = "SENSOR"
     SCHEDULER = "SCHEDULER"
     QUEUED_RUN_COORDINATOR = "QUEUED_RUN_COORDINATOR"
+    MESSAGE_QUEUE = "MESSAGE_QUEUE"
 
 
 @whitelist_for_serdes
