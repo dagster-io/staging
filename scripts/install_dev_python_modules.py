@@ -85,11 +85,7 @@ def main(quiet):
         "-e integration_tests/python_modules/dagster-k8s-test-infra",
         "-r scala_modules/scripts/requirements.txt",
         "-e python_modules/libraries/dagster-airflow[test]",
-        #
-        # https://github.com/dagster-io/dagster/pull/2483#issuecomment-635174157
-        # Uncomment only when snowflake-connector-python can be installed with optional (or
-        # compatible) Azure dependencies.
-        # "-e python_modules/libraries/dagster-azure",
+        "-e python_modules/libraries/dagster-azure",
     ]
 
     # dagster-ge depends on a great_expectations version that does not install on Windows
