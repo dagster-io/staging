@@ -57,10 +57,11 @@ class SensorDefinition(JobDefinition):
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute when the sensor runs. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The mode to apply when executing this sensor. (default: 'default')
-        minimum_interval_seconds (Optional[str]): The minimum number of seconds that will elapse
+        minimum_interval_seconds (Optional[int]): The minimum number of seconds that will elapse
             between sensor evaluations.  Practically, the time elapsed between sensor evaluations
-            will be the shortest multiple of the sensor daemon evaluation interval (30 seconds) that
-            is greater than or equal to this value.
+            will be the shortest multiple of the sensor daemon evaluation interval (set on the
+            instance in the "sensors_setting" configuration map, 30 seconds by default) that is
+            greater than or equal to this value.
     """
 
     __slots__ = [
