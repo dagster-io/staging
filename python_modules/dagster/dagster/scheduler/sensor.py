@@ -5,6 +5,7 @@ import time
 import pendulum
 from dagster import check
 from dagster.core.definitions.job import JobType
+from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
 from dagster.core.host_representation import (
     ExternalPipeline,
     PipelineSelector,
@@ -24,6 +25,10 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 
 RECORDED_TICK_STATES = [JobTickStatus.SUCCESS, JobTickStatus.FAILURE]
 FULFILLED_TICK_STATES = [JobTickStatus.SKIPPED, JobTickStatus.SUCCESS]
+
+
+def get_sensor_daemon_interval(instance):
+    return instance.sensor_settings.get("interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL)
 
 
 class SensorLaunchContext:

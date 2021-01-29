@@ -4,7 +4,6 @@ from abc import abstractclassmethod, abstractmethod
 
 import pendulum
 from dagster import DagsterInstance, check
-from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
 from dagster.daemon.types import DaemonHeartbeat
 from dagster.scheduler import execute_scheduler_iteration
 from dagster.scheduler.sensor import execute_sensor_iteration
@@ -175,7 +174,9 @@ class SchedulerDaemon(DagsterDaemon):
 class SensorDaemon(DagsterDaemon):
     @staticmethod
     def create_from_instance(instance):
-        return SensorDaemon(instance, interval_seconds=DEFAULT_SENSOR_DAEMON_INTERVAL)
+        from dagster.scheduler.sensor import get_sensor_daemon_interval
+
+        return SensorDaemon(instance, interval_seconds=get_sensor_daemon_interval(instance))
 
     @classmethod
     def daemon_type(cls):
