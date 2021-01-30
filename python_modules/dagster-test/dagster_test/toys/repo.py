@@ -10,6 +10,10 @@ from dagster_test.toys.log_s3 import log_s3_pipeline
 from dagster_test.toys.log_spew import log_spew
 from dagster_test.toys.longitudinal import longitudinal_pipeline
 from dagster_test.toys.many_events import many_events
+from dagster_test.toys.partitioned_asset import (
+    partitioned_asset_partition_set,
+    partitioned_asset_pipeline,
+)
 from dagster_test.toys.retries import retry_pipeline
 from dagster_test.toys.sleepy import sleepy_pipeline
 from dagster_test.toys.unreliable import unreliable_pipeline
@@ -36,7 +40,9 @@ def toys_repository():
             branch_pipeline,
             unreliable_pipeline,
             dynamic_pipeline,
+            partitioned_asset_pipeline,
         ]
+        + [partitioned_asset_partition_set]
         + get_toys_schedules()
         + get_toys_sensors()
     )
