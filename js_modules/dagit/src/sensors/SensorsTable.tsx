@@ -157,7 +157,7 @@ const SensorRow: React.FC<{
           </Group>
         </Group>
       </td>
-      <td>~ 30 seconds</td>
+      <td>~ {sensor.minIntervalSeconds} seconds</td>
       <td>
         {latestTick ? (
           <TickTag tick={latestTick} jobType={JobType.SENSOR} />

@@ -117,6 +117,10 @@ export const SensorDetails: React.FC<{
               key: 'Mode',
               value: sensor.mode,
             },
+            {
+              key: 'Frequency',
+              value: `~ ${Math.max(30, sensor.minIntervalSeconds)} sec`,
+            },
           ]}
         />
       </Group>
