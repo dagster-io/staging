@@ -5,7 +5,9 @@ from dagster.core.definitions.sensor import RunRequest, SensorDefinition, SkipRe
 from dagster.core.errors import DagsterInvariantViolationError
 
 
-def sensor(pipeline_name, name=None, solid_selection=None, mode=None):
+def sensor(
+    pipeline_name, name=None, solid_selection=None, mode=None, minimum_interval_seconds=None
+):
     """
     Creates a sensor where the decorated function is used as the sensor's evaluation function.  The
     decorated function may:
@@ -56,6 +58,7 @@ def sensor(pipeline_name, name=None, solid_selection=None, mode=None):
             evaluation_fn=_wrapped_fn,
             solid_selection=solid_selection,
             mode=mode,
+            minimum_interval_seconds=minimum_interval_seconds,
         )
 
     return inner
