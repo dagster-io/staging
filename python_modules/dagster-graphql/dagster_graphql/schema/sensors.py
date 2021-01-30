@@ -25,6 +25,7 @@ class DauphinSensor(dauphin.ObjectType):
     solidSelection = dauphin.List(dauphin.String)
     mode = dauphin.NonNull(dauphin.String)
     sensorState = dauphin.NonNull("JobState")
+    minIntervalSeconds = dauphin.NonNull(dauphin.Int)
     nextTick = dauphin.Field("FutureJobTick")
 
     def resolve_id(self, _):
@@ -49,6 +50,7 @@ class DauphinSensor(dauphin.ObjectType):
             pipelineName=external_sensor.pipeline_name,
             solidSelection=external_sensor.solid_selection,
             mode=external_sensor.mode,
+            minIntervalSeconds=external_sensor.min_interval_seconds,
         )
 
     def resolve_sensorState(self, graphene_info):
