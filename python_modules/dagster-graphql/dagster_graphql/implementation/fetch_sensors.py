@@ -6,8 +6,7 @@ from dagster.core.host_representation import (
     RepositorySelector,
     SensorSelector,
 )
-from dagster.core.scheduler.job import JobStatus
-from dagster.daemon.controller import SENSOR_DAEMON_INTERVAL
+from dagster.core.scheduler.job import JobState, JobStatus
 from dagster.seven import get_current_datetime_in_utc, get_timestamp_from_utc_datetime
 from graphql.execution.base import ResolveInfo
 
@@ -122,6 +121,24 @@ def get_sensors_for_pipeline(graphene_info, pipeline_selector):
 
 
 def get_sensor_next_tick(graphene_info, sensor_state):
+    check.inst_param(graphene_info, "graphene_info", ResolveInfo)
+    check.inst_param(sensor_state, "sensor_state", JobState)
+
+    repository_origin = sensor_state.origin.external_repository_origin
+    if not graphene_info.context.has_repository_location(
+        repository_origin.repository_location_origin.location_name
+    ):
+        return None
+
+    repository_location = graphene_info.context.get_repository_location(
+        repository_origin.repository_location_origin.location_name
+    )
+    if not repository_location.has_repository(repository_origin.repository_name):
+        return None
+
+    repository = repository_location.get_repository(repository_origin.repository_name)
+    external_sensor = repository.get_external_job(sensor_state.name)
+
     if sensor_state.status != JobStatus.RUNNING:
         return None
 
@@ -129,7 +146,7 @@ def get_sensor_next_tick(graphene_info, sensor_state):
     if not latest_tick:
         return None
 
-    next_timestamp = latest_tick.timestamp + SENSOR_DAEMON_INTERVAL
+    next_timestamp = latest_tick.timestamp + external_sensor.min_interval_seconds
     if next_timestamp < get_timestamp_from_utc_datetime(get_current_datetime_in_utc()):
         return None
     return graphene_info.schema.type_named("FutureJobTick")(sensor_state, next_timestamp)

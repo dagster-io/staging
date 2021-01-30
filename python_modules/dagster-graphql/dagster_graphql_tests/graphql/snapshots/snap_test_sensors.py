@@ -9,6 +9,7 @@ snapshots = Snapshot()
 snapshots['TestSensors.test_get_sensor[readonly_in_memory_instance_in_process_env] 1'] = {
     '__typename': 'Sensor',
     'id': 'always_no_config_sensor:no_config_pipeline',
+    'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
     'nextTick': None,
@@ -27,6 +28,7 @@ snapshots['TestSensors.test_get_sensor[readonly_in_memory_instance_in_process_en
 snapshots['TestSensors.test_get_sensor[readonly_in_memory_instance_managed_grpc_env] 1'] = {
     '__typename': 'Sensor',
     'id': 'always_no_config_sensor:no_config_pipeline',
+    'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
     'nextTick': None,
@@ -45,6 +47,7 @@ snapshots['TestSensors.test_get_sensor[readonly_in_memory_instance_managed_grpc_
 snapshots['TestSensors.test_get_sensor[readonly_in_memory_instance_multi_location] 1'] = {
     '__typename': 'Sensor',
     'id': 'always_no_config_sensor:no_config_pipeline',
+    'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
     'nextTick': None,
@@ -63,6 +66,7 @@ snapshots['TestSensors.test_get_sensor[readonly_in_memory_instance_multi_locatio
 snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_deployed_grpc_env] 1'] = {
     '__typename': 'Sensor',
     'id': 'always_no_config_sensor:no_config_pipeline',
+    'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
     'nextTick': None,
@@ -81,6 +85,7 @@ snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_deployed_grpc_en
 snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_in_process_env] 1'] = {
     '__typename': 'Sensor',
     'id': 'always_no_config_sensor:no_config_pipeline',
+    'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
     'nextTick': None,
@@ -99,6 +104,7 @@ snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_in_process_env] 
 snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_managed_grpc_env] 1'] = {
     '__typename': 'Sensor',
     'id': 'always_no_config_sensor:no_config_pipeline',
+    'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
     'nextTick': None,
@@ -117,6 +123,7 @@ snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_managed_grpc_env
 snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_multi_location] 1'] = {
     '__typename': 'Sensor',
     'id': 'always_no_config_sensor:no_config_pipeline',
+    'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
     'nextTick': None,
@@ -135,6 +142,7 @@ snapshots['TestSensors.test_get_sensor[readonly_sqlite_instance_multi_location] 
 snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_in_process_env] 1'] = [
     {
         'id': 'always_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -149,7 +157,24 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_in_process_e
         'solidSelection': None
     },
     {
+        'id': 'custom_interval_sensor:no_config_pipeline',
+        'minIntervalSeconds': 60,
+        'mode': 'default',
+        'name': 'custom_interval_sensor',
+        'pipelineName': 'no_config_pipeline',
+        'sensorState': {
+            'runs': [
+            ],
+            'runsCount': 0,
+            'status': 'STOPPED',
+            'ticks': [
+            ]
+        },
+        'solidSelection': None
+    },
+    {
         'id': 'multi_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -165,6 +190,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_in_process_e
     },
     {
         'id': 'never_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -180,6 +206,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_in_process_e
     },
     {
         'id': 'once_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -198,6 +225,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_in_process_e
 snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_managed_grpc_env] 1'] = [
     {
         'id': 'always_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -212,7 +240,24 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_managed_grpc
         'solidSelection': None
     },
     {
+        'id': 'custom_interval_sensor:no_config_pipeline',
+        'minIntervalSeconds': 60,
+        'mode': 'default',
+        'name': 'custom_interval_sensor',
+        'pipelineName': 'no_config_pipeline',
+        'sensorState': {
+            'runs': [
+            ],
+            'runsCount': 0,
+            'status': 'STOPPED',
+            'ticks': [
+            ]
+        },
+        'solidSelection': None
+    },
+    {
         'id': 'multi_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -228,6 +273,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_managed_grpc
     },
     {
         'id': 'never_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -243,6 +289,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_managed_grpc
     },
     {
         'id': 'once_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -261,6 +308,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_managed_grpc
 snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_multi_location] 1'] = [
     {
         'id': 'always_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -275,7 +323,24 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_multi_locati
         'solidSelection': None
     },
     {
+        'id': 'custom_interval_sensor:no_config_pipeline',
+        'minIntervalSeconds': 60,
+        'mode': 'default',
+        'name': 'custom_interval_sensor',
+        'pipelineName': 'no_config_pipeline',
+        'sensorState': {
+            'runs': [
+            ],
+            'runsCount': 0,
+            'status': 'STOPPED',
+            'ticks': [
+            ]
+        },
+        'solidSelection': None
+    },
+    {
         'id': 'multi_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -291,6 +356,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_multi_locati
     },
     {
         'id': 'never_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -306,6 +372,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_multi_locati
     },
     {
         'id': 'once_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -324,6 +391,7 @@ snapshots['TestSensors.test_get_sensors[readonly_in_memory_instance_multi_locati
 snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_deployed_grpc_env] 1'] = [
     {
         'id': 'always_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -338,7 +406,24 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_deployed_grpc_e
         'solidSelection': None
     },
     {
+        'id': 'custom_interval_sensor:no_config_pipeline',
+        'minIntervalSeconds': 60,
+        'mode': 'default',
+        'name': 'custom_interval_sensor',
+        'pipelineName': 'no_config_pipeline',
+        'sensorState': {
+            'runs': [
+            ],
+            'runsCount': 0,
+            'status': 'STOPPED',
+            'ticks': [
+            ]
+        },
+        'solidSelection': None
+    },
+    {
         'id': 'multi_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -354,6 +439,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_deployed_grpc_e
     },
     {
         'id': 'never_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -369,6 +455,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_deployed_grpc_e
     },
     {
         'id': 'once_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -387,6 +474,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_deployed_grpc_e
 snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_in_process_env] 1'] = [
     {
         'id': 'always_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -401,7 +489,24 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_in_process_env]
         'solidSelection': None
     },
     {
+        'id': 'custom_interval_sensor:no_config_pipeline',
+        'minIntervalSeconds': 60,
+        'mode': 'default',
+        'name': 'custom_interval_sensor',
+        'pipelineName': 'no_config_pipeline',
+        'sensorState': {
+            'runs': [
+            ],
+            'runsCount': 0,
+            'status': 'STOPPED',
+            'ticks': [
+            ]
+        },
+        'solidSelection': None
+    },
+    {
         'id': 'multi_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -417,6 +522,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_in_process_env]
     },
     {
         'id': 'never_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -432,6 +538,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_in_process_env]
     },
     {
         'id': 'once_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -450,6 +557,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_in_process_env]
 snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_managed_grpc_env] 1'] = [
     {
         'id': 'always_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -464,7 +572,24 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_managed_grpc_en
         'solidSelection': None
     },
     {
+        'id': 'custom_interval_sensor:no_config_pipeline',
+        'minIntervalSeconds': 60,
+        'mode': 'default',
+        'name': 'custom_interval_sensor',
+        'pipelineName': 'no_config_pipeline',
+        'sensorState': {
+            'runs': [
+            ],
+            'runsCount': 0,
+            'status': 'STOPPED',
+            'ticks': [
+            ]
+        },
+        'solidSelection': None
+    },
+    {
         'id': 'multi_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -480,6 +605,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_managed_grpc_en
     },
     {
         'id': 'never_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -495,6 +621,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_managed_grpc_en
     },
     {
         'id': 'once_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -513,6 +640,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_managed_grpc_en
 snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_multi_location] 1'] = [
     {
         'id': 'always_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -527,7 +655,24 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_multi_location]
         'solidSelection': None
     },
     {
+        'id': 'custom_interval_sensor:no_config_pipeline',
+        'minIntervalSeconds': 60,
+        'mode': 'default',
+        'name': 'custom_interval_sensor',
+        'pipelineName': 'no_config_pipeline',
+        'sensorState': {
+            'runs': [
+            ],
+            'runsCount': 0,
+            'status': 'STOPPED',
+            'ticks': [
+            ]
+        },
+        'solidSelection': None
+    },
+    {
         'id': 'multi_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -543,6 +688,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_multi_location]
     },
     {
         'id': 'never_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
@@ -558,6 +704,7 @@ snapshots['TestSensors.test_get_sensors[readonly_sqlite_instance_multi_location]
     },
     {
         'id': 'once_no_config_sensor:no_config_pipeline',
+        'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
         'pipelineName': 'no_config_pipeline',
