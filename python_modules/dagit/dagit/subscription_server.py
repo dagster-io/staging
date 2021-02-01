@@ -17,10 +17,17 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
         super(DagsterSubscriptionServer, self).__init__(**kwargs)
 
     def execute(self, request_context, params):
+
+        print("EXECUTING")
         # https://github.com/graphql-python/graphql-ws/issues/7
         params["context_value"] = request_context
         params["middleware"] = self.middleware
-        return super(DagsterSubscriptionServer, self).execute(request_context, params)
+
+        result = super(DagsterSubscriptionServer, self).execute(request_context, params)
+
+        print("GOT RESULT: " + repr(result))
+
+        return result
 
     def send_execution_result(self, connection_context, op_id, execution_result):
         if op_id not in connection_context.operations.keys():
