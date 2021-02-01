@@ -232,7 +232,7 @@ class DagsterApiServer(DagsterApiServicer):
 
         self.__cleanup_thread.start()
 
-    def cleanup(self):
+    def join(self):
         if self.__heartbeat_thread:
             self.__heartbeat_thread.join()
         self.__cleanup_thread.join()

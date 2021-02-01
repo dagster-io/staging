@@ -30,10 +30,12 @@ def run_command():
 
         controller = DagsterDaemonController(instance)
 
-        while True:
-            curr_time = pendulum.now("UTC")
-            controller.run_iteration(curr_time)
-            time.sleep(0.5)
+        try:
+            controller.run()
+            while True:
+                time.sleep(0.5)
+        finally:
+            controller.join()
 
 
 @click.command(
