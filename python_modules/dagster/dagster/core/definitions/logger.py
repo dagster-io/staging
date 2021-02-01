@@ -1,11 +1,11 @@
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
-from dagster.core.definitions.configurable import ConfigurableDefinition
+from dagster.core.definitions.resource import ResourceDefinition
 
 from .definition_config_schema import convert_user_facing_definition_config_schema
 
 
-class LoggerDefinition(ConfigurableDefinition):
+class LoggerDefinition(ResourceDefinition):
     """Core class for defining loggers.
 
     Loggers are pipeline-scoped logging handlers, which will be automatically invoked whenever
@@ -21,31 +21,17 @@ class LoggerDefinition(ConfigurableDefinition):
     """
 
     def __init__(
-        self, logger_fn, config_schema=None, description=None,
+        self, resource_fn, config_schema=None, description=None,
     ):
-        self._logger_fn = check.callable_param(logger_fn, "logger_fn")
-        self._config_schema = convert_user_facing_definition_config_schema(config_schema)
-        self._description = check.opt_str_param(description, "description")
+        super(LoggerDefinition, self).__init__(
+            resource_fn=check.callable_param(resource_fn, "resource_fn"),
+            config_schema=convert_user_facing_definition_config_schema(config_schema),
+            description=check.opt_str_param(description, "description"),
+        )
 
     @property
     def logger_fn(self):
-        return self._logger_fn
-
-    @property
-    def config_schema(self):
-        return self._config_schema
-
-    @property
-    def description(self):
-        return self._description
-
-    def copy_for_configured(self, name, description, config_schema, _):
-        check.invariant(name is None, "LoggerDefinitions do not have names")
-        return LoggerDefinition(
-            config_schema=config_schema,
-            description=description or self.description,
-            logger_fn=self.logger_fn,
-        )
+        return self._resource_fn
 
 
 def logger(config_schema=None, description=None):
@@ -67,7 +53,7 @@ def logger(config_schema=None, description=None):
 
     def _wrap(logger_fn):
         return LoggerDefinition(
-            logger_fn=logger_fn, config_schema=config_schema, description=description,
+            resource_fn=logger_fn, config_schema=config_schema, description=description
         )
 
     return _wrap

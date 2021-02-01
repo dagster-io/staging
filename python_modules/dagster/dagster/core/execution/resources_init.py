@@ -16,7 +16,7 @@ from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.utils import toposort
-from dagster.utils import EventGenerationManager, ensure_gen
+from dagster.utils import EventGenerationManager, ensure_gen, merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.timing import format_duration, time_execution_scope
 
@@ -100,7 +100,13 @@ def _core_resource_initialization_event_generator(
                 execution_plan, resource_log_manager, resource_keys_to_init,
             )
 
-        resource_dependencies = _resolve_resource_dependencies(mode_definition.resource_defs)
+        resource_dependencies = _resolve_resource_dependencies(
+            {
+                name: resource_def
+                for name, resource_def in mode_definition.resource_defs.items()
+                if name != ":loggers"
+            }
+        )
 
         for level in toposort(resource_dependencies):
             for resource_name in level:
