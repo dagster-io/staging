@@ -125,10 +125,12 @@ class AssetAwareEventLogStorage(ABC):
         self,
         asset_key: AssetKey,
         partitions: List[str] = None,
-        cursor: int = None,
+        before_cursor: int = None,
+        after_cursor: int = None,
         limit: int = None,
         ascending: bool = False,
         include_cursor: bool = False,
+        cursor: int = None,  # deprecated
     ) -> Iterable[EventRecord]:
         pass
 

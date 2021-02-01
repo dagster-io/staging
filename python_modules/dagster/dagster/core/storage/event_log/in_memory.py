@@ -116,41 +116,56 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
         self,
         asset_key,
         partitions=None,
-        cursor=None,
+        before_cursor=None,
+        after_cursor=None,
         limit=None,
         ascending=False,
         include_cursor=False,
+        cursor=None,
     ):
         asset_events = []
         for records in self._logs.values():
             asset_events += [
                 record
                 for record in records
-                if record.is_dagster_event and record.dagster_event.asset_key == asset_key
+                if record.is_dagster_event
+                and record.dagster_event.asset_key == asset_key
+                and (not partitions or record.dagster_event.partition in partitions)
             ]
 
-        if partitions:
-            asset_events = filter(lambda x: x.dagster_event.partition in partitions, asset_events)
+        def _coerce_cursor(cursor):
+            if cursor is None:
+                return None
+            try:
+                return int(cursor)
+            except ValueError:
+                return None
 
-        asset_events = sorted(asset_events, key=lambda x: x.timestamp, reverse=not ascending)
+        if cursor and ascending and after_cursor is None:
+            after_cursor = cursor
+        if cursor and not ascending and before_cursor is None:
+            before_cursor = cursor
+        after_cursor = _coerce_cursor(after_cursor)  # pylint: disable=assignment-from-none
+        before_cursor = _coerce_cursor(before_cursor)  # pylint: disable=assignment-from-none
 
-        try:
-            cursor = int(cursor) if cursor else 0
-        except ValueError:
-            cursor = 0
+        events_with_ids = [
+            tuple([event_id, event])
+            for event_id, event in enumerate(asset_events)
+            if (after_cursor is None or event_id > after_cursor)
+            and (before_cursor is None or event_id < before_cursor)
+        ]
 
-        if cursor:
-            asset_events = asset_events[cursor:]
+        events_with_ids = sorted(
+            events_with_ids, key=lambda x: x[1].timestamp, reverse=not ascending
+        )
 
         if limit:
-            asset_events = asset_events[:limit]
+            events_with_ids = events_with_ids[:limit]
 
         if include_cursor:
-            asset_events = [
-                tuple([index + cursor, event]) for index, event in enumerate(asset_events)
-            ]
+            return events_with_ids
 
-        return asset_events
+        return [event for id, event in events_with_ids]
 
     def get_asset_run_ids(self, asset_key):
         asset_run_ids = set()
