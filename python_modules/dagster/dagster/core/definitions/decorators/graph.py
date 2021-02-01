@@ -1,36 +1,19 @@
 from functools import update_wrapper
 
 from dagster import check
-from dagster.utils.backcompat import experimental_arg_warning
 
-from ..hook import HookDefinition
 from ..input import InputDefinition
-from ..mode import ModeDefinition
 from ..output import OutputDefinition
 from ..pipeline import GraphDefinition
-from ..preset import PresetDefinition
 
 
 class _Graph:
     def __init__(
-        self,
-        name=None,
-        mode_defs=None,
-        preset_defs=None,
-        description=None,
-        tags=None,
-        hook_defs=None,
-        input_defs=None,
-        output_defs=None,
-        config_schema=None,
-        config_fn=None,
+        self, name=None, description=None, tags=None, input_defs=None, output_defs=None,
     ):
         self.name = check.opt_str_param(name, "name")
-        self.mode_definitions = check.opt_list_param(mode_defs, "mode_defs", ModeDefinition)
-        self.preset_definitions = check.opt_list_param(preset_defs, "preset_defs", PresetDefinition)
         self.description = check.opt_str_param(description, "description")
         self.tags = check.opt_dict_param(tags, "tags")
-        self.hook_defs = check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
         self.input_defs = check.opt_nullable_list_param(
             input_defs, "input_defs", of_type=InputDefinition
         )
@@ -38,8 +21,6 @@ class _Graph:
         self.output_defs = check.opt_nullable_list_param(
             output_defs, "output_defs", of_type=OutputDefinition
         )
-        self.config_schema = config_schema
-        self.config_fn = check.opt_callable_param(config_fn, "config_fn")
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
@@ -57,25 +38,22 @@ class _Graph:
             config_mapping,
             positional_inputs,
         ) = do_composition(
-            "@pipeline",
-            self.name,
-            fn,
-            self.input_defs,
-            self.output_defs,
-            self.config_schema,
-            self.config_fn,
-            ignore_output_from_composition_fn=not self.did_pass_outputs,
+            decorator_name="@graph",
+            graph_name=self.name,
+            fn=fn,
+            provided_input_defs=self.input_defs,
+            provided_output_defs=self.output_defs,
+            ignore_output_from_composition_fn=False,
+            config_schema=None,
+            config_fn=None,
         )
 
         pipeline_def = GraphDefinition(
             name=self.name,
             dependencies=dependencies,
-            solid_defs=solid_defs,
-            mode_defs=self.mode_definitions,
-            preset_defs=self.preset_definitions,
+            node_defs=solid_defs,
             description=self.description,
             tags=self.tags,
-            hook_defs=self.hook_defs,
             input_mappings=input_mappings,
             output_mappings=output_mappings,
             config_mapping=config_mapping,
@@ -85,17 +63,8 @@ class _Graph:
         return pipeline_def
 
 
-def pipeline(
-    name=None,
-    description=None,
-    mode_defs=None,
-    preset_defs=None,
-    tags=None,
-    hook_defs=None,
-    input_defs=None,
-    output_defs=None,
-    config_schema=None,
-    config_fn=None,
+def graph(
+    name=None, description=None, tags=None, input_defs=None, output_defs=None,
 ):
     """Create a graph with the specified parameters from the decorated composition function.
 
@@ -106,48 +75,10 @@ def pipeline(
         name (Optional[str]): The name of the pipeline. Must be unique within any
             :py:class:`RepositoryDefinition` containing the pipeline.
         description (Optional[str]): A human-readable description of the pipeline.
-        mode_defs (Optional[List[ModeDefinition]]): The set of modes in which this pipeline can
-            operate. Modes are used to attach resources, custom loggers, custom system storage
-            options, and custom executors to a pipeline. Modes can be used, e.g., to vary
-            available resource and logging implementations between local test and production runs.
-        preset_defs (Optional[List[PresetDefinition]]): A set of preset collections of configuration
-            options that may be used to execute a pipeline. A preset consists of an environment
-            dict, an optional subset of solids to execute, and a mode selection. Presets can be used
-            to ship common combinations of options to pipeline end users in Python code, and can
-            be selected by tools like Dagit.
         tags (Optional[Dict[str, Any]]): Arbitrary metadata for any execution run of the pipeline.
             Values that are not strings will be json encoded and must meet the criteria that
             `json.loads(json.dumps(value)) == value`.  These tag values may be overwritten by tag
             values provided at invocation time.
-        hook_defs (Optional[Set[HookDefinition]]): A set of hook definitions applied to the
-            pipeline. When a hook is applied to a pipeline, it will be attached to all solid
-            instances within the pipeline.
-
-    Example:
-
-        .. code-block:: python
-
-            @solid(output_defs=[OutputDefinition(int, "two"), OutputDefinition(int, "four")])
-            def emit_two_four(_) -> int:
-                yield Output(2, "two")
-                yield Output(4, "four")
-
-
-            @lambda_solid
-            def add_one(num: int) -> int:
-                return num + 1
-
-
-            @lambda_solid
-            def mult_two(num: int) -> int:
-                return num * 2
-
-
-            @graph
-            def math_graph():
-                two, four = emit_two_four()
-                add_one(two)
-                mult_two(four)
     """
     if callable(name):
         check.invariant(description is None)
@@ -155,13 +86,8 @@ def pipeline(
 
     return _Graph(
         name=name,
-        mode_defs=mode_defs,
-        preset_defs=preset_defs,
         description=description,
         tags=tags,
-        hook_defs=hook_defs,
         input_defs=input_defs,
         output_defs=output_defs,
-        config_schema=config_schema,
-        config_fn=config_fn,
     )

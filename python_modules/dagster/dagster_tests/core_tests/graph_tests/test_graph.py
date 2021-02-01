@@ -1,5 +1,5 @@
 from dagster import solid
-from dagster.experimental import graph
+from dagster.core.definitions.decorators.graph import graph
 from dagster.core.definitions.graph import GraphDefinition
 
 
