@@ -5,11 +5,10 @@ import path from "path";
 import { promises as fs } from "fs";
 import matter from "gray-matter";
 import MDXComponents from "../components/MDXComponents";
-import codeTransformer from "util/codeTransformer";
+
 import rehypePrism from "@mapbox/rehype-prism";
 
 const components: MdxRemote.Components = MDXComponents;
-
 interface Props {
   mdxSource: MdxRemote.Source;
   frontMatter: {
@@ -20,7 +19,13 @@ interface Props {
 
 export default function ExamplePage({ mdxSource, frontMatter }: Props) {
   const content = hydrate(mdxSource, { components });
-  return <div className="prose max-w-none">{content}</div>;
+  return (
+    <div className="prose max-w-none">
+      <h1>{frontMatter.title}</h1>
+      <p>{frontMatter.description}</p>
+      {content}
+    </div>
+  );
 }
 
 const basePathForVersion = (version: string) => {
