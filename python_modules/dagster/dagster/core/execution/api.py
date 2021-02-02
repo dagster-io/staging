@@ -1,9 +1,20 @@
 import sys
+from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple, Union
 
-from dagster import check
-from dagster.core.definitions import IPipeline, PipelineDefinition
+from dagster import check, lambda_solid
+from dagster.core.definitions import (
+    DependencyDefinition,
+    ExecutorDefinition,
+    IPipeline,
+    LoggerDefinition,
+    ModeDefinition,
+    NodeDefinition,
+    OutputDefinition,
+    PipelineDefinition,
+    ResourceDefinition,
+)
 from dagster.core.definitions.pipeline import PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
@@ -15,7 +26,7 @@ from dagster.core.execution.resolve_versions import resolve_memoized_execution_p
 from dagster.core.execution.retries import Retries
 from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.selector import parse_items_from_selection, parse_step_selection
-from dagster.core.storage.mem_io_manager import InMemoryIOManager
+from dagster.core.storage.mem_io_manager import InMemoryIOManager, mem_io_manager
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.telemetry import log_repo_stats, telemetry_wrapper
@@ -30,7 +41,7 @@ from .context_creation_pipeline import (
     PlanExecutionContextManager,
     scoped_pipeline_context,
 )
-from .results import PipelineExecutionResult
+from .results import GraphExecutionResult, PipelineExecutionResult
 
 ## Brief guide to the execution APIs
 # | function name               | operates over      | sync  | supports    | creates new PipelineRun |
@@ -316,6 +327,65 @@ def _ephemeral_instance_if_missing(
     else:
         with DagsterInstance.ephemeral() as ephemeral_instance:
             yield ephemeral_instance
+
+
+def execute_node(
+    node: NodeDefinition,
+    run_config: Optional[dict] = None,
+    resource_defs: Optional[Dict[str, ResourceDefinition]] = None,
+    logger_defs: Optional[Dict[str, LoggerDefinition]] = None,
+    executor_defs: Optional[List[ExecutorDefinition]] = None,
+    input_values: Optional[Dict[str, Any]] = None,
+    instance: DagsterInstance = None,
+) -> GraphExecutionResult:
+    node = check.inst_param(node, "node", NodeDefinition)
+    resource_defs = check.opt_dict_param(
+        resource_defs, "resource_defs", key_type=str, value_type=ResourceDefinition
+    )
+    input_values = check.opt_dict_param(input_values, "input_values", key_type=str)
+
+    node_defs = [node]
+
+    def create_value_solid(input_name, input_value):
+        @lambda_solid(
+            name=input_name, output_def=OutputDefinition(io_manager_key="DAGSTER_SYSTEM_IO_MANAGER")
+        )
+        def input_solid():
+            return input_value
+
+        return input_solid
+
+    dependencies: Dict[str, Dict[str, DependencyDefinition]] = defaultdict(dict)
+
+    for input_name, input_value in input_values.items():
+        dependencies[node.name][input_name] = DependencyDefinition(input_name)
+        node_defs.append(create_value_solid(input_name, input_value))
+
+    mode_def = ModeDefinition(
+        "created",
+        resource_defs=merge_dicts(resource_defs, {"DAGSTER_SYSTEM_IO_MANAGER": mem_io_manager}),
+        logger_defs=logger_defs,
+        executor_defs=executor_defs,
+    )
+
+    pipeline_def = PipelineDefinition(
+        node_defs,
+        name=f"ephemeral_{node.name}_node_pipeline",
+        mode_defs=[mode_def],
+        dependencies=dependencies,
+    )
+
+    result = execute_pipeline(
+        pipeline_def, run_config=run_config, mode="created", instance=instance,
+    )
+
+    return GraphExecutionResult(
+        result.container,
+        result.event_list,
+        result.reconstruct_context,
+        handle=result.handle,
+        resource_instances_to_override=result.resource_instances_to_override,
+    )
 
 
 def execute_pipeline(
