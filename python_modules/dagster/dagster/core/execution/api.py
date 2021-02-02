@@ -3,7 +3,17 @@ from contextlib import contextmanager
 from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple, Union
 
 from dagster import check
-from dagster.core.definitions import IPipeline, PipelineDefinition
+from dagster.core.definitions import (
+    ExecutorDefinition,
+    GraphDefinition,
+    IPipeline,
+    LoggerDefinition,
+    ModeDefinition,
+    NodeDefinition,
+    PipelineDefinition,
+    ResourceDefinition,
+    SolidDefinition,
+)
 from dagster.core.definitions.pipeline import PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
@@ -316,6 +326,46 @@ def _ephemeral_instance_if_missing(
     else:
         with DagsterInstance.ephemeral() as ephemeral_instance:
             yield ephemeral_instance
+
+
+def execute_node(
+    node: NodeDefinition,
+    run_config: Optional[dict] = None,
+    resource_defs: Optional[Dict[str, ResourceDefinition]] = None,
+    logger_defs: Optional[Dict[str, LoggerDefinition]] = None,
+    executor_defs: Optional[List[ExecutorDefinition]] = None,
+    instance: DagsterInstance = None,
+):
+    node = check.inst_param(node, "node", NodeDefinition)
+
+    mode_def = ModeDefinition(
+        "created", resource_defs=resource_defs, logger_defs=logger_defs, executor_defs=executor_defs
+    )
+
+    if isinstance(node, GraphDefinition):
+        pipeline_def = PipelineDefinition(
+            node.node_defs,
+            name=node.name,
+            description=node.description,
+            dependencies=node.dependencies,
+            mode_defs=[mode_def],
+            config_mapping=node.config_mapping,
+        )
+        return execute_pipeline(
+            pipeline_def, run_config=run_config, mode="created", instance=instance,
+        )
+
+    elif isinstance(node, SolidDefinition):
+        from dagster.utils.test import execute_solid
+
+        return execute_solid(node, mode_def=mode_def, run_config=run_config)
+
+    else:
+        raise DagsterInvariantViolationError(
+            f'Attemtped to execute node "{node.name}", which is not a SolidDefinition or '
+            "GraphDefinition. Dagster only supports execution of graphs, solids, and pipelines at "
+            "this time."
+        )
 
 
 def execute_pipeline(
