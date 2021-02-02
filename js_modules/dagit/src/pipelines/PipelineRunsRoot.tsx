@@ -1,5 +1,5 @@
 import {gql, NetworkStatus} from '@apollo/client';
-import {NonIdealState} from '@blueprintjs/core';
+import {NonIdealState, Tag} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 import styled from 'styled-components/macro';
@@ -22,13 +22,15 @@ import {POLL_INTERVAL, useCursorPaginatedQuery} from 'src/runs/useCursorPaginate
 import {Box} from 'src/ui/Box';
 import {useCountdown} from 'src/ui/Countdown';
 import {CursorPaginationControls} from 'src/ui/CursorControls';
+import {Group} from 'src/ui/Group';
 import {ScrollContainer} from 'src/ui/ListComponents';
 import {Loading} from 'src/ui/Loading';
 import {Page} from 'src/ui/Page';
 import {RefreshableCountdown} from 'src/ui/RefreshableCountdown';
+import {TokenizingFieldValue} from 'src/ui/TokenizingField';
 
 const PAGE_SIZE = 25;
-const ENABLED_FILTERS: RunFilterTokenType[] = ['id', 'snapshotId', 'status', 'tag'];
+const ENABLED_FILTERS: RunFilterTokenType[] = ['status', 'tag'];
 
 interface Props {
   pipelinePath: string;
@@ -39,7 +41,16 @@ export const PipelineRunsRoot: React.FC<Props> = (props) => {
   const {pipelineName, snapshotId} = explorerPathFromString(pipelinePath);
 
   useDocumentTitle(`Pipeline: ${pipelineName}`);
+
   const [filterTokens, setFilterTokens] = useQueryPersistedRunFilters(ENABLED_FILTERS);
+  const permanentTokens = React.useMemo(() => {
+    return [
+      {token: 'pipeline', value: pipelineName},
+      snapshotId ? {token: 'snapshotId', value: snapshotId} : null,
+    ].filter(Boolean) as TokenizingFieldValue[];
+  }, [pipelineName, snapshotId]);
+
+  const allTokens = [...filterTokens, ...permanentTokens];
 
   const {queryResult, paginationProps} = useCursorPaginatedQuery<
     PipelineRunsRootQuery,
@@ -48,7 +59,7 @@ export const PipelineRunsRoot: React.FC<Props> = (props) => {
     query: PIPELINE_RUNS_ROOT_QUERY,
     pageSize: PAGE_SIZE,
     variables: {
-      filter: {...runsFilterForSearchTokens(filterTokens), pipelineName, snapshotId},
+      filter: {...runsFilterForSearchTokens(allTokens), pipelineName, snapshotId},
     },
     nextCursorForResult: (runs) => {
       if (runs.pipelineRunsOrError.__typename !== 'PipelineRuns') {
@@ -71,24 +82,29 @@ export const PipelineRunsRoot: React.FC<Props> = (props) => {
   });
   const countdownRefreshing = countdownStatus === 'idle' || timeRemaining === 0;
 
-  const tokens = [{token: 'pipeline', value: pipelineName}, ...filterTokens];
-  if (snapshotId) {
-    tokens.push({token: 'snapshotId', value: snapshotId});
-  }
-
   return (
     <RunsQueryRefetchContext.Provider value={{refetch: queryResult.refetch}}>
-      <ScrollContainer>
+      <ScrollContainer style={{height: '100%'}}>
         <Page>
-          <Box flex={{alignItems: 'flex-start', justifyContent: 'space-between'}}>
-            <Filters>
-              <RunsFilter
-                enabledFilters={ENABLED_FILTERS}
-                tokens={tokens}
-                onChange={setFilterTokens}
-                loading={queryResult.loading}
-              />
-            </Filters>
+          <Box
+            flex={{alignItems: 'flex-start', justifyContent: 'space-between'}}
+            margin={{bottom: 8}}
+          >
+            <Group direction="column" spacing={8}>
+              <Group direction="row" spacing={8}>
+                {permanentTokens.map(({token, value}) => (
+                  <Tag minimal key={token}>{`${token}:${value}`}</Tag>
+                ))}
+              </Group>
+              <Filters>
+                <RunsFilter
+                  enabledFilters={ENABLED_FILTERS}
+                  tokens={filterTokens}
+                  onChange={setFilterTokens}
+                  loading={queryResult.loading}
+                />
+              </Filters>
+            </Group>
             <RefreshableCountdown
               refreshing={countdownRefreshing}
               seconds={Math.floor(timeRemaining / 1000)}
@@ -129,9 +145,7 @@ export const PipelineRunsRoot: React.FC<Props> = (props) => {
 };
 
 const Filters = styled.div`
-  display: flex;
-  align-items: center;
-  margin-bottom: 14px;
+  position: relative;
 `;
 
 const PIPELINE_RUNS_ROOT_QUERY = gql`
