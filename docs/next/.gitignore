@@ -11,6 +11,8 @@
 # next.js
 /.next/
 /out/
+# TODO: ignore versioned_content only for this review.
+/.versioned_content
 
 # production
 /build
