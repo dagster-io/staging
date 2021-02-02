@@ -9,6 +9,16 @@ from dagster.daemon.cli import run_command
 from dagster.daemon.controller import DagsterDaemonController
 from dagster.daemon.daemon import SchedulerDaemon
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
+from dagster.serdes import deserialize_json_to_dagster_namedtuple
+
+
+def test_heartbeat_backcompat():
+    old_heartbeat = '{"__class__": "DaemonHeartbeat", "daemon_id": "05f24887-fb6a-4821-807b-fbd772a921e3", "daemon_type": {"__enum__": "DaemonType.SCHEDULER"}, "errors": [], "timestamp": 1612453213.775866}'
+    heartbeat = deserialize_json_to_dagster_namedtuple(old_heartbeat)
+    assert heartbeat.daemon_id == "05f24887-fb6a-4821-807b-fbd772a921e3"
+    assert heartbeat.daemon_type == "SCHEDULER"
+    assert heartbeat.errors == []
+    assert heartbeat.timestamp == 1612453213.775866
 
 
 def test_scheduler_instance():
