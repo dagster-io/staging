@@ -32,7 +32,6 @@ def docs_steps() -> List[dict]:
         .build(),
         StepBuilder(":coverage: docs")
         .run(
-            "make install_dev_python_modules",
             "pip install -e python_modules/automation",
             "pip install -r docs-requirements.txt -qqq",
             "cd docs",
