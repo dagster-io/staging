@@ -4,6 +4,7 @@ import * as React from 'react';
 import {Link, RouteComponentProps} from 'react-router-dom';
 import styled from 'styled-components';
 
+import {featureEnabled, FeatureFlag} from 'src/app/Util';
 import {AssetView} from 'src/assets/AssetView';
 import {AssetsCatalogTable} from 'src/assets/AssetsCatalogTable';
 import {AssetEntryRootQuery} from 'src/assets/types/AssetEntryRootQuery';
@@ -57,13 +58,28 @@ export const AssetEntryRoot: React.FunctionComponent<RouteComponentProps> = ({ma
     <Page>
       <Group direction="column" spacing={20}>
         <PageHeader
-          title={<Heading>{currentPath.slice(-1)}</Heading>}
+          title={
+            <Heading>
+              {currentPath
+                .map<React.ReactNode>((p, i) => <span key={i}>{p}</span>)
+                .reduce((prev, curr, i) => [
+                  prev,
+                  <span key={`separator_${i}`} style={{padding: 4}}>
+                    /
+                  </span>,
+                  curr,
+                ])}
+            </Heading>
+          }
           icon="th"
           description={<PathDetails>{pathDetails()}</PathDetails>}
         />
         <Loading queryResult={queryResult}>
           {({assetOrError}) => {
             if (assetOrError.__typename === 'AssetNotFoundError') {
+              if (featureEnabled(FeatureFlag.AssetCatalog)) {
+                return <AssetsCatalogTable />;
+              }
               return <AssetsCatalogTable prefixPath={currentPath} />;
             }
 
