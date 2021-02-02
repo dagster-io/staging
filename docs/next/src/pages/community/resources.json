@@ -1,0 +1,7 @@
+[
+  {
+    "name": "airflow_ingest",
+    "title": "Airflow Ingest",
+    "description": "Create a pipeline from an Airflow DAG"
+  }
+]
