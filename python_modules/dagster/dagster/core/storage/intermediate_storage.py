@@ -63,13 +63,13 @@ class IntermediateStorageAdapter(IOManager):
         if isinstance(res, ObjectStoreOperation):
             context.log.debug(
                 (
-                    'Stored output "{output_name}" in {object_store_name}object store{serialization_strategy_modifier} '
-                    "at {address}"
+                    'Stored output "{output_name}" in {object_store_name} object store '
+                    "{serialization_strategy_modifier} at {address}"
                 ).format(
                     output_name=context.name,
                     object_store_name=res.object_store_name,
                     serialization_strategy_modifier=(
-                        " using {serialization_strategy_name}".format(
+                        "using {serialization_strategy_name}".format(
                             serialization_strategy_name=res.serialization_strategy_name
                         )
                         if res.serialization_strategy_name
