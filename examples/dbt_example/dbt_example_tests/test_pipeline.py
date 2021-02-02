@@ -47,3 +47,5 @@ def test_pipeline(pg_hostname, postgres):  # pylint: disable=unused-argument
                 },
             )
             assert res.success
+
+    assert False
