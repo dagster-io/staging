@@ -3,7 +3,15 @@ from contextlib import contextmanager
 from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple, Union
 
 from dagster import check
-from dagster.core.definitions import IPipeline, PipelineDefinition
+from dagster.core.definitions import (
+    ExecutorDefinition,
+    IPipeline,
+    LoggerDefinition,
+    ModeDefinition,
+    NodeDefinition,
+    PipelineDefinition,
+    ResourceDefinition,
+)
 from dagster.core.definitions.pipeline import PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
@@ -30,7 +38,7 @@ from .context_creation_pipeline import (
     PlanExecutionContextManager,
     scoped_pipeline_context,
 )
-from .results import PipelineExecutionResult
+from .results import GraphExecutionResult, PipelineExecutionResult
 
 ## Brief guide to the execution APIs
 # | function name               | operates over      | sync  | supports    | creates new PipelineRun |
@@ -316,6 +324,37 @@ def _ephemeral_instance_if_missing(
     else:
         with DagsterInstance.ephemeral() as ephemeral_instance:
             yield ephemeral_instance
+
+
+def execute_node(
+    node: NodeDefinition,
+    run_config: Optional[dict] = None,
+    resource_defs: Optional[Dict[str, ResourceDefinition]] = None,
+    logger_defs: Optional[Dict[str, LoggerDefinition]] = None,
+    executor_defs: Optional[List[ExecutorDefinition]] = None,
+    instance: DagsterInstance = None,
+) -> GraphExecutionResult:
+    node = check.inst_param(node, "node", NodeDefinition)
+
+    mode_def = ModeDefinition(
+        "created", resource_defs=resource_defs, logger_defs=logger_defs, executor_defs=executor_defs
+    )
+
+    pipeline_def = PipelineDefinition(
+        [node], name=f"ephemeral_{node.name}_node_pipeline", mode_defs=[mode_def]
+    )
+
+    result = execute_pipeline(
+        pipeline_def, run_config=run_config, mode="created", instance=instance,
+    )
+
+    return GraphExecutionResult(
+        result.container,
+        result.event_list,
+        result.reconstruct_context,
+        handle=result.handle,
+        resource_instances_to_override=result.resource_instances_to_override,
+    )
 
 
 def execute_pipeline(

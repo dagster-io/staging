@@ -6,9 +6,11 @@ from dagster import (
     execute_pipeline_iterator,
     reexecute_pipeline,
     reexecute_pipeline_iterator,
+    solid,
 )
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvalidSubsetError
+from dagster.core.execution.api import execute_node
 from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import step_output_event_filter
 
@@ -220,3 +222,14 @@ def test_reexecute_pipeline_iterator():
     )
     events_up = list(output_event_iterator_up)
     assert len(events_up) == 3
+
+
+def test_execute_solid_node():
+    @solid
+    def emit_one(_):
+        return 1
+
+    result = execute_node(emit_one)
+
+    assert result.success
+    assert result.result_for_solid("emit_one").output_value("result") == 1
