@@ -190,6 +190,9 @@ def dbt_cli_run(context) -> DbtCliOutput:
         warn_error=context.solid_config["warn-error"],
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
+    print("cli output:")
+    print(cli_output)
+    raise ValueError(f"cli output: {str(cli_output)}")
     run_results = parse_run_results(context.solid_config["project-dir"])
     cli_output_dict = {**run_results, **cli_output}
     cli_output = DbtCliOutput.from_dict(cli_output_dict)
