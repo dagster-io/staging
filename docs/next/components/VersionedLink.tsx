@@ -7,10 +7,14 @@ interface VersionedLinkProps {
 }
 
 const VersionedLink = ({ href, children }: VersionedLinkProps) => {
-  const { locale } = useRouter();
+  // safely pass undefined router at the first render
+  const router = useRouter();
+  if (!router) {
+    return null;
+  }
 
   return (
-    <Link href={href} locale={locale}>
+    <Link href={href} locale={router.locale}>
       {children}
     </Link>
   );
