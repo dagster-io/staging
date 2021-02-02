@@ -46,4 +46,20 @@ pytest my_project_tests
 
 ### Deploying to Production
 
-TODO
+1. Build the Docker image.
+
+```bash
+docker build . -t dagster-my_project
+```
+
+2. Run the Docker image.
+
+```bash
+docker -p 4000:4000 run dagster-my_project:latest
+```
+
+3. In another terminal, run Dagit.
+
+```bash
+dagit --grpc-host=localhost --grpc-port=4000
+```

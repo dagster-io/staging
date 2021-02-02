@@ -1,0 +1,28 @@
+FROM python:3.7-slim
+
+# Sets the working directory for the Dagster repository.
+
+WORKDIR /opt/dagster/repo
+
+# Installs Python dependencies.
+
+COPY requirements.txt /opt/dagster/repo
+RUN pip install -r requirements.txt
+
+# Sets $DAGSTER_HOME and copies your Dagster instance's config.
+
+ENV DAGSTER_HOME=/opt/dagster/dagster_home
+RUN mkdir -p $DAGSTER_HOME
+COPY dagster.yaml $DAGSTER_HOME
+
+# Copies repository code and installs your repository as an editable package.
+
+COPY . /opt/dagster/repo
+RUN pip install -e .
+
+# Runs the Dagit server (on port 3000 by default).
+# NOTE: CMD can be overridden from run launchers or executors that want
+# to run other commands against your repository.
+
+EXPOSE 3000
+CMD ["dagit", "-m", "my_project.repository"]

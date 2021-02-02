@@ -1,0 +1,22 @@
+FROM python:3.7-slim
+
+# Sets the working directory for the Dagster repository.
+
+WORKDIR /opt/dagster/repo
+
+# Installs Python dependencies.
+
+COPY requirements.txt /opt/dagster/repo
+RUN pip install -r requirements.txt
+
+# Copies repository code and installs your repository as an editable package.
+
+COPY . /opt/dagster/repo
+RUN pip install -e .
+
+# Runs the Dagster gRPC server on port 4000.
+# NOTE: CMD can be overridden from run launchers or executors that want
+# to run other commands against your repository.
+
+EXPOSE 4000
+CMD ["dagster", "api", "grpc", "-h", "0.0.0.0", "-p", "4000", "-m", "my_project.repository"]
