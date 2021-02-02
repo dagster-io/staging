@@ -524,6 +524,10 @@
         "name": "Community"
       },
       {
+        "path": "/community/resources",
+        "name": "Resources"
+      },
+      {
         "path": "/community/code_of_conduct",
         "name": "Code of Conduct"
       },
