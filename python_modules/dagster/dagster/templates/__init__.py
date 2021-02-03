@@ -1,1 +1,1 @@
-from .generate import generate_simple_project
+from .generate import generate_new_repo
