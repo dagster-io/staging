@@ -62,7 +62,12 @@ class SensorDefinition(JobDefinition):
     ]
 
     def __init__(
-        self, name, pipeline_name, evaluation_fn, solid_selection=None, mode=None,
+        self,
+        name,
+        pipeline_name,
+        evaluation_fn,
+        solid_selection=None,
+        mode=None,
     ):
         super(SensorDefinition, self).__init__(
             name,

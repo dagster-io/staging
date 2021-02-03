@@ -148,7 +148,9 @@ class ExternalRepository:
         return self.handle.get_external_origin()
 
     def get_python_origin(self):
-        return self.handle.repository_location_handle.get_repository_python_origin(self.name,)
+        return self.handle.repository_location_handle.get_repository_python_origin(
+            self.name,
+        )
 
     def get_external_origin_id(self):
         """
@@ -282,8 +284,10 @@ class ExternalPipeline(RepresentedPipeline):
         return self.get_python_origin()
 
     def get_python_origin(self):
-        repository_python_origin = self.repository_handle.repository_location_handle.get_repository_python_origin(
-            self.repository_handle.repository_name,
+        repository_python_origin = (
+            self.repository_handle.repository_location_handle.get_repository_python_origin(
+                self.repository_handle.repository_name,
+            )
         )
         return PipelinePythonOrigin(self.name, repository_python_origin)
 
@@ -467,7 +471,9 @@ class ExternalSchedule:
 class ExternalSensor:
     def __init__(self, external_job_data, handle):
         self._external_job_data = check.inst_param(
-            external_job_data, "external_job_data", ExternalJobData,
+            external_job_data,
+            "external_job_data",
+            ExternalJobData,
         )
         check.param_invariant(external_job_data.job_type == JobType.SENSOR, "external_job_data")
         self._handle = JobHandle(

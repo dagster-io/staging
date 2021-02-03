@@ -62,7 +62,10 @@ def create_consolidated_sqlite_event_log_instance():
 
 asset_test = pytest.mark.parametrize(
     "asset_aware_context",
-    [create_in_memory_event_log_instance, create_consolidated_sqlite_event_log_instance,],
+    [
+        create_in_memory_event_log_instance,
+        create_consolidated_sqlite_event_log_instance,
+    ],
 )
 
 

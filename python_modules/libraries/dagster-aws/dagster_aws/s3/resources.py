@@ -104,7 +104,7 @@ def s3_resource(context):
 )
 def s3_file_manager(context):
     """FileManager that provides abstract access to S3.
-    
+
     Implements the :py:class:`~dagster.core.storage.file_manager.FileManager` API.
     """
     return S3FileManager(
