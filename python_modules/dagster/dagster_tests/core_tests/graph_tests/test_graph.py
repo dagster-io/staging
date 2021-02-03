@@ -1,9 +1,9 @@
-from dagster import solid
+from dagster import execute_pipeline, pipeline, solid
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.definitions.graph import GraphDefinition
 
 
-def test_basic_graph():
+def get_solids():
     @solid
     def emit_one(_):
         return 1
@@ -12,8 +12,22 @@ def test_basic_graph():
     def add(_, x, y):
         return x + y
 
-    @graph
-    def add_one(a):
-        return add(emit_one(), a)
+    return emit_one, add
 
-    assert isinstance(add_one, GraphDefinition)
+
+def test_basic_graph():
+    emit_one, add = get_solids()
+
+    @graph
+    def get_two():
+        return add(emit_one(), emit_one())
+
+    assert isinstance(get_two, GraphDefinition)
+
+    @pipeline
+    def call_graph():
+        get_two()
+
+    result = execute_pipeline(call_graph)
+
+    assert result.success
