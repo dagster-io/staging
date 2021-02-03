@@ -873,7 +873,12 @@ class DagsterEvent(
     def handled_output(step_context, output_name, manager_key):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
-        message = f'Handled output "{output_name}" using output manager ' f'"{manager_key}"'
+        message = 'Handled output "{output_name}" using {output_manager_modifier}'.format(
+            output_name=output_name,
+            output_manager_modifier=f'output manager "{manager_key}"'
+            if manager_key != "intermediate storage"
+            else "intermediate storage",
+        )
         return DagsterEvent.from_step(
             event_type=DagsterEventType.HANDLED_OUTPUT,
             step_context=step_context,
@@ -893,7 +898,12 @@ class DagsterEvent(
         check.opt_str_param(upstream_output_name, "upstream_output_name")
         check.opt_str_param(upstream_step_key, "upstream_step_key")
 
-        message = f'Loaded input "{input_name}" using input manager ' f'"{manager_key}"'
+        message = 'Loaded input "{input_name}" using {input_manager_modifier}'.format(
+            input_name=input_name,
+            input_manager_modifier=f'input manager "{manager_key}"'
+            if manager_key != "intermediate storage"
+            else "intermediate storage",
+        )
         if upstream_output_name:
             message += f', from output "{upstream_output_name}" of step ' f'"{upstream_step_key}"'
 

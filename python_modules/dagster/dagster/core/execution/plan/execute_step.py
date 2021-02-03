@@ -28,6 +28,7 @@ from dagster.core.execution.plan.compute import execute_core_compute
 from dagster.core.execution.plan.inputs import StepInputData
 from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
+from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind
 from dagster.utils import ensure_gen, iterate_with_context
@@ -402,7 +403,9 @@ def _store_output(
     yield DagsterEvent.handled_output(
         step_context,
         output_name=step_output_handle.output_name,
-        manager_key=output_def.io_manager_key,
+        manager_key=output_def.io_manager_key
+        if not isinstance(output_manager, IntermediateStorageAdapter)
+        else "intermediate storage",
     )
 
 
