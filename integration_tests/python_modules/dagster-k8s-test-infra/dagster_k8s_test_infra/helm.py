@@ -221,6 +221,7 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
 
         # Wait for Celery worker queues to become ready
         pods = kubernetes.client.CoreV1Api().list_namespaced_pod(namespace=namespace)
+        
         pod_names = [
             p.metadata.name for p in pods.items if CELERY_WORKER_NAME_PREFIX in p.metadata.name
         ]
@@ -240,6 +241,15 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
                     ]
                 )
                 assert queue.get("replicaCount") == num_pods_for_queue
+                
+                labels = queue.get('labels')
+                if labels:
+                    all_deployments = kubernetes.client.AppsV1Api().list_namespaced_deployment(namespace=namespace)
+                    target_deployments = list(filter(lambda item: "{queue.get('name')}" in item.metadata.name, all_deployments.items))
+                    assert len(target_deployments) > 0
+                    for target in target_deployments:
+                        for key in labels:
+                            assert target.spec.template.metadata.labels.get(key) == labels.get(key)
 
             print("Waiting for celery workers")
             for pod_name in pod_names:
@@ -341,7 +351,7 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
                     "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
                     "workerQueues": [
                         {"name": "dagster", "replicaCount": 2},
-                        {"name": "extra-queue-1", "replicaCount": 1},
+                        {"name": "extra-queue-1", "replicaCount": 1, "labels": {'celery-label-key': "celery-label-value"}},
                     ],
                     "livenessProbe": {
                         "initialDelaySeconds": 15,
