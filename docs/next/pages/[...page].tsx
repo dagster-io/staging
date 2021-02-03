@@ -10,16 +10,13 @@ import MDXComponents, {
 import { NextSeo } from "next-seo";
 
 import matter from "gray-matter";
-import rehypePrism from "@mapbox/rehype-prism";
-import rehypeSlug from "rehype-slug";
-import rehypeLink from "rehype-autolink-headings";
-import rehypeAddClasses from "rehype-add-classes";
 
 import generateTOC from "mdast-util-toc";
 import remark from "remark";
 import mdx from "remark-mdx";
 import visit from "unist-util-visit";
 import SidebarNavigation from "components/mdx/SidebarNavigation";
+import rehypePlugins from "components/mdx/rehypePlugins";
 
 const components: MdxRemote.Components = MDXComponents;
 
@@ -33,7 +30,7 @@ interface Props {
   tableOfContents: any;
 }
 
-export default function ExamplePage({
+export default function MdxPage({
   mdxSource,
   frontMatter,
   searchIndex,
@@ -147,39 +144,7 @@ export async function getServerSideProps({ params, locale }) {
         props: { value: searchIndex },
       },
       mdxOptions: {
-        rehypePlugins: [
-          rehypePrism,
-          rehypeSlug,
-          [
-            rehypeLink,
-            {
-              behavior: "append",
-              properties: {
-                className: ["no-underline", "group"],
-                style: { scrollMarginTop: "100px" },
-              },
-              content: {
-                type: "element",
-                tagName: "span",
-                properties: {
-                  className: [
-                    "ml-2",
-                    "text-gray-200",
-                    "hover:text-gray-800",
-                    "hover:underline",
-                  ],
-                },
-                children: [{ type: "text", value: "#" }],
-              },
-            },
-          ],
-          [
-            rehypeAddClasses,
-            {
-              "h1,h2,h3,h4,h5,h6": "scroll-top-margin",
-            },
-          ],
-        ],
+        rehypePlugins: rehypePlugins,
       },
       scope: data,
     });
