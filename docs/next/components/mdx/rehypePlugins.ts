@@ -1,7 +1,14 @@
+<<<<<<< HEAD
 import rehypePrism from "@mapbox/rehype-prism";
 import rehypeSlug from "rehype-slug";
 import rehypeLink from "rehype-autolink-headings";
 import rehypeAddClasses from "rehype-add-classes";
+=======
+import rehypeAddClasses from "rehype-add-classes";
+import rehypeLink from "rehype-autolink-headings";
+import rehypePrism from "@mapbox/rehype-prism";
+import rehypeSlug from "rehype-slug";
+>>>>>>> f17a7c91a... temp
 
 export default [
   rehypePrism,
@@ -32,7 +39,11 @@ export default [
   [
     rehypeAddClasses,
     {
+<<<<<<< HEAD
       "h1,h2,h3,h4,h5,h6": "scroll-top-margin",
+=======
+      "h1,h2,h3,h4,h5,h6": "scroll-margin-top",
+>>>>>>> f17a7c91a... temp
     },
   ],
 ];

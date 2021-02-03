@@ -1,22 +1,20 @@
-import path from "path";
-import { promises as fs } from "fs";
-
-import renderToString from "next-mdx-remote/render-to-string";
-import hydrate from "next-mdx-remote/hydrate";
-import { MdxRemote } from "next-mdx-remote/types";
 import MDXComponents, {
   SearchIndexContext,
 } from "../components/mdx/MDXComponents";
+
+import { MdxRemote } from "next-mdx-remote/types";
 import { NextSeo } from "next-seo";
-
-import matter from "gray-matter";
-
-import generateTOC from "mdast-util-toc";
-import remark from "remark";
-import mdx from "remark-mdx";
-import visit from "unist-util-visit";
 import SidebarNavigation from "components/mdx/SidebarNavigation";
+import { promises as fs } from "fs";
+import generateToc from "mdast-util-toc";
+import hydrate from "next-mdx-remote/hydrate";
+import matter from "gray-matter";
+import mdx from "remark-mdx";
+import path from "path";
 import rehypePlugins from "components/mdx/rehypePlugins";
+import remark from "remark";
+import renderToString from "next-mdx-remote/render-to-string";
+import visit from "unist-util-visit";
 
 const components: MdxRemote.Components = MDXComponents;
 
@@ -78,6 +76,14 @@ export default function MdxPage({
   );
 }
 
+const basePathForVersion = (version: string) => {
+  if (version === "master") {
+    return path.resolve("content");
+  }
+
+  return path.resolve(".versioned_content", version);
+};
+
 // Travel the tree to get the headings
 function getItems(node, current) {
   if (!node) {
@@ -107,36 +113,28 @@ function getItems(node, current) {
   return {};
 }
 
-const basePathForVersion = (version: string) => {
-  if (version === "master") {
-    return path.resolve("content");
-  }
-
-  return path.resolve(".versioned_content", version);
-};
-
 export async function getServerSideProps({ params, locale }) {
   const { page } = params;
 
   const basePath = basePathForVersion(locale);
   const pathToMdxFile = path.resolve(basePath, page.join("/") + ".mdx");
+  const pathToSearchindex = path.resolve(basePath, "api/searchindex.json");
+
   try {
-    // versioned searchindex
-    const pathToSearchindex = path.resolve(basePath, "api/searchindex.json");
+    // 1. Read and parse versioned search
     const buffer = await fs.readFile(pathToSearchindex);
     const searchIndex = JSON.parse(buffer.toString());
 
-    // versioned mdx
+    // 2. Read and parse versioned MDX content
     const source = await fs.readFile(pathToMdxFile);
     const { content, data } = matter(source);
 
-    // Generate the table of contents from the AST
-    const mdast = remark().use(mdx).parse(content);
-    const tableOfContents = getItems(
-      generateTOC(mdast, { maxDepth: 3 }).map,
-      {}
-    );
+    // 3. Extract table of contents from MDX
+    const tree = remark().use(mdx).parse(content);
+    const node = generateToc(tree, { maxDepth: 3 });
+    const tableOfContents = getItems(node.map, {});
 
+    // 4. Render MDX
     const mdxSource = await renderToString(content, {
       components,
       provider: {
@@ -148,6 +146,7 @@ export async function getServerSideProps({ params, locale }) {
       },
       scope: data,
     });
+
     return {
       props: {
         mdxSource: mdxSource,
