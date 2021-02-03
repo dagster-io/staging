@@ -24,7 +24,11 @@ class ExecutorDefinition(ConfigurableDefinition):
     """
 
     def __init__(
-        self, name, config_schema=None, executor_creation_fn=None, description=None,
+        self,
+        name,
+        config_schema=None,
+        executor_creation_fn=None,
+        description=None,
     ):
         self._name = check.str_param(name, "name")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
@@ -88,7 +92,9 @@ class _ExecutorDecoratorCallable:
             self.name = fn.__name__
 
         executor_def = ExecutorDefinition(
-            name=self.name, config_schema=self.config_schema, executor_creation_fn=fn,
+            name=self.name,
+            config_schema=self.config_schema,
+            executor_creation_fn=fn,
         )
 
         update_wrapper(executor_def, wrapped=fn)

@@ -17,7 +17,8 @@ from dagster.daemon.types import DaemonType
 
 
 @click.command(
-    name="run", help="Run any daemons configured on the DagsterInstance.",
+    name="run",
+    help="Run any daemons configured on the DagsterInstance.",
 )
 def run_command():
     with DagsterInstance.get() as instance:
@@ -37,7 +38,8 @@ def run_command():
 
 
 @click.command(
-    name="health-check", help="DEPRECATED, use liveness-check instead",
+    name="health-check",
+    help="DEPRECATED, use liveness-check instead",
 )
 def health_check_command():
     warnings.warn("health-check is deprecated. Use liveness-check instead.")
@@ -50,7 +52,8 @@ def health_check_command():
 
 
 @click.command(
-    name="liveness-check", help="Check for recent heartbeats from the daemon.",
+    name="liveness-check",
+    help="Check for recent heartbeats from the daemon.",
 )
 def liveness_check_command():
     with DagsterInstance.get() as instance:
@@ -62,7 +65,8 @@ def liveness_check_command():
 
 
 @click.command(
-    name="wipe", help="Wipe all heartbeats from storage.",
+    name="wipe",
+    help="Wipe all heartbeats from storage.",
 )
 def wipe_command():
     with DagsterInstance.get() as instance:
@@ -71,7 +75,8 @@ def wipe_command():
 
 
 @click.command(
-    name="heartbeat", help="Read and write a heartbeat",
+    name="heartbeat",
+    help="Read and write a heartbeat",
 )
 def debug_heartbeat_command():
     with DagsterInstance.get() as instance:
@@ -79,7 +84,8 @@ def debug_heartbeat_command():
 
 
 @click.command(
-    name="heartbeat-dump", help="Log all heartbeat statuses",
+    name="heartbeat-dump",
+    help="Log all heartbeat statuses",
 )
 def debug_heartbeat_dump_command():
     with DagsterInstance.get() as instance:

@@ -49,7 +49,12 @@ class DagsterDaemonController:
                 )
             )
 
-        self._add_daemon(SensorDaemon(instance, interval_seconds=DEFAULT_SENSOR_DAEMON_INTERVAL,))
+        self._add_daemon(
+            SensorDaemon(
+                instance,
+                interval_seconds=DEFAULT_SENSOR_DAEMON_INTERVAL,
+            )
+        )
 
         if isinstance(instance.run_coordinator, QueuedRunCoordinator):
             max_concurrent_runs = instance.run_coordinator.max_concurrent_runs
@@ -126,7 +131,12 @@ class DagsterDaemonController:
             except Exception:  # pylint: disable=broad-except
                 # log errors in daemon
                 error_info = serializable_error_info_from_exc_info(sys.exc_info())
-                self._logger.error("Caught error in {}:\n{}".format(daemon_type, error_info,))
+                self._logger.error(
+                    "Caught error in {}:\n{}".format(
+                        daemon_type,
+                        error_info,
+                    )
+                )
                 self._current_iteration_exceptions[daemon_type].append(error_info)
                 # The iteration stopped short, so errors can be reported in heartbeat
                 self._last_iteration_exceptions[daemon_type] = self._current_iteration_exceptions[
@@ -167,7 +177,9 @@ class DagsterDaemonController:
                     "message reoccurs, you may have multiple daemons running which is not supported. "
                     "Last heartbeat daemon id: {}, "
                     "Current daemon_id: {}".format(
-                        daemon_type.value, last_stored_heartbeat.daemon_id, self._daemon_uuid,
+                        daemon_type.value,
+                        last_stored_heartbeat.daemon_id,
+                        self._daemon_uuid,
                     )
                 )
 
@@ -259,7 +271,10 @@ def get_daemon_status(instance, daemon_type, curr_time_seconds=None, ignore_erro
 
 
 def debug_daemon_heartbeats(instance):
-    daemon = SensorDaemon(instance, interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS,)
+    daemon = SensorDaemon(
+        instance,
+        interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS,
+    )
     timestamp = pendulum.now("UTC").float_timestamp
     instance.add_daemon_heartbeat(DaemonHeartbeat(timestamp, daemon.daemon_type(), None, None))
     returned_timestamp = instance.get_daemon_heartbeats()[daemon.daemon_type()].timestamp
