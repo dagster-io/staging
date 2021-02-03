@@ -240,6 +240,13 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
                     ]
                 )
                 assert queue.get("replicaCount") == num_pods_for_queue
+                
+                labels = queue.get('labels')
+                if labels:
+                    for pod in pods:
+                        if f"{CELERY_WORKER_NAME_PREFIX}-{queue.get('name')}" in pod_name:
+                            for key in labels:
+                                assert pod.spec.template.metadata.labels.get(key) == labels.get(key)
 
             print("Waiting for celery workers")
             for pod_name in pod_names:
@@ -341,7 +348,7 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
                     "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
                     "workerQueues": [
                         {"name": "dagster", "replicaCount": 2},
-                        {"name": "extra-queue-1", "replicaCount": 1},
+                        {"name": "extra-queue-1", "replicaCount": 1, "labels": {'celery-label-key': "celery-label-value"}},
                     ],
                     "livenessProbe": {
                         "initialDelaySeconds": 15,
