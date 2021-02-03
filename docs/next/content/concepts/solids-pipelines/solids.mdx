@@ -85,6 +85,8 @@ Solids are used within a <PyObject module="dagster" object="pipeline" displayTex
 
 ## Examples
 
+ass
+
 ### With inputs
 
 ```python
@@ -127,15 +129,13 @@ def my_pipeline():
     create_table_2(create_table_1())
 ```
 
-## Patterns
+<!-- ### Solid Factory -->
 
-### Solid Factory
+<!-- You may find the need to create utilities that help generate solids. In most cases, you should parameterize solid behavior by adding solid configuration. You should reach for this pattern if you find yourself needing to vary the arguments to the <PyObject module="dagster" object="solid" displayText="@solid" /> decorator or <PyObject module="dagster" object="SolidDefinition"/> themselves, since they cannot be modified based on solid configuration. -->
 
-You may find the need to create utilities that help generate solids. In most cases, you should parameterize solid behavior by adding solid configuration. You should reach for this pattern if you find yourself needing to vary the arguments to the <PyObject module="dagster" object="solid" displayText="@solid" /> decorator or <PyObject module="dagster" object="SolidDefinition"/> themselves, since they cannot be modified based on solid configuration.
+<!-- To create a solid factory, you define a function that returns a <PyObject module="dagster" object="SolidDefinition"/> , either directly or by decorating a function with the solid dectorator. -->
 
-To create a solid factory, you define a function that returns a <PyObject module="dagster" object="SolidDefinition"/> , either directly or by decorating a function with the solid dectorator.
-
-```python
+<!-- ```python
 def x_solid(
     arg, name="default_name", input_defs=None, **kwargs,
 ):
@@ -155,4 +155,4 @@ def x_solid(
         pass
 
     return _x_solid
-```
+``` -->
