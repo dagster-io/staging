@@ -388,10 +388,12 @@ runLauncher:
       configSource: {}
 
       # Additional Celery worker queues can be configured here. When overriding, be sure to
-      # provision a "dagster" worker queue, as this is the default queue used by Dagster.
+      # provision a "dagster" worker queue, as this is the default queue used by Dagster. Labels are optional. If specified,
+      # the labels are added to the k8s Pod(s) for the Celery queue
       workerQueues:
         - name: "dagster"
           replicaCount: 2
+          labels: {}
 
       # Additional environment variables to set on the celery/job containers
       # A Kubernetes ConfigMap will be created with these environment variables. See:
