@@ -1268,6 +1268,13 @@
                 "name": {
                     "title": "Name",
                     "type": "string"
+                },
+                "labels": {
+                    "title": "Labels",
+                    "type": "array",
+                    "items": {
+                        "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+                    }
                 }
             },
             "required": [
