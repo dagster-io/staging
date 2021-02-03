@@ -393,6 +393,7 @@ runLauncher:
       workerQueues:
         - name: "dagster"
           replicaCount: 2
+          labels: []
 
       # Additional environment variables to set on the celery/job containers
       # A Kubernetes ConfigMap will be created with these environment variables. See:
