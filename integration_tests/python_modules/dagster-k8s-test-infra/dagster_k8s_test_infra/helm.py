@@ -343,7 +343,7 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
                     "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
                     "workerQueues": [
                         {"name": "dagster", "replicaCount": 2},
-                        {"name": "extra-queue-1", "replicaCount": 1},
+                        {"name": "extra-queue-1", "replicaCount": 1, "labels": {'celery-label-key': "celery-label-value"}},
                     ],
                     "livenessProbe": {
                         "initialDelaySeconds": 15,

@@ -1256,6 +1256,12 @@
             ],
             "type": "string"
         },
+        "Labels": {
+            "title": "Labels",
+            "type": "object",
+            "properties": {},
+            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/labels"
+        },
         "CeleryWorkerQueue": {
             "title": "CeleryWorkerQueue",
             "type": "object",
@@ -1268,13 +1274,16 @@
                 "name": {
                     "title": "Name",
                     "type": "string"
+                },
+                "labels": {
+                    "$ref": "#/definitions/Labels"
                 }
             },
             "required": [
                 "replicaCount",
                 "name"
             ],
-            "additionalProperties": false
+            "additionalProperties": true
         },
         "CeleryK8sRunLauncherConfig": {
             "title": "CeleryK8sRunLauncherConfig",
