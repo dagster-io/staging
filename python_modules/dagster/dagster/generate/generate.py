@@ -47,6 +47,9 @@ def generate_new_repo(path: str):
             )
             dst_file_path = os.path.join(normalized_path, dst_relative_file_path)
 
+            if dst_file_path.endswith(".tmpl"):
+                dst_file_path = dst_file_path[: -len(".tmpl")]
+
             with open(dst_file_path, "w") as f:
                 template = env.get_template(name=src_relative_file_path)
                 f.write(template.render(repo_name=repo_name))
