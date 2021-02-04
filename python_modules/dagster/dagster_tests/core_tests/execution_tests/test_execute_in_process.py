@@ -37,3 +37,23 @@ def test_execute_graph():
     result = execute_in_process(emit_three)
 
     assert result.success
+
+
+def test_execute_solid_with_inputs():
+    @solid
+    def add_one(_, x):
+        return 1 + x
+
+    result = execute_in_process(add_one, input_values={"x": 5})
+    assert result.success
+
+
+def test_execute_graph_with_inputs():
+    emit_one, add = get_solids()
+
+    @graph
+    def add_one(x):
+        return add(x, emit_one())
+
+    result = execute_in_process(add_one, input_values={"x": 5})
+    assert result.success
