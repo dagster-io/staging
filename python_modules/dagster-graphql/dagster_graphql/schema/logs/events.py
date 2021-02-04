@@ -368,7 +368,11 @@ class GrapheneStepMaterializationEvent(graphene.ObjectType):
 
 class GrapheneHandledOutputEvent(graphene.ObjectType):
     class Meta:
-        interfaces = (GrapheneMessageEvent, GrapheneStepEvent)
+        interfaces = (
+            GrapheneMessageEvent,
+            GrapheneStepEvent,
+            GrapheneDisplayableEvent,
+        )
         name = "HandledOutputEvent"
 
     output_name = graphene.NonNull(graphene.String)

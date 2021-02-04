@@ -534,6 +534,65 @@ export interface LogsRowStructuredFragment_ObjectStoreOperationEvent {
   operationResult: LogsRowStructuredFragment_ObjectStoreOperationEvent_operationResult;
 }
 
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventPathMetadataEntry {
+  __typename: "EventPathMetadataEntry";
+  label: string;
+  description: string | null;
+  path: string;
+}
+
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventJsonMetadataEntry {
+  __typename: "EventJsonMetadataEntry";
+  label: string;
+  description: string | null;
+  jsonString: string;
+}
+
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventUrlMetadataEntry {
+  __typename: "EventUrlMetadataEntry";
+  label: string;
+  description: string | null;
+  url: string;
+}
+
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventTextMetadataEntry {
+  __typename: "EventTextMetadataEntry";
+  label: string;
+  description: string | null;
+  text: string;
+}
+
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventMarkdownMetadataEntry {
+  __typename: "EventMarkdownMetadataEntry";
+  label: string;
+  description: string | null;
+  mdStr: string;
+}
+
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventPythonArtifactMetadataEntry {
+  __typename: "EventPythonArtifactMetadataEntry";
+  label: string;
+  description: string | null;
+  module: string;
+  name: string;
+}
+
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventFloatMetadataEntry {
+  __typename: "EventFloatMetadataEntry";
+  label: string;
+  description: string | null;
+  floatValue: number;
+}
+
+export interface LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventIntMetadataEntry {
+  __typename: "EventIntMetadataEntry";
+  label: string;
+  description: string | null;
+  intValue: number;
+}
+
+export type LogsRowStructuredFragment_HandledOutputEvent_metadataEntries = LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventPathMetadataEntry | LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventJsonMetadataEntry | LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventUrlMetadataEntry | LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventTextMetadataEntry | LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventMarkdownMetadataEntry | LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventPythonArtifactMetadataEntry | LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventFloatMetadataEntry | LogsRowStructuredFragment_HandledOutputEvent_metadataEntries_EventIntMetadataEntry;
+
 export interface LogsRowStructuredFragment_HandledOutputEvent {
   __typename: "HandledOutputEvent";
   message: string;
@@ -542,6 +601,7 @@ export interface LogsRowStructuredFragment_HandledOutputEvent {
   stepKey: string | null;
   outputName: string;
   managerKey: string;
+  metadataEntries: LogsRowStructuredFragment_HandledOutputEvent_metadataEntries[];
 }
 
 export interface LogsRowStructuredFragment_LoadedInputEvent {

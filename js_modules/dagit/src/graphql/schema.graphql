@@ -1268,13 +1268,16 @@ type PipelineSuccessEvent implements MessageEvent & PipelineEvent {
   pipelineName: String!
 }
 
-type HandledOutputEvent implements MessageEvent & StepEvent {
+type HandledOutputEvent implements MessageEvent & StepEvent & DisplayableEvent {
   runId: String!
   message: String!
   timestamp: String!
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  label: String!
+  description: String
+  metadataEntries: [EventMetadataEntry!]!
   outputName: String!
   managerKey: String!
 }

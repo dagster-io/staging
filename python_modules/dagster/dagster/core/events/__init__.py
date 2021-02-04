@@ -870,7 +870,7 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def handled_output(step_context, output_name, manager_key):
+    def handled_output(step_context, output_name, manager_key, metadata_entries=None):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
         message = f'Handled output "{output_name}" using output manager ' f'"{manager_key}"'
@@ -878,7 +878,9 @@ class DagsterEvent(
             event_type=DagsterEventType.HANDLED_OUTPUT,
             step_context=step_context,
             event_specific_data=HandledOutputData(
-                output_name=output_name, manager_key=manager_key,
+                output_name=output_name,
+                manager_key=manager_key,
+                metadata_entries=metadata_entries if metadata_entries else [],
             ),
             message=message,
         )
@@ -1120,12 +1122,17 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
 
 
 @whitelist_for_serdes
-class HandledOutputData(namedtuple("_HandledOutputData", "output_name manager_key")):
-    def __new__(cls, output_name, manager_key):
+class HandledOutputData(
+    namedtuple("_HandledOutputData", "output_name manager_key metadata_entries")
+):
+    def __new__(cls, output_name, manager_key, metadata_entries):
         return super(HandledOutputData, cls).__new__(
             cls,
             output_name=check.str_param(output_name, "output_name"),
             manager_key=check.str_param(manager_key, "manager_key"),
+            metadata_entries=check.opt_list_param(
+                metadata_entries, "metadata_entries", EventMetadataEntry
+            ),
         )
 
 

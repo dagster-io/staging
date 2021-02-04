@@ -13,6 +13,7 @@ from dagster_test.toys.many_events import many_events
 from dagster_test.toys.retries import retry_pipeline
 from dagster_test.toys.sleepy import sleepy_pipeline
 from dagster_test.toys.unreliable import unreliable_pipeline
+from dagster_test.toys.output_metadata import output_metadata_pipeline
 
 from .schedules import get_toys_schedules
 from .sensors import get_toys_sensors
@@ -36,6 +37,7 @@ def toys_repository():
             branch_pipeline,
             unreliable_pipeline,
             dynamic_pipeline,
+            output_metadata_pipeline,
         ]
         + get_toys_schedules()
         + get_toys_sensors()

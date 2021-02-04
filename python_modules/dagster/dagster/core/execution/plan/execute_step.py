@@ -403,6 +403,7 @@ def _store_output(
         step_context,
         output_name=step_output_handle.output_name,
         manager_key=output_def.io_manager_key,
+        metadata_entries=output.metadata_entries,
     )
 
 

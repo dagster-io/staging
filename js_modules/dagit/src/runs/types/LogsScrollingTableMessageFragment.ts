@@ -534,6 +534,65 @@ export interface LogsScrollingTableMessageFragment_ObjectStoreOperationEvent {
   operationResult: LogsScrollingTableMessageFragment_ObjectStoreOperationEvent_operationResult;
 }
 
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventPathMetadataEntry {
+  __typename: "EventPathMetadataEntry";
+  label: string;
+  description: string | null;
+  path: string;
+}
+
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventJsonMetadataEntry {
+  __typename: "EventJsonMetadataEntry";
+  label: string;
+  description: string | null;
+  jsonString: string;
+}
+
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventUrlMetadataEntry {
+  __typename: "EventUrlMetadataEntry";
+  label: string;
+  description: string | null;
+  url: string;
+}
+
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventTextMetadataEntry {
+  __typename: "EventTextMetadataEntry";
+  label: string;
+  description: string | null;
+  text: string;
+}
+
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventMarkdownMetadataEntry {
+  __typename: "EventMarkdownMetadataEntry";
+  label: string;
+  description: string | null;
+  mdStr: string;
+}
+
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventPythonArtifactMetadataEntry {
+  __typename: "EventPythonArtifactMetadataEntry";
+  label: string;
+  description: string | null;
+  module: string;
+  name: string;
+}
+
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventFloatMetadataEntry {
+  __typename: "EventFloatMetadataEntry";
+  label: string;
+  description: string | null;
+  floatValue: number;
+}
+
+export interface LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventIntMetadataEntry {
+  __typename: "EventIntMetadataEntry";
+  label: string;
+  description: string | null;
+  intValue: number;
+}
+
+export type LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries = LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventPathMetadataEntry | LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventJsonMetadataEntry | LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventUrlMetadataEntry | LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventTextMetadataEntry | LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventMarkdownMetadataEntry | LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventPythonArtifactMetadataEntry | LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventFloatMetadataEntry | LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries_EventIntMetadataEntry;
+
 export interface LogsScrollingTableMessageFragment_HandledOutputEvent {
   __typename: "HandledOutputEvent";
   message: string;
@@ -542,6 +601,7 @@ export interface LogsScrollingTableMessageFragment_HandledOutputEvent {
   stepKey: string | null;
   outputName: string;
   managerKey: string;
+  metadataEntries: LogsScrollingTableMessageFragment_HandledOutputEvent_metadataEntries[];
 }
 
 export interface LogsScrollingTableMessageFragment_LoadedInputEvent {

@@ -73,6 +73,7 @@ class StepOutputData(
             ),
             type_check_data=check.opt_inst_param(type_check_data, "type_check_data", TypeCheckData),
             version=check.opt_str_param(version, "version"),
+            # potentially put metadata entries here
         )
 
     @property
