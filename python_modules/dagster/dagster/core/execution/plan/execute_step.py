@@ -380,6 +380,7 @@ def _store_output(
     step_output_handle: StepOutputHandle,
     output: Union[Output, DynamicOutput],
 ) -> Iterator[DagsterEvent]:
+    # find asset key here
     output_def = step_context.solid_def.output_def_named(step_output_handle.output_name)
     output_manager = step_context.get_io_manager(step_output_handle)
     output_context = step_context.get_output_context(step_output_handle)

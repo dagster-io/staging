@@ -7,6 +7,7 @@ from enum import Enum
 from dagster import check
 from dagster.core.definitions import (
     AssetMaterialization,
+    AssetKey,
     EventMetadataEntry,
     ExpectationResult,
     Materialization,
@@ -870,7 +871,9 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def handled_output(step_context, output_name, manager_key, metadata_entries=None):
+    def handled_output(
+        step_context, output_name, manager_key, metadata_entries=None, asset_key=None
+    ):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
         message = f'Handled output "{output_name}" using output manager ' f'"{manager_key}"'
@@ -881,6 +884,7 @@ class DagsterEvent(
                 output_name=output_name,
                 manager_key=manager_key,
                 metadata_entries=metadata_entries if metadata_entries else [],
+                asset_key=asset_key,
             ),
             message=message,
         )
@@ -1125,7 +1129,7 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
 class HandledOutputData(
     namedtuple("_HandledOutputData", "output_name manager_key metadata_entries")
 ):
-    def __new__(cls, output_name, manager_key, metadata_entries):
+    def __new__(cls, output_name, manager_key, metadata_entries, asset_key):
         return super(HandledOutputData, cls).__new__(
             cls,
             output_name=check.str_param(output_name, "output_name"),
@@ -1133,6 +1137,7 @@ class HandledOutputData(
             metadata_entries=check.opt_list_param(
                 metadata_entries, "metadata_entries", EventMetadataEntry
             ),
+            asset_key=check.opt_inst_param(asset_key, "asset_key", AssetKey),
         )
 
 

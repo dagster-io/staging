@@ -92,6 +92,7 @@ def _to_metadata_entries(metadata_entries):
 def from_dagster_event_record(event_record, pipeline_name):
     from ..schema.errors import GraphenePythonError
     from ..schema.logs.events import (
+        GrapheneAssetKey,
         GrapheneEngineEvent,
         GrapheneExecutionStepFailureEvent,
         GrapheneExecutionStepInputEvent,
@@ -199,15 +200,15 @@ def from_dagster_event_record(event_record, pipeline_name):
             **basic_params,
         )
     elif dagster_event.event_type == DagsterEventType.HANDLED_OUTPUT:
-        x = GrapheneHandledOutputEvent(
+        return GrapheneHandledOutputEvent(
             output_name=dagster_event.event_specific_data.output_name,
             manager_key=dagster_event.event_specific_data.manager_key,
             metadataEntries=_to_metadata_entries(
                 dagster_event.event_specific_data.metadata_entries
             ),
+            assetKey=GrapheneAssetKey(path=dagster_event.event_specific_data.asset_key.path),
             **basic_params,
         )
-        return x
     elif dagster_event.event_type == DagsterEventType.LOADED_INPUT:
         return GrapheneLoadedInputEvent(
             input_name=dagster_event.event_specific_data.input_name,
