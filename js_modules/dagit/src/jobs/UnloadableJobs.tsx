@@ -61,7 +61,7 @@ export const UnloadableSchedules: React.FunctionComponent<{
   }
   return (
     <>
-      <Subheading>Unloadable schedules:</Subheading>
+      <Subheading>Unloadable schedules</Subheading>
       <UnloadableScheduleInfo />
 
       <Table>
