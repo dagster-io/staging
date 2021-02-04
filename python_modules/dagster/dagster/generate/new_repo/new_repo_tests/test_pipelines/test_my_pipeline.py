@@ -1,5 +1,4 @@
 from dagster import execute_pipeline
-
 from {{ repo_name }}.pipelines import my_pipeline
 
 

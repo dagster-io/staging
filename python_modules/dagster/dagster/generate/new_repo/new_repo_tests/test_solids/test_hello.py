@@ -1,5 +1,4 @@
 from dagster import execute_solid
-
 from {{ repo_name }}.pipelines import MODE_TEST
 from {{ repo_name }}.solids import hello
 
