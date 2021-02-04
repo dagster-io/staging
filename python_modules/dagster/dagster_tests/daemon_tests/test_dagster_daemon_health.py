@@ -27,13 +27,16 @@ def test_healthy():
         assert not all_daemons_healthy(instance, curr_time_seconds=init_time.float_timestamp)
         assert not all_daemons_live(instance, curr_time_seconds=init_time.float_timestamp)
 
-        with DagsterDaemonController(instance):
+        with DagsterDaemonController(instance) as controller:
 
             while True:
                 now = pendulum.now("UTC")
                 if all_daemons_healthy(
                     instance, curr_time_seconds=now.float_timestamp
                 ) and all_daemons_live(instance, curr_time_seconds=now.float_timestamp):
+
+                    controller.check_daemons()
+
                     beyond_tolerated_time = now.float_timestamp + 100
 
                     assert not all_daemons_healthy(
@@ -67,6 +70,46 @@ def test_healthy_with_different_daemons():
                 assert not all_daemons_live(other_instance, curr_time_seconds=now.float_timestamp)
 
 
+def test_thread_die_daemon(monkeypatch):
+    with instance_for_test(overrides={}) as instance:
+        from dagster.daemon.daemon import SchedulerDaemon, SensorDaemon
+
+        iteration_ran = {"ran": False}
+
+        def run_iteration_error(_):
+            iteration_ran["ran"] = True
+            raise KeyboardInterrupt
+            yield  # pylint: disable=unreachable
+
+        monkeypatch.setattr(SensorDaemon, "run_iteration", run_iteration_error)
+
+        init_time = pendulum.now("UTC")
+        with DagsterDaemonController(instance) as controller:
+            while True:
+                now = pendulum.now("UTC")
+
+                status = get_daemon_status(
+                    instance, SchedulerDaemon.daemon_type(), now.float_timestamp
+                )
+
+                if iteration_ran["ran"] and status.healthy:
+                    try:
+                        controller.check_daemons()  # Should throw since the sensor thread is interrupted
+                    except Exception as e:  # pylint: disable=broad-except
+                        assert (
+                            "Stopping dagster-daemon process since the following threads are no longer sending heartbeats: ['SENSOR']"
+                            in str(e)
+                        )
+                        break
+                    else:
+                        raise Exception("check_daemons should fail if a thread has died")
+
+                if (now - init_time).total_seconds() > 10:
+                    raise Exception("timed out waiting for heartbeat error")
+
+                time.sleep(0.5)
+
+
 def test_error_daemon(monkeypatch):
     with instance_for_test(overrides={}) as instance:
         from dagster.daemon.daemon import SensorDaemon
@@ -78,7 +121,7 @@ def test_error_daemon(monkeypatch):
         monkeypatch.setattr(SensorDaemon, "run_iteration", run_iteration_error)
 
         init_time = pendulum.now("UTC")
-        with DagsterDaemonController(instance):
+        with DagsterDaemonController(instance) as controller:
             while True:
                 now = pendulum.now("UTC")
 
@@ -87,6 +130,10 @@ def test_error_daemon(monkeypatch):
                 )
 
                 if status.last_heartbeat:
+
+                    # Despite error, daemon should still be running
+                    controller.check_daemons()
+
                     assert status.healthy == False
                     assert len(status.last_heartbeat.errors) == 1
                     assert (
@@ -116,7 +163,7 @@ def test_multiple_error_daemon(monkeypatch):
 
         init_time = pendulum.now("UTC")
 
-        with DagsterDaemonController(instance):
+        with DagsterDaemonController(instance) as controller:
             while True:
 
                 now = pendulum.now("UTC")
@@ -126,6 +173,9 @@ def test_multiple_error_daemon(monkeypatch):
                 )
 
                 if status.last_heartbeat:
+
+                    # Despite error, daemon should still be running
+                    controller.check_daemons()
 
                     assert status.healthy == False
                     assert len(status.last_heartbeat.errors) == 2
@@ -145,7 +195,7 @@ def test_warn_multiple_daemons(capsys):
     with instance_for_test() as instance:
         init_time = pendulum.now("UTC")
 
-        with DagsterDaemonController(instance):
+        with DagsterDaemonController(instance) as controller:
             while True:
                 now = pendulum.now("UTC")
 
@@ -154,6 +204,9 @@ def test_warn_multiple_daemons(capsys):
                 )
 
                 if status.last_heartbeat:
+
+                    controller.check_daemons()
+
                     captured = capsys.readouterr()
                     assert "Taking over from another SENSOR daemon process" not in captured.out
                     break
