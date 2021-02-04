@@ -34,12 +34,10 @@ def get_default_daemon_logger(daemon_name):
 
 
 class DagsterDaemon:
-    def __init__(self, instance, interval_seconds, daemon_uuid, thread_shutdown_event):
+    def __init__(self, instance, interval_seconds):
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
         self._logger = get_default_daemon_logger(type(self).__name__)
         self.interval_seconds = check.int_param(interval_seconds, "interval_seconds")
-        self._daemon_uuid = check.str_param(daemon_uuid, "daemon_uuid")
-        self._thread_shutdown_event = thread_shutdown_event
 
         self._last_iteration_time = None
         self._last_heartbeat_time = None
@@ -52,8 +50,8 @@ class DagsterDaemon:
         returns: str
         """
 
-    def run_loop(self):
-        while not self._thread_shutdown_event.is_set():
+    def run_loop(self, daemon_uuid, daemon_shutdown_event):
+        while not daemon_shutdown_event.is_set():
             curr_time = pendulum.now("UTC")
 
             if (
@@ -61,11 +59,11 @@ class DagsterDaemon:
                 or (curr_time - self._last_iteration_time).total_seconds() >= self.interval_seconds
             ):
                 self._last_iteration_time = curr_time
-                self._run_iteration(curr_time)
+                self._run_iteration(curr_time, daemon_uuid)
 
-            self._thread_shutdown_event.wait(0.5)
+            daemon_shutdown_event.wait(0.5)
 
-    def _run_iteration(self, curr_time):
+    def _run_iteration(self, curr_time, daemon_uuid):
         # Build a list of any exceptions encountered during the iteration.
         # Once the iteration completes, this is copied to last_iteration_exceptions
         # which is used in the heartbeats. This guarantees that heartbeats contain the full
@@ -94,12 +92,12 @@ class DagsterDaemon:
                     # wait until first iteration completes, since we report any errors from the previous
                     # iteration in the heartbeat. After the first iteration, start logging a heartbeat
                     # every time the generator yields.
-                    self._check_add_heartbeat(curr_time)
+                    self._check_add_heartbeat(curr_time, daemon_uuid)
 
         if first_iteration:
-            self._check_add_heartbeat(curr_time)
+            self._check_add_heartbeat(curr_time, daemon_uuid)
 
-    def _check_add_heartbeat(self, curr_time):
+    def _check_add_heartbeat(self, curr_time, daemon_uuid):
         if (
             self._last_heartbeat_time
             and (curr_time - self._last_heartbeat_time).total_seconds()
@@ -113,14 +111,14 @@ class DagsterDaemon:
         if (
             self._last_heartbeat_time  # not the first heartbeat
             and last_stored_heartbeat
-            and last_stored_heartbeat.daemon_id != self._daemon_uuid
+            and last_stored_heartbeat.daemon_id != daemon_uuid
         ):
             self._logger.warning(
                 "Taking over from another {} daemon process. If this "
                 "message reoccurs, you may have multiple daemons running which is not supported. "
                 "Last heartbeat daemon id: {}, "
                 "Current daemon_id: {}".format(
-                    daemon_type, last_stored_heartbeat.daemon_id, self._daemon_uuid,
+                    daemon_type, last_stored_heartbeat.daemon_id, daemon_uuid,
                 )
             )
 
@@ -130,7 +128,7 @@ class DagsterDaemon:
             DaemonHeartbeat(
                 curr_time.float_timestamp,
                 daemon_type,
-                self._daemon_uuid,
+                daemon_uuid,
                 self._last_iteration_exceptions,
             )
         )
@@ -148,12 +146,22 @@ class DagsterDaemon:
 
 class SchedulerDaemon(DagsterDaemon):
     def __init__(
-        self, instance, interval_seconds, max_catchup_runs, daemon_uuid, thread_shutdown_event
+        self, instance, interval_seconds, max_catchup_runs,
     ):
-        super(SchedulerDaemon, self).__init__(
-            instance, interval_seconds, daemon_uuid, thread_shutdown_event
-        )
+        super(SchedulerDaemon, self).__init__(instance, interval_seconds)
         self._max_catchup_runs = max_catchup_runs
+
+    @staticmethod
+    def create_from_instance(instance):
+        max_catchup_runs = instance.scheduler.max_catchup_runs
+
+        from dagster.daemon.controller import DEFAULT_DAEMON_INTERVAL_SECONDS
+
+        return SchedulerDaemon(
+            instance,
+            interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS,
+            max_catchup_runs=max_catchup_runs,
+        )
 
     @classmethod
     def daemon_type(cls):
@@ -164,6 +172,12 @@ class SchedulerDaemon(DagsterDaemon):
 
 
 class SensorDaemon(DagsterDaemon):
+    @staticmethod
+    def create_from_instance(instance):
+        from dagster.daemon.controller import SENSOR_DAEMON_INTERVAL
+
+        return SensorDaemon(instance, interval_seconds=SENSOR_DAEMON_INTERVAL)
+
     @classmethod
     def daemon_type(cls):
         return "SENSOR"
