@@ -21,7 +21,7 @@ class TestSubscribeToGrpcServerEvents(
         test_subscriber = LocationStateSubscriber(events.append)
         handle = next(
             iter(
-                graphql_context._workspace.repository_location_handles  # pylint: disable=protected-access
+                graphql_context.process_context._workspace.repository_location_handles  # pylint: disable=protected-access
             )
         )
         handle.add_state_subscriber(test_subscriber)
@@ -32,7 +32,7 @@ class TestSubscribeToGrpcServerEvents(
         timeout = 30
         while not len(events) > 0:
             if time.time() - start_time > timeout:
-                break
+                raise Exception("Timed out waiting for LocationStateChangeEvent")
             time.sleep(1)
 
         assert len(events) == 1
