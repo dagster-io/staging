@@ -3,6 +3,7 @@ import logging
 import os
 from collections import namedtuple
 from enum import Enum
+from typing import Union
 
 from dagster import check
 from dagster.core.definitions import (
@@ -19,6 +20,8 @@ from dagster.core.execution.context.system import (
     SystemStepExecutionContext,
 )
 from dagster.core.execution.plan.handle import ResolvedFromDynamicStepHandle, StepHandle
+from dagster.core.execution.plan.inputs import StepInputData
+from dagster.core.execution.plan.objects import StepFailureData, StepSuccessData
 from dagster.core.execution.plan.outputs import StepOutputData
 from dagster.core.log_manager import DagsterLogManager
 from dagster.serdes import register_serdes_tuple_fallbacks, whitelist_for_serdes
@@ -109,37 +112,11 @@ HOOK_EVENTS = {
 }
 
 
-def _assert_type(method, expected_type, actual_type):
+def _assert_type(method: str, expected_type: str, actual_type: str):
     check.invariant(
         expected_type == actual_type,
-        (
-            "{method} only callable when event_type is {expected_type}, called on {actual_type}"
-        ).format(method=method, expected_type=expected_type, actual_type=actual_type),
+        f"{method} only callable when event_type is {expected_type}, called on {actual_type}"
     )
-
-
-def _validate_event_specific_data(event_type, event_specific_data):
-    from dagster.core.execution.plan.objects import StepFailureData, StepSuccessData
-    from dagster.core.execution.plan.inputs import StepInputData
-
-    if event_type == DagsterEventType.STEP_OUTPUT:
-        check.inst_param(event_specific_data, "event_specific_data", StepOutputData)
-    elif event_type == DagsterEventType.STEP_FAILURE:
-        check.inst_param(event_specific_data, "event_specific_data", StepFailureData)
-    elif event_type == DagsterEventType.STEP_SUCCESS:
-        check.inst_param(event_specific_data, "event_specific_data", StepSuccessData)
-    elif event_type == DagsterEventType.STEP_MATERIALIZATION:
-        check.inst_param(event_specific_data, "event_specific_data", StepMaterializationData)
-    elif event_type == DagsterEventType.STEP_EXPECTATION_RESULT:
-        check.inst_param(event_specific_data, "event_specific_data", StepExpectationResultData)
-    elif event_type == DagsterEventType.STEP_INPUT:
-        check.inst_param(event_specific_data, "event_specific_data", StepInputData)
-    elif event_type == DagsterEventType.ENGINE_EVENT:
-        check.inst_param(event_specific_data, "event_specific_data", EngineEventData)
-    elif event_type == DagsterEventType.HOOK_ERRORED:
-        check.inst_param(event_specific_data, "event_specific_data", HookErroredData)
-
-    return event_specific_data
 
 
 def log_step_event(step_context, event):
@@ -1212,3 +1189,25 @@ register_serdes_tuple_fallbacks(
         "AssetStoreOperationData": AssetStoreOperationData,
     }
 )
+
+EventSpecificData = Union[StepOutputData, StepFailureData, StepSuccessData, StepMaterializationData, StepExpectationResultData, StepInputData, EngineEventData, HookErroredData]
+
+def _validate_event_specific_data(event_type: DagsterEventType, event_specific_data: EventSpecificData):
+    if event_type == DagsterEventType.STEP_OUTPUT:
+        check.inst_param(event_specific_data, "event_specific_data", StepOutputData)
+    elif event_type == DagsterEventType.STEP_FAILURE:
+        check.inst_param(event_specific_data, "event_specific_data", StepFailureData)
+    elif event_type == DagsterEventType.STEP_SUCCESS:
+        check.inst_param(event_specific_data, "event_specific_data", StepSuccessData)
+    elif event_type == DagsterEventType.STEP_MATERIALIZATION:
+        check.inst_param(event_specific_data, "event_specific_data", StepMaterializationData)
+    elif event_type == DagsterEventType.STEP_EXPECTATION_RESULT:
+        check.inst_param(event_specific_data, "event_specific_data", StepExpectationResultData)
+    elif event_type == DagsterEventType.STEP_INPUT:
+        check.inst_param(event_specific_data, "event_specific_data", StepInputData)
+    elif event_type == DagsterEventType.ENGINE_EVENT:
+        check.inst_param(event_specific_data, "event_specific_data", EngineEventData)
+    elif event_type == DagsterEventType.HOOK_ERRORED:
+        check.inst_param(event_specific_data, "event_specific_data", HookErroredData)
+
+    return event_specific_data

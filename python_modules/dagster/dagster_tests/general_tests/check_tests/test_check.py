@@ -77,12 +77,16 @@ def test_list_param():
     assert check.list_param([], "list_param") == []
     assert check.list_param(frozenlist(), "list_param") == []
 
+    assert check.list_param(["foo"], "list_param", of_type=str) == ["foo"]
+
     with pytest.raises(ParameterCheckError):
         check.list_param(None, "list_param")
 
     with pytest.raises(ParameterCheckError):
         check.list_param("3u4", "list_param")
 
+    with pytest.raises(CheckError):
+        check.list_param(["foo"], "list_param", of_type=int)
 
 def test_set_param():
     assert check.set_param(set(), "set_param") == set()
@@ -183,10 +187,12 @@ def test_typed_is_list():
 
 def test_opt_list_param():
     assert check.opt_list_param(None, "list_param") == []
+    assert check.opt_list_param(None, "list_param", of_type=str) == []
     assert check.opt_list_param([], "list_param") == []
     assert check.opt_list_param(frozenlist(), "list_param") == []
     obj_list = [1]
     assert check.list_param(obj_list, "list_param") == obj_list
+    assert check.opt_list_param(["foo"], "list_param", of_type=str) == ["foo"]
 
     with pytest.raises(ParameterCheckError):
         check.opt_list_param(0, "list_param")
@@ -197,6 +203,8 @@ def test_opt_list_param():
     with pytest.raises(ParameterCheckError):
         check.opt_list_param("3u4", "list_param")
 
+    with pytest.raises(CheckError):
+        check.opt_list_param(["foo"], "list_param", of_type=int)
 
 def test_opt_set_param():
     assert check.opt_set_param(None, "set_param") == set()
@@ -813,6 +821,7 @@ def test_list_elem():
     ddict = {"listkey": list_value, "stringkey": "A", "nonekey": None}
 
     assert check.list_elem(ddict, "listkey") == list_value
+    assert check.list_elem(ddict, "listkey", of_type=str) == list_value
 
     with pytest.raises(CheckError):
         assert check.list_elem(ddict, "nonekey") == []
@@ -823,17 +832,23 @@ def test_list_elem():
     with pytest.raises(CheckError):
         check.list_elem(ddict, "stringkey")
 
+    with pytest.raises(CheckError):
+        check.list_elem(ddict, "listkey", of_type=int) == list_value
 
 def test_opt_list_elem():
     list_value = ["blah", "blahblah"]
     ddict = {"listkey": list_value, "stringkey": "A", "nonekey": None}
 
     assert check.opt_list_elem(ddict, "listkey") == list_value
+    assert check.opt_list_elem(ddict, "listkey", of_type=str) == list_value
     assert check.opt_list_elem(ddict, "nonekey") == []
     assert check.opt_list_elem(ddict, "nonexistantkey") == []
 
     with pytest.raises(CheckError):
         check.opt_list_elem(ddict, "stringkey")
+
+    with pytest.raises(CheckError):
+        check.opt_list_elem(ddict, "listkey", of_type=int)
 
 
 def test_not_none_param():
