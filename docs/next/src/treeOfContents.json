@@ -10,39 +10,31 @@
     "ignore": true,
     "children": [
       {
-        "name": "Before We Start",
-        "path": "/tutorial"
-      },
-      {
-        "name": "Setup for the Tutorial",
+        "name": "Installing Dagster",
         "path": "/tutorial/setup"
       },
       {
-        "name": "Overview",
-        "path": "/tutorial/overview"
-      },
-      {
-        "name": "Building Pipelines with Dagster",
+        "name": "A Single-Solid Pipeline",
         "path": "/tutorial/execute"
       },
       {
-        "name": "Basics of Solids",
-        "path": "/tutorial/basics_solids"
-      },
-      {
-        "name": "Basics of Pipelines",
+        "name": "Connecting Solids in Pipelines",
         "path": "/tutorial/basics_pipelines"
       },
       {
-        "name": "Making Your Pipelines Testable and Maintainable",
+        "name": "Configuring Solids",
+        "path": "/tutorial/basics_solids"
+      },
+      {
+        "name": "Testing Solids and Pipelines",
         "path": "/tutorial/testable"
       },
       {
-        "name": "Dagster Types & Expectations",
+        "name": "Advanced: Dagster Types",
         "path": "/tutorial/types"
       },
       {
-        "name": "Advanced: Solids",
+        "name": "Advanced: Re-use and Composition",
         "path": "/tutorial/advanced_solids"
       },
       {

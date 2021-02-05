@@ -4,15 +4,28 @@ import AnchorHeading from 'components/AnchorHeading';
 import PyObject from 'components/PyObject';
 
 <DynamicMetaTags
-  title="Building pipelines with Dagster | Dagster"
-  description="Tutoiral guide to executing data pipelines using Dagster."
+  title="A Single-Solid Pipeline | Dagster"
+  description="Executing your first pipeline - with a single solid."
 />
 
-# Building Pipelines with Dagster
+# A Single-Solid Pipeline
 
-We now have the basic building blocks for our cereal pipeline. To construct and execute a data
-pipeline using Dagster, we will need solids as our computational units containing business logic,
-a pipeline to connect solids, and a way to execute the pipeline.
+<CodeReferenceLink filePath="examples/docs_snippets/docs_snippets/intro_tutorial/basics/e01_first_pipeline/" />
+
+## Solids and Pipelines
+
+Dagster's core abstractions are **[solids](/overview/solids-pipelines/solids)** and
+**[pipelines](/overview/solids-pipelines/pipelines)**.
+
+**[Solids](/overview/solids-pipelines/solids)** are individual units of computation that we wire
+together to form **[pipelines](/overview/solids-pipelines/pipelines)**. By default, all solids in a
+pipeline execute in the same process. In production environments, Dagster is usually configured
+so that each solid executes in its own process.
+
+In this section, we'll cover how to define a simple pipeline with a single solid, and then execute it.
+
+## The Cereal Dataset
+Our pipeline will operate on a simple but scary CSV dataset, cereal.csv, which contains nutritional facts about 80 breakfast cereals.
 
 If you haven't already, grab the dataset for this tutorial from Github:
 
@@ -20,9 +33,6 @@ If you haven't already, grab the dataset for this tutorial from Github:
 curl -O https://raw.githubusercontent.com/dagster-io/dagster/master/examples/docs_snippets/docs_snippets/intro_tutorial/cereal.csv
 ```
 
-## Executing Your First Pipeline
-
-<CodeReferenceLink filePath="examples/docs_snippets/docs_snippets/intro_tutorial/basics/e01_first_pipeline/" />
 
 ## Hello, Solid!
 
@@ -37,10 +47,11 @@ and logs the number of rows it finds.
 
 ```python literalinclude showLines caption=hello_cereal.py
 file:/docs_snippets/docs_snippets/intro_tutorial/basics/e01_first_pipeline/hello_cereal.py
-lines:1-20
+startAfter:start_solid_marker
+endBefore:end_solid_marker
 ```
 
-In this simple case, our solid takes no inputs except for the <PyObject module="dagster"
+In this simple case, our solid takes no arguments except for the <PyObject module="dagster"
 object="SystemComputeExecutionContext" displayText="context" /> in which it executes (provided by
 the Dagster framework as the first argument to every solid), and also returns no outputs. Don't
 worry, we'll soon encounter solids that are much more dynamic.
@@ -56,11 +67,12 @@ module="dagster" object="pipeline" displayText="@pipeline" /> decorator.
 
 ```python literalinclude showLines startLine=22 caption=hello_cereal.py
 file:/docs_snippets/docs_snippets/intro_tutorial/basics/e01_first_pipeline/hello_cereal.py
-lines:22-24
+startAfter:start_pipeline_marker
+endBefore:end_pipeline_marker
 ```
 
 Here you'll see that we call `hello_cereal()`. This call doesn't actually execute the
-solid&mdash;within the body of functions decorated with <PyObject module="dagster" object="pipeline"
+solid. Within the bodies of functions decorated with <PyObject module="dagster" object="pipeline"
 displayText="@pipeline" />, we use function calls to indicate the dependency structure of the solids
 making up the pipeline. Here, we indicate that the execution of `hello_cereal` doesn't depend on any
 other solids by calling it with no arguments.
@@ -87,11 +99,7 @@ You'll see the full stream of events emitted by Dagster appear in the console,
 including our call to the logging machinery, which will look like:
 
 ```bash
-2019-10-10 11:46:50 - dagster - INFO - system - a91a4cc4-d218-4c2b-800c-aac50fced1a5
-- Found 77 cereals
-    solid             = "hello_cereal"
-    solid_definition  = "hello_cereal"
-    step_key          = "hello_cereal"
+2021-02-05 08:50:25 - dagster - INFO - system - ce5d4576-2569-44ff-a14a-51010eea5329 - hello_cereal - Found 77 cereals
 ```
 
 Success!
@@ -109,7 +117,8 @@ using the Dagster CLI at all. Just add a few lines to
 
 ```python literalinclude showLines startLine=27 caption=hello_cereal.py
 file:/docs_snippets/docs_snippets/intro_tutorial/basics/e01_first_pipeline/hello_cereal.py
-lines:27-29
+startAfter:start_execute_marker
+endBefore:end_execute_marker
 ```
 
 Now you can just run:
