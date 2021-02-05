@@ -469,7 +469,7 @@ EntryDataUnion = (
 )
 
 
-class Output(namedtuple("_Output", "value output_name metadata_entries")):
+class Output(namedtuple("_Output", "value output_name metadata_entries asset_keys")):
     """Event corresponding to one of a solid's outputs.
 
     Solid compute functions must explicitly yield events of this type when they have more than
@@ -486,12 +486,13 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
             "result")
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=[]):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None, asset_keys=None):
         return super(Output, cls).__new__(
             cls,
             value,
             check.str_param(output_name, "output_name"),
-            check.list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
+            check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
+            check.opt_list_param(asset_keys, "asset_keys", AssetKey),
         )
 
 
