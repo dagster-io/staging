@@ -640,3 +640,8 @@ class RepositoryDefinition:
 
     def has_job_def(self, name):
         return self._repository_data.has_job(name)
+
+    # If definition comes from the @repository decorator, then the __call__ method will be
+    # overwritten. Therefore, we want to maintain the call-ability of repository definitions.
+    def __call__(self, *args, **kwargs):
+        return self
