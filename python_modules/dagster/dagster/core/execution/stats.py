@@ -1,5 +1,6 @@
 from collections import defaultdict, namedtuple
 from enum import Enum
+from typing import List
 
 from dagster import check
 from dagster.core.definitions import AssetMaterialization, ExpectationResult, Materialization
@@ -82,7 +83,9 @@ class StepEventStatus(Enum):
     FAILURE = "FAILURE"
 
 
-def build_run_step_stats_from_events(run_id, records):
+def build_run_step_stats_from_events(
+    run_id: str, records: EventRecord
+) -> List["RunStepKeyStatsSnapshot"]:
     by_step_key = defaultdict(dict)
     for event in records:
         if not event.is_dagster_event:
