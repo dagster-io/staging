@@ -523,6 +523,9 @@ class RepositoryDefinition:
         self._description = check.opt_str_param(description, "description")
         self._repository_data = check.inst_param(repository_data, "repository_data", RepositoryData)
 
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError()
+
     @property
     def name(self):
         return self._name

@@ -1,4 +1,5 @@
 from functools import update_wrapper
+from typing import Any, Callable, Optional, Union, cast
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
@@ -11,11 +12,11 @@ from ..schedule import ScheduleDefinition
 
 
 class _Repository:
-    def __init__(self, name=None, description=None):
+    def __init__(self, name: Optional[str] = None, description: Optional[str] = None):
         self.name = check.opt_str_param(name, "name")
         self.description = check.opt_str_param(description, "description")
 
-    def __call__(self, fn):
+    def __call__(self, fn: Callable[[], Any]) -> RepositoryDefinition:
         check.callable_param(fn, "fn")
 
         if not self.name:
@@ -82,11 +83,13 @@ class _Repository:
             name=self.name, description=self.description, repository_data=repository_data
         )
 
-        update_wrapper(repository_def, fn)
+        update_wrapper(cast(Callable[[], Any], repository_def), fn)
         return repository_def
 
 
-def repository(name=None, description=None):
+def repository(
+    name: Union[Optional[str], Callable[..., Any]] = None, description: Optional[str] = None
+) -> Union[_Repository, RepositoryDefinition]:
     """Create a repository from the decorated function.
 
     The decorated function should take no arguments and its return value should one of:
