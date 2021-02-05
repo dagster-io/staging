@@ -5,13 +5,14 @@ import os
 from dagster import execute_pipeline, pipeline, solid
 
 
-@solid
-def read_csv(context, csv_path):
-    csv_path = os.path.join(os.path.dirname(__file__), csv_path)
+@solid(config_schema={"csv_name"})
+def read_csv(context):
+    csv_path = os.path.join(
+        os.path.dirname(__file__), context.solid_config["csv_name"]
+    )
     with open(csv_path, "r") as fd:
         lines = [row for row in csv.DictReader(fd)]
 
-    context.log.info("Read {n_lines} lines".format(n_lines=len(lines)))
     return lines
 
 
@@ -20,20 +21,8 @@ def sort_by_calories(context, cereals):
     sorted_cereals = sorted(
         cereals, key=lambda cereal: int(cereal["calories"])
     )
-    context.log.info(
-        "Least caloric cereal: {least_caloric}".format(
-            least_caloric=sorted_cereals[0]["name"]
-        )
-    )
-    context.log.info(
-        "Most caloric cereal: {most_caloric}".format(
-            most_caloric=sorted_cereals[-1]["name"]
-        )
-    )
-    return {
-        "least_caloric": sorted_cereals[0],
-        "most_caloric": sorted_cereals[-1],
-    }
+
+    context.log.info(f'Most caloric cereal: {sorted_cereals[-1]["name"]}')
 
 
 @pipeline
@@ -46,9 +35,7 @@ def inputs_pipeline():
 if __name__ == "__main__":
     # start_inputs_marker_1
     run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        }
+        "solids": {"read_csv": {"config": {"csv_path": "cereal.csv"}}}
     }
     # end_inputs_marker_1
     # start_inputs_marker_2

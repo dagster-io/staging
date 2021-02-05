@@ -1,5 +1,4 @@
 solids:
   read_csv:
-    inputs:
-      csv_path:
-        value: "cereal.csv"
+    config:
+      csv_path: "cereal.csv"

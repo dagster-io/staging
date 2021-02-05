@@ -1,0 +1,48 @@
+Besides, pipeline authors generally do not have control over their input data, which means that even
+if data pipelines are covered by sophisticated tests, pipeline breakage could still happen.
+
+## Type-checking Solid Outputs
+
+If you zoom in on the **Definition** tab in Dagit and click on one of our pipeline solids, you'll
+see that its inputs and outputs are annotated with types.
+
+![inputs_figure_four.png](/assets/images/tutorial/inputs_figure_four.png)
+
+By default, every untyped value in Dagster is assigned the catch-all type <PyObject module="dagster" object="Any" />.
+This means that any errors in the config won't be surfaced until the pipeline
+is executed.
+
+For example, when we execute our pipeline with this config, it'll fail at runtime:
+
+```YAML literalinclude caption=inputs_env_bad.yaml
+file:/docs_snippets/docs_snippets/intro_tutorial/basics/e04_quality/inputs_env_bad.yaml
+```
+
+When we enter this mistyped config in Dagit and execute our pipeline, we'll see that an error
+appears in the structured log viewer:
+
+![inputs_figure_five.png](/assets/images/tutorial/inputs_figure_five.png)
+
+Click on "View Full Message" or on the red dot on the execution step that failed and a detailed
+stack trace will pop up.
+
+![inputs_figure_six.png](/assets/images/tutorial/inputs_figure_six.png)
+
+It would be better if we could catch this error earlier, when we specify the config. So let's make
+the inputs typed.
+
+A user can apply types to inputs and outputs using Python 3's type annotation syntax. In this case,
+we just want to type the input as the built-in `str`.
+
+```python literalinclude showLines startLine=7 emphasize-lines=2 caption=inputs_typed.py
+file:/docs_snippets/docs_snippets/intro_tutorial/basics/e04_quality/inputs_typed.py
+startAfter:start_inputs_typed_marker_0
+endBefore:end_inputs_typed_marker_0
+```
+
+By using typed input, we can catch this error prior to execution, and reduce the surface area
+we need to test.
+
+![inputs_figure_seven.png](/assets/images/tutorial/inputs_figure_seven.png)
+
+<br />
