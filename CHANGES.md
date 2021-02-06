@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.5 (upcoming)
+
+**New**
+
+* [k8s] Changed provided docker images. `dagster/dagster-k8s` and `dagster/dagster-celery-k8s` can be
+  used for all host processes (Dagit, Daemon, Celery workers if applicable). `user-code-example` can
+  be used for a sample user repository. The prior images (`k8s-dagit`, `k8s-celery-worker`, `k8s-example`)
+  deprecated.
+
 ## 0.10.4
 
 **Bugfixes**
