@@ -17,6 +17,7 @@ from dagster.core.host_representation.external_data import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler.job import JobStatus, JobTickData, JobTickStatus, SensorJobData
+from dagster.core.selector import parse_step_selection
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import RUN_KEY_TAG, check_tags
 from dagster.utils import merge_dicts
@@ -345,6 +346,9 @@ def _create_sensor_run(instance, repo_location, external_sensor, external_pipeli
         external_pipeline, run_request.run_config, external_sensor.mode, step_keys_to_execute=None,
     )
     execution_plan_snapshot = external_execution_plan.execution_plan_snapshot
+    step_keys_to_execute = list(
+        parse_step_selection(execution_plan_snapshot.step_deps, run_request.step_selection)
+    )
 
     pipeline_tags = external_pipeline.tags or {}
     check_tags(pipeline_tags, "pipeline_tags")
@@ -360,7 +364,7 @@ def _create_sensor_run(instance, repo_location, external_sensor, external_pipeli
         run_config=run_request.run_config,
         mode=external_sensor.mode,
         solids_to_execute=external_pipeline.solids_to_execute,
-        step_keys_to_execute=None,
+        step_keys_to_execute=step_keys_to_execute,
         status=PipelineRunStatus.NOT_STARTED,
         solid_selection=external_sensor.solid_selection,
         root_run_id=None,
