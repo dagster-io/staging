@@ -75,9 +75,8 @@ def test_forward_compat_serdes_new_field_with_default():
     assert _TEST_WHITELIST_MAP["types"]["tuple"]["Quux"] == Quux
 
     deserialized = _deserialize_json_to_dagster_namedtuple(
-        serialized, whitelist_map=_TEST_WHITELIST_MAP
+        serialized, whitelist_map=_TEST_WHITELIST_MAP, backcompat_map={}
     )
-
     assert deserialized != quux
     assert deserialized.foo == quux.foo
     assert deserialized.bar == quux.bar
@@ -105,12 +104,43 @@ def test_forward_compat_serdes_new_enum_field():
         BAR = 2
         BAZ = 3
 
-    unpacked = _unpack_value(packed, whitelist_map=_TEST_WHITELIST_MAP)
+    unpacked = _unpack_value(packed, whitelist_map=_TEST_WHITELIST_MAP, backcompat_map={})
 
     assert unpacked != corge
     assert unpacked.name == corge.name
     assert unpacked.value == corge.value
 
+
+def test_backcompat_map_serdes():
+    _TEST_OLD_WHITELIST_MAP = _initial_whitelist_map()
+    _TEST_NEW_WHITELIST_MAP = _initial_whitelist_map()
+    _TEST_BACKCOMPAT_MAP = {"Foo": "Bar"}
+
+    @_whitelist_for_serdes(whitelist_map=_TEST_OLD_WHITELIST_MAP)
+    class Foo(namedtuple("_Foo", "baz")):
+        def __new__(cls, baz):
+            return super().__new__(cls, baz)
+
+    @_whitelist_for_serdes(whitelist_map=_TEST_NEW_WHITELIST_MAP)
+    class Bar(namedtuple("_Bar", "baz")):
+        def __new__(cls, baz):
+            return super().__new__(cls, baz)
+
+    foo = Foo("quux")
+
+    serialized = _serialize_dagster_namedtuple(foo, whitelist_map=_TEST_OLD_WHITELIST_MAP)
+
+    with pytest.raises(CheckError):
+        _deserialize_json_to_dagster_namedtuple(
+            serialized, whitelist_map=_TEST_NEW_WHITELIST_MAP, backcompat_map={}
+        )
+
+    deserialized = _deserialize_json_to_dagster_namedtuple(
+        serialized, whitelist_map=_TEST_NEW_WHITELIST_MAP, backcompat_map=_TEST_BACKCOMPAT_MAP
+    )
+
+    assert type(deserialized) == Bar
+    assert deserialized.baz == foo.baz
 
 def test_backward_compat_serdes():
     _TEST_WHITELIST_MAP = _initial_whitelist_map()
@@ -131,7 +161,7 @@ def test_backward_compat_serdes():
             return super(Quux, cls).__new__(cls, foo, bar)
 
     deserialized = _deserialize_json_to_dagster_namedtuple(
-        serialized, whitelist_map=_TEST_WHITELIST_MAP
+        serialized, whitelist_map=_TEST_WHITELIST_MAP, backcompat_map={}
     )
 
     assert deserialized != quux
@@ -279,7 +309,9 @@ def test_set():
     foo = HasSets({1, 2, 3, "3"}, frozenset([4, 5, 6, "6"]))
 
     serialized = _serialize_dagster_namedtuple(foo, whitelist_map=_TEST_WHITELIST_MAP)
-    foo_2 = _deserialize_json_to_dagster_namedtuple(serialized, whitelist_map=_TEST_WHITELIST_MAP)
+    foo_2 = _deserialize_json_to_dagster_namedtuple(
+        serialized, whitelist_map=_TEST_WHITELIST_MAP, backcompat_map={}
+    )
     assert foo == foo_2
 
 
@@ -299,7 +331,9 @@ def test_persistent_tuple():
 
     foo = Alphabet(a="A", b="B", c="C")
     serialized = _serialize_dagster_namedtuple(foo, whitelist_map=_TEST_WHITELIST_MAP)
-    foo_2 = _deserialize_json_to_dagster_namedtuple(serialized, whitelist_map=_TEST_WHITELIST_MAP)
+    foo_2 = _deserialize_json_to_dagster_namedtuple(
+        serialized, whitelist_map=_TEST_WHITELIST_MAP, backcompat_map={}
+    )
     assert foo == foo_2
 
 
@@ -327,7 +361,9 @@ def test_from_storage_dict():
     assert "DeprecatedAlphabet" in _TEST_WHITELIST_MAP["persistence"]
     serialized = '{"__class__": "DeprecatedAlphabet", "a": "A", "b": "B", "c": "C"}'
 
-    nt = _deserialize_json_to_dagster_namedtuple(serialized, whitelist_map=_TEST_WHITELIST_MAP)
+    nt = _deserialize_json_to_dagster_namedtuple(
+        serialized, whitelist_map=_TEST_WHITELIST_MAP, backcompat_map={}
+    )
     assert isinstance(nt, DeprecatedAlphabet)
 
 
@@ -359,9 +395,31 @@ def test_to_storage_value():
     deprecated = DeprecatedAlphabet("A", "B", nested)
     serialized = _serialize_dagster_namedtuple(deprecated, whitelist_map=_TEST_WHITELIST_MAP)
     alphabet = _deserialize_json_to_dagster_namedtuple(
-        serialized, whitelist_map=_TEST_WHITELIST_MAP
+        serialized, whitelist_map=_TEST_WHITELIST_MAP, backcompat_map={}
     )
     assert not isinstance(alphabet, DeprecatedAlphabet)
     assert isinstance(alphabet, SubstituteAlphabet)
     assert not isinstance(alphabet.c, DeprecatedAlphabet)
     assert isinstance(alphabet.c, SubstituteAlphabet)
+
+
+def test_deserialize_backcompat_for_dagster_event_record():
+    from dagster.core.events.log import EventRecord
+
+    assert isinstance(
+        deserialize_json_to_dagster_namedtuple(
+            r"""{"__class__": "DagsterEventRecord", "dagster_event": {"__class__": "DagsterEvent", "event_specific_data": {"__class__": "EngineEventData", "error": null, "marker_end": null, "marker_start": null, "metadata_entries": []}, "event_type_value": "ENGINE_EVENT", "logging_tags": {}, "message": "Engine message", "pid": 89745, "pipeline_name": "foo", "solid_handle": null, "step_handle": null, "step_key": null, "step_kind_value": null}, "error_info": {"__class__": "SerializableErrorInfo", "cause": null, "cls_name": "Exception", "message": "Exception: Synthetic exception\n", "stack": ["  File \"/Users/max/Desktop/test_data.py\", line 13, in <module>\n    raise Exception(\"Synthetic exception\")\n"]}, "level": 10, "message": "A message", "pipeline_name": "a_pipeline", "run_id": "3edbdb9b-2bfc-4848-9e61-e3baddcf73fe", "step_key": "step1", "timestamp": 1612574675.518514, "user_message": "A user message"}"""
+        ),
+        EventRecord,
+    )
+
+
+def test_deserialize_backcompat_for_log_message_record():
+    from dagster.core.events.log import EventRecord
+
+    assert isinstance(
+        deserialize_json_to_dagster_namedtuple(
+            r"""{"__class__": "LogMessageRecord", "dagster_event": {"__class__": "DagsterEvent", "event_specific_data": {"__class__": "EngineEventData", "error": null, "marker_end": null, "marker_start": null, "metadata_entries": []}, "event_type_value": "ENGINE_EVENT", "logging_tags": {}, "message": "Engine message", "pid": 89745, "pipeline_name": "foo", "solid_handle": null, "step_handle": null, "step_key": null, "step_kind_value": null}, "error_info": {"__class__": "SerializableErrorInfo", "cause": null, "cls_name": "Exception", "message": "Exception: Synthetic exception\n", "stack": ["  File \"/Users/max/Desktop/test_data.py\", line 13, in <module>\n    raise Exception(\"Synthetic exception\")\n"]}, "level": 10, "message": "A message", "pipeline_name": "a_pipeline", "run_id": "3edbdb9b-2bfc-4848-9e61-e3baddcf73fe", "step_key": "step1", "timestamp": 1612574675.533561, "user_message": "A user message"}"""
+        ),
+        EventRecord,
+    )

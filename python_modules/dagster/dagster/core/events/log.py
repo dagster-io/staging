@@ -17,6 +17,7 @@ from dagster.utils.log import (
 )
 
 
+@whitelist_for_serdes
 class EventRecord(
     namedtuple(
         "_EventRecord",
@@ -65,24 +66,10 @@ class EventRecord(
         return self.dagster_event.event_type if self.dagster_event else None
 
 
-@whitelist_for_serdes
-class DagsterEventRecord(EventRecord):
-    pass
-
-
-@whitelist_for_serdes
-class LogMessageRecord(EventRecord):
-    pass
-
-
 def construct_event_record(logger_message):
     check.inst_param(logger_message, "logger_message", StructuredLoggerMessage)
 
-    log_record_cls = LogMessageRecord
-    if logger_message.meta.get("dagster_event"):
-        log_record_cls = DagsterEventRecord
-
-    return log_record_cls(
+    return EventRecord(
         message=logger_message.message,
         level=logger_message.level,
         user_message=logger_message.meta["orig_message"],
