@@ -54,7 +54,7 @@ class SkipReason(namedtuple("_SkipReason", "skip_message")):
 
 
 @whitelist_for_serdes
-class RunRequest(namedtuple("_RunRequest", "run_key run_config tags")):
+class RunRequest(namedtuple("_RunRequest", "run_key run_config tags step_selection")):
     """
     Represents all the information required to launch a single run.  Must be returned by a
     SensorDefinition or ScheduleDefinition's evaluation function for a run to be launched.
@@ -68,14 +68,25 @@ class RunRequest(namedtuple("_RunRequest", "run_key run_config tags")):
             be launched, as a dict.
         tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach
             to the launched run.
+        step_selection (Optional[List[str]]): A list of step selection queries (including single
+            step keys) to execute. For example:
+            - ['some_solid']: select the execution step "some_solid" itself.
+            - ['*some_solid']: select the step "some_solid" and all its ancestors
+                (upstream dependencies).
+            - ['*some_solid+++']: select the step "some_solid", all its ancestors,
+                and its descendants (downstream dependencies) within 3 levels down.
+            - ['*some_solid', 'other_solid_a', 'other_solid_b+']: select
+                "some_solid" and all its ancestors, "other_solid_a" itself, and
+                "other_solid_b" and its direct child execution steps.
     """
 
-    def __new__(cls, run_key, run_config=None, tags=None):
+    def __new__(cls, run_key, run_config=None, tags=None, step_selection=None):
         return super(RunRequest, cls).__new__(
             cls,
             run_key=check.opt_str_param(run_key, "run_key"),
             run_config=check.opt_dict_param(run_config, "run_config"),
             tags=check.opt_dict_param(tags, "tags"),
+            step_selection=check.opt_list_param(step_selection, "step_selection", of_type=str),
         )
 
 

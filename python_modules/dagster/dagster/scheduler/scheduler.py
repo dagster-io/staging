@@ -15,7 +15,14 @@ from dagster.core.host_representation import (
     RepositoryLocationHandle,
 )
 from dagster.core.instance import DagsterInstance
-from dagster.core.scheduler.job import JobState, JobStatus, JobTickData, JobTickStatus, JobType
+from dagster.core.scheduler.job import (
+    JobState,
+    JobStatus,
+    JobTickData,
+    JobTickStatus,
+    JobType,
+    get_external_execution_plan_snapshot,
+)
 from dagster.core.scheduler.scheduler import DEFAULT_MAX_CATCHUP_RUNS
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import RUN_KEY_TAG, SCHEDULED_EXECUTION_TIME_TAG, check_tags
@@ -352,13 +359,9 @@ def _create_scheduler_run(
     execution_plan_snapshot = None
 
     try:
-        external_execution_plan = repo_location.get_external_execution_plan(
-            external_pipeline,
-            run_config,
-            external_schedule.mode,
-            step_keys_to_execute=None,
+        execution_plan_snapshot = get_external_execution_plan_snapshot(
+            repo_location, external_schedule.mode, external_pipeline, run_request
         )
-        execution_plan_snapshot = external_execution_plan.execution_plan_snapshot
     except DagsterSubprocessError as e:
         execution_plan_errors.extend(e.subprocess_error_infos)
     except Exception as e:  # pylint: disable=broad-except
@@ -380,7 +383,9 @@ def _create_scheduler_run(
         run_config=run_config,
         mode=external_schedule.mode,
         solids_to_execute=external_pipeline.solids_to_execute,
-        step_keys_to_execute=None,
+        step_keys_to_execute=execution_plan_snapshot.step_keys_to_execute
+        if execution_plan_snapshot
+        else None,
         solid_selection=external_pipeline.solid_selection,
         status=(
             PipelineRunStatus.FAILURE

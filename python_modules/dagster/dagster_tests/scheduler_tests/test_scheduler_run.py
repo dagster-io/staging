@@ -71,6 +71,21 @@ def the_pipeline():
     the_solid()
 
 
+@solid
+def timeless_solid(_):
+    return 1
+
+
+@solid
+def downstream_timeless_solid(_, _x):
+    pass
+
+
+@pipeline
+def multi_step_pipeline():
+    downstream_timeless_solid(timeless_solid())
+
+
 def _solid_config(date):
     return {
         "solids": {"the_solid": {"config": {"partition_time": date.isoformat()}}},
@@ -80,6 +95,19 @@ def _solid_config(date):
 @daily_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="UTC")
 def simple_schedule(date):
     return _solid_config(date)
+
+
+def step_selection_execution_fn(_):
+    yield RunRequest(run_key=None, run_config={}, tags={}, step_selection=["timeless_solid"])
+
+
+step_selection_schedule = ScheduleDefinition(
+    pipeline_name="multi_step_pipeline",
+    name="step_selection_schedule",
+    cron_schedule="0 0 * * *",
+    execution_timezone="UTC",
+    execution_fn=step_selection_execution_fn,
+)
 
 
 @daily_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO)
@@ -269,7 +297,9 @@ def the_other_repo():
 def the_repo():
     return [
         the_pipeline,
+        multi_step_pipeline,
         simple_schedule,
+        step_selection_schedule,
         simple_temporary_schedule,
         simple_hourly_schedule,
         daily_schedule_without_timezone,
@@ -391,6 +421,23 @@ def wait_for_all_runs_to_start(instance, timeout=10):
         ]
 
         if len(not_started_runs) == 0:
+            break
+
+
+def wait_for_all_runs_to_end(instance, timeout=10):
+    start_time = time.time()
+    while True:
+        if time.time() - start_time > timeout:
+            raise Exception("Timed out waiting for runs to end")
+        time.sleep(0.5)
+
+        not_ended_runs = [
+            run
+            for run in instance.get_runs()
+            if run.status not in [PipelineRunStatus.SUCCESS, PipelineRunStatus.FAILURE]
+        ]
+
+        if len(not_ended_runs) == 0:
             break
 
 
@@ -546,6 +593,73 @@ def test_simple_schedule(external_repo_context, capfd):
             assert instance.get_runs_count() == 3
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
+
+
+@pytest.mark.parametrize("external_repo_context", repos())
+def test_step_selection(external_repo_context, capfd):
+    freeze_datetime = pendulum.datetime(
+        year=2019,
+        month=2,
+        day=27,
+        hour=23,
+        minute=59,
+        second=59,
+    ).in_tz("US/Central")
+    with instance_with_schedules(external_repo_context) as (instance, external_repo):
+        with pendulum.test(freeze_datetime):
+            external_schedule = external_repo.get_external_schedule("step_selection_schedule")
+            schedule_origin = external_schedule.get_external_origin()
+            instance.start_schedule_and_update_storage_state(external_schedule)
+
+        freeze_datetime = freeze_datetime.add(seconds=2)
+        with pendulum.test(freeze_datetime):
+            list(
+                launch_scheduled_runs(
+                    instance,
+                    logger(),
+                    pendulum.now("UTC"),
+                )
+            )
+
+            assert instance.get_runs_count() == 1
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
+            assert len(ticks) == 1
+
+            expected_datetime = pendulum.datetime(year=2019, month=2, day=28)
+
+            validate_tick(
+                ticks[0],
+                external_schedule,
+                expected_datetime,
+                JobTickStatus.SUCCESS,
+                [run.run_id for run in instance.get_runs()],
+            )
+
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(
+                instance.get_runs()[0],
+                execution_time=pendulum.datetime(2019, 2, 28),
+            )
+
+            wait_for_all_runs_to_end(instance)
+            assert instance.get_runs_count() == 1
+            run = instance.get_runs()[0]
+            assert run.step_keys_to_execute == ["timeless_solid"]
+            step_stats = instance.get_run_step_stats(run.run_id)
+            assert len(step_stats) == 1
+            assert step_stats[0].step_key == "timeless_solid"
+
+            captured = capfd.readouterr()
+
+            assert (
+                captured.out
+                == """2019-02-27 18:00:01 - SchedulerDaemon - INFO - Checking for new runs for the following schedules: step_selection_schedule
+2019-02-27 18:00:01 - SchedulerDaemon - INFO - Evaluating schedule `step_selection_schedule` at 2019-02-28 00:00:00+0000
+2019-02-27 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {run_id} for step_selection_schedule
+""".format(
+                    run_id=instance.get_runs()[0].run_id
+                )
+            )
 
 
 @pytest.mark.parametrize("external_repo_context", repos())

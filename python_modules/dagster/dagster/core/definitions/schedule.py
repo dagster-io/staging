@@ -236,6 +236,7 @@ class ScheduleDefinition(JobDefinition):
                     run_key=data.run_key,
                     run_config=data.run_config,
                     tags=merge_dicts(data.tags, PipelineRun.tags_for_schedule(self)),
+                    step_selection=data.step_selection,
                 )
             ]
 
@@ -252,6 +253,7 @@ class ScheduleDefinition(JobDefinition):
                 run_key=data.run_key,
                 run_config=data.run_config,
                 tags=merge_dicts(data.tags, PipelineRun.tags_for_schedule(self)),
+                step_selection=data.step_selection,
             )
             for data in result
         ]
