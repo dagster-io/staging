@@ -759,7 +759,11 @@ type Sensors {
   results: [Sensor!]!
 }
 
-union JobStateOrError = JobState | PythonError
+union JobStateOrError = JobState | PythonError | JobNotFoundError
+
+type JobNotFoundError implements Error {
+  message: String!
+}
 
 input JobSelector {
   repositoryName: String!

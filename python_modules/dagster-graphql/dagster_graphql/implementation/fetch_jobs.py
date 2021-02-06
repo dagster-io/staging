@@ -40,7 +40,12 @@ def get_job_state_or_error(graphene_info, selector):
     check.inst_param(selector, "selector", JobSelector)
     location = graphene_info.context.get_repository_location(selector.location_name)
     repository = location.get_repository(selector.repository_name)
+
+    if not repository.has_external_job(selector.job_name):
+        raise UserFacingGraphQLError(GrapheneJobNotFoundError(selector.job_name))
+
     external_job = repository.get_external_job(selector.job_name)
+
     if not external_job or not isinstance(external_job, (ExternalSensor, ExternalSchedule)):
         raise UserFacingGraphQLError(GrapheneJobNotFoundError(selector.job_name))
 

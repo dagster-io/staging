@@ -12,7 +12,7 @@ VALID_REPOSITORY_DATA_DICT_KEYS = {
     "pipelines",
     "partition_sets",
     "schedules",
-    "jobs",
+    "sensors",
 }
 
 
@@ -220,6 +220,12 @@ class RepositoryData:
         for key in VALID_REPOSITORY_DATA_DICT_KEYS:
             if key not in repository_definitions:
                 repository_definitions[key] = {}
+
+        repository_definitions["jobs"] = {
+            **repository_definitions.get("schedules", {}),
+            **repository_definitions.get("sensors", {}),
+        }
+        del repository_definitions["sensors"]
 
         return RepositoryData(**repository_definitions)
 
