@@ -77,7 +77,6 @@ def test_forward_compat_serdes_new_field_with_default():
     deserialized = _deserialize_json_to_dagster_namedtuple(
         serialized, whitelist_map=_TEST_WHITELIST_MAP
     )
-
     assert deserialized != quux
     assert deserialized.foo == quux.foo
     assert deserialized.bar == quux.bar
@@ -279,7 +278,9 @@ def test_set():
     foo = HasSets({1, 2, 3, "3"}, frozenset([4, 5, 6, "6"]))
 
     serialized = _serialize_dagster_namedtuple(foo, whitelist_map=_TEST_WHITELIST_MAP)
-    foo_2 = _deserialize_json_to_dagster_namedtuple(serialized, whitelist_map=_TEST_WHITELIST_MAP)
+    foo_2 = _deserialize_json_to_dagster_namedtuple(
+        serialized, whitelist_map=_TEST_WHITELIST_MAP
+    )
     assert foo == foo_2
 
 
@@ -299,7 +300,9 @@ def test_persistent_tuple():
 
     foo = Alphabet(a="A", b="B", c="C")
     serialized = _serialize_dagster_namedtuple(foo, whitelist_map=_TEST_WHITELIST_MAP)
-    foo_2 = _deserialize_json_to_dagster_namedtuple(serialized, whitelist_map=_TEST_WHITELIST_MAP)
+    foo_2 = _deserialize_json_to_dagster_namedtuple(
+        serialized, whitelist_map=_TEST_WHITELIST_MAP
+    )
     assert foo == foo_2
 
 
@@ -330,7 +333,9 @@ def test_from_storage_dict():
     assert "DeprecatedAlphabet" in _TEST_WHITELIST_MAP["persistence"]
     serialized = '{"__class__": "DeprecatedAlphabet", "a": "A", "b": "B", "c": "C"}'
 
-    nt = _deserialize_json_to_dagster_namedtuple(serialized, whitelist_map=_TEST_WHITELIST_MAP)
+    nt = _deserialize_json_to_dagster_namedtuple(
+        serialized, whitelist_map=_TEST_WHITELIST_MAP
+    )
     assert isinstance(nt, DeprecatedAlphabet)
 
 

@@ -217,10 +217,7 @@ def serialize_dagster_namedtuple(nt, **json_kwargs):
 
 
 def unpack_value(val):
-    return _unpack_value(
-        val,
-        whitelist_map=_WHITELIST_MAP,
-    )
+    return _unpack_value(val, whitelist_map=_WHITELIST_MAP)
 
 
 def _unpack_value(val, whitelist_map):
@@ -228,18 +225,22 @@ def _unpack_value(val, whitelist_map):
         return [_unpack_value(i, whitelist_map) for i in val]
     if isinstance(val, dict) and val.get("__class__"):
         klass_name = val.pop("__class__")
-        if klass_name not in whitelist_map["types"]["tuple"]:
-            check.failed(
-                'Attempted to deserialize class "{}" which is not in the serdes whitelist.'.format(
-                    klass_name
-                )
-            )
+
+        check.invariant(
+            klass_name in whitelist_map["types"]["tuple"],
+            (
+                f'Attempted to deserialize class "{klass_name}", which is not in '
+                "the serdes whitelist."
+            ),
+        )
 
         klass = whitelist_map["types"]["tuple"][klass_name]
         if klass is None:
             return None
 
-        unpacked_val = {key: _unpack_value(value, whitelist_map) for key, value in val.items()}
+        unpacked_val = {
+            key: _unpack_value(value, whitelist_map) for key, value in val.items()
+        }
 
         if klass_name in whitelist_map["persistence"]:
             return klass.from_storage_dict(unpacked_val)
@@ -258,16 +259,21 @@ def _unpack_value(val, whitelist_map):
     if isinstance(val, dict) and val.get("__set__") is not None:
         return set([_unpack_value(item, whitelist_map) for item in val["__set__"]])
     if isinstance(val, dict) and val.get("__frozenset__") is not None:
-        return frozenset([_unpack_value(item, whitelist_map) for item in val["__frozenset__"]])
+        return frozenset(
+            [_unpack_value(item, whitelist_map) for item in val["__frozenset__"]]
+        )
     if isinstance(val, dict):
-        return {key: _unpack_value(value, whitelist_map) for key, value in val.items()}
+        return {
+            key: _unpack_value(value, whitelist_map) for key, value in val.items()
+        }
 
     return val
 
 
 def deserialize_json_to_dagster_namedtuple(json_str):
     dagster_namedtuple = _deserialize_json_to_dagster_namedtuple(
-        check.str_param(json_str, "json_str"), whitelist_map=_WHITELIST_MAP
+        check.str_param(json_str, "json_str"),
+        whitelist_map=_WHITELIST_MAP,
     )
     check.invariant(
         isinstance(dagster_namedtuple, tuple),
