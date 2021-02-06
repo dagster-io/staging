@@ -59,7 +59,12 @@ export interface JobTickHistoryQuery_jobStateOrError_PythonError {
   cause: JobTickHistoryQuery_jobStateOrError_PythonError_cause | null;
 }
 
-export type JobTickHistoryQuery_jobStateOrError = JobTickHistoryQuery_jobStateOrError_JobState | JobTickHistoryQuery_jobStateOrError_PythonError;
+export interface JobTickHistoryQuery_jobStateOrError_JobNotFoundError {
+  __typename: "JobNotFoundError";
+  message: string;
+}
+
+export type JobTickHistoryQuery_jobStateOrError = JobTickHistoryQuery_jobStateOrError_JobState | JobTickHistoryQuery_jobStateOrError_PythonError | JobTickHistoryQuery_jobStateOrError_JobNotFoundError;
 
 export interface JobTickHistoryQuery {
   jobStateOrError: JobTickHistoryQuery_jobStateOrError;

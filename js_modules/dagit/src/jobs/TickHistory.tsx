@@ -147,13 +147,25 @@ export const JobTickHistory = ({
     </Tabs>
   );
 
-  if (!data || data?.jobStateOrError.__typename !== 'JobState') {
+  if (!data) {
     return (
       <Group direction="column" spacing={12}>
         <Subheading>Tick History</Subheading>
         {tabs}
         <Spinner purpose="section" />
       </Group>
+    );
+  }
+
+  if (data.jobStateOrError.__typename === 'PythonError') {
+    return <PythonErrorInfo error={data.jobStateOrError} />;
+  }
+
+  if (data.jobStateOrError.__typename === 'JobNotFoundError') {
+    return (
+      <Box padding={32} flex={{justifyContent: 'center', alignItems: 'center'}}>
+        {data.jobStateOrError.message}
+      </Box>
     );
   }
 
@@ -536,6 +548,9 @@ const JOB_TICK_HISTORY_QUERY = gql`
       }
       ... on PythonError {
         ...PythonErrorFragment
+      }
+      ... on JobNotFoundError {
+        message
       }
     }
   }

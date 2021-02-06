@@ -20,7 +20,7 @@ from dagster.core.storage.tags import TagType, get_tag_type
 
 from ..implementation.fetch_schedules import get_schedule_next_tick
 from ..implementation.fetch_sensors import get_sensor_next_tick
-from .errors import GraphenePythonError
+from .errors import GraphenePythonError, GrapheneJobNotFoundError
 from .repository_origin import GrapheneRepositoryOrigin
 from .tags import GraphenePipelineTag
 from .util import non_null_list
@@ -355,7 +355,7 @@ class GrapheneJobStates(graphene.ObjectType):
 class GrapheneJobStateOrError(graphene.Union):
     class Meta:
         name = "JobStateOrError"
-        types = (GrapheneJobState, GraphenePythonError)
+        types = (GrapheneJobState, GraphenePythonError, GrapheneJobNotFoundError)
 
 
 class GrapheneJobStatesOrError(graphene.Union):
