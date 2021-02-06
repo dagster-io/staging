@@ -33,12 +33,30 @@ def the_pipeline():
     the_solid()
 
 
+@solid
+def another_solid(_, _x):
+    pass
+
+
+@pipeline
+def multi_step_pipeline():
+    another_solid(the_solid())
+
+
 @sensor(pipeline_name="the_pipeline")
 def simple_sensor(context):
     if not context.last_completion_time or not int(context.last_completion_time) % 2:
         return SkipReason()
 
     return RunRequest(run_key=None, run_config={}, tags={})
+
+
+@sensor(pipeline_name="multi_step_pipeline")
+def step_selection_sensor(context):
+    if not context.last_completion_time or not int(context.last_completion_time) % 2:
+        return SkipReason()
+
+    return RunRequest(run_key=None, run_config={}, tags={}, step_selection=["the_solid"])
 
 
 @sensor(pipeline_name="the_pipeline")
@@ -70,7 +88,9 @@ def custom_interval_sensor(_context):
 def the_repo():
     return [
         the_pipeline,
+        multi_step_pipeline,
         simple_sensor,
+        step_selection_sensor,
         error_sensor,
         wrong_config_sensor,
         always_on_sensor,
@@ -164,6 +184,23 @@ def wait_for_all_runs_to_start(instance, timeout=10):
             break
 
 
+def wait_for_all_runs_to_end(instance, timeout=10):
+    start_time = time.time()
+    while True:
+        if time.time() - start_time > timeout:
+            raise Exception("Timed out waiting for runs to end")
+        time.sleep(0.5)
+
+        not_ended_runs = [
+            run
+            for run in instance.get_runs()
+            if run.status not in [PipelineRunStatus.SUCCESS, PipelineRunStatus.FAILURE]
+        ]
+
+        if len(not_ended_runs) == 0:
+            break
+
+
 @pytest.mark.parametrize("external_repo_context", repos())
 def test_simple_sensor(external_repo_context, capfd):
     freeze_datetime = pendulum.datetime(
@@ -232,6 +269,65 @@ def test_simple_sensor(external_repo_context, capfd):
                 == """2019-02-27 18:00:29 - SensorDaemon - INFO - Checking for new runs for the following sensors: simple_sensor
 2019-02-27 18:00:29 - SensorDaemon - INFO - Launching run for simple_sensor
 2019-02-27 18:00:29 - SensorDaemon - INFO - Completed launch of run {run_id} for simple_sensor
+""".format(
+                    run_id=run.run_id
+                )
+            )
+
+
+@pytest.mark.parametrize("external_repo_context", repos())
+def test_step_selection(external_repo_context, capfd):
+    freeze_datetime = pendulum.datetime(
+        year=2019,
+        month=2,
+        day=27,
+        hour=23,
+        minute=59,
+        second=59,
+    ).in_tz("US/Central")
+    with instance_with_sensors(external_repo_context) as (instance, external_repo):
+        with pendulum.test(freeze_datetime):
+            external_sensor = external_repo.get_external_sensor("step_selection_sensor")
+            instance.add_job_state(
+                JobState(external_sensor.get_external_origin(), JobType.SENSOR, JobStatus.RUNNING)
+            )
+            list(execute_sensor_iteration(instance, get_default_daemon_logger("SensorDaemon")))
+            capfd.readouterr()
+
+        freeze_datetime = freeze_datetime.add(seconds=30)
+
+        with pendulum.test(freeze_datetime):
+            list(execute_sensor_iteration(instance, get_default_daemon_logger("SensorDaemon")))
+
+            wait_for_all_runs_to_end(instance)
+            assert instance.get_runs_count() == 1
+            run = instance.get_runs()[0]
+            assert run.step_keys_to_execute == ["the_solid"]
+            validate_run_started(run)
+            step_stats = instance.get_run_step_stats(run.run_id)
+            assert len(step_stats) == 1
+            assert step_stats[0].step_key == "the_solid"
+
+            ticks = instance.get_job_ticks(external_sensor.get_external_origin_id())
+            assert len(ticks) == 2
+
+            expected_datetime = pendulum.datetime(
+                year=2019, month=2, day=28, hour=0, minute=0, second=29
+            )
+            validate_tick(
+                ticks[0],
+                external_sensor,
+                expected_datetime,
+                JobTickStatus.SUCCESS,
+                [run.run_id],
+            )
+
+            captured = capfd.readouterr()
+            assert (
+                captured.out
+                == """2019-02-27 18:00:29 - SensorDaemon - INFO - Checking for new runs for the following sensors: step_selection_sensor
+2019-02-27 18:00:29 - SensorDaemon - INFO - Launching run for step_selection_sensor
+2019-02-27 18:00:29 - SensorDaemon - INFO - Completed launch of run {run_id} for step_selection_sensor
 """.format(
                     run_id=run.run_id
                 )

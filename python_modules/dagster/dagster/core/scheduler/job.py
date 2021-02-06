@@ -4,6 +4,7 @@ from enum import Enum
 from dagster import check
 from dagster.core.definitions.job import JobType
 from dagster.core.host_representation.origin import ExternalJobOrigin
+from dagster.core.selector import parse_step_selection
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo
 
@@ -300,3 +301,28 @@ class JobTickStatsSnapshot(
             ticks_skipped=check.int_param(ticks_skipped, "ticks_skipped"),
             ticks_failed=check.int_param(ticks_failed, "ticks_failed"),
         )
+
+
+def get_external_execution_plan_snapshot(repo_location, mode, external_pipeline, run_request):
+    """Gets the external execution plan snapshot, resolving the run request's step selection,
+    if there is any."""
+
+    execution_plan_snapshot = repo_location.get_external_execution_plan(
+        external_pipeline,
+        run_request.run_config,
+        mode,
+        step_keys_to_execute=None,
+    ).execution_plan_snapshot
+
+    if run_request.step_selection:
+        step_keys_to_execute = list(
+            parse_step_selection(execution_plan_snapshot.step_deps, run_request.step_selection)
+        )
+        return repo_location.get_external_execution_plan(
+            external_pipeline,
+            run_request.run_config,
+            mode,
+            step_keys_to_execute=step_keys_to_execute,
+        ).execution_plan_snapshot
+    else:
+        return execution_plan_snapshot
