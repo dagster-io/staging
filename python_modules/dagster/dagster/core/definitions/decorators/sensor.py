@@ -1,13 +1,23 @@
 import inspect
+from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from dagster import check
 from dagster.core.definitions.sensor import RunRequest, SensorDefinition, SkipReason
 from dagster.core.errors import DagsterInvariantViolationError
 
+if TYPE_CHECKING:
+    from dagster.core.definitions.sensor import SensorExecutionContext
+
 
 def sensor(
-    pipeline_name, name=None, solid_selection=None, mode=None, minimum_interval_seconds=None
-):
+    pipeline_name: str,
+    name: Optional[str] = None,
+    solid_selection: Optional[List[str]] = None,
+    mode: Optional[str] = None,
+    minimum_interval_seconds: Optional[str] = None,
+) -> Callable[
+    [Callable[["SensorExecutionContext"], Union[SkipReason, RunRequest]]], SensorDefinition
+]:
     """
     Creates a sensor where the decorated function is used as the sensor's evaluation function.  The
     decorated function may:
@@ -34,7 +44,9 @@ def sensor(
     """
     check.opt_str_param(name, "name")
 
-    def inner(fn):
+    def inner(
+        fn: Callable[["SensorExecutionContext"], Union[SkipReason, RunRequest]]
+    ) -> SensorDefinition:
         check.callable_param(fn, "fn")
         sensor_name = name or fn.__name__
 
