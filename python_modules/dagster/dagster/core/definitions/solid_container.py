@@ -231,15 +231,12 @@ def _validate_dependencies(dependencies, solid_dict, alias_to_name):
                     from .graph import GraphDefinition
 
                     input_list = solid_dict[from_solid].definition.input_dict.keys()
-                    node_type = (
-                        "graph"
-                        if isinstance(solid_dict[from_solid].definition, GraphDefinition)
-                        else "solid"
-                    )
                     raise DagsterInvalidDefinitionError(
                         'Invalid dependencies: {node_type} "{from_solid}" does not have input '
                         '"{from_input}". '.format(
-                            node_type=node_type, from_solid=from_solid, from_input=from_input
+                            node_type=solid_dict[from_solid].definition.get_type_str,
+                            from_solid=from_solid,
+                            from_input=from_input,
                         )
                         + "Available inputs: {input_list}".format(input_list=list(input_list))
                     )

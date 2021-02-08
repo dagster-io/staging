@@ -15,7 +15,7 @@ from dagster.core.definitions.decorators.solid import solid
 from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.instance import DagsterInstance
-from dagster.core.storage.mem_io_manager import mem_io_manager
+from dagster.core.storage.mem_io_manager import InMemoryIOManager, mem_io_manager
 from dagster.utils import merge_dicts
 
 from .api import (
@@ -23,6 +23,7 @@ from .api import (
     create_execution_plan,
     ephemeral_instance_if_missing,
     pipeline_execution_iterator,
+    scoped_pipeline_context,
 )
 from .context_creation_pipeline import PipelineExecutionContextManager
 from .results import ExecutionResult
@@ -97,13 +98,39 @@ def execute_in_process(
             ),
         )
         event_list = list(_execute_run_iterable)
+        pipeline_context = _execute_run_iterable.pipeline_context
+        # workaround for mem_io_manager to work in reconstruct_context, e.g. result.result_for_solid
+        # in-memory values dict will get lost when the resource is re-initiated in reconstruct_context
+        # so instead of re-initiating every single resource, we pass the resource instances to
+        # reconstruct_context directly to avoid re-building from resource def.
+        resource_instances_to_override = {}
+        if pipeline_context:  # None if we have a pipeline failure
+            for (
+                key,
+                resource_instance,
+            ) in pipeline_context.scoped_resources_builder.resource_instance_dict.items():
+                if isinstance(resource_instance, InMemoryIOManager):
+                    resource_instances_to_override[key] = resource_instance
 
-    top_level_node_handle = SolidHandle.from_string(node.name)
+        top_level_node_handle = SolidHandle.from_string(node.name)
 
-    event_list_for_top_lvl_node = [
-        event
-        for event in event_list
-        if event.solid_handle and event.solid_handle.is_or_descends_from(top_level_node_handle)
-    ]
+        event_list_for_top_lvl_node = [
+            event
+            for event in event_list
+            if event.solid_handle and event.solid_handle.is_or_descends_from(top_level_node_handle)
+        ]
 
-    return ExecutionResult(node, event_list_for_top_lvl_node)
+        return ExecutionResult(
+            node,
+            event_list_for_top_lvl_node,
+            lambda hardcoded_resources_arg: scoped_pipeline_context(
+                execution_plan,
+                pipeline_run.run_config,
+                pipeline_run,
+                execute_instance,
+                intermediate_storage=pipeline_context.intermediate_storage,
+                resource_instances_to_override=hardcoded_resources_arg,
+            ),
+            resource_instances_to_override=resource_instances_to_override,
+            handle=top_level_node_handle,
+        )
