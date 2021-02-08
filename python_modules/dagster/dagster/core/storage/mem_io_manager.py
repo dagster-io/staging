@@ -1,8 +1,10 @@
 from dagster.core.storage.io_manager import IOManager, io_manager
+from dagster.core.storage.mem_asset_key_manager import InMemoryAssetKeyManager
 
 
 class InMemoryIOManager(IOManager):
     def __init__(self):
+        super(InMemoryIOManager, self).__init__()
         self.values = {}
 
     def handle_output(self, context, obj):
@@ -14,8 +16,12 @@ class InMemoryIOManager(IOManager):
         return self.values[keys]
 
 
+class InMemoryAssetIOManager(InMemoryAssetKeyManager, InMemoryIOManager):
+    pass
+
+
 @io_manager
 def mem_io_manager(_):
     """Built-in IO manager that stores and retrieves values in memory."""
 
-    return InMemoryIOManager()
+    return InMemoryAssetIOManager()

@@ -1,9 +1,11 @@
 from collections import defaultdict
-from typing import Any, Dict, Iterator, Optional, Set, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Union
 
 from dagster import check
 from dagster.core.definitions import (
+    AssetKey,
     AssetMaterialization,
+    AssetOutput,
     ExpectationResult,
     Failure,
     Materialization,
@@ -28,6 +30,7 @@ from dagster.core.execution.plan.compute import execute_core_compute
 from dagster.core.execution.plan.inputs import StepInputData
 from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
+from dagster.core.storage.asset_key_manager import AssetKeyManager
 from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind
@@ -55,7 +58,7 @@ def _step_output_error_checked_user_event_sequence(
     seen_mapping_keys: Dict[str, Set[str]] = defaultdict(set)
 
     for user_event in user_event_sequence:
-        if not isinstance(user_event, (Output, DynamicOutput)):
+        if not isinstance(user_event, (Output, AssetOutput, DynamicOutput)):
             yield user_event
             continue
 
@@ -89,6 +92,8 @@ def _step_output_error_checked_user_event_sequence(
                     f'Compute for solid "{step.solid_handle}" for output "{output.output_name}" '
                     "defined as dynamic must yield DynamicOutput, got Output."
                 )
+        elif isinstance(output, AssetOutput):
+            pass
         else:
             if not output_def.is_dynamic:
                 raise DagsterInvariantViolationError(
@@ -194,8 +199,7 @@ def _type_checked_event_sequence_for_input(
     if not type_check.success:
         raise DagsterTypeCheckDidNotPass(
             description='Type check failed for step input "{input_name}" - expected type "{dagster_type}".'.format(
-                input_name=input_name,
-                dagster_type=dagster_type.display_name,
+                input_name=input_name, dagster_type=dagster_type.display_name,
             ),
             metadata_entries=type_check.metadata_entries,
             dagster_type=dagster_type,
@@ -209,7 +213,7 @@ def _type_check_output(
     version: Optional[str],
 ) -> Iterator[DagsterEvent]:
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
-    check.inst_param(output, "output", (Output, DynamicOutput))
+    check.inst_param(output, "output", (Output, AssetOutput, DynamicOutput))
 
     step_output = step_context.step.step_output_named(output.output_name)
     step_output_def = step_context.solid_def.output_def_named(step_output.name)
@@ -250,8 +254,7 @@ def _type_check_output(
     if not type_check.success:
         raise DagsterTypeCheckDidNotPass(
             description='Type check failed for step output "{output_name}" - expected type "{dagster_type}".'.format(
-                output_name=output.output_name,
-                dagster_type=dagster_type.display_name,
+                output_name=output.output_name, dagster_type=dagster_type.display_name,
             ),
             metadata_entries=type_check.metadata_entries,
             dagster_type=dagster_type,
@@ -275,6 +278,7 @@ def core_dagster_event_sequence_for_step(
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
+    input_asset_keys = []
 
     for step_input in step_context.step.step_inputs:
         input_def = step_input.source.get_input_def(step_context.pipeline_def)
@@ -282,6 +286,10 @@ def core_dagster_event_sequence_for_step(
 
         if dagster_type.kind == DagsterTypeKind.NOTHING:
             continue
+
+        input_asset_keys.extend(step_input.source.get_asset_keys(step_context))
+        print("*" * 100)
+        print(step_input.name, input_asset_keys)
 
         for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
             if isinstance(event_or_input_value, DagsterEvent):
@@ -307,8 +315,8 @@ def core_dagster_event_sequence_for_step(
             _step_output_error_checked_user_event_sequence(step_context, user_event_sequence)
         ):
 
-            if isinstance(user_event, (Output, DynamicOutput)):
-                for evt in _type_check_and_store_output(step_context, user_event):
+            if isinstance(user_event, (Output, AssetOutput, DynamicOutput)):
+                for evt in _type_check_and_store_output(step_context, user_event, input_asset_keys):
                     yield evt
             elif isinstance(user_event, (AssetMaterialization, Materialization)):
                 yield DagsterEvent.step_materialization(step_context, user_event)
@@ -327,11 +335,13 @@ def core_dagster_event_sequence_for_step(
 
 
 def _type_check_and_store_output(
-    step_context: SystemStepExecutionContext, output: Union[DynamicOutput, Output]
+    step_context: SystemStepExecutionContext,
+    output: Union[DynamicOutput, AssetOutput, Output],
+    input_asset_keys: List[AssetKey],
 ) -> Iterator[DagsterEvent]:
 
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
-    check.inst_param(output, "output", (Output, DynamicOutput))
+    check.inst_param(output, "output", (Output, AssetOutput, DynamicOutput))
 
     mapping_key = output.mapping_key if isinstance(output, DynamicOutput) else None
 
@@ -348,7 +358,7 @@ def _type_check_and_store_output(
     for output_event in _type_check_output(step_context, step_output_handle, output, version):
         yield output_event
 
-    for evt in _store_output(step_context, step_output_handle, output):
+    for evt in _store_output(step_context, step_output_handle, output, input_asset_keys):
         yield evt
 
     for evt in _create_type_materializations(step_context, output.output_name, output.value):
@@ -381,7 +391,8 @@ def _materializations_to_events(
 def _store_output(
     step_context: SystemStepExecutionContext,
     step_output_handle: StepOutputHandle,
-    output: Union[Output, DynamicOutput],
+    output: Union[Output, AssetOutput, DynamicOutput],
+    input_asset_keys: List[AssetKey],
 ) -> Iterator[DagsterEvent]:
     output_def = step_context.solid_def.output_def_named(step_output_handle.output_name)
     output_manager = step_context.get_io_manager(step_output_handle)
@@ -398,9 +409,17 @@ def _store_output(
         output_name=output_context.name,
     ):
         materializations = output_manager.handle_output(output_context, output.value)
+        if isinstance(output_manager, AssetKeyManager):
+            output_manager.handle_output_asset_keys(output_context, output)
 
     for evt in _materializations_to_events(step_context, step_output_handle, materializations):
         yield evt
+
+    if isinstance(output, AssetOutput):
+        for materialization in output.asset_materializations:
+            yield DagsterEvent.step_materialization(
+                step_context, materialization, input_asset_keys,
+            )
 
     yield DagsterEvent.handled_output(
         step_context,
@@ -477,9 +496,7 @@ def _user_event_sequence_for_step_compute_fn(
     check.dict_param(evaluated_inputs, "evaluated_inputs", key_type=str)
 
     gen = execute_core_compute(
-        step_context.for_compute(),
-        evaluated_inputs,
-        step_context.solid_def.compute_fn,
+        step_context.for_compute(), evaluated_inputs, step_context.solid_def.compute_fn,
     )
 
     for event in iterate_with_context(

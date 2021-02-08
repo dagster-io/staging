@@ -10,11 +10,14 @@ from dagster.core.definitions import (
     RetryRequested,
     SolidHandle,
 )
+from dagster.core.definitions.events import AssetKey
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
     DagsterTypeLoadingError,
     user_code_error_boundary,
 )
+from dagster.core.storage.asset_io_manager import AssetIOManager
+from dagster.core.storage.asset_key_manager import AssetKeyManager
 from dagster.core.storage.io_manager import IOManager
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.serdes import whitelist_for_serdes
@@ -47,8 +50,7 @@ class StepInputData(
 
 class StepInput(
     NamedTuple(
-        "_StepInput",
-        [("name", str), ("dagster_type_key", str), ("source", "StepInputSource")],
+        "_StepInput", [("name", str), ("dagster_type_key", str), ("source", "StepInputSource")],
     )
 ):
     """Holds information for how to prepare an input for an ExecutionStep"""
@@ -118,12 +120,13 @@ class StepInputSource(ABC):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
+    @abstractmethod
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        raise NotImplementedError()
+
 
 class FromRootInputManager(
-    NamedTuple(
-        "_FromRootInputManager",
-        [("solid_handle", SolidHandle), ("input_name", str)],
-    ),
+    NamedTuple("_FromRootInputManager", [("solid_handle", SolidHandle), ("input_name", str)],),
     StepInputSource,
 ):
     def load_input_object(
@@ -149,9 +152,7 @@ class FromRootInputManager(
         )
         yield _load_input_with_input_manager(loader, load_input_context)
         yield DagsterEvent.loaded_input(
-            step_context,
-            input_name=input_def.name,
-            manager_key=input_def.root_manager_key,
+            step_context, input_name=input_def.name, manager_key=input_def.root_manager_key,
         )
 
     def compute_version(self, step_versions, pipeline_def, environment_config) -> Optional[str]:
@@ -161,6 +162,9 @@ class FromRootInputManager(
     def required_resource_keys(self, pipeline_def: PipelineDefinition) -> Set[str]:
         input_def = self.get_input_def(pipeline_def)
         return {input_def.root_manager_key}
+
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return []
 
 
 class FromStepOutput(
@@ -266,6 +270,15 @@ class FromStepOutput(
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        source_handle = self.step_output_handle
+        input_manager = step_context.get_io_manager(source_handle)
+        load_context = self.get_load_context(step_context)
+        if isinstance(input_manager, AssetKeyManager):
+            return input_manager.load_input_asset_keys(load_context)
+        else:
+            return []
+
 
 def _generate_error_boundary_msg_for_step_input(
     context: "SystemStepExecutionContext", input_name: str
@@ -291,9 +304,7 @@ class FromConfig(
 
     def __new__(cls, solid_handle: SolidHandle, input_name: str):
         return super(FromConfig, cls).__new__(
-            cls,
-            solid_handle=solid_handle,
-            input_name=input_name,
+            cls, solid_handle=solid_handle, input_name=input_name,
         )
 
     def load_input_object(self, step_context: "SystemStepExecutionContext") -> Any:
@@ -331,10 +342,7 @@ class FromConfig(
 
 
 class FromDefaultValue(
-    NamedTuple(
-        "_FromDefaultValue",
-        [("solid_handle", SolidHandle), ("input_name", str)],
-    ),
+    NamedTuple("_FromDefaultValue", [("solid_handle", SolidHandle), ("input_name", str)],),
     StepInputSource,
 ):
     """This step input source is the default value declared on the InputDefinition"""
@@ -362,11 +370,7 @@ class FromDefaultValue(
 class FromMultipleSources(
     NamedTuple(
         "_FromMultipleSources",
-        [
-            ("solid_handle", SolidHandle),
-            ("input_name", str),
-            ("sources", List[StepInputSource]),
-        ],
+        [("solid_handle", SolidHandle), ("input_name", str), ("sources", List[StepInputSource]),],
     ),
     StepInputSource,
 ):
@@ -447,6 +451,13 @@ class FromMultipleSources(
             ]
         )
 
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return [
+            asset_key
+            for source in self.sources
+            for asset_key in source.get_asset_keys(step_context)
+        ]
+
 
 def _load_input_with_input_manager(input_manager: "InputManager", context: "InputContext"):
     with user_code_error_boundary(
@@ -481,10 +492,7 @@ class FromPendingDynamicStepOutput(
     """
 
     def __new__(
-        cls,
-        step_output_handle: StepOutputHandle,
-        solid_handle: SolidHandle,
-        input_name: str,
+        cls, step_output_handle: StepOutputHandle, solid_handle: SolidHandle, input_name: str,
     ):
         # Model the unknown mapping key from known execution step
         # using a StepOutputHandle with None mapping_key.
@@ -605,10 +613,7 @@ class UnresolvedStepInput(
     """Holds information for how to resolve a StepInput once the upstream mapping is done"""
 
     def __new__(
-        cls,
-        name,
-        dagster_type_key,
-        source,
+        cls, name, dagster_type_key, source,
     ):
         return super(UnresolvedStepInput, cls).__new__(
             cls,

@@ -267,10 +267,7 @@ def test_event_log_get_stats_for_run(event_storage_factory_cm_fn):
                 "",
                 "foo",
                 enqueued_time,
-                dagster_event=DagsterEvent(
-                    DagsterEventType.PIPELINE_ENQUEUED.value,
-                    "nonce",
-                ),
+                dagster_event=DagsterEvent(DagsterEventType.PIPELINE_ENQUEUED.value, "nonce",),
             )
         )
         storage.store_event(
@@ -281,10 +278,7 @@ def test_event_log_get_stats_for_run(event_storage_factory_cm_fn):
                 "",
                 "foo",
                 launched_time,
-                dagster_event=DagsterEvent(
-                    DagsterEventType.PIPELINE_STARTING.value,
-                    "nonce",
-                ),
+                dagster_event=DagsterEvent(DagsterEventType.PIPELINE_STARTING.value, "nonce",),
             )
         )
         storage.store_event(
@@ -295,10 +289,7 @@ def test_event_log_get_stats_for_run(event_storage_factory_cm_fn):
                 "",
                 "foo",
                 start_time,
-                dagster_event=DagsterEvent(
-                    DagsterEventType.PIPELINE_START.value,
-                    "nonce",
-                ),
+                dagster_event=DagsterEvent(DagsterEventType.PIPELINE_START.value, "nonce",),
             )
         )
         assert math.isclose(storage.get_stats_for_run("foo").enqueued_time, enqueued_time)
@@ -322,10 +313,8 @@ def test_filesystem_event_log_storage_run_corrupted_bad_data():
         storage = SqliteEventLogStorage(tmpdir_path)
         SqlEventLogStorageMetadata.create_all(create_engine(storage.conn_string_for_shard("foo")))
         with storage.run_connection("foo") as conn:
-            event_insert = (
-                SqlEventLogStorageTable.insert().values(  # pylint: disable=no-value-for-parameter
-                    run_id="foo", event="{bar}", dagster_event_type=None, timestamp=None
-                )
+            event_insert = SqlEventLogStorageTable.insert().values(  # pylint: disable=no-value-for-parameter
+                run_id="foo", event="{bar}", dagster_event_type=None, timestamp=None
             )
             conn.execute(event_insert)
 
@@ -335,10 +324,8 @@ def test_filesystem_event_log_storage_run_corrupted_bad_data():
         SqlEventLogStorageMetadata.create_all(create_engine(storage.conn_string_for_shard("bar")))
 
         with storage.run_connection("bar") as conn:
-            event_insert = (
-                SqlEventLogStorageTable.insert().values(  # pylint: disable=no-value-for-parameter
-                    run_id="bar", event="3", dagster_event_type=None, timestamp=None
-                )
+            event_insert = SqlEventLogStorageTable.insert().values(  # pylint: disable=no-value-for-parameter
+                run_id="bar", event="3", dagster_event_type=None, timestamp=None
             )
             conn.execute(event_insert)
         with pytest.raises(DagsterEventLogInvalidForRun):
@@ -441,7 +428,7 @@ def _stats_records(run_id):
             "D",
             now - 125,
             DagsterEventType.STEP_MATERIALIZATION,
-            StepMaterializationData(AssetMaterialization(asset_key="mat_1")),
+            StepMaterializationData(AssetMaterialization(asset_key="mat_1"), []),
         ),
         _event_record(
             run_id,
@@ -455,7 +442,7 @@ def _stats_records(run_id):
             "D",
             now - 75,
             DagsterEventType.STEP_MATERIALIZATION,
-            StepMaterializationData(AssetMaterialization(asset_key="mat_2")),
+            StepMaterializationData(AssetMaterialization(asset_key="mat_2"), []),
         ),
         _event_record(
             run_id,
@@ -469,7 +456,7 @@ def _stats_records(run_id):
             "D",
             now - 25,
             DagsterEventType.STEP_MATERIALIZATION,
-            StepMaterializationData(AssetMaterialization(asset_key="mat_3")),
+            StepMaterializationData(AssetMaterialization(asset_key="mat_3"), []),
         ),
         _event_record(
             run_id, "D", now, DagsterEventType.STEP_SUCCESS, StepSuccessData(duration_ms=150000.0)
