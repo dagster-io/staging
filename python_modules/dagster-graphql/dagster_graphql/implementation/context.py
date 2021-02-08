@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 from dagster import check
-from dagster.core.host_representation import PipelineSelector, RepositoryLocation
+from dagster.core.host_representation import PipelineSelector
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.grpc_server_state_subscriber import (
     LocationStateChangeEventType,
@@ -32,12 +32,7 @@ class RequestContext(
         cls, instance, workspace_snapshot, repository_locations_dict, process_context, version
     ):
         return super(RequestContext, cls).__new__(
-            cls,
-            instance,
-            workspace_snapshot,
-            repository_locations_dict,
-            process_context,
-            version,
+            cls, instance, workspace_snapshot, repository_locations_dict, process_context, version,
         )
 
     @property
@@ -100,8 +95,7 @@ class RequestContext(
             )
 
         return ExternalPipeline(
-            subset_result.external_pipeline_data,
-            repository_handle=external_repository.handle,
+            subset_result.external_pipeline_data, repository_handle=external_repository.handle,
         )
 
     def has_external_pipeline(self, selector):
@@ -198,9 +192,7 @@ class ProcessContext:
             )
 
             handle.add_state_subscriber(self._location_state_subscriber)
-            self._repository_locations[handle.location_name] = RepositoryLocation.from_handle(
-                handle
-            )
+            self._repository_locations[handle.location_name] = handle.create_location()
 
         self.version = version
 
@@ -250,7 +242,7 @@ class ProcessContext:
         if self._workspace.has_repository_location_handle(name):
             new_handle = self._workspace.get_repository_location_handle(name)
             new_handle.add_state_subscriber(self._location_state_subscriber)
-            new_location = RepositoryLocation.from_handle(new_handle)
+            new_location = new_handle.create_location()
             check.invariant(new_location.name == name)
             self._repository_locations[name] = new_location
         elif name in self._repository_locations:

@@ -56,6 +56,10 @@ class RepositoryLocationHandle(ABC):
     def get_repository_python_origin(self, repository_name):
         pass
 
+    @abstractmethod
+    def create_location(self):
+        pass
+
 
 class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
     """
@@ -173,6 +177,13 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
             self._reload_current_image(),
         )
 
+    def create_location(self):
+        from dagster.core.host_representation.repository_location import (
+            GrpcServerRepositoryLocation,
+        )
+
+        return GrpcServerRepositoryLocation(self)
+
 
 class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
     """
@@ -204,10 +215,7 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
 
             self.heartbeat_thread = threading.Thread(
                 target=client_heartbeat_thread,
-                args=(
-                    self.client,
-                    self.heartbeat_shutdown_event,
-                ),
+                args=(self.client, self.heartbeat_shutdown_event,),
                 name="grpc-client-heartbeat",
             )
             self.heartbeat_thread.daemon = True
@@ -275,6 +283,13 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
     def is_cleaned_up(self):
         return not self.client
 
+    def create_location(self):
+        from dagster.core.host_representation.repository_location import (
+            GrpcServerRepositoryLocation,
+        )
+
+        return GrpcServerRepositoryLocation(self)
+
 
 class InProcessRepositoryLocationHandle(RepositoryLocationHandle):
     def __init__(self, origin):
@@ -290,11 +305,13 @@ class InProcessRepositoryLocationHandle(RepositoryLocationHandle):
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
-            sys.executable,
-            self.repository_code_pointer_dict,
-            repository_name,
-            None,
+            sys.executable, self.repository_code_pointer_dict, repository_name, None,
         )
+
+    def create_location(self):
+        from dagster.core.host_representation.repository_location import InProcessRepositoryLocation
+
+        return InProcessRepositoryLocation(self)
 
 
 class RepositoryHandle(
@@ -311,8 +328,7 @@ class RepositoryHandle(
 
     def get_external_origin(self):
         return ExternalRepositoryOrigin(
-            self.repository_location_handle.origin,
-            self.repository_name,
+            self.repository_location_handle.origin, self.repository_name,
         )
 
     def get_python_origin(self):
