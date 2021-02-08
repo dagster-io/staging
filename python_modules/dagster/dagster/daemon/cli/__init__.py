@@ -12,7 +12,6 @@ from dagster.daemon.controller import (
     DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
     DagsterDaemonController,
     all_daemons_healthy,
-    create_daemons_from_instance,
     debug_daemon_heartbeats,
     get_daemon_status,
     required_daemons,
@@ -23,7 +22,14 @@ from dagster.daemon.controller import (
     name="run",
     help="Run any daemons configured on the DagsterInstance.",
 )
-def run_command():
+@click.option(
+    "--daemon_types",
+    multiple=True,
+    help="[Internal] Subset of daemons to run",
+    type=click.STRING,
+)
+def run_command(daemon_types):
+
     with DagsterInstance.get() as instance:
         if instance.is_ephemeral:
             raise Exception(
@@ -32,8 +38,8 @@ def run_command():
                 "you have created a dagster.yaml file there."
             )
 
-        with DagsterDaemonController(
-            instance, create_daemons_from_instance(instance)
+        with DagsterDaemonController.create_from_instance(
+            instance, daemon_types=list(daemon_types)
         ) as controller:
             while True:
                 # Wait until a daemon has been unhealthy for a long period of time
