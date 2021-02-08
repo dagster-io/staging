@@ -29,9 +29,11 @@ def _sorted_quoted(strings):
 
 class DagsterDaemonController:
     @staticmethod
-    def create_from_instance(instance):
+    def create_from_instance(instance, daemon_types=None):
         check.inst_param(instance, "instance", DagsterInstance)
-        return DagsterDaemonController(instance, create_daemons_from_instance(instance))
+        return DagsterDaemonController(
+            instance, create_daemons_from_instance(instance, daemon_types=daemon_types)
+        )
 
     def __init__(self, instance, daemons):
 
@@ -110,8 +112,10 @@ class DagsterDaemonController:
         return list(self._daemons.values())
 
 
-def create_daemons_from_instance(instance):
-    daemon_types = required_daemons(instance)
+def create_daemons_from_instance(instance, daemon_types=None):
+    check.opt_list_param(daemon_types, "daemon_types", of_type=str)
+    if not daemon_types:
+        daemon_types = required_daemons(instance)
 
     daemons = []
 

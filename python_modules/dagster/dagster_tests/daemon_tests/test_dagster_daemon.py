@@ -14,10 +14,7 @@ from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedR
 def test_scheduler_instance():
     with instance_for_test(
         overrides={
-            "scheduler": {
-                "module": "dagster.core.scheduler",
-                "class": "DagsterDaemonScheduler",
-            },
+            "scheduler": {"module": "dagster.core.scheduler", "class": "DagsterDaemonScheduler",},
         }
     ) as instance:
         with DagsterDaemonController.create_from_instance(instance) as controller:
@@ -82,10 +79,7 @@ def test_ephemeral_instance():
 def test_different_intervals(caplog):
     with instance_for_test(
         overrides={
-            "scheduler": {
-                "module": "dagster.core.scheduler",
-                "class": "DagsterDaemonScheduler",
-            },
+            "scheduler": {"module": "dagster.core.scheduler", "class": "DagsterDaemonScheduler",},
             "run_coordinator": {
                 "module": "dagster.core.run_coordinator.queued_run_coordinator",
                 "class": "QueuedRunCoordinator",
@@ -118,5 +112,32 @@ def test_different_intervals(caplog):
 
                 if (now - init_time).total_seconds() > 45:
                     raise Exception("Timed out waiting for schedule daemon to execute twice")
+
+                time.sleep(0.5)
+
+
+def test_daemon_types_option(caplog):
+    with instance_for_test(
+        overrides={
+            "scheduler": {"module": "dagster.core.scheduler", "class": "DagsterDaemonScheduler",},
+            "run_coordinator": {
+                "module": "dagster.core.run_coordinator.queued_run_coordinator",
+                "class": "QueuedRunCoordinator",
+                "config": {"dequeue_interval_seconds": 5},
+            },
+        }
+    ) as instance:
+        init_time = pendulum.now("UTC")
+        with DagsterDaemonController.create_from_instance(instance, daemon_types=["SCHEDULER"]):
+            while True:
+                now = pendulum.now("UTC")
+                # Wait until the run coordinator has run three times
+                # Scheduler has only run once
+                if _scheduler_ran(caplog) == 1:
+                    assert _run_coordinator_ran(caplog) == 0
+                    break
+
+                if (now - init_time).total_seconds() > 45:
+                    raise Exception("Timed out waiting for scheduler daemon to execute")
 
                 time.sleep(0.5)

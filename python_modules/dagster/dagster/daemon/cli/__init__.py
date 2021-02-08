@@ -12,7 +12,6 @@ from dagster.daemon.controller import (
     DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
     DagsterDaemonController,
     all_daemons_healthy,
-    create_daemons_from_instance,
     debug_daemon_heartbeats,
     get_daemon_status,
     required_daemons,
@@ -20,10 +19,17 @@ from dagster.daemon.controller import (
 
 
 @click.command(
-    name="run",
-    help="Run any daemons configured on the DagsterInstance.",
+    name="run", help="Run any daemons configured on the DagsterInstance.",
 )
-def run_command():
+@click.option(
+    "--daemon_types",
+    multiple=True,
+    help="[Internal] Subset of daemons to run",
+    type=click.STRING,
+    default=None,
+)
+def run_command(daemon_types):
+
     with DagsterInstance.get() as instance:
         if instance.is_ephemeral:
             raise Exception(
@@ -32,8 +38,8 @@ def run_command():
                 "you have created a dagster.yaml file there."
             )
 
-        with DagsterDaemonController(
-            instance, create_daemons_from_instance(instance)
+        with DagsterDaemonController.create_from_instance(
+            instance, daemon_types=list(daemon_types)
         ) as controller:
             while True:
                 # Wait until a daemon has been unhealthy for a long period of time
@@ -43,8 +49,7 @@ def run_command():
 
 
 @click.command(
-    name="health-check",
-    help="DEPRECATED, use liveness-check instead",
+    name="health-check", help="DEPRECATED, use liveness-check instead",
 )
 def health_check_command():
     warnings.warn("health-check is deprecated. Use liveness-check instead.")
@@ -57,8 +62,7 @@ def health_check_command():
 
 
 @click.command(
-    name="liveness-check",
-    help="Check for recent heartbeats from the daemon.",
+    name="liveness-check", help="Check for recent heartbeats from the daemon.",
 )
 def liveness_check_command():
     with DagsterInstance.get() as instance:
@@ -70,8 +74,7 @@ def liveness_check_command():
 
 
 @click.command(
-    name="wipe",
-    help="Wipe all heartbeats from storage.",
+    name="wipe", help="Wipe all heartbeats from storage.",
 )
 def wipe_command():
     with DagsterInstance.get() as instance:
@@ -80,8 +83,7 @@ def wipe_command():
 
 
 @click.command(
-    name="heartbeat",
-    help="Read and write a heartbeat",
+    name="heartbeat", help="Read and write a heartbeat",
 )
 def debug_heartbeat_command():
     with DagsterInstance.get() as instance:
@@ -89,8 +91,7 @@ def debug_heartbeat_command():
 
 
 @click.command(
-    name="heartbeat-dump",
-    help="Log all heartbeat statuses",
+    name="heartbeat-dump", help="Log all heartbeat statuses",
 )
 def debug_heartbeat_dump_command():
     with DagsterInstance.get() as instance:
