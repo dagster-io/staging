@@ -195,6 +195,7 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
     def __init__(self, origin):
         from dagster.grpc.client import client_heartbeat_thread
         from dagster.grpc.server import GrpcServerProcess
+        from dagster.grpc.server_watcher import create_grpc_watch_thread
 
         self.client = None
 
@@ -209,6 +210,9 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
             heartbeat=True,
             lazy_load_user_code=True,
         )
+
+        self._watch_thread_shutdown_event = None
+        self._watch_thread = None
 
         try:
             self.client = self.grpc_server_process.create_ephemeral_client()
@@ -227,6 +231,29 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
             self.heartbeat_thread.start()
 
             list_repositories_response = sync_list_repositories_grpc(self.client)
+
+            self._state_subscribers = []
+            self._watch_thread_shutdown_event, self._watch_thread = create_grpc_watch_thread(
+                self.client,
+                on_updated=lambda new_server_id: self._send_state_event_to_subscribers(
+                    LocationStateChangeEvent(
+                        LocationStateChangeEventType.LOCATION_UPDATED,
+                        location_name=self.location_name,
+                        message="Server has been updated.",
+                        server_id=new_server_id,
+                    )
+                ),
+                on_error=lambda: self._send_state_event_to_subscribers(
+                    LocationStateChangeEvent(
+                        LocationStateChangeEventType.LOCATION_ERROR,
+                        location_name=self.location_name,
+                        message="Unable to reconnect to server. You can reload the server once it is "
+                        "reachable again",
+                    )
+                ),
+            )
+
+            self._watch_thread.start()
         except:
             self.cleanup()
             raise
@@ -234,6 +261,14 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
         self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
 
         self.container_image = self.client.get_current_image().current_image
+
+    def add_state_subscriber(self, subscriber):
+        self._state_subscribers.append(subscriber)
+
+    def _send_state_event_to_subscribers(self, event):
+        check.inst_param(event, "event", LocationStateChangeEvent)
+        for subscriber in self._state_subscribers:
+            subscriber.handle_event(event)
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
@@ -272,6 +307,14 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
         return self.grpc_server_process.socket
 
     def cleanup(self):
+        if self._watch_thread_shutdown_event:
+            self._watch_thread_shutdown_event.set()
+            self._watch_thread_shutdown_event = None
+
+        if self._watch_thread:
+            self._watch_thread.join()
+            self._watch_thread = None
+
         if self.heartbeat_shutdown_event:
             self.heartbeat_shutdown_event.set()
             self.heartbeat_shutdown_event = None
