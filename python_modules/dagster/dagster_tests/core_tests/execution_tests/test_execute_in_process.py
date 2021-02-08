@@ -24,6 +24,7 @@ def test_execute_solid():
     result = execute_in_process(emit_one)
 
     assert result.success
+    assert result.output_values["result"] == 1
 
 
 def test_execute_graph():
@@ -40,6 +41,7 @@ def test_execute_graph():
     result = execute_in_process(emit_three)
 
     assert result.success
+    assert result.output_values["result"] == 3
 
 
 def test_execute_solid_with_inputs():
@@ -49,6 +51,7 @@ def test_execute_solid_with_inputs():
 
     result = execute_in_process(add_one, input_values={"x": 5})
     assert result.success
+    assert result.output_values["result"] == 6
 
 
 def test_execute_graph_with_inputs():
@@ -60,6 +63,7 @@ def test_execute_graph_with_inputs():
 
     result = execute_in_process(add_one, input_values={"x": 5})
     assert result.success
+    assert result.output_values["result"] == 6
 
 
 def test_execute_graph_nonexistent_inputs():
