@@ -25,12 +25,19 @@ from dagster.core.test_utils import ExplodingRunLauncher, instance_for_test_temp
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.server import GrpcServerProcess
 from dagster.utils import merge_dicts
+from dagster.utils.test import FilesystemTestScheduler
 from dagster.utils.test.postgres_instance import TestPostgresInstance
 from dagster_graphql.implementation.context import ProcessContext
 
 
 def get_main_recon_repo():
     return ReconstructableRepository.for_file(file_relative_path(__file__, "setup.py"), "test_repo")
+
+
+def get_dict_recon_repo():
+    return ReconstructableRepository.for_file(
+        file_relative_path(__file__, "setup.py"), "test_dict_repo"
+    )
 
 
 @contextmanager
@@ -61,6 +68,11 @@ def graphql_postgres_instance(overrides):
                             "module": "dagster_postgres.schedule_storage.schedule_storage",
                             "class": "PostgresScheduleStorage",
                             "config": {"postgres_url": pg_conn_string},
+                        },
+                        "scheduler": {
+                            "module": "dagster.utils.test",
+                            "class": "FilesystemTestScheduler",
+                            "config": {"base_dir": temp_dir},
                         },
                     },
                     overrides if overrides else {},
@@ -101,6 +113,7 @@ class InstanceManagers:
                     run_launcher=SyncInMemoryRunLauncher(),
                     run_coordinator=DefaultRunCoordinator(),
                     schedule_storage=SqliteScheduleStorage.from_local(temp_dir),
+                    scheduler=FilesystemTestScheduler(temp_dir),
                 )
 
         return MarkedManager(_in_memory_instance, [Marks.in_memory_instance])
@@ -119,6 +132,7 @@ class InstanceManagers:
                     run_launcher=ExplodingRunLauncher(),
                     run_coordinator=DefaultRunCoordinator(),
                     schedule_storage=SqliteScheduleStorage.from_local(temp_dir),
+                    scheduler=FilesystemTestScheduler(temp_dir),
                 )
 
         return MarkedManager(
@@ -201,6 +215,11 @@ class InstanceManagers:
                 with instance_for_test_tempdir(
                     temp_dir,
                     overrides={
+                        "scheduler": {
+                            "module": "dagster.utils.test",
+                            "class": "FilesystemTestScheduler",
+                            "config": {"base_dir": temp_dir},
+                        },
                         "run_coordinator": {
                             "module": "dagster.core.run_coordinator.queued_run_coordinator",
                             "class": "QueuedRunCoordinator",
@@ -290,6 +309,7 @@ class InstanceManagers:
                     compute_log_manager=LocalComputeLogManager(temp_dir),
                     run_coordinator=DefaultRunCoordinator(),
                     run_launcher=SyncInMemoryRunLauncher(),
+                    scheduler=FilesystemTestScheduler(temp_dir),
                 )
                 yield instance
 
@@ -378,6 +398,14 @@ class EnvironmentManagers:
                             attribute="empty_repo",
                         ),
                         location_name="empty_repo",
+                    ),
+                    ManagedGrpcPythonEnvRepositoryLocationOrigin(
+                        loadable_target_origin=LoadableTargetOrigin(
+                            executable_path=sys.executable,
+                            python_file=file_relative_path(__file__, "setup.py"),
+                            attribute="test_dict_repo",
+                        ),
+                        location_name="test_dict_repo_location",
                     ),
                 ]
             ) as workspace:
@@ -714,6 +742,10 @@ class GraphQLContextVariant:
         Return all readonly variants. If you try to start or launch these will error
         """
         return _variants_with_mark(GraphQLContextVariant.all_variants(), pytest.mark.readonly)
+
+    @staticmethod
+    def all_multi_location_variants():
+        return _variants_with_mark(GraphQLContextVariant.all_variants(), pytest.mark.multi_location)
 
 
 def _variants_with_mark(variants, mark):
