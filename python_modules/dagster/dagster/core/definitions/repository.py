@@ -13,6 +13,7 @@ VALID_REPOSITORY_DATA_DICT_KEYS = {
     "partition_sets",
     "schedules",
     "sensors",
+    "jobs",
 }
 
 
@@ -222,6 +223,7 @@ class RepositoryData:
                 repository_definitions[key] = {}
 
         repository_definitions["jobs"] = {
+            **repository_definitions.get("jobs", {}),
             **repository_definitions.get("schedules", {}),
             **repository_definitions.get("sensors", {}),
         }
