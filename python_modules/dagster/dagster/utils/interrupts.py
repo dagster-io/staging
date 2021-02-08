@@ -17,6 +17,10 @@ def _replace_interrupt_signal(new_signal_handler):
     # Update the windows interrupt signal as well if needed
     setup_windows_interrupt_support()
 
+    # Ensure that any SIGTERMs that come in (e.g. in k8s termination) are mapped
+    # to the new SIGINT handler
+    signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
+
 
 # Wraps code that we don't want a SIGINT to be able to interrupt. Within this context you can
 # use pop_captured_interrupt or check_captured_interrupt to check whether or not an interrupt
