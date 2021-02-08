@@ -6,8 +6,8 @@ from enum import Enum
 
 from dagster import check
 from dagster.core.definitions import (
-    AssetMaterialization,
     AssetKey,
+    AssetMaterialization,
     EventMetadataEntry,
     ExpectationResult,
     Materialization,
@@ -1204,7 +1204,7 @@ def _handle_back_compat(event_type_value, event_specific_data):
             return (
                 DagsterEventType.HANDLED_OUTPUT.value,
                 HandledOutputData(
-                    event_specific_data.output_name, event_specific_data.asset_store_key
+                    event_specific_data.output_name, event_specific_data.asset_store_key, None, []
                 ),
             )
     else:
