@@ -140,60 +140,61 @@ def test_handle_cleaup_by_workspace_context_exit():
 
 
 def test_handle_cleaup_by_gc_without_request_context():
+    for _ in range(30):
+        called = {"yup": False}
 
-    called = {"yup": False}
+        def call_me():
+            called["yup"] = True  # pylint: disable=cell-var-from-loop
 
-    def call_me():
-        called["yup"] = True
+        with instance_for_test() as instance:
+            with define_out_of_process_workspace(__file__, "get_repo") as workspace:
+                # Create a process context
+                process_context = ProcessContext(workspace=workspace, instance=instance)
+                assert len(process_context.repository_locations) == 1
+                process_context.repository_locations[  # pylint: disable=protected-access
+                    0
+                ]._handle.cleanup = call_me
 
-    with instance_for_test() as instance:
-        with define_out_of_process_workspace(__file__, "get_repo") as workspace:
-            # Create a process context
-            process_context = ProcessContext(workspace=workspace, instance=instance)
-            assert len(process_context.repository_locations) == 1
-            process_context.repository_locations[  # pylint: disable=protected-access
-                0
-            ]._handle.cleanup = call_me
+                # Reload the location from the request context
+                assert not called["yup"]
+                process_context.reload_repository_location("test_location")
 
-            # Reload the location from the request context
-            assert not called["yup"]
-            process_context.reload_repository_location("test_location")
-
-            # There are no more references to the location, so it should be GC'd
-            gc.collect()
-            assert called["yup"]
+                # There are no more references to the location, so it should be GC'd
+                gc.collect()
+                assert called["yup"]
 
 
 def test_handle_cleaup_by_gc_with_dangling_request_reference():
-    called = {"yup": False}
+    for _ in range(30):
+        called = {"yup": False}
 
-    def call_me():
-        called["yup"] = True
+        def call_me():
+            called["yup"] = True  # pylint: disable=cell-var-from-loop
 
-    with instance_for_test() as instance:
-        with define_out_of_process_workspace(__file__, "get_repo") as workspace:
-            # Create a process context
-            process_context = ProcessContext(workspace=workspace, instance=instance)
-            process_context.repository_locations[  # pylint: disable=protected-access
-                0
-            ]._handle.cleanup = call_me
+        with instance_for_test() as instance:
+            with define_out_of_process_workspace(__file__, "get_repo") as workspace:
+                # Create a process context
+                process_context = ProcessContext(workspace=workspace, instance=instance)
+                process_context.repository_locations[  # pylint: disable=protected-access
+                    0
+                ]._handle.cleanup = call_me
 
-            assert len(process_context.repository_locations) == 1
+                assert len(process_context.repository_locations) == 1
 
-            assert not called["yup"]
+                assert not called["yup"]
 
-            # The request context maintains a reference to the location handle through the
-            # repository location
-            request_context = (  # pylint: disable=unused-variable
-                process_context.create_request_context()
-            )
+                # The request context maintains a reference to the location handle through the
+                # repository location
+                request_context = (  # pylint: disable=unused-variable
+                    process_context.create_request_context()
+                )
 
-            # Even though we reload, verify the handle isn't cleaned up
-            process_context.reload_repository_location("test_location")
-            gc.collect()
-            assert not called["yup"]
+                # Even though we reload, verify the handle isn't cleaned up
+                process_context.reload_repository_location("test_location")
+                gc.collect()
+                assert not called["yup"]
 
-            # Free reference, make sure handle is cleaned up
-            request_context = None
-            gc.collect()
-            assert called["yup"]
+                # Free reference, make sure handle is cleaned up
+                request_context = None
+                gc.collect()
+                assert called["yup"]
