@@ -4,7 +4,6 @@ from collections import defaultdict
 
 from dagster import DagsterEvent, DagsterEventType, check
 from dagster.core.events.log import DagsterEventRecord
-from dagster.core.host_representation.handle import RepositoryLocationHandle
 from dagster.core.storage.pipeline_run import (
     IN_PROGRESS_RUN_STATUSES,
     PipelineRun,
@@ -91,11 +90,7 @@ class _RepositoryLocationHandleManager:
         )
         origin_id = repo_location_origin.get_id()
         if origin_id not in self._location_handles:
-            self._location_handles[
-                origin_id
-            ] = RepositoryLocationHandle.create_from_repository_location_origin(
-                repo_location_origin
-            )
+            self._location_handles[origin_id] = repo_location_origin.create_handle()
 
         return external_pipeline_from_location_handle(
             self._location_handles[origin_id],
@@ -119,16 +114,12 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
 
     @experimental
     def __init__(
-        self,
-        interval_seconds,
-        max_concurrent_runs,
-        tag_concurrency_limits=None,
+        self, interval_seconds, max_concurrent_runs, tag_concurrency_limits=None,
     ):
         super(QueuedRunCoordinatorDaemon, self).__init__(interval_seconds)
         self._max_concurrent_runs = check.int_param(max_concurrent_runs, "max_concurrent_runs")
         self._tag_concurrency_limits = check.opt_list_param(
-            tag_concurrency_limits,
-            "tag_concurrency_limits",
+            tag_concurrency_limits, "tag_concurrency_limits",
         )
 
     @staticmethod

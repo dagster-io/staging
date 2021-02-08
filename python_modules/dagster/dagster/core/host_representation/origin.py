@@ -70,11 +70,14 @@ class RepositoryLocationOrigin(ABC):
     def get_id(self):
         return create_snapshot_id(self)
 
+    @abstractmethod
+    def create_handle(self):
+        pass
+
 
 @whitelist_for_serdes
 class InProcessRepositoryLocationOrigin(
-    namedtuple("_InProcessRepositoryLocationOrigin", "recon_repo"),
-    RepositoryLocationOrigin,
+    namedtuple("_InProcessRepositoryLocationOrigin", "recon_repo"), RepositoryLocationOrigin,
 ):
     """Identifies a repository location constructed in the host process. Should only be
     used in tests.
@@ -100,6 +103,11 @@ class InProcessRepositoryLocationOrigin(
         return {
             "in_process_code_pointer": self.recon_repo.pointer.describe(),
         }
+
+    def create_handle(self):
+        from dagster.core.host_representation.handle import InProcessRepositoryLocationHandle
+
+        return InProcessRepositoryLocationHandle(self)
 
 
 @whitelist_for_serdes
@@ -142,6 +150,13 @@ class ManagedGrpcPythonEnvRepositoryLocationOrigin(
         }
         return {key: value for key, value in metadata.items() if value is not None}
 
+    def create_handle(self):
+        from dagster.core.host_representation.handle import (
+            ManagedGrpcPythonEnvRepositoryLocationHandle,
+        )
+
+        return ManagedGrpcPythonEnvRepositoryLocationHandle(self)
+
 
 @whitelist_for_serdes
 class GrpcServerRepositoryLocationOrigin(
@@ -174,6 +189,11 @@ class GrpcServerRepositoryLocationOrigin(
     def get_display_metadata(self):
         metadata = {"host": self.host, "port": self.port, "socket": self.socket}
         return {key: value for key, value in metadata.items() if value is not None}
+
+    def create_handle(self):
+        from dagster.core.host_representation.handle import GrpcServerRepositoryLocationHandle
+
+        return GrpcServerRepositoryLocationHandle(self)
 
 
 @whitelist_for_serdes
@@ -221,9 +241,7 @@ class ExternalPipelineOrigin(
         return super(ExternalPipelineOrigin, cls).__new__(
             cls,
             check.inst_param(
-                external_repository_origin,
-                "external_repository_origin",
-                ExternalRepositoryOrigin,
+                external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
             ),
             check.str_param(pipeline_name, "pipeline_name"),
         )
@@ -245,9 +263,7 @@ class ExternalJobOrigin(namedtuple("_ExternalJobOrigin", "external_repository_or
         return super(ExternalJobOrigin, cls).__new__(
             cls,
             check.inst_param(
-                external_repository_origin,
-                "external_repository_origin",
-                ExternalRepositoryOrigin,
+                external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
             ),
             check.str_param(job_name, "job_name"),
         )
@@ -271,9 +287,7 @@ class ExternalPartitionSetOrigin(
         return super(ExternalPartitionSetOrigin, cls).__new__(
             cls,
             check.inst_param(
-                external_repository_origin,
-                "external_repository_origin",
-                ExternalRepositoryOrigin,
+                external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
             ),
             check.str_param(partition_set_name, "partition_set_name"),
         )

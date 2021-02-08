@@ -18,9 +18,9 @@ def repository_location_handle_from_run(pipeline_run):
     external_pipeline_origin = check.inst(
         pipeline_run.external_pipeline_origin, ExternalPipelineOrigin
     )
-    yield RepositoryLocationHandle.create_from_repository_location_origin(
-        external_pipeline_origin.external_repository_origin.repository_location_origin
-    )
+    origin = external_pipeline_origin.external_repository_origin.repository_location_origin
+    with origin.create_handle() as handle:
+        yield handle
 
 
 def external_pipeline_from_location_handle(
@@ -52,8 +52,7 @@ def external_pipeline_from_location_handle(
 
     subset_pipeline_result = repo_location.get_subset_external_pipeline_result(pipeline_selector)
     external_pipeline = ExternalPipeline(
-        subset_pipeline_result.external_pipeline_data,
-        external_repo.handle,
+        subset_pipeline_result.external_pipeline_data, external_repo.handle,
     )
     return external_pipeline
 
