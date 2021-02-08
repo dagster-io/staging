@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, Iterator, List, Set, Union
 from dagster import check
 from dagster.core.definitions import (
     AssetMaterialization,
+    AssetOutput,
     DynamicOutput,
     ExpectationResult,
     Materialization,
@@ -18,7 +19,7 @@ from dagster.core.system_config.objects import EnvironmentConfig
 from .outputs import StepOutput
 
 SolidOutputUnion = Union[
-    DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult
+    DynamicOutput, AssetOutput, Output, AssetMaterialization, Materialization, ExpectationResult
 ]
 
 
@@ -70,7 +71,14 @@ def _yield_compute_results(
     for event in user_event_sequence:
         if isinstance(
             event,
-            (DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult),
+            (
+                DynamicOutput,
+                AssetOutput,
+                Output,
+                AssetMaterialization,
+                Materialization,
+                ExpectationResult,
+            ),
         ):
             yield event
         else:

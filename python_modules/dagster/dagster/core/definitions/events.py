@@ -487,10 +487,18 @@ class Output(namedtuple("_Output", "value output_name")):
     """
 
     def __new__(cls, value, output_name=DEFAULT_OUTPUT):
-        return super(Output, cls).__new__(
+        return super(Output, cls).__new__(cls, value, check.str_param(output_name, "output_name"),)
+
+
+class AssetOutput(namedtuple("_AssetOutput", "value output_name asset_materializations")):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, asset_materializations=None):
+        return super(AssetOutput, cls).__new__(
             cls,
             value,
             check.str_param(output_name, "output_name"),
+            check.opt_list_param(
+                asset_materializations, "asset_materializations", AssetMaterialization
+            ),
         )
 
 
