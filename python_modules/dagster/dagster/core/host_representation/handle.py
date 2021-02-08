@@ -52,15 +52,7 @@ class RepositoryLocationHandle(ABC):
 
     @staticmethod
     def create_from_repository_location_origin(repo_location_origin):
-        check.inst_param(repo_location_origin, "repo_location_origin", RepositoryLocationOrigin)
-        if isinstance(repo_location_origin, ManagedGrpcPythonEnvRepositoryLocationOrigin):
-            return ManagedGrpcPythonEnvRepositoryLocationHandle(repo_location_origin)
-        elif isinstance(repo_location_origin, GrpcServerRepositoryLocationOrigin):
-            return GrpcServerRepositoryLocationHandle(repo_location_origin)
-        elif isinstance(repo_location_origin, InProcessRepositoryLocationOrigin):
-            return InProcessRepositoryLocationHandle(repo_location_origin)
-        else:
-            check.failed("Unexpected repository location origin")
+        return repo_location_origin.create_handle()
 
     @abstractmethod
     def get_repository_python_origin(self, repository_name):
@@ -203,10 +195,7 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
 
             self.heartbeat_thread = threading.Thread(
                 target=client_heartbeat_thread,
-                args=(
-                    self.client,
-                    self.heartbeat_shutdown_event,
-                ),
+                args=(self.client, self.heartbeat_shutdown_event,),
                 name="grpc-client-heartbeat",
             )
             self.heartbeat_thread.daemon = True
@@ -289,10 +278,7 @@ class InProcessRepositoryLocationHandle(RepositoryLocationHandle):
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
-            sys.executable,
-            self.repository_code_pointer_dict,
-            repository_name,
-            None,
+            sys.executable, self.repository_code_pointer_dict, repository_name, None,
         )
 
 
@@ -310,8 +296,7 @@ class RepositoryHandle(
 
     def get_external_origin(self):
         return ExternalRepositoryOrigin(
-            self.repository_location_handle.origin,
-            self.repository_name,
+            self.repository_location_handle.origin, self.repository_name,
         )
 
     def get_python_origin(self):

@@ -43,17 +43,12 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
     recon_repo = recon_pipeline.repository
     repo_def = recon_repo.get_definition()
     location_origin = InProcessRepositoryLocationOrigin(recon_repo)
-    location_handle = RepositoryLocationHandle.create_from_repository_location_origin(
-        location_origin,
-    )
+    location_handle = location_origin.create_handle()
     repo_handle = RepositoryHandle(
-        repository_name=repo_def.name,
-        repository_location_handle=location_handle,
+        repository_name=repo_def.name, repository_location_handle=location_handle,
     )
     fake_external_pipeline = external_pipeline_from_recon_pipeline(
-        recon_pipeline,
-        solid_selection=None,
-        repository_handle=repo_handle,
+        recon_pipeline, solid_selection=None, repository_handle=repo_handle,
     )
 
     # Launch the run in a fake Dagster instance.
