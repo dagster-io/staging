@@ -140,11 +140,10 @@ def test_handle_cleaup_by_workspace_context_exit():
 
 
 def test_handle_cleaup_by_gc_without_request_context():
-
     called = {"yup": False}
 
     def call_me():
-        called["yup"] = True
+        called["yup"] = True  # pylint: disable=cell-var-from-loop
 
     with instance_for_test() as instance:
         with define_out_of_process_workspace(__file__, "get_repo") as workspace:
@@ -168,7 +167,7 @@ def test_handle_cleaup_by_gc_with_dangling_request_reference():
     called = {"yup": False}
 
     def call_me():
-        called["yup"] = True
+        called["yup"] = True  # pylint: disable=cell-var-from-loop
 
     with instance_for_test() as instance:
         with define_out_of_process_workspace(__file__, "get_repo") as workspace:
