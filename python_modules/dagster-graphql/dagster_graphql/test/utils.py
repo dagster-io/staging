@@ -23,6 +23,14 @@ def main_repo_name():
     return "test_repo"
 
 
+def dict_repo_location_name():
+    return "test_dict_repo_location"
+
+
+def dict_repo_name():
+    return "test_dict_repo"
+
+
 def execute_dagster_graphql(context, query, variables=None):
     result = graphql(
         create_schema(),
