@@ -144,6 +144,11 @@ class GraphDefinition(NodeDefinition):
         """List[NodeDefinition]: List of nodes in the graph."""
         return self._node_defs
 
+    @property
+    def get_type_str(self):
+        """str: String signaling type of node this instance is, used for error reporting."""
+        return "graph"
+
     def has_solid_named(self, name):
         """Return whether or not there is a top level solid with this name in the graph.
 

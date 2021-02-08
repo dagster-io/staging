@@ -1,7 +1,8 @@
 import re
 
 import pytest
-from dagster import DagsterInvalidDefinitionError, solid
+from dagster import DagsterInvalidDefinitionError, DagsterInvariantViolationError, solid
+from dagster.check import CheckError
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.execution.execute import execute_in_process
 
@@ -24,6 +25,12 @@ def test_execute_solid():
     result = execute_in_process(emit_one)
 
     assert result.success
+    assert result.output_values["result"] == 1
+
+    with pytest.raises(
+        DagsterInvariantViolationError, match="Cannot retrieve an inner result from a solid."
+    ):
+        result.result_for_handle("result_doesnt_exist")
 
 
 def test_execute_graph():
@@ -31,7 +38,7 @@ def test_execute_graph():
 
     @graph
     def emit_two():
-        return add(emit_one(), emit_one())
+        return add(emit_one.alias("emit_one_1")(), emit_one.alias("emit_one_2")())
 
     @graph
     def emit_three():
@@ -40,6 +47,20 @@ def test_execute_graph():
     result = execute_in_process(emit_three)
 
     assert result.success
+    assert result.output_values["result"] == 3
+    assert result.result_for_handle("emit_two").output_values["result"] == 2
+    assert result.result_for_handle("emit_one").output_values["result"] == 1
+    assert (
+        result.result_for_handle("emit_two").result_for_handle("emit_one_1").output_values["result"]
+        == 1
+    )
+    assert (
+        result.result_for_handle("emit_two").result_for_handle("emit_one_2").output_values["result"]
+        == 1
+    )
+
+    with pytest.raises(CheckError, match="emit_three has no solid named handle_doesnt_exist."):
+        result.result_for_handle("handle_doesnt_exist")
 
 
 def test_execute_solid_with_inputs():
@@ -49,6 +70,7 @@ def test_execute_solid_with_inputs():
 
     result = execute_in_process(add_one, input_values={"x": 5})
     assert result.success
+    assert result.output_values["result"] == 6
 
 
 def test_execute_graph_with_inputs():
@@ -60,6 +82,7 @@ def test_execute_graph_with_inputs():
 
     result = execute_in_process(add_one, input_values={"x": 5})
     assert result.success
+    assert result.output_values["result"] == 6
 
 
 def test_execute_graph_nonexistent_inputs():
