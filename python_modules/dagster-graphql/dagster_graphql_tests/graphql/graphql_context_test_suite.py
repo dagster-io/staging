@@ -715,6 +715,26 @@ class GraphQLContextVariant:
         """
         return _variants_with_mark(GraphQLContextVariant.all_variants(), pytest.mark.readonly)
 
+    @staticmethod
+    def all_grpc_readonly_variants():
+        """
+        Return all readonly variants. If you try to start or launch these will error
+        """
+        return _variants_with_marks(
+            GraphQLContextVariant.all_variants(),
+            [pytest.mark.managed_grpc_env, pytest.mark.deployed_grpc_env],
+        )
+
+
+def _variants_with_marks(variants, marks):
+    def _yield_all():
+        for variant in variants:
+            for mark in marks:
+                if mark in variant.marks:
+                    yield variant
+
+    return list(set(_yield_all()))
+
 
 def _variants_with_mark(variants, mark):
     def _yield_all():
