@@ -860,3 +860,11 @@ def test_warn_on_pipeline_return():
         @pipeline
         def _returns_something():
             return noop()
+
+
+def test_bad_alias():
+    with pytest.raises(DagsterInvalidDefinitionError, match="not a valid name"):
+        echo.alias("uh oh")
+
+    with pytest.raises(DagsterInvalidDefinitionError, match="not a valid name"):
+        echo.alias("uh[oh]")
