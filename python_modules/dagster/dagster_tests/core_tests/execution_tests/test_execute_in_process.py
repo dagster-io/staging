@@ -1,7 +1,7 @@
 import re
 
 import pytest
-from dagster import DagsterInvalidDefinitionError, solid
+from dagster import DagsterInvalidDefinitionError, DagsterInvariantViolationError, solid
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.execution.execute import execute_in_process
 
@@ -26,13 +26,18 @@ def test_execute_solid():
     assert result.success
     assert result.output_values["result"] == 1
 
+    with pytest.raises(
+        DagsterInvariantViolationError, match="Cannot retrieve an inner result from a solid."
+    ):
+        result.result_for_handle("result_doesnt_exist")
+
 
 def test_execute_graph():
     emit_one, add = get_solids()
 
     @graph
     def emit_two():
-        return add(emit_one(), emit_one())
+        return add(emit_one.alias("emit_one_1")(), emit_one.alias("emit_one_2")())
 
     @graph
     def emit_three():
@@ -42,6 +47,16 @@ def test_execute_graph():
 
     assert result.success
     assert result.output_values["result"] == 3
+    assert result.result_for_handle("emit_two").output_values["result"] == 2
+    assert result.result_for_handle("emit_one").output_values["result"] == 1
+    assert (
+        result.result_for_handle("emit_two").result_for_handle("emit_one_1").output_values["result"]
+        == 1
+    )
+    assert (
+        result.result_for_handle("emit_two").result_for_handle("emit_one_2").output_values["result"]
+        == 1
+    )
 
 
 def test_execute_solid_with_inputs():
