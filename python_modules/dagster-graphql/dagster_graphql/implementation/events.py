@@ -206,7 +206,7 @@ def from_dagster_event_record(event_record, pipeline_name):
             metadataEntries=_to_metadata_entries(
                 dagster_event.event_specific_data.metadata_entries
             ),
-            assetKey=GrapheneAssetKey(path=dagster_event.event_specific_data.asset_key.path),
+            # assetKey=GrapheneAssetKey(path=dagster_event.event_specific_data.asset_key.path),
             **basic_params,
         )
     elif dagster_event.event_type == DagsterEventType.LOADED_INPUT:

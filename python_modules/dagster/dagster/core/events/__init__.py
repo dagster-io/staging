@@ -590,7 +590,8 @@ class DagsterEvent(
             step_context=step_context,
             event_specific_data=success,
             message='Finished execution of step "{step_key}" in {duration}.'.format(
-                step_key=step_context.step.key, duration=format_duration(success.duration_ms),
+                step_key=step_context.step.key,
+                duration=format_duration(success.duration_ms),
             ),
         )
 
@@ -724,7 +725,8 @@ class DagsterEvent(
                 ", ".join(sorted(resource_init_times.keys()))
             ),
             event_specific_data=EngineEventData(
-                metadata_entries=metadata_entries, marker_end="resources",
+                metadata_entries=metadata_entries,
+                marker_end="resources",
             ),
         )
 
@@ -737,7 +739,9 @@ class DagsterEvent(
             log_manager=check.inst_param(log_manager, "log_manager", DagsterLogManager),
             message="Initialization of resources [{}] failed.".format(", ".join(resource_keys)),
             event_specific_data=EngineEventData(
-                metadata_entries=[], marker_end="resources", error=error,
+                metadata_entries=[],
+                marker_end="resources",
+                error=error,
             ),
         )
 
@@ -750,7 +754,10 @@ class DagsterEvent(
             log_manager=check.inst_param(log_manager, "log_manager", DagsterLogManager),
             message="Teardown of resources [{}] failed.".format(", ".join(resource_keys)),
             event_specific_data=EngineEventData(
-                metadata_entries=[], marker_start=None, marker_end=None, error=error,
+                metadata_entries=[],
+                marker_start=None,
+                marker_end=None,
+                error=error,
             ),
         )
 
@@ -872,7 +879,10 @@ class DagsterEvent(
 
     @staticmethod
     def handled_output(
-        step_context, output_name, manager_key, metadata_entries=None, asset_key=None
+        step_context,
+        output_name,
+        manager_key,
+        metadata_entries=None,  # asset_key=None
     ):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
@@ -884,7 +894,7 @@ class DagsterEvent(
                 output_name=output_name,
                 manager_key=manager_key,
                 metadata_entries=metadata_entries if metadata_entries else [],
-                asset_key=asset_key,
+                # asset_key=asset_key,
             ),
             message=message,
         )
@@ -933,7 +943,9 @@ class DagsterEvent(
         )
 
         hook_context.log.debug(
-            event.message, dagster_event=event, pipeline_name=hook_context.pipeline_name,
+            event.message,
+            dagster_event=event,
+            pipeline_name=hook_context.pipeline_name,
         )
 
         return event
@@ -959,7 +971,9 @@ class DagsterEvent(
         )
 
         hook_context.log.error(
-            str(error), dagster_event=event, pipeline_name=hook_context.pipeline_name,
+            str(error),
+            dagster_event=event,
+            pipeline_name=hook_context.pipeline_name,
         )
 
         return event
@@ -983,7 +997,9 @@ class DagsterEvent(
         )
 
         hook_context.log.debug(
-            event.message, dagster_event=event, pipeline_name=hook_context.pipeline_name,
+            event.message,
+            dagster_event=event,
+            pipeline_name=hook_context.pipeline_name,
         )
 
         return event
@@ -1121,7 +1137,8 @@ class PipelineCanceledData(namedtuple("_PipelineCanceledData", "error")):
 class HookErroredData(namedtuple("_HookErroredData", "error")):
     def __new__(cls, error):
         return super(HookErroredData, cls).__new__(
-            cls, error=check.inst_param(error, "error", SerializableErrorInfo),
+            cls,
+            error=check.inst_param(error, "error", SerializableErrorInfo),
         )
 
 
@@ -1129,7 +1146,7 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
 class HandledOutputData(
     namedtuple("_HandledOutputData", "output_name manager_key metadata_entries")
 ):
-    def __new__(cls, output_name, manager_key, metadata_entries, asset_key):
+    def __new__(cls, output_name, manager_key, metadata_entries):
         return super(HandledOutputData, cls).__new__(
             cls,
             output_name=check.str_param(output_name, "output_name"),
@@ -1137,7 +1154,7 @@ class HandledOutputData(
             metadata_entries=check.opt_list_param(
                 metadata_entries, "metadata_entries", EventMetadataEntry
             ),
-            asset_key=check.opt_inst_param(asset_key, "asset_key", AssetKey),
+            # asset_key=check.opt_inst_param(asset_key, "asset_key", AssetKey),
         )
 
 
@@ -1204,7 +1221,7 @@ def _handle_back_compat(event_type_value, event_specific_data):
             return (
                 DagsterEventType.HANDLED_OUTPUT.value,
                 HandledOutputData(
-                    event_specific_data.output_name, event_specific_data.asset_store_key, None, []
+                    event_specific_data.output_name, event_specific_data.asset_store_key, []
                 ),
             )
     else:

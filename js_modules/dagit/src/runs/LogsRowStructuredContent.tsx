@@ -146,9 +146,9 @@ export const LogsRowStructuredContent: React.FunctionComponent<IStructuredConten
     case 'HandledOutputEvent':
       return (
         <DefaultContent message={node.message} eventType="Handled Output">
-          <MetadataEntries entries={node.metadataEntries}/>
+          <MetadataEntries entries={node.metadataEntries} />
         </DefaultContent>
-       );
+      );
     case 'LoadedInputEvent':
       return <DefaultContent message={node.message} eventType="Loaded Input" />;
     case 'HookCompletedEvent':
