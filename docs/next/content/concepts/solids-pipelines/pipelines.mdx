@@ -39,11 +39,23 @@ we wrap a function that composes a set of solids.
 
 Within the body of the function that is decorated, we use function calls to indicate the dependency structure of the solids making up the pipeline.
 
-```python literalinclude caption=solids.py
-file=/docs_snippets/docs_snippets/overview/solids_pipelines/pipeline_definition.py
-lineno-start:
-startAfter:start_pipeline_definition_marker_0
-endBefore:end_pipeline_definition_marker_0
+```python file=/overview/solids_pipelines/pipeline_definition.py startafter=start_pipeline_definition_marker_0 endbefore=end_pipeline_definition_marker_0
+from dagster import DependencyDefinition, InputDefinition, PipelineDefinition, pipeline, solid
+
+
+@solid
+def return_one(context):
+    return 1
+
+
+@solid(input_defs=[InputDefinition("number", int)])
+def add_one(context, number):
+    return number + 1
+
+
+@pipeline
+def one_plus_one_pipeline():
+    add_one(return_one())
 ```
 
 **Method 2: Constructing the PipelineDefinition object**
@@ -53,9 +65,10 @@ list of solid definitions, and a dictionary defining the dependency structure.
 
 The dependency structure declares the dependencies of each solid’s inputs on the outputs of other solids in the pipeline. Keys of the top level dict are either the string names of solids in the pipeline or, in the case of aliased solids, SolidInvocations. Values of the top level dict are themselves dicts, which map input names belonging to the solid or aliased solid to DependencyDefinitions.
 
-```python literalinclude caption=solids.py
-file=/docs_snippets/docs_snippets/overview/solids_pipelines/pipeline_definition.py
-lineno-start:
-startAfter:start_pipeline_definition_marker_1
-endBefore:end_pipeline_definition_marker_1
+```python file=/overview/solids_pipelines/pipeline_definition.py startafter=start_pipeline_definition_marker_1 endbefore=end_pipeline_definition_marker_1
+one_plus_one_pipeline_def = PipelineDefinition(
+    name="one_plus_one_pipeline",
+    solid_defs=[return_one, add_one],
+    dependencies={"add_one": {"number": DependencyDefinition("return_one")}},
+)
 ```
