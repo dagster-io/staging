@@ -1,7 +1,13 @@
 import re
+import tempfile
 
 import pytest
-from dagster import DagsterInvalidDefinitionError, DagsterInvariantViolationError, solid
+from dagster import (
+    DagsterInvalidDefinitionError,
+    DagsterInvariantViolationError,
+    fs_io_manager,
+    solid,
+)
 from dagster.check import CheckError
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.execution.execute import execute_in_process
@@ -22,15 +28,21 @@ def get_solids():
 def test_execute_solid():
     emit_one, _ = get_solids()
 
-    result = execute_in_process(emit_one)
+    with tempfile.TemporaryDirectory() as temp_dir:
 
-    assert result.success
-    assert result.output_values["result"] == 1
+        result = execute_in_process(
+            emit_one,
+            resources={"io_manager": fs_io_manager},
+            run_config={"resources": {"io_manager": {"config": {"base_dir": temp_dir}}}},
+        )
 
-    with pytest.raises(
-        DagsterInvariantViolationError, match="Cannot retrieve an inner result from a solid."
-    ):
-        result.result_for_handle("result_doesnt_exist")
+        assert result.success
+        assert result.output_values["result"] == 1
+
+        with pytest.raises(
+            DagsterInvariantViolationError, match="Cannot retrieve an inner result from a solid."
+        ):
+            result.result_for_handle("result_doesnt_exist")
 
 
 def test_execute_graph():
@@ -44,23 +56,33 @@ def test_execute_graph():
     def emit_three():
         return add(emit_two(), emit_one())
 
-    result = execute_in_process(emit_three)
+    with tempfile.TemporaryDirectory() as temp_dir:
 
-    assert result.success
-    assert result.output_values["result"] == 3
-    assert result.result_for_handle("emit_two").output_values["result"] == 2
-    assert result.result_for_handle("emit_one").output_values["result"] == 1
-    assert (
-        result.result_for_handle("emit_two").result_for_handle("emit_one_1").output_values["result"]
-        == 1
-    )
-    assert (
-        result.result_for_handle("emit_two").result_for_handle("emit_one_2").output_values["result"]
-        == 1
-    )
+        result = execute_in_process(
+            emit_three,
+            resources={"io_manager": fs_io_manager},
+            run_config={"resources": {"io_manager": {"config": {"base_dir": temp_dir}}}},
+        )
 
-    with pytest.raises(CheckError, match="emit_three has no solid named handle_doesnt_exist."):
-        result.result_for_handle("handle_doesnt_exist")
+        assert result.success
+        assert result.output_values["result"] == 3
+        assert result.result_for_handle("emit_two").output_values["result"] == 2
+        assert result.result_for_handle("emit_one").output_values["result"] == 1
+        assert (
+            result.result_for_handle("emit_two")
+            .result_for_handle("emit_one_1")
+            .output_values["result"]
+            == 1
+        )
+        assert (
+            result.result_for_handle("emit_two")
+            .result_for_handle("emit_one_2")
+            .output_values["result"]
+            == 1
+        )
+
+        with pytest.raises(CheckError, match="emit_three has no solid named handle_doesnt_exist."):
+            result.result_for_handle("handle_doesnt_exist")
 
 
 def test_execute_solid_with_inputs():
@@ -68,9 +90,16 @@ def test_execute_solid_with_inputs():
     def add_one(_, x):
         return 1 + x
 
-    result = execute_in_process(add_one, input_values={"x": 5})
-    assert result.success
-    assert result.output_values["result"] == 6
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        result = execute_in_process(
+            add_one,
+            resources={"io_manager": fs_io_manager},
+            run_config={"resources": {"io_manager": {"config": {"base_dir": temp_dir}}}},
+            input_values={"x": 5},
+        )
+        assert result.success
+        assert result.output_values["result"] == 6
 
 
 def test_execute_graph_with_inputs():
@@ -80,9 +109,16 @@ def test_execute_graph_with_inputs():
     def add_one(x):
         return add(x, emit_one())
 
-    result = execute_in_process(add_one, input_values={"x": 5})
-    assert result.success
-    assert result.output_values["result"] == 6
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        result = execute_in_process(
+            add_one,
+            resources={"io_manager": fs_io_manager},
+            input_values={"x": 5},
+            run_config={"resources": {"io_manager": {"config": {"base_dir": temp_dir}}}},
+        )
+        assert result.success
+        assert result.output_values["result"] == 6
 
 
 def test_execute_graph_nonexistent_inputs():

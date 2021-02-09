@@ -123,6 +123,8 @@ def execute_in_process(
         return ExecutionResult(
             node,
             event_list_for_top_lvl_node,
+            execution_plan,
+            pipeline_run.run_id,
             lambda hardcoded_resources_arg: scoped_pipeline_context(
                 execution_plan,
                 pipeline_run.run_config,

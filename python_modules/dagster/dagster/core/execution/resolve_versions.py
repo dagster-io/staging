@@ -182,9 +182,7 @@ def resolve_memoized_execution_plan(execution_plan):
             resource_context = InitResourceContext(
                 resource_config,
                 resource_def,
-                pipeline_run=PipelineRun(
-                    pipeline_name=pipeline_def.name, run_id="", mode=environment_config.mode
-                ),
+                run_id="",
             )
             io_manager = resource_def.resource_fn(resource_context)
             context = get_output_context(
