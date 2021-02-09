@@ -72,7 +72,8 @@ class Workspace:
         return self._location_handle_dict[location_name]
 
     def has_repository_location_error(self, location_name):
-        check.str_param(location_name, "location_name")
+        check.str_param(location_name, 
+        "location_name")
         return location_name in self._location_error_dict
 
     def get_repository_location_error(self, location_name):
