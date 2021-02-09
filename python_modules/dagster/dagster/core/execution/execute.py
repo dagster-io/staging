@@ -132,4 +132,5 @@ def execute_in_process(
                 resource_instances_to_override=hardcoded_resources_arg,
             ),
             resource_instances_to_override=resource_instances_to_override,
+            handle=top_level_node_handle,
         )

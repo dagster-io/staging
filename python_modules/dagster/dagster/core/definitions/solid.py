@@ -121,6 +121,11 @@ class SolidDefinition(NodeDefinition):
     def version(self):
         return self._version
 
+    @property
+    def get_type_str(self):
+        """str: String signaling type of node this instance is, used for error reporting."""
+        return "solid"
+
     def all_dagster_types(self):
         yield from self.all_input_output_types()
 

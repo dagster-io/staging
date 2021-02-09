@@ -1,7 +1,13 @@
 from collections import defaultdict
 
 from dagster import check
-from dagster.core.definitions import GraphDefinition, PipelineDefinition, Solid, SolidHandle
+from dagster.core.definitions import (
+    GraphDefinition,
+    PipelineDefinition,
+    Solid,
+    SolidDefinition,
+    SolidHandle,
+)
 from dagster.core.definitions.utils import DEFAULT_OUTPUT
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.events import DagsterEvent, DagsterEventType
@@ -18,12 +24,18 @@ def _construct_events_by_step_key(event_list):
 
 class ExecutionResult:
     def __init__(
-        self, node_def, event_list, reconstruct_context, resource_instances_to_override=None
+        self,
+        node_def,
+        event_list,
+        reconstruct_context,
+        resource_instances_to_override=None,
+        handle=None,
     ):
         self.node_def = node_def
         self.event_list = event_list
         self._reconstruct_context = reconstruct_context
         self._resource_instances_to_override = resource_instances_to_override
+        self._handle = handle
 
         events_by_kind = defaultdict(list)
         for event in self.event_list:
@@ -34,6 +46,10 @@ class ExecutionResult:
     @property
     def step_events_by_kind(self):
         return self._step_events_by_kind
+
+    @property
+    def handle(self):
+        return self._handle
 
     @property
     def compute_step_events(self):
@@ -93,6 +109,41 @@ class ExecutionResult:
             )
         )
         return res
+
+    def result_for_handle(self, handle):
+        """Get the result of a top level node.
+
+        Args:
+            handle (Union[str, SolidHandle]): The handle of the top-level node for which to retrieve
+                the result.
+
+        Returns:
+            NodeExecutionResult: The result of the node's execution within this node.
+        """
+        if isinstance(self.node_def, SolidDefinition):
+            raise DagsterInvariantViolationError("Cannot retrieve an inner result from a solid.")
+
+        if isinstance(handle, str):
+            handle = SolidHandle.from_string(handle)
+        else:
+            check.inst_param(handle, "handle", SolidHandle)
+
+        node = self.node_def.get_solid(handle)
+
+        events = [
+            event
+            for event in self.event_list
+            if event.is_step_event
+            and event.solid_handle.is_or_descends_from(handle.with_ancestor(self.handle))
+        ]
+
+        return ExecutionResult(
+            node.definition,
+            events,
+            self._reconstruct_context,
+            resource_instances_to_override=self.resource_instances_to_override,
+            handle=handle.with_ancestor(self.handle),
+        )
 
 
 class GraphExecutionResult:

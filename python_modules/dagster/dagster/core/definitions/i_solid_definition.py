@@ -146,6 +146,10 @@ class NodeDefinition(NamedConfigurableDefinition):
     def input_supports_dynamic_output_dep(self, input_name):
         raise NotImplementedError()
 
+    @abstractproperty
+    def get_type_str(self):
+        raise NotImplementedError()
+
     def all_input_output_types(self):
         for input_def in self._input_defs:
             yield input_def.dagster_type
