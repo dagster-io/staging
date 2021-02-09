@@ -1,4 +1,5 @@
-from collections import defaultdict
+from collections import defaultdict, deque
+from contextlib import contextmanager
 
 from dagster import check
 from dagster.core.definitions import (
@@ -8,10 +9,57 @@ from dagster.core.definitions import (
     SolidDefinition,
     SolidHandle,
 )
+from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.utils import DEFAULT_OUTPUT
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvariantViolationError, DagsterUserCodeExecutionError
 from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.execution.plan.step import StepKind
+from dagster.core.log_manager import DagsterLogManager
+from dagster.core.utils import toposort
+from dagster.loggers import default_system_loggers
+from dagster.utils import EventGenerationManager
+
+from .context.init import InitResourceContext
+from .context.logger import InitLoggerContext
+from .context.system import InputContext, OutputContext
+from .resources_init import InitializedResource, single_resource_event_generator
+
+
+def create_log_manager(pipeline_def, mode_def, execution_plan, run_id):
+    environment_config = execution_plan.environment_config
+
+    # The following logic is tightly coupled to the processing of logger config in
+    # python_modules/dagster/dagster/core/system_config/objects.py#config_map_loggers
+    # Changes here should be accompanied checked against that function, which applies config mapping
+    # via ConfigurableDefinition (@configured) to incoming logger configs. See docstring for more details.
+
+    loggers = []
+    for logger_key, logger_def in mode_def.loggers.items() or default_loggers().items():
+        if logger_key in environment_config.loggers:
+            loggers.append(
+                logger_def.logger_fn(
+                    InitLoggerContext(
+                        environment_config.loggers.get(logger_key, {}).get("config"),
+                        pipeline_def,
+                        logger_def,
+                        run_id,
+                    )
+                )
+            )
+
+    if not loggers:
+        for (logger_def, logger_config) in default_system_loggers():
+            loggers.append(
+                logger_def.logger_fn(
+                    InitLoggerContext(logger_config, pipeline_def, logger_def, run_id)
+                )
+            )
+
+    return DagsterLogManager(
+        run_id=run_id,
+        logging_tags={},
+        loggers=loggers,
+    )
 
 
 def _construct_events_by_step_key(event_list):
@@ -22,11 +70,121 @@ def _construct_events_by_step_key(event_list):
     return dict(events_by_step_key)
 
 
+def _resolve_resource_dependencies(resource_defs):
+    """Generates a dictionary that maps resource key to resource keys it requires for initialization"""
+    resource_dependencies = {
+        key: resource_def.required_resource_keys for key, resource_def in resource_defs.items()
+    }
+    return resource_dependencies
+
+
+def _single_resource_generation_manager(context, resource_name, resource_def):
+    generator = single_resource_event_generator(context, resource_name, resource_def)
+    return EventGenerationManager(generator, InitializedResource)
+
+
+def _core_resource_generation(execution_plan, run_id, resource_defs, resource_managers, mode_def):
+    resource_deps = _resolve_resource_dependencies(resource_defs)
+    log_manager = create_log_manager(execution_plan.pipeline_def, mode_def, execution_plan, run_id)
+    resource_instances = {}
+    resource_init_times = {}
+    resource_managers = deque()
+    try:
+        yield DagsterEvent.resource_init_start(
+            execution_plan,
+            log_manager,
+            resource_defs.keys(),
+        )
+        for level in toposort(resource_deps):
+            for resource_name in level:
+                resource_def = mode_def.resource_defs[resource_name]
+                resource_context = InitResourceContext(
+                    resource_def=resource_def,
+                    resource_config=execution_plan.environment_config.resources.get(
+                        resource_name, {}
+                    ).get("config"),
+                    run_id=run_id,
+                    resource_instance_dict=resource_instances,
+                    required_resource_keys=resource_def.required_resource_keys,
+                )
+                manager = _single_resource_generation_manager(
+                    resource_context, resource_name, resource_def
+                )
+                for event in manager.generate_setup_events():
+                    if event:
+                        yield event
+                initialized_resource = check.inst(manager.get_object(), InitializedResource)
+                resource_instances[resource_name] = initialized_resource.resource
+                resource_init_times[resource_name] = initialized_resource.duration
+                resource_managers.append(manager)
+        yield ScopedResourcesBuilder(resource_instances)
+    except DagsterUserCodeExecutionError as dagster_user_error:
+        yield DagsterEvent.resource_init_failure(
+            execution_plan,
+            log_manager,
+            resource_keys_to_init,
+            serializable_error_info_from_exc_info(dagster_user_error.original_exc_info),
+        )
+        raise dagster_user_error
+
+
+def generate_resource_from_key(execution_plan, run_id):
+    mode_def = execution_plan.pipeline_def.get_mode_definition("created")
+    resource_defs = mode_def.resource_defs
+    generator_closed = False
+    resource_managers = deque()
+    try:
+        yield from _core_resource_generation(
+            execution_plan, run_id, resource_defs, resource_managers, mode_def
+        )
+    except GeneratorExit:
+        # Shouldn't happen, but avoid runtime-exception in case this generator gets GC-ed
+        # (see https://amir.rachum.com/blog/2017/03/03/generator-cleanup/).
+        generator_closed = True
+        raise
+    finally:
+        if not generator_closed:
+            error = None
+            while len(resource_managers) > 0:
+                manager = resource_managers.pop()
+                try:
+                    yield from manager.generate_teardown_events()
+                except DagsterUserCodeExecutionError as dagster_user_error:
+                    error = dagster_user_error
+            if error:
+                yield DagsterEvent.resource_teardown_failure(
+                    execution_plan,
+                    None,
+                    resource_keys_to_init,
+                    serializable_error_info_from_exc_info(error.original_exc_info),
+                )
+
+
+def standalone_resource_init_manager(execution_plan, run_id):
+    generator = generate_resource_from_key(execution_plan, run_id)
+    return EventGenerationManager(generator, ScopedResourcesBuilder)
+
+
+@contextmanager
+def initialize_resources(execution_plan, run_id):
+    resources_manager = standalone_resource_init_manager(execution_plan, run_id)
+    try:
+        _events = list(resources_manager.generate_setup_events())
+        scoped_resources_builder = check.inst(
+            resources_manager.get_object(), ScopedResourcesBuilder
+        )
+        yield scoped_resources_builder
+    finally:
+        _events = resources_manager.generate_teardown_events()
+
+
 class ExecutionResult:
     def __init__(
         self,
         node_def,
         event_list,
+        execution_plan,
+        run_id,
         reconstruct_context,
         resource_instances_to_override=None,
         handle=None,
@@ -36,12 +194,17 @@ class ExecutionResult:
         self._reconstruct_context = reconstruct_context
         self._resource_instances_to_override = resource_instances_to_override
         self._handle = handle
+        self._execution_plan = execution_plan
+        self._run_id = run_id
 
         events_by_kind = defaultdict(list)
         for event in self.event_list:
             if event.is_step_event:
                 events_by_kind[event.step_kind].append(event)
         self._step_events_by_kind = events_by_kind
+
+    def _resource_key_to_instance(self, resource_key):
+        return _generate_resource_from_key(resource_key, self._execution_plan, self._run_id)
 
     @property
     def step_events_by_kind(self):
@@ -72,12 +235,14 @@ class ExecutionResult:
     @property
     def output_values(self):
         results = {}
-        with self.reconstruct_context(self.resource_instances_to_override) as context:
+        with initialize_resources(self._execution_plan, self._run_id) as scoped_resources:
             for compute_step_event in self.compute_step_events:
                 if compute_step_event.is_successful_output:
                     output = compute_step_event.step_output_data
-                    step = context.execution_plan.get_step_by_key(compute_step_event.step_key)
-                    value = self._get_value(context.for_step(step), output)
+                    step = self._execution_plan.get_step_by_key(compute_step_event.step_key)
+                    value = self._get_value(
+                        scoped_resources.resource_instance_dict, self._execution_plan, output
+                    )
                     check.invariant(
                         not (output.mapping_key and step.get_mapping_key()),
                         "Not set up to handle mapped outputs downstream of mapped steps",
@@ -93,19 +258,26 @@ class ExecutionResult:
 
         return results
 
-    def _get_value(self, context, step_output_data):
+    def _get_value(self, resources, execution_plan, step_output_data):
         step_output_handle = step_output_data.step_output_handle
-        manager = context.get_io_manager(step_output_handle)
+        step_output = execution_plan.get_step_by_key(step_output_handle.step_key)
+        solid_handle = step_output.solid_handle
+        manager_key = execution_plan.get_manager_key(step_output_handle)
+        manager = resources[manager_key]
+        solid_def = execution_plan.pipeline_def.solid_named(solid_handle.name).definition
 
         res = manager.load_input(
-            context.for_input_manager(
-                name=None,
+            InputContext(
+                execution_plan.pipeline_def.name,
+                solid_def=solid_def,
                 config=None,
                 metadata=None,
-                dagster_type=self.node_def.output_def_named(
-                    step_output_data.output_name
-                ).dagster_type,
-                source_handle=step_output_handle,
+                upstream_output=OutputContext(
+                    step_output_handle.step_key,
+                    step_output_handle.output_name,
+                    execution_plan.pipeline_def.name,
+                    self._run_id,
+                ),
             )
         )
         return res
