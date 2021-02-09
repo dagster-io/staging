@@ -161,14 +161,6 @@ export const JobTickHistory = ({
     return <PythonErrorInfo error={data.jobStateOrError} />;
   }
 
-  if (data.jobStateOrError.__typename === 'JobNotFoundError') {
-    return (
-      <Box padding={32} flex={{justifyContent: 'center', alignItems: 'center'}}>
-        {data.jobStateOrError.message}
-      </Box>
-    );
-  }
-
   const {ticks, nextTick, jobType} = data.jobStateOrError;
   const displayedTicks = ticks.filter((tick) =>
     tick.status === JobTickStatus.SKIPPED
@@ -548,9 +540,6 @@ const JOB_TICK_HISTORY_QUERY = gql`
       }
       ... on PythonError {
         ...PythonErrorFragment
-      }
-      ... on JobNotFoundError {
-        message
       }
     }
   }
