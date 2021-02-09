@@ -34,12 +34,6 @@ def get_main_recon_repo():
     return ReconstructableRepository.for_file(file_relative_path(__file__, "setup.py"), "test_repo")
 
 
-def get_dict_recon_repo():
-    return ReconstructableRepository.for_file(
-        file_relative_path(__file__, "setup.py"), "test_dict_repo"
-    )
-
-
 @contextmanager
 def graphql_postgres_instance(overrides):
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -399,19 +393,34 @@ class EnvironmentManagers:
                         ),
                         location_name="empty_repo",
                     ),
+                ]
+            ) as workspace:
+                yield workspace
+
+        return MarkedManager(_mgr_fn, [Marks.multi_location])
+
+    @staticmethod
+    def lazy_repository():
+        @contextmanager
+        def _mgr_fn(recon_repo):
+            """Goes out of process but same process as host process"""
+            check.inst_param(recon_repo, "recon_repo", ReconstructableRepository)
+
+            with Workspace(
+                [
                     ManagedGrpcPythonEnvRepositoryLocationOrigin(
                         loadable_target_origin=LoadableTargetOrigin(
                             executable_path=sys.executable,
                             python_file=file_relative_path(__file__, "setup.py"),
                             attribute="test_dict_repo",
                         ),
-                        location_name="test_dict_repo_location",
+                        location_name="test",
                     ),
                 ]
             ) as workspace:
                 yield workspace
 
-        return MarkedManager(_mgr_fn, [Marks.multi_location])
+        return MarkedManager(_mgr_fn, [Marks.lazy_repository])
 
 
 class Marks:
@@ -431,6 +440,7 @@ class Marks:
     multi_location = pytest.mark.multi_location
     managed_grpc_env = pytest.mark.managed_grpc_env
     deployed_grpc_env = pytest.mark.deployed_grpc_env
+    lazy_repository = pytest.mark.lazy_repository
 
     # Asset-aware sqlite variants
     asset_aware_instance = pytest.mark.asset_aware_instance
@@ -617,6 +627,14 @@ class GraphQLContextVariant:
         )
 
     @staticmethod
+    def readonly_sqlite_instance_lazy_repository():
+        return GraphQLContextVariant(
+            InstanceManagers.readonly_sqlite_instance(),
+            EnvironmentManagers.lazy_repository(),
+            test_id="readonly_sqlite_instance_lazy_repository",
+        )
+
+    @staticmethod
     def readonly_sqlite_instance_managed_grpc_env():
         return GraphQLContextVariant(
             InstanceManagers.readonly_sqlite_instance(),
@@ -649,6 +667,14 @@ class GraphQLContextVariant:
         )
 
     @staticmethod
+    def readonly_postgres_instance_lazy_repository():
+        return GraphQLContextVariant(
+            InstanceManagers.readonly_postgres_instance(),
+            EnvironmentManagers.lazy_repository(),
+            test_id="readonly_postgres_instance_lazy_repository",
+        )
+
+    @staticmethod
     def readonly_postgres_instance_managed_grpc_env():
         return GraphQLContextVariant(
             InstanceManagers.readonly_postgres_instance(),
@@ -670,6 +696,14 @@ class GraphQLContextVariant:
             InstanceManagers.readonly_in_memory_instance(),
             EnvironmentManagers.multi_location(),
             test_id="readonly_in_memory_instance_multi_location",
+        )
+
+    @staticmethod
+    def readonly_in_memory_instance_lazy_repository():
+        return GraphQLContextVariant(
+            InstanceManagers.readonly_in_memory_instance(),
+            EnvironmentManagers.lazy_repository(),
+            test_id="readonly_in_memory_instance_lazy_repository",
         )
 
     @staticmethod
@@ -710,13 +744,16 @@ class GraphQLContextVariant:
             GraphQLContextVariant.readonly_in_memory_instance_in_process_env(),
             GraphQLContextVariant.readonly_in_memory_instance_multi_location(),
             GraphQLContextVariant.readonly_in_memory_instance_managed_grpc_env(),
+            GraphQLContextVariant.readonly_in_memory_instance_lazy_repository(),
             GraphQLContextVariant.readonly_sqlite_instance_in_process_env(),
             GraphQLContextVariant.readonly_sqlite_instance_multi_location(),
             GraphQLContextVariant.readonly_sqlite_instance_managed_grpc_env(),
             GraphQLContextVariant.readonly_sqlite_instance_deployed_grpc_env(),
+            GraphQLContextVariant.readonly_sqlite_instance_lazy_repository(),
             GraphQLContextVariant.readonly_postgres_instance_in_process_env(),
             GraphQLContextVariant.readonly_postgres_instance_multi_location(),
             GraphQLContextVariant.readonly_postgres_instance_managed_grpc_env(),
+            GraphQLContextVariant.readonly_postgres_instance_lazy_repository(),
             GraphQLContextVariant.consolidated_sqlite_instance_in_process_env(),
         ]
 
