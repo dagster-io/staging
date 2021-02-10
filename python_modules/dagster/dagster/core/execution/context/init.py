@@ -1,9 +1,9 @@
 from collections import namedtuple
-from typing import Any, Dict, Optional, Set
+from typing import Any, Optional
 
 from dagster import check
 from dagster.core.definitions.pipeline import PipelineDefinition
-from dagster.core.definitions.resource import ResourceDefinition, ScopedResourcesBuilder
+from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -39,25 +39,17 @@ class InitResourceContext(
         resource_def: ResourceDefinition,
         pipeline_run: PipelineRun,
         log_manager: Optional[DagsterLogManager] = None,
-        resource_instance_dict: Optional[Dict[str, Any]] = None,
-        required_resource_keys: Optional[Set[str]] = None,
+        resources: Optional[Any] = None,
         instance_for_backwards_compat: Optional[DagsterInstance] = None,
         pipeline_def_for_backwards_compat: Optional[PipelineDefinition] = None,
     ):
-        check.opt_dict_param(resource_instance_dict, "resource_instance_dict")
-        required_resource_keys = check.opt_set_param(
-            required_resource_keys, "required_resource_keys"
-        )
-
-        scoped_resources_builder = ScopedResourcesBuilder(resource_instance_dict)
-
         return super(InitResourceContext, cls).__new__(
             cls,
             resource_config,
             check.inst_param(resource_def, "resource_def", ResourceDefinition),
             check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
             check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
-            resources=scoped_resources_builder.build(required_resource_keys),
+            resources=resources,
             # The following are used internally for adapting intermediate storage defs to resources
             instance_for_backwards_compat=check.opt_inst_param(
                 instance_for_backwards_compat, "instance_for_backwards_compat", DagsterInstance
@@ -83,5 +75,6 @@ class InitResourceContext(
             resource_def=self.resource_def,
             pipeline_run=self.pipeline_run,
             log_manager=self.log_manager,
+            resources=self.resources,
             instance_for_backwards_compat=self.instance_for_backwards_compat,
         )

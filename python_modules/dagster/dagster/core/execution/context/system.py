@@ -479,7 +479,7 @@ class HookContext(SystemExecutionContext):
 class OutputContext(
     namedtuple(
         "_OutputContext",
-        "step_key name pipeline_name run_id metadata mapping_key config solid_def dagster_type log version step_context resource_config resources",
+        "step_key name pipeline_name run_id metadata mapping_key config solid_def dagster_type log_manager version step_context resource_config resources",
     )
 ):
     """
@@ -534,7 +534,7 @@ class OutputContext(
             dagster_type=check.inst_param(
                 resolve_dagster_type(dagster_type), "dagster_type", DagsterType
             ),  # this allows the user to mock the context with unresolved dagster type
-            log=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
+            log_manager=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
             version=check.opt_str_param(version, "version"),
             step_context=check.opt_inst_param(
                 step_context, "step_context", SystemStepExecutionContext
@@ -564,11 +564,15 @@ class OutputContext(
 
         return [self.run_id, self.step_key, self.name]
 
+    @property
+    def log(self):
+        return self.log_manager
+
 
 class InputContext(
     namedtuple(
         "_InputContext",
-        "name pipeline_name solid_def config metadata upstream_output dagster_type log step_context resource_config resources",
+        "name pipeline_name solid_def config metadata upstream_output dagster_type log_manager step_context resource_config resources",
     )
 ):
     """
@@ -620,13 +624,17 @@ class InputContext(
             dagster_type=check.inst_param(
                 resolve_dagster_type(dagster_type), "dagster_type", DagsterType
             ),  # this allows the user to mock the context with unresolved dagster type
-            log=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
+            log_manager=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
             step_context=check.opt_inst_param(
                 step_context, "step_context", SystemStepExecutionContext
             ),
             resource_config=resource_config,
             resources=resources,
         )
+
+    @property
+    def log(self):
+        return self.log_manager
 
 
 def _step_output_version(
