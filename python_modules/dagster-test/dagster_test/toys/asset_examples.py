@@ -1,19 +1,91 @@
+from collections import namedtuple
 from contextlib import contextmanager
 from typing import Callable, List, Optional
 
 from dagster import (
     AssetKey,
+    AssetMaterialization,
+    DagsterEvent,
+    EventMetadataEntry,
     IOManager,
     IOManagerDefinition,
     InputDefinition,
     ModeDefinition,
     Nothing,
+    Output,
     OutputDefinition,
     io_manager,
     pipeline,
     solid,
 )
 from pandas import DataFrame, read_csv
+
+
+class PartitionSpecificMetadata(
+    namedtuple("_PartitionSpecificMetadata", "partition metadata_entry")
+):
+    pass
+
+
+def error(s):
+    pass
+
+
+def demo_assembly_func(context, output_def, io_manager, output):
+
+    parent_asset_keys = []  # we know how to get these from inputs
+    output_def_asset_keys = output_def.asset_key_fn(context) if output_def.asset_key_fn else []
+    io_manager_asset_keys = (
+        io_manager.get_output_asset_keys(context)
+        if isinstance(io_manager, "AssetIOManager")
+        else []
+    )
+
+    # we get these when the io manager yields them from the handle_output function
+    io_manager_metadata_entries = []
+
+    # I don't think it's reasonable to specify assets in multiple places, so I think for now
+    # it's fine to error out in this case (although we can probably catch this sort of issue earlier)
+    if output_def_asset_keys and io_manager_asset_keys:
+        error(
+            f"output {context.output_name} has asset keys attached to both its OutputDefinition and its IOManager"
+        )
+    asset_keys = output_def_asset_keys or io_manager_asset_keys
+
+    metadata_mapping = {asset_key.partition: [] for asset_key in asset_keys}
+
+    # it might be reasonable to actually segment output related md entries and io manager related
+    # md entries on the actual AssetMaterialization so that we can do different stuff with them
+    # later on, but for now they all get combined
+    for entry in output.metadata_entries + io_manager_metadata_entries:
+
+        # if you target a given entry at a partition, only apply it to the requested partition
+        # otherwise, apply it to all partitions
+        if isinstance(entry, PartitionSpecificMetadata):
+            if entry.partition not in metadata_mapping:
+                error("invalid partition specified, options are ...")
+            metadata_mapping[entry.partition].append(entry.metadata)
+        else:
+            for asset_key in asset_keys:
+                metadata_mapping[asset_key.partition].append(entry.metadata)
+
+    # we probably would want to grab the user-provided AssetMaterializations in the solid body
+    # and IOManager here, and do something with them (and probably not create a new
+    # AssetMaterialization and instead just add the MetadataEntries if already specified),
+    # leaving this open for now
+    materializations = []
+    for asset_key in asset_keys:
+        materializations.append(
+            AssetMaterialization(
+                asset_key=asset_key,
+                description="?",  # figure out what to do about description? leaving blank for now
+                metadata_entries=metadata_mapping[asset_key.partition],
+            )
+        )
+
+    # keep the parent asset keys in the step materialization to prevent users from accessing it
+    for materialization in materializations:
+        yield DagsterEvent.step_materialization(context, materialization, parent_asset_keys)
 
 
 def io_manager_from_functions(
@@ -319,6 +391,12 @@ def pure_upstream_single_partition_downstream_rolling_window():
             context.resource_config["partition"],
             context.metadata["num_partitions"],
         )
+        yield EventMetadataEntry.text("database", "redshift.users")
+        yield EventMetadataEntry.url("dashboard", "www.dashboard.com/this_thing")
+        yield PartitionSpecificMetadata(
+            partition=context.resource_config["partition"],
+            metadata=EventMetadataEntry.text("some_label", "something specific to this event"),
+        )
 
     def load_input(context):
         return read_partitions(
@@ -351,10 +429,23 @@ def pure_upstream_single_partition_downstream_rolling_window():
 
     @solid(
         input_defs=[InputDefinition("df", metadata={"num_partitions": 3})],
-        output_defs=[OutputDefinition(metadata={"num_partitions": 3})],
+        output_defs=[OutputDefinition(name="chargebacks", metadata={"num_partitions": 3})],
     )
     def solid2(_, df):
-        return df[df["some_condition"]]
+        df = df[df["some_condition"]]
+        return Output(
+            df,
+            "chargebacks",
+            metadata_entries=[
+                EventMetadataEntry.int("output rows", df.count()),
+                *[
+                    PartitionSpecificMetadata(
+                        partition=day.format("Y-M-D"), md=EventMetadataEntry.int("num rows", count)
+                    )
+                    for day, count in df.group_by("day").count()
+                ],
+            ],
+        )
 
     @pipeline(
         mode_defs=mode_defs_from_io_functions(
@@ -377,33 +468,37 @@ def impure_drop_recreate():
 
     @solid(
         output_defs=OutputDefinition(
-            dagster_type=Nothing, asset_key_fn=lambda _: [AssetKey(["solid1"])]
+            name="table1", dagster_type=Nothing, asset_key_fn=lambda _: [AssetKey(["table1"])]
         )
     )
     def solid1(_):
         with db_connection() as con:
             con.execute(
                 """
-                create table solid1 as
+                create table table1 as
                 select * from source_table
                 """
             )
+        return Output(None, "table1", metadata_entries=[EventMetadataEntry.int(1, "some_md")])
 
     @solid(
-        input_defs=[InputDefinition("solid1", dagster_type=Nothing)],
+        input_defs=[InputDefinition("table1", dagster_type=Nothing)],
         output_defs=OutputDefinition(
-            dagster_type=Nothing, asset_key_fn=lambda _: [AssetKey(["solid2"])]
+            name="table2", dagster_type=Nothing, asset_key_fn=lambda _: [AssetKey(["table2"])]
         ),
     )
     def solid2(_):
         with db_connection() as con:
             con.execute(
                 """
-                create table solid2 as
-                select * from solid1
+                create table table2 as
+                select * from table1
                 where some_condition
                 """
             )
+        return Output(
+            None, "table2", metadata_entries=[EventMetadataEntry.int(20, "number of rows")]
+        )
 
     @pipeline
     def my_pipeline():
@@ -426,7 +521,9 @@ def impure_single_partition():
 
     @solid(
         config_schema={"partition": str},
-        output_defs=OutputDefinition(dagster_type=Nothing, asset_key_fn=get_asset_keys),
+        output_defs=OutputDefinition(
+            name="table1", dagster_type=Nothing, asset_key_fn=get_asset_keys
+        ),
     )
     def solid1(context) -> Nothing:
         with db_connection() as con:
@@ -443,28 +540,38 @@ def impure_single_partition():
                 where partition = {context.solid_config["partition"]}
                 """
             )
+        return Output(
+            None,
+            "table1",
+            metadata_entries=[EventMetadataEntry.md("|schema|or|whatever|", "table schema")],
+        )
 
     @solid(
         config_schema={"partition": str},
-        input_defs=[InputDefinition("solid1", dagster_type=Nothing)],
-        output_defs=OutputDefinition(dagster_type=Nothing, asset_key_fn=get_asset_keys),
+        input_defs=[InputDefinition(name="solid1", dagster_type=Nothing)],
+        output_defs=[
+            OutputDefinition(name="table2", dagster_type=Nothing, asset_key_fn=get_asset_keys)
+        ],
     )
     def solid2(context):
         with db_connection() as con:
             con.execute(
                 f"""
-                delete from table solid2
+                delete from table table2
                 where partition = {context.solid_config["partition"]}
                 """
             )
             con.execute(
                 f"""
-                insert into solid2
-                select * from solid1
+                insert into table2
+                select * from table1
                 where partition = {context.solid_config["partition"]}
                     and some_condition
                 """
             )
+        return Output(
+            None, "table2", metadata_entries=[EventMetadataEntry.float(1.23, "diagnostic value")]
+        )
 
     @pipeline
     def my_pipeline():
@@ -486,6 +593,7 @@ def impure_upstream_single_partition_downstream_drop_recreate():
         config_schema={"partition": str},
         output_defs=[
             OutputDefinition(
+                name="solid1",
                 dagster_type=Nothing,
                 asset_key_fn=lambda context: [
                     AssetKey(["solid1"], partition=context.solid_config["partition"])
@@ -511,7 +619,11 @@ def impure_upstream_single_partition_downstream_drop_recreate():
 
     @solid(
         output_defs=[
-            OutputDefinition(dagster_type=Nothing, asset_key_fn=lambda _: [AssetKey(["solid2"])],)
+            OutputDefinition(
+                name="solid2",
+                dagster_type=Nothing,
+                asset_key_fn=lambda _: [AssetKey(["solid2"])],
+            )
         ],
         input_defs=[
             InputDefinition(
@@ -528,6 +640,14 @@ def impure_upstream_single_partition_downstream_drop_recreate():
                 where some_condition
                 """
             )
+            nrows = con.execute(
+                """
+                SELECT COUNT(*) AS nrows FROM solid2
+                """
+            )
+        return Output(
+            None, "solid2", metadata_entries=[EventMetadataEntry.int("number of rows", nrows)]
+        )
 
     @pipeline
     def my_pipeline():

@@ -33,7 +33,7 @@ def parse_asset_key_string(s):
 
 @whitelist_for_persistence
 class AssetKey(namedtuple("_AssetKey", "path partition"), Persistable):
-    """ Object representing the structure of an asset key.  Takes in a sanitized string, list of
+    """Object representing the structure of an asset key.  Takes in a sanitized string, list of
     strings, or tuple of strings.
 
     Example usage:
@@ -469,7 +469,7 @@ EntryDataUnion = (
 )
 
 
-class Output(namedtuple("_Output", "value output_name")):
+class Output(namedtuple("_Output", "value output_name metadata_entries")):
     """Event corresponding to one of a solid's outputs.
 
     Solid compute functions must explicitly yield events of this type when they have more than
@@ -486,8 +486,13 @@ class Output(namedtuple("_Output", "value output_name")):
             "result")
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT):
-        return super(Output, cls).__new__(cls, value, check.str_param(output_name, "output_name"),)
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=""):
+        return super(Output, cls).__new__(
+            cls,
+            value,
+            check.str_param(output_name, "output_name"),
+            check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
+        )
 
 
 class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name")):
