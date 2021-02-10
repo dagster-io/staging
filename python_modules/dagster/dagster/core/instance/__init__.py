@@ -1447,3 +1447,16 @@ class DagsterInstance:
 
     def wipe_daemon_heartbeats(self):
         self._run_storage.wipe_daemon_heartbeats()
+
+    def get_required_daemon_types(self):
+        from dagster.daemon.daemon import SchedulerDaemon, SensorDaemon
+        from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import (
+            QueuedRunCoordinatorDaemon,
+        )
+
+        daemons = [SensorDaemon.daemon_type()]
+        if isinstance(instance.scheduler, DagsterDaemonScheduler):
+            daemons.append(SchedulerDaemon.daemon_type())
+        if isinstance(instance.run_coordinator, QueuedRunCoordinator):
+            daemons.append(QueuedRunCoordinatorDaemon.daemon_type())
+        return daemons

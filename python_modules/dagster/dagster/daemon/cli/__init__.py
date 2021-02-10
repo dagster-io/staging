@@ -106,7 +106,7 @@ def debug_heartbeat_command():
 )
 def debug_heartbeat_dump_command():
     with DagsterInstance.get() as instance:
-        for daemon_type in required_daemons(instance):
+        for daemon_type in instance.get_required_daemon_types():
             click.echo(get_daemon_status(instance, daemon_type))
 
 
