@@ -1,9 +1,10 @@
 import warnings
 from abc import ABC, abstractmethod, abstractproperty
-from typing import Callable, Iterable, List, Optional
+from typing import Callable, Iterable, List, Optional, cast
 
 import pyrsistent
 from dagster.core.definitions.events import AssetKey
+from dagster.core.events import DagsterEvent
 from dagster.core.events.log import EventRecord
 from dagster.core.execution.stats import (
     RunStepKeyStatsSnapshot,
@@ -50,7 +51,8 @@ class EventLogStorage(ABC):
             logs = [
                 event
                 for event in logs
-                if event.is_dagster_event and event.dagster_event.step_key in step_keys
+                if event.is_dagster_event
+                and cast(DagsterEvent, event.dagster_event).step_key in step_keys
             ]
 
         return build_run_step_stats_from_events(run_id, logs)
