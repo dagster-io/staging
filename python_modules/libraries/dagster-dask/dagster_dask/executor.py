@@ -157,7 +157,7 @@ class DaskExecutor(Executor):
         check.param_invariant(
             isinstance(pipeline_context.executor, DaskExecutor),
             "pipeline_context",
-            "Expected executor to be DaskExecutor got {}".format(pipeline_context.executor),
+            f"Expected executor to be DaskExecutor got {pipeline_context.executor}",
         )
 
         check.invariant(
@@ -236,7 +236,7 @@ class DaskExecutor(Executor):
                     run_config = dict(pipeline_context.run_config, execution={"in_process": {}})
                     recon_repo = pipeline_context.pipeline.get_reconstructable_repository()
 
-                    dask_task_name = "%s.%s" % (pipeline_name, step.key)
+                    dask_task_name = f"{pipeline_name}.{step.key}"
 
                     recon_pipeline = recon_repo.get_reconstructable_pipeline(pipeline_name)
 

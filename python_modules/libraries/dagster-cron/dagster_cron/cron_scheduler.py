@@ -126,19 +126,15 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
         script_directory = os.path.join(instance.schedules_directory(), "scripts")
         utils.mkdir_p(script_directory)
 
-        script_file_name = "{}.sh".format(schedule_origin_id)
+        script_file_name = f"{schedule_origin_id}.sh"
         return os.path.join(script_directory, script_file_name)
 
     def _cron_tag_for_schedule(self, schedule_origin_id):
-        return "dagster-schedule: {schedule_origin_id}".format(
-            schedule_origin_id=schedule_origin_id
-        )
+        return f"dagster-schedule: {schedule_origin_id}"
 
     def _get_command(self, script_file, instance, schedule_origin_id):
         schedule_log_file_path = self.get_logs_path(instance, schedule_origin_id)
-        command = "{script_file} > {schedule_log_file_path} 2>&1".format(
-            script_file=script_file, schedule_log_file_path=schedule_log_file_path
-        )
+        command = f"{script_file} > {schedule_log_file_path} 2>&1"
 
         return command
 
@@ -150,9 +146,7 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
         with self.get_cron_tab() as cron_tab:
             job = cron_tab.new(
                 command=command,
-                comment="dagster-schedule: {schedule_origin_id}".format(
-                    schedule_origin_id=schedule_origin_id
-                ),
+                comment=f"dagster-schedule: {schedule_origin_id}",
             )
             job.setall(external_schedule.cron_schedule)
 
@@ -195,7 +189,7 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
 
         # Get path to store schedule attempt logs
         logs_directory = self._get_or_create_logs_directory(instance, schedule_origin_id)
-        schedule_log_file_name = "{}_{}.result".format("${RUN_DATE}", schedule_origin_id)
+        schedule_log_file_name = f"${{RUN_DATE}}_{schedule_origin_id}.result"
         schedule_log_file_path = os.path.join(logs_directory, schedule_log_file_name)
 
         local_target = external_schedule.get_external_origin()

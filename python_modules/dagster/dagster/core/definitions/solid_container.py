@@ -71,8 +71,7 @@ def validate_dependency_dict(dependencies):
         for input_key, dep in dep_dict.items():
             if not isinstance(input_key, str):
                 raise DagsterInvalidDefinitionError(
-                    prelude
-                    + "Received non-sting key in the inner dict for key {key}.".format(key=key)
+                    prelude + f"Received non-sting key in the inner dict for key {key}."
                 )
             if not isinstance(dep, IDependencyDefinition):
                 raise DagsterInvalidDefinitionError(
@@ -241,7 +240,7 @@ def _validate_dependencies(dependencies, solid_dict, alias_to_name):
                         '"{from_input}". '.format(
                             node_type=node_type, from_solid=from_solid, from_input=from_input
                         )
-                        + "Available inputs: {input_list}".format(input_list=list(input_list))
+                        + f"Available inputs: {list(input_list)}"
                     )
 
                 if not dep.solid in solid_dict:

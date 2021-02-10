@@ -677,7 +677,7 @@ def defensively_unpack_pipeline_snapshot_query(logger, row):
     # implementation detail
 
     def _warn(msg):
-        logger.warning("get-pipeline-snapshot: {msg}".format(msg=msg))
+        logger.warning(f"get-pipeline-snapshot: {msg}")
 
     if not isinstance(row[0], bytes):
         _warn("First entry in row is not a binary type.")

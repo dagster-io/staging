@@ -83,10 +83,10 @@ class AssetKey(namedtuple("_AssetKey", "path"), Persistable):
         return super(AssetKey, cls).__new__(cls, path=path)
 
     def __str__(self):
-        return "AssetKey({})".format(self.path)
+        return f"AssetKey({self.path})"
 
     def __repr__(self):
-        return "AssetKey({})".format(self.path)
+        return f"AssetKey({self.path})"
 
     def __hash__(self):
         return hash(tuple(self.path))

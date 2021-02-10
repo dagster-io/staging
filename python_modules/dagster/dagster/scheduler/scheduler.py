@@ -131,9 +131,7 @@ def launch_scheduled_runs_for_schedule(
 
     check.invariant(
         repo_location.has_repository(repo_name),
-        "Could not find repository {repo_name} in location {repo_location_name}".format(
-            repo_name=repo_name, repo_location_name=repo_location.name
-        ),
+        f"Could not find repository {repo_name} in location {repo_location.name}",
     )
 
     external_repo = repo_location.get_repository(repo_name)

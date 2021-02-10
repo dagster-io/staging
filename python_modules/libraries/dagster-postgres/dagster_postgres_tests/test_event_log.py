@@ -387,17 +387,15 @@ def test_listen_notify_filter_run_event(conn_string):
 
 
 def test_load_from_config(hostname):
-    url_cfg = """
+    url_cfg = f"""
       event_log_storage:
         module: dagster_postgres.event_log
         class: PostgresEventLogStorage
         config:
             postgres_url: postgresql://test:test@{hostname}:5432/test
-    """.format(
-        hostname=hostname
-    )
+    """
 
-    explicit_cfg = """
+    explicit_cfg = f"""
       event_log_storage:
         module: dagster_postgres.event_log
         class: PostgresEventLogStorage
@@ -407,9 +405,7 @@ def test_load_from_config(hostname):
               password: test
               hostname: {hostname}
               db_name: test
-    """.format(
-        hostname=hostname
-    )
+    """
 
     # pylint: disable=protected-access
     with instance_for_test(overrides=yaml.safe_load(url_cfg)) as from_url_instance:

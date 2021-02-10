@@ -260,11 +260,7 @@ class PipelineRun(
 
         # warn about unused arguments
         if len(kwargs):
-            warnings.warn(
-                "Found unhandled arguments from stored PipelineRun: {args}".format(
-                    args=kwargs.keys()
-                )
-            )
+            warnings.warn(f"Found unhandled arguments from stored PipelineRun: {kwargs.keys()}")
 
         return cls.__new__(  # pylint: disable=redundant-keyword-arg
             cls,

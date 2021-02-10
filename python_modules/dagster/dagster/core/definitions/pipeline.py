@@ -310,7 +310,7 @@ class PipelineDefinition(GraphDefinition):
 
         check.invariant(
             mode_def is not None,
-            "Could not find mode {mode} in pipeline {name}".format(mode=mode, name=self._name),
+            f"Could not find mode {mode} in pipeline {self._name}",
         )
 
         return mode_def
@@ -351,7 +351,7 @@ class PipelineDefinition(GraphDefinition):
     def solid_def_named(self, name):
         check.str_param(name, "name")
 
-        check.invariant(name in self._all_node_defs, "{} not found".format(name))
+        check.invariant(name in self._all_node_defs, f"{name} not found")
         return self._all_node_defs[name]
 
     def has_solid_def(self, name):
@@ -519,9 +519,7 @@ def _get_pipeline_subset_def(pipeline_def, solids_to_execute):
     for solid_name in solids_to_execute:
         if not pipeline_def.has_solid_named(solid_name):
             raise DagsterInvalidSubsetError(
-                "Pipeline {pipeline_name} has no solid named {name}.".format(
-                    pipeline_name=pipeline_def.name, name=solid_name
-                ),
+                f"Pipeline {pipeline_def.name} has no solid named {solid_name}.",
             )
 
     solids = list(map(pipeline_def.solid_named, solids_to_execute))

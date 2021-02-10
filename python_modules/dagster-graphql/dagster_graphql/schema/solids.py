@@ -528,7 +528,7 @@ def build_solid_definition(represented_pipeline, solid_def_name):
     if isinstance(solid_def_snap, CompositeSolidDefSnap):
         return GrapheneCompositeSolidDefinition(represented_pipeline, solid_def_snap.name)
 
-    check.failed("Unknown solid definition type {type}".format(type=type(solid_def_snap)))
+    check.failed(f"Unknown solid definition type {type(solid_def_snap)}")
 
 
 types = [

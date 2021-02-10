@@ -42,7 +42,7 @@ def load_type_input_schema_dict(value):
         with open(file_options["path"], "rb") as ff:
             return pickle.load(ff)
     else:
-        check.failed("Unsupported key {key}".format(key=file_type))
+        check.failed(f"Unsupported key {file_type}")
 
 
 def define_any_input_schema():
@@ -109,7 +109,7 @@ def define_builtin_scalar_output_schema(scalar_name):
                 pickle.dump(runtime_value, ff)
             return AssetMaterialization.file(pickle_file_path)
         else:
-            check.failed("Unsupported file type: {file_type}".format(file_type=file_type))
+            check.failed(f"Unsupported file type: {file_type}")
 
     return _buildint_materializer
 

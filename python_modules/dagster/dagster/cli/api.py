@@ -116,7 +116,7 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
 
     pid = os.getpid()
     instance.report_engine_event(
-        "Started process for pipeline (pid: {pid}).".format(pid=pid),
+        f"Started process for pipeline (pid: {pid}).",
         pipeline_run,
         EngineEventData.in_process(pid, marker_end="cli_api_subprocess_init"),
     )
@@ -126,7 +126,7 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
             write_stream_fn(event)
     finally:
         instance.report_engine_event(
-            "Process for pipeline exited (pid: {pid}).".format(pid=pid),
+            f"Process for pipeline exited (pid: {pid}).",
             pipeline_run,
         )
 
@@ -528,9 +528,7 @@ def launch_scheduled_execution(output_file, schedule_name, override_system_timez
                             schedule.name for schedule in external_repo.get_external_schedules()
                         ]:
                             raise DagsterInvariantViolationError(
-                                "Could not find schedule named {schedule_name}".format(
-                                    schedule_name=schedule_name
-                                ),
+                                f"Could not find schedule named {schedule_name}",
                             )
 
                         external_schedule = external_repo.get_external_schedule(schedule_name)

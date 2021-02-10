@@ -15,7 +15,7 @@ from .pandas_hello_world.pipeline import pandas_hello_world
 
 
 def nb_test_path(name):
-    return file_relative_path(__file__, "notebooks/{name}.ipynb".format(name=name))
+    return file_relative_path(__file__, f"notebooks/{name}.ipynb")
 
 
 hello_world = dagstermill.define_dagstermill_solid(

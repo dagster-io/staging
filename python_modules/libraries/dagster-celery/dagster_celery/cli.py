@@ -40,11 +40,7 @@ def get_app(config_yaml=None):
 
 
 def get_worker_name(name=None):
-    return (
-        name + "@%h"
-        if name is not None
-        else "dagster-{uniq}@%h".format(uniq=str(uuid.uuid4())[-6:])
-    )
+    return name + "@%h" if name is not None else f"dagster-{str(uuid.uuid4())[-6:]}@%h"
 
 
 def get_config_dir(config_yaml=None):
@@ -58,14 +54,12 @@ def get_config_dir(config_yaml=None):
         instance.root_directory, "dagster_celery", "config", str(uuid.uuid4())
     )
     mkdir_p(config_dir)
-    config_path = os.path.join(
-        config_dir, "{config_module_name}.py".format(config_module_name=config_module_name)
-    )
+    config_path = os.path.join(config_dir, f"{config_module_name}.py")
 
     config = validate_config(config_type, config_value)
     if not config.success:
         raise DagsterInvalidConfigError(
-            "Errors while loading Celery executor config at {}.".format(config_yaml),
+            f"Errors while loading Celery executor config at {config_yaml}.",
             config.errors,
             config_value,
         )
@@ -73,18 +67,12 @@ def get_config_dir(config_yaml=None):
     validated_config = post_process_config(config_type, config_value).value
     with open(config_path, "w") as fd:
         if "broker" in validated_config and validated_config["broker"]:
-            fd.write(
-                "broker_url = '{broker_url}'\n".format(broker_url=str(validated_config["broker"]))
-            )
+            fd.write(f"broker_url = '{str(validated_config['broker'])}'\n")
         if "backend" in validated_config and validated_config["backend"]:
-            fd.write(
-                "result_backend = '{result_backend}'\n".format(
-                    result_backend=str(validated_config["backend"])
-                )
-            )
+            fd.write(f"result_backend = '{str(validated_config['backend'])}'\n")
         if "config_source" in validated_config and validated_config["config_source"]:
             for key, value in validated_config["config_source"].items():
-                fd.write("{key} = {value}\n".format(key=key, value=repr(value)))
+                fd.write(f"{key} = {repr(value)}\n")
 
     # n.b. right now we don't attempt to clean up this cache, but it might make sense to delete
     # any files older than some time if there are more than some number of files present, etc.
@@ -185,9 +173,7 @@ def worker_start_command(
 
     env = os.environ.copy()
     if pythonpath is not None:
-        env["PYTHONPATH"] = "{existing_pythonpath}:{pythonpath}:".format(
-            existing_pythonpath=env.get("PYTHONPATH", ""), pythonpath=pythonpath
-        )
+        env["PYTHONPATH"] = f"{env.get('PYTHONPATH', '')}:{pythonpath}:"
 
     if background:
         launch_background_worker(subprocess_args, env=env)

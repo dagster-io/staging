@@ -28,7 +28,7 @@ class S3ObjectStore(ObjectStore):
         )  # cannot be none here
 
         if self.has_object(key):
-            logging.warning("Removing existing S3 key: {key}".format(key=key))
+            logging.warning(f"Removing existing S3 key: {key}")
             self.rm_object(key)
 
         with BytesIO() as bytes_io:
@@ -113,4 +113,4 @@ class S3ObjectStore(ObjectStore):
     def uri_for_key(self, key, protocol=None):
         check.str_param(key, "key")
         protocol = check.opt_str_param(protocol, "protocol", default="s3://")
-        return protocol + self.bucket + "/" + "{key}".format(key=key)
+        return protocol + self.bucket + "/" + f"{key}"

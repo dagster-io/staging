@@ -85,17 +85,13 @@ def _type_mismatch_error(obj: Any, ttype: Type, desc: str = None) -> CheckError:
 
 def _not_callable_exception(obj: Any, param_name: str) -> ParameterCheckError:
     return ParameterCheckError(
-        'Param "{name}" is not callable. Got {obj} with type {obj_type}.'.format(
-            name=param_name, obj=repr(obj), obj_type=type(obj)
-        )
+        f'Param "{param_name}" is not callable. Got {repr(obj)} with type {type(obj)}.'
     )
 
 
 def _param_invariant_exception(param_name: str, desc: str = None) -> ParameterCheckError:
     return ParameterCheckError(
-        "Invariant violation for parameter {param_name}. Description: {desc}".format(
-            param_name=param_name, desc=desc
-        )
+        f"Invariant violation for parameter {param_name}. Description: {desc}"
     )
 
 
@@ -103,14 +99,14 @@ def failed(desc: str) -> NoReturn:  # type: ignore[misc]
     if not isinstance(desc, str):
         raise_with_traceback(CheckError("desc argument must be a string"))
 
-    raise_with_traceback(CheckError("Failure condition: {desc}".format(desc=desc)))
+    raise_with_traceback(CheckError(f"Failure condition: {desc}"))
 
 
 def not_implemented(desc: str):
     if not isinstance(desc, str):
         raise_with_traceback(CheckError("desc argument must be a string"))
 
-    raise_with_traceback(NotImplementedCheckError("Not implemented: {desc}".format(desc=desc)))
+    raise_with_traceback(NotImplementedCheckError(f"Not implemented: {desc}"))
 
 
 def inst(obj: Any, ttype: Type, desc: str = None) -> Any:
@@ -136,18 +132,10 @@ def is_callable(obj: Any, desc: str = None) -> Callable:
     if not callable(obj):
         if desc:
             raise_with_traceback(
-                CheckError(
-                    "Must be callable. Got {obj}. Description: {desc}".format(
-                        obj=repr(obj), desc=desc
-                    )
-                )
+                CheckError(f"Must be callable. Got {repr(obj)}. Description: {desc}")
             )
         else:
-            raise_with_traceback(
-                CheckError(
-                    "Must be callable. Got {obj}. Description: {desc}".format(obj=obj, desc=desc)
-                )
-            )
+            raise_with_traceback(CheckError(f"Must be callable. Got {obj}. Description: {desc}"))
 
     return obj
 
@@ -155,9 +143,7 @@ def is_callable(obj: Any, desc: str = None) -> Callable:
 def not_none_param(obj: Any, param_name: str) -> Any:
     if obj is None:
         raise_with_traceback(
-            _param_invariant_exception(
-                param_name, "Param {param_name} cannot be none".format(param_name=param_name)
-            )
+            _param_invariant_exception(param_name, f"Param {param_name} cannot be none")
         )
     return obj
 
@@ -165,9 +151,7 @@ def not_none_param(obj: Any, param_name: str) -> Any:
 def invariant(condition: Any, desc: str = None) -> bool:
     if not condition:
         if desc:
-            raise_with_traceback(
-                CheckError("Invariant failed. Description: {desc}".format(desc=desc))
-            )
+            raise_with_traceback(CheckError(f"Invariant failed. Description: {desc}"))
         else:
             raise_with_traceback(CheckError("Invariant failed."))
 
@@ -217,9 +201,7 @@ def int_value_param(obj: Any, value: int, param_name: str) -> int:
     if not isinstance(obj, int):
         raise_with_traceback(_param_type_mismatch_exception(obj, int, param_name))
     if obj != value:
-        raise_with_traceback(
-            _param_invariant_exception(param_name, "Should be equal to {value}".format(value=value))
-        )
+        raise_with_traceback(_param_invariant_exception(param_name, f"Should be equal to {value}"))
     return obj
 
 
@@ -342,7 +324,7 @@ def matrix_param(matrix: Any, param_name: str, of_type: Type = None) -> List[Lis
     if not matrix:
         raise_with_traceback(CheckError("You must pass a list of lists. Received an empty list."))
     for sublist in matrix:
-        sublist = list_param(sublist, "sublist_{}".format(param_name), of_type=of_type)
+        sublist = list_param(sublist, f"sublist_{param_name}", of_type=of_type)
         if len(sublist) != len(matrix[0]):
             raise_with_traceback(CheckError("All sublists in matrix must have the same length"))
     return matrix
@@ -699,9 +681,7 @@ def _element_check_error(key: Any, value: Any, ddict: Dict, ttype: Type) -> Elem
 def generator(obj: Any) -> Generator:
     if not inspect.isgenerator(obj):
         raise ParameterCheckError(
-            "Not a generator (return value of function that yields) Got {obj} instead".format(
-                obj=obj
-            )
+            f"Not a generator (return value of function that yields) Got {obj} instead"
         )
     return obj
 
@@ -709,9 +689,7 @@ def generator(obj: Any) -> Generator:
 def opt_generator(obj: Any) -> Optional[Generator]:
     if obj is not None and not inspect.isgenerator(obj):
         raise ParameterCheckError(
-            "Not a generator (return value of function that yields) Got {obj} instead".format(
-                obj=obj
-            )
+            f"Not a generator (return value of function that yields) Got {obj} instead"
         )
     return obj
 
@@ -780,9 +758,7 @@ def dict_elem(ddict: Dict, key: str) -> Dict:
     str_param(key, "key")
 
     if key not in ddict:
-        raise_with_traceback(
-            CheckError("{key} not present in dictionary {ddict}".format(key=key, ddict=ddict))
-        )
+        raise_with_traceback(CheckError(f"{key} not present in dictionary {ddict}"))
 
     value = ddict[key]
     if not isinstance(value, (frozendict, dict)):

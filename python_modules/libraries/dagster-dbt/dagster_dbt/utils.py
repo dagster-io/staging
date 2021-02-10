@@ -73,7 +73,7 @@ def generate_materializations(
 
                 unique_id = node_result.node["unique_id"]
                 yield AssetMaterialization(
-                    description="dbt node: {unique_id}".format(unique_id=unique_id),
+                    description=f"dbt node: {unique_id}",
                     metadata_entries=entries,
                     asset_key=asset_key_prefix + unique_id.split("."),
                 )

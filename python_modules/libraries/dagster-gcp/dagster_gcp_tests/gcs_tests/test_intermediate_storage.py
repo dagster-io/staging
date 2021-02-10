@@ -383,7 +383,7 @@ def test_gcs_intermediate_storage_with_custom_prefix(gcs_bucket):
 
             assert intermediate_storage.has_intermediate(context, StepOutputHandle(obj_name))
             assert intermediate_storage.uri_for_paths([obj_name]).startswith(
-                "gs://%s/custom_prefix" % gcs_bucket
+                f"gs://{gcs_bucket}/custom_prefix"
             )
 
     finally:

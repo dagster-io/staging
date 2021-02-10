@@ -104,9 +104,7 @@ class CloudwatchLogsHandler(logging.Handler):
     def log_error(self, record, exc):
         logging.critical("Error while logging!")
         try:
-            logging.error(
-                "Attempted to log: {record}".format(record=seven.json.dumps(record.__dict__))
-            )
+            logging.error(f"Attempted to log: {seven.json.dumps(record.__dict__)}")
         except Exception:  # pylint: disable=broad-except
             pass
         logging.exception(str(exc))
@@ -135,7 +133,7 @@ class CloudwatchLogsHandler(logging.Handler):
             self.sequence_token = res["nextSequenceToken"]
             log_events_rejected = res.get("rejectedLogEventsInfo")
             if log_events_rejected is not None:
-                logging.error("Cloudwatch logger: log events rejected: {res}".format(res=res))
+                logging.error(f"Cloudwatch logger: log events rejected: {res}")
         except self.client.exceptions.InvalidSequenceTokenException as exc:
             if not retry:
                 self.check_log_stream()
@@ -143,13 +141,9 @@ class CloudwatchLogsHandler(logging.Handler):
             else:
                 self.log_error(record, exc)
         except self.client.exceptions.DataAlreadyAcceptedException as exc:
-            logging.error("Cloudwatch logger: log events already accepted: {res}".format(res=res))
+            logging.error(f"Cloudwatch logger: log events already accepted: {res}")
         except self.client.exceptions.InvalidParameterException as exc:
-            logging.error(
-                "Cloudwatch logger: Invalid parameter exception while logging: {res}".format(
-                    res=res
-                )
-            )
+            logging.error(f"Cloudwatch logger: Invalid parameter exception while logging: {res}")
         except self.client.exceptions.ResourceNotFoundException as exc:
             logging.error(
                 "Cloudwatch logger: Resource not found. Check that the log stream or log group "
@@ -159,7 +153,7 @@ class CloudwatchLogsHandler(logging.Handler):
             if not retry:
                 self.retry(record)
             else:
-                logging.error("Cloudwatch logger: Service unavailable: {res}".format(res=res))
+                logging.error(f"Cloudwatch logger: Service unavailable: {res}")
         except self.client.exceptions.ServiceUnavailableException as exc:
             if not retry:
                 self.retry(record)

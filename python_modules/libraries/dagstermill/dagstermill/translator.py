@@ -54,7 +54,7 @@ class DagsterTranslator(papermill.translators.PythonTranslator):
             dm_unmarshal_call = "__dm_dagstermill._load_parameter('{name}', '{val}')".format(
                 name=name, val=seven.json.dumps(val)
             )
-            content += "{}\n".format(cls.assign(name, dm_unmarshal_call))
+            content += f"{cls.assign(name, dm_unmarshal_call)}\n"
 
         return content
 

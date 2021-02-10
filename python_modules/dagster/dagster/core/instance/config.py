@@ -33,7 +33,7 @@ def dagster_instance_config(base_dir, config_filename=DAGSTER_CONFIG_YAML_FILENA
     dagster_config = validate_config(dagster_instance_config_schema(), dagster_config_dict)
     if not dagster_config.success:
         raise DagsterInvalidConfigError(
-            "Errors whilst loading dagster instance config at {}.".format(config_filename),
+            f"Errors whilst loading dagster instance config at {config_filename}.",
             dagster_config.errors,
             dagster_config_dict,
         )

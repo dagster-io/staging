@@ -38,9 +38,7 @@ class MultiTypeAssetStorage(AssetStorage):
         )
         check.invariant(
             len(matching_policies) < 2,
-            "Multiple matching storages for in-memory type {in_memory_type} ".format(
-                in_memory_type=in_memory_type
-            ),
+            f"Multiple matching storages for in-memory type {in_memory_type} ",
         )
 
 

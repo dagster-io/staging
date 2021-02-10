@@ -20,9 +20,7 @@ def aws_ecr_repository(aws_account_id, aws_region=DEFAULT_AWS_ECR_REGION):
     check.str_param(aws_account_id, "aws_account_id")
     check.str_param(aws_region, "aws_region")
 
-    return "{aws_account_id}.dkr.ecr.{aws_region}.amazonaws.com".format(
-        aws_account_id=aws_account_id, aws_region=aws_region
-    )
+    return f"{aws_account_id}.dkr.ecr.{aws_region}.amazonaws.com"
 
 
 def get_aws_account_id():
@@ -38,7 +36,7 @@ def get_aws_region():
 def ensure_ecr_login(aws_region=DEFAULT_AWS_ECR_REGION):
     check.str_param(aws_region, "aws_region")
 
-    cmd = "aws ecr get-login --no-include-email --region {} | sh".format(aws_region)
+    cmd = f"aws ecr get-login --no-include-email --region {aws_region} | sh"
 
     check.invariant(
         subprocess.call(cmd, shell=True) == 0,
@@ -51,4 +49,4 @@ def ecr_image(image, tag, aws_account_id, aws_region=DEFAULT_AWS_ECR_REGION):
     check.str_param(aws_account_id, "aws_account_id")
     check.str_param(aws_region, "aws_region")
 
-    return "{}/{}:{}".format(aws_ecr_repository(aws_account_id, aws_region), image, tag)
+    return f"{aws_ecr_repository(aws_account_id, aws_region)}/{image}:{tag}"

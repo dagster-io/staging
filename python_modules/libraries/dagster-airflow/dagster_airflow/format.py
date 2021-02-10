@@ -20,13 +20,7 @@ def format_dict_for_graphql(dict_):
                     .lstrip(" ")
                     .rstrip("\n")
                 )
-                printer.line(
-                    "{key}: {formatted_value}{comma}".format(
-                        key=key,
-                        formatted_value=formatted_value,
-                        comma="," if i != n_elements - 1 else "",
-                    )
-                )
+                printer.line(f"{key}: {formatted_value}{',' if i != n_elements - 1 else ''}")
         printer.line("}")
 
         return printer.read()
@@ -43,11 +37,7 @@ def format_dict_for_graphql(dict_):
                     .lstrip(" ")
                     .rstrip("\n")
                 )
-                printer.line(
-                    "{formatted_value}{comma}".format(
-                        formatted_value=formatted_value, comma="," if i != n_elements - 1 else ""
-                    )
-                )
+                printer.line(f"{formatted_value}{',' if i != n_elements - 1 else ''}")
         printer.line("]")
 
         return printer.read()
@@ -66,6 +56,6 @@ def format_dict_for_graphql(dict_):
 
     check.dict_param(dict_, "dict_", key_type=str)
     if not isinstance(dict_, dict):
-        check.failed("Expected a dict to format, got: {item}".format(item=repr(dict_)))
+        check.failed(f"Expected a dict to format, got: {repr(dict_)}")
 
     return _format_subdict(dict_)

@@ -101,7 +101,7 @@ def telemetry_wrapper(f):
 
 def get_python_version():
     version = sys.version_info
-    return "{}.{}.{}".format(version.major, version.minor, version.micro)
+    return f"{version.major}.{version.minor}.{version.micro}"
 
 
 class TelemetryEntry(

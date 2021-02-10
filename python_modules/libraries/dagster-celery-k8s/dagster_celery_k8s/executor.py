@@ -232,7 +232,7 @@ def _submit_task_k8s_job(app, pipeline_context, step, queue, priority):
     return task_signature.apply_async(
         priority=priority,
         queue=queue,
-        routing_key="{queue}.execute_step_k8s_job".format(queue=queue),
+        routing_key=f"{queue}.execute_step_k8s_job",
     )
 
 
@@ -314,14 +314,14 @@ def create_k8s_job_task(celery_app, **task_kwargs):
         check.inst(
             pipeline_run,
             PipelineRun,
-            "Could not load run {}".format(execute_step_args.pipeline_run_id),
+            f"Could not load run {execute_step_args.pipeline_run_id}",
         )
         step_key = execute_step_args.step_keys_to_execute[0]
 
         celery_worker_name = self.request.hostname
         celery_pod_name = os.environ.get("HOSTNAME")
         instance.report_engine_event(
-            "Task for step {step_key} picked up by Celery".format(step_key=step_key),
+            f"Task for step {step_key} picked up by Celery",
             pipeline_run,
             EngineEventData(
                 [
@@ -357,8 +357,8 @@ def create_k8s_job_task(celery_app, **task_kwargs):
             job_name = "dagster-job-%s-%d" % (k8s_name_key, attempt_number)
             pod_name = "dagster-job-%s-%d" % (k8s_name_key, attempt_number)
         else:
-            job_name = "dagster-job-%s" % (k8s_name_key)
-            pod_name = "dagster-job-%s" % (k8s_name_key)
+            job_name = f"dagster-job-{k8s_name_key}"
+            pod_name = f"dagster-job-{k8s_name_key}"
 
         input_json = serialize_dagster_namedtuple(execute_step_args)
         args = ["dagster", "api", "execute_step", input_json]
@@ -373,7 +373,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
         # Post event for starting execution
         job_name = job.metadata.name
         engine_event = instance.report_engine_event(
-            "Executing step {} in Kubernetes job {}".format(step_key, job_name),
+            f"Executing step {step_key} in Kubernetes job {job_name}",
             pipeline_run,
             EngineEventData(
                 [

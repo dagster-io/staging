@@ -1033,7 +1033,7 @@ class DagsterInstance:
         )
 
         if cls:
-            message = "[{}] {}".format(cls.__name__, message)
+            message = f"[{cls.__name__}] {message}"
 
         log_level = logging.INFO
         if engine_event_data and engine_event_data.error:

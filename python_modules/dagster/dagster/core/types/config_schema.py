@@ -14,9 +14,7 @@ from dagster.utils.backcompat import experimental_arg_warning
 class DagsterTypeLoader:
     @property
     def schema_type(self):
-        check.not_implemented(
-            "Must override schema_type in {klass}".format(klass=type(self).__name__)
-        )
+        check.not_implemented(f"Must override schema_type in {type(self).__name__}")
 
     @property
     def loader_version(self):
@@ -38,9 +36,7 @@ class DagsterTypeLoader:
 class DagsterTypeMaterializer:
     @property
     def schema_type(self):
-        check.not_implemented(
-            "Must override schema_type in {klass}".format(klass=type(self).__name__)
-        )
+        check.not_implemented(f"Must override schema_type in {type(self).__name__}")
 
     def materialize_runtime_values(self, _context, _config_value, _runtime_value):
         """

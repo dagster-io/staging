@@ -27,12 +27,12 @@ class DagsterRepo:
 
     def build_docs(self, docs_version):
         """Run docs build"""
-        cmd = "NODE_ENV=production VERSION={} make full_docs_build".format(docs_version)
+        cmd = f"NODE_ENV=production VERSION={docs_version} make full_docs_build"
         print("Running build:\n", cmd)
         subprocess.call(cmd, cwd=self.docs_path, shell=True)
 
     def commit(self, docs_version):
-        git_commit_updates(self.base_dir, message="[Docs] {}".format(docs_version))
+        git_commit_updates(self.base_dir, message=f"[Docs] {docs_version}")
 
 
 class DagsterDocsRepo:
@@ -44,14 +44,14 @@ class DagsterDocsRepo:
         # Clone dagster-docs
         if not os.path.exists(docs_dir) and should_clone:
             print("Cloning docs repo...")
-            cmd = "git clone git@github.com:dagster-io/dagster-docs.git {}".format(docs_dir)
+            cmd = f"git clone git@github.com:dagster-io/dagster-docs.git {docs_dir}"
             subprocess.call(cmd, shell=True)
 
     def check_new_version_dir(self, docs_version):
         """Checks dagster-docs/x.x.x version folder and ensure it doesn't already exist"""
         new_version_path = os.path.join(self.docs_dir, docs_version)
         if os.path.exists(new_version_path):
-            print("Cannot build docs; version folder {} already exists!".format(new_version_path))
+            print(f"Cannot build docs; version folder {new_version_path} already exists!")
             sys.exit(1)
 
     def remove_existing_docs_files(self):
@@ -66,7 +66,7 @@ class DagsterDocsRepo:
                 continue
 
             filepath = os.path.join(self.docs_dir, filename)
-            print("Removing {}".format(filepath))
+            print(f"Removing {filepath}")
             os.remove(filepath)
 
         # Also remove subdirectories
@@ -76,8 +76,8 @@ class DagsterDocsRepo:
                 continue
 
             fname = os.path.join(self.docs_dir, subdir)
-            print("Removing {}".format(fname))
+            print(f"Removing {fname}")
             shutil.rmtree(fname)
 
     def commit(self, docs_version):
-        git_commit_updates(self.docs_dir, message="[Docs] {}".format(docs_version))
+        git_commit_updates(self.docs_dir, message=f"[Docs] {docs_version}")

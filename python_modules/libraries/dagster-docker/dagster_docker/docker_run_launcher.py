@@ -107,11 +107,7 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
             # validate that the docker image name is valid
             reference.Reference.parse(docker_image)
         except Exception as e:
-            raise Exception(
-                "Docker image name {docker_image} is not correctly formatted".format(
-                    docker_image=docker_image
-                )
-            ) from e
+            raise Exception(f"Docker image name {docker_image} is not correctly formatted") from e
 
         input_json = serialize_dagster_namedtuple(
             ExecuteRunArgs(
@@ -121,7 +117,7 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
             )
         )
 
-        command = "dagster api execute_run_with_structured_logs {}".format(json.dumps(input_json))
+        command = f"dagster api execute_run_with_structured_logs {json.dumps(input_json)}"
 
         docker_env = (
             {env_name: os.getenv(env_name) for env_name in self._env_vars} if self._env_vars else {}

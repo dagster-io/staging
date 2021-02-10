@@ -49,7 +49,7 @@ def construct_log_string(synth_props, logging_tags, message_props):
         stack = "\n\n" + event_specific_data.error.to_string()
 
     log_source_prefix = (
-        "resource:%s" % logging_tags["resource_name"]
+        f"resource:{logging_tags['resource_name']}"
         if "resource_name" in logging_tags
         else message_props.get("pipeline_name", "system")
     )

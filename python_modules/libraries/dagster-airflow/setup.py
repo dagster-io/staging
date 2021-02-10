@@ -30,7 +30,7 @@ if __name__ == "__main__":
         ],
         packages=find_packages(exclude=["dagster_airflow_tests"]),
         install_requires=[
-            "dagster=={ver}".format(ver=ver),
+            f"dagster=={ver}",
             "docker",
             "python-dateutil>=2.8.0",
             "lazy_object_proxy",

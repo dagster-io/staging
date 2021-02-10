@@ -21,9 +21,7 @@ from dagster_aws.s3 import (
 
 
 def build_key(run_id, step_key, output_name):
-    return "dagster/storage/{run_id}/intermediates/{step_key}/{output_name}".format(
-        run_id=run_id, step_key=step_key, output_name=output_name
-    )
+    return f"dagster/storage/{run_id}/intermediates/{step_key}/{output_name}"
 
 
 def test_s3_file_manager_write(mock_s3_resource, mock_s3_bucket):

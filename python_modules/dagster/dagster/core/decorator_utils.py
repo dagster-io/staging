@@ -26,8 +26,8 @@ def validate_decorated_fn_positionals(decorated_fn_positionals, expected_positio
             possible_names = {
                 "_",
                 expected_name,
-                "_{expected}".format(expected=expected_name),
-                "{expected}_".format(expected=expected_name),
+                f"_{expected_name}",
+                f"{expected_name}_",
             }
             if (
                 actual.kind

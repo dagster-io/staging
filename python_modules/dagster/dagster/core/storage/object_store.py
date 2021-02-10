@@ -104,8 +104,8 @@ class InMemoryObjectStore(ObjectStore):
         return key
 
     def cp_object(self, src, dst):
-        check.invariant(not dst in self.values, "key {} already in use".format(dst))
-        check.invariant(src in self.values, "key {} not present".format(src))
+        check.invariant(not dst in self.values, f"key {dst} already in use")
+        check.invariant(src in self.values, f"key {src} not present")
         self.values[dst] = self.values[src]
         return src, dst
 
@@ -124,7 +124,7 @@ class FilesystemObjectStore(ObjectStore):  # pylint: disable=no-init
         check.inst_param(serialization_strategy, "serialization_strategy", SerializationStrategy)
 
         if os.path.exists(key):
-            logging.warning("Removing existing path {path}".format(path=key))
+            logging.warning(f"Removing existing path {key}")
             os.unlink(key)
 
         # Ensure path exists
@@ -160,7 +160,7 @@ class FilesystemObjectStore(ObjectStore):  # pylint: disable=no-init
         return key
 
     def cp_object(self, src, dst):
-        check.invariant(not os.path.exists(dst), "Path already exists {}".format(dst))
+        check.invariant(not os.path.exists(dst), f"Path already exists {dst}")
 
         # Ensure output path exists
         mkdir_p(os.path.dirname(dst))

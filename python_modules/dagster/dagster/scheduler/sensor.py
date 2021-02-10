@@ -82,9 +82,7 @@ class SensorLaunchContext:
             self.update_state(JobTickStatus.FAILURE, error=error_data)
             self._write()
             self._logger.error(
-                "Error launching sensor run: {error_info}".format(
-                    error_info=error_data.to_string()
-                ),
+                f"Error launching sensor run: {error_data.to_string()}",
             )
             return True  # Swallow the exception after logging in the tick DB
 
@@ -181,12 +179,7 @@ def execute_sensor_iteration(instance, logger, debug_crash_flags=None):
                 )
         except Exception:  # pylint: disable=broad-except
             error_info = serializable_error_info_from_exc_info(sys.exc_info())
-            logger.error(
-                "Sensor failed for {sensor_name} : {error_info}".format(
-                    sensor_name=job_state.job_name,
-                    error_info=error_info.to_string(),
-                )
-            )
+            logger.error(f"Sensor failed for {job_state.job_name} : {error_info.to_string()}")
         yield error_info
 
 
@@ -255,19 +248,11 @@ def _evaluate_sensor(
         _check_for_debug_crash(sensor_debug_crash_flags, "RUN_CREATED")
 
         try:
-            context.logger.info(
-                "Launching run for {sensor_name}".format(sensor_name=external_sensor.name)
-            )
+            context.logger.info(f"Launching run for {external_sensor.name}")
             instance.submit_run(run.run_id, external_pipeline)
-            context.logger.info(
-                "Completed launch of run {run_id} for {sensor_name}".format(
-                    run_id=run.run_id, sensor_name=external_sensor.name
-                )
-            )
+            context.logger.info(f"Completed launch of run {run.run_id} for {external_sensor.name}")
         except Exception:  # pylint: disable=broad-except
-            context.logger.error(
-                "Run {run_id} created successfully but failed to launch.".format(run_id=run.run_id)
-            )
+            context.logger.error(f"Run {run.run_id} created successfully but failed to launch.")
 
         _check_for_debug_crash(sensor_debug_crash_flags, "RUN_LAUNCHED")
 

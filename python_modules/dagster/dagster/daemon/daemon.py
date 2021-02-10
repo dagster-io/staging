@@ -86,7 +86,7 @@ class DagsterDaemon:
                 break
             except Exception:  # pylint: disable=broad-except
                 error_info = serializable_error_info_from_exc_info(sys.exc_info())
-                self._logger.error("Caught error:\n{}".format(error_info))
+                self._logger.error(f"Caught error:\n{error_info}")
                 self._current_iteration_exceptions.append(error_info)
                 self._last_iteration_exceptions = self._current_iteration_exceptions
                 break

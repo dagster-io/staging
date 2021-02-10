@@ -104,17 +104,15 @@ def test_handle_run_event_pipeline_success_test(clean_storage):
 
 
 def test_load_from_config(hostname):
-    url_cfg = """
+    url_cfg = f"""
       run_storage:
         module: dagster_postgres.run_storage
         class: PostgresRunStorage
         config:
           postgres_url: postgresql://test:test@{hostname}:5432/test
-    """.format(
-        hostname=hostname
-    )
+    """
 
-    explicit_cfg = """
+    explicit_cfg = f"""
       run_storage:
         module: dagster_postgres.run_storage
         class: PostgresRunStorage
@@ -124,12 +122,10 @@ def test_load_from_config(hostname):
             password: test
             hostname: {hostname}
             db_name: test
-    """.format(
-        hostname=hostname
-    )
+    """
 
     with environ({"TEST_PG_PASSWORD": "test"}):
-        env_cfg = """
+        env_cfg = f"""
         run_storage:
           module: dagster_postgres.run_storage
           class: PostgresRunStorage
@@ -140,9 +136,7 @@ def test_load_from_config(hostname):
                 env: TEST_PG_PASSWORD
               hostname: {hostname}
               db_name: test
-        """.format(
-            hostname=hostname
-        )
+        """
 
         # pylint: disable=protected-access
         with instance_for_test(overrides=yaml.safe_load(url_cfg)) as from_url_instance:

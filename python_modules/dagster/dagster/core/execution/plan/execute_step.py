@@ -316,11 +316,7 @@ def core_dagster_event_sequence_for_step(
             elif isinstance(user_event, ExpectationResult):
                 yield DagsterEvent.step_expectation_result(step_context, user_event)
             else:
-                check.failed(
-                    "Unexpected event {event}, should have been caught earlier".format(
-                        event=user_event
-                    )
-                )
+                check.failed(f"Unexpected event {user_event}, should have been caught earlier")
 
     yield DagsterEvent.step_success_event(
         step_context, StepSuccessData(duration_ms=timer_result.millis)
@@ -487,15 +483,11 @@ def _user_event_sequence_for_step_compute_fn(
         lambda: user_code_error_boundary(
             DagsterExecutionStepExecutionError,
             control_flow_exceptions=[Failure, RetryRequested],
-            msg_fn=lambda: """Error occurred during the execution of step:
-            step key: "{key}"
-            solid invocation: "{solid}"
-            solid definition: "{solid_def}"
-            """.format(
-                key=step_context.step.key,
-                solid_def=step_context.solid_def.name,
-                solid=step_context.solid.name,
-            ),
+            msg_fn=lambda: f"""Error occurred during the execution of step:
+            step key: "{step_context.step.key}"
+            solid invocation: "{step_context.solid.name}"
+            solid definition: "{step_context.solid_def.name}"
+            """,
             step_key=step_context.step.key,
             solid_def_name=step_context.solid_def.name,
             solid_name=step_context.solid.name,

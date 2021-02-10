@@ -23,9 +23,7 @@ def _assign_grpc_location_name(port, socket, host):
     check.opt_str_param(socket, "socket")
     check.str_param(host, "host")
     check.invariant(port or socket)
-    return "grpc:{host}:{socket_or_port}".format(
-        host=host, socket_or_port=(socket if socket else port)
-    )
+    return f"grpc:{host}:{socket if socket else port}"
 
 
 def _assign_loadable_target_origin_name(loadable_target_origin):
@@ -42,9 +40,7 @@ def _assign_loadable_target_origin_name(loadable_target_origin):
     )
 
     return (
-        "{file_or_module}:{attribute}".format(
-            file_or_module=file_or_module, attribute=loadable_target_origin.attribute
-        )
+        f"{file_or_module}:{loadable_target_origin.attribute}"
         if loadable_target_origin.attribute
         else file_or_module
     )
@@ -181,11 +177,9 @@ class GrpcServerRepositoryLocationOrigin(
 
     def get_cli_args(self):
         if self.port:
-            return "--grpc-host {host} --grpc-port {port}".format(host=self.host, port=self.port)
+            return f"--grpc-host {self.host} --grpc-port {self.port}"
         else:
-            return "--grpc-host {host} --grpc-socket {socket}".format(
-                host=self.host, socket=self.socket
-            )
+            return f"--grpc-host {self.host} --grpc-socket {self.socket}"
 
     def get_display_metadata(self):
         metadata = {"host": self.host, "port": self.port, "socket": self.socket}

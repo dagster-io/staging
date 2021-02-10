@@ -34,5 +34,5 @@ def test_roundtrip(monkeypatch):
 
         debug_result = runner.invoke(dagit_debug_command, [file_path])
         assert file_path in debug_result.output
-        assert "run_id: {}".format(run_result.run_id) in debug_result.output
+        assert f"run_id: {run_result.run_id}" in debug_result.output
         assert "Serving on" in debug_result.output

@@ -15,13 +15,13 @@ def test_gcs_object_store(gcs_bucket):
 
     serialization_strategy = PickleSerializationStrategy()
 
-    key = "test-file-%s" % uuid.uuid4().hex
+    key = f"test-file-{uuid.uuid4().hex}"
     object_store.set_object(key, file_obj, serialization_strategy)
 
     assert object_store.has_object(key)
     assert object_store.get_object(key, serialization_strategy)[0].read() == test_str
 
-    other_key = "test-file-%s" % uuid.uuid4().hex
+    other_key = f"test-file-{uuid.uuid4().hex}"
     object_store.cp_object(key, other_key)
     assert object_store.has_object(other_key)
 

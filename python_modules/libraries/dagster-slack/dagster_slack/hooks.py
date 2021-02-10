@@ -64,9 +64,7 @@ def slack_on_failure(
     def _hook(context: HookContext):
         text = message_fn(context)
         if dagit_base_url:
-            text += "\n<{base_url}/instance/runs/{run_id}|View in Dagit>".format(
-                base_url=dagit_base_url, run_id=context.run_id
-            )
+            text += f"\n<{dagit_base_url}/instance/runs/{context.run_id}|View in Dagit>"
 
         context.resources.slack.chat_postMessage(channel=channel, text=text)
 
@@ -116,9 +114,7 @@ def slack_on_success(
     def _hook(context: HookContext):
         text = message_fn(context)
         if dagit_base_url:
-            text += "\n<{base_url}/instance/runs/{run_id}|View in Dagit>".format(
-                base_url=dagit_base_url, run_id=context.run_id
-            )
+            text += f"\n<{dagit_base_url}/instance/runs/{context.run_id}|View in Dagit>"
 
         context.resources.slack.chat_postMessage(channel=channel, text=text)
 

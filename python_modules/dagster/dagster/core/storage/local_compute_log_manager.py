@@ -70,9 +70,9 @@ class LocalComputeLogManager(ComputeLogManager, ConfigurableClass):
         return self._get_local_path(run_id, key, "complete")
 
     def _get_local_path(self, run_id, key, extension):
-        filename = "{}.{}".format(key, extension)
+        filename = f"{key}.{extension}"
         if len(filename) > MAX_FILENAME_LENGTH:
-            filename = "{}.{}".format(hashlib.md5(key.encode("utf-8")).hexdigest(), extension)
+            filename = f"{hashlib.md5(key.encode('utf-8')).hexdigest()}.{extension}"
         return os.path.join(self._run_directory(run_id), filename)
 
     def read_logs_file(self, run_id, key, io_type, cursor=0, max_bytes=MAX_BYTES_FILE_READ):
@@ -118,7 +118,7 @@ class LocalComputeLogManager(ComputeLogManager, ConfigurableClass):
 
     def download_url(self, run_id, key, io_type):
         check.inst_param(io_type, "io_type", ComputeIOType)
-        return "/download/{}/{}/{}".format(run_id, key, io_type.value)
+        return f"/download/{run_id}/{key}/{io_type.value}"
 
     def on_subscribe(self, subscription):
         self._subscription_manager.add_subscription(subscription)
@@ -136,7 +136,7 @@ class LocalComputeLogSubscriptionManager:
         self._observer.start()
 
     def _key(self, run_id, key):
-        return "{}:{}".format(run_id, key)
+        return f"{run_id}:{key}"
 
     def add_subscription(self, subscription):
         check.inst_param(subscription, "subscription", ComputeLogSubscription)

@@ -17,9 +17,7 @@ from .solid_container import create_execution_structure, validate_dependency_dic
 def _check_node_defs_arg(graph_name, node_defs):
     if not isinstance(node_defs, list):
         raise DagsterInvalidDefinitionError(
-            '"solids" arg to "{name}" is not a list. Got {val}.'.format(
-                name=graph_name, val=repr(node_defs)
-            )
+            f'"solids" arg to "{graph_name}" is not a list. Got {repr(node_defs)}.'
         )
     for node_def in node_defs:
         if isinstance(node_def, NodeDefinition):
@@ -34,9 +32,7 @@ def _check_node_defs_arg(graph_name, node_defs):
                 )
             )
         else:
-            raise DagsterInvalidDefinitionError(
-                "Invalid item in solid list: {item}".format(item=repr(node_def))
-            )
+            raise DagsterInvalidDefinitionError(f"Invalid item in solid list: {repr(node_def)}")
 
     return node_defs
 
@@ -168,7 +164,7 @@ class GraphDefinition(NodeDefinition):
         check.str_param(name, "name")
         check.invariant(
             name in self._solid_dict,
-            "{graph_name} has no solid named {name}.".format(graph_name=self._name, name=name),
+            f"{self._name} has no solid named {name}.",
         )
 
         return self._solid_dict[name]
@@ -412,7 +408,7 @@ def _validate_in_mappings(input_mappings, solid_dict, dependency_structure, name
                 )
             )
             target_type = target_input.dagster_type.get_inner_type_for_fan_in()
-            fan_in_msg = " (index {} of fan-in)".format(mapping.maps_to.fan_in_index)
+            fan_in_msg = f" (index {mapping.maps_to.fan_in_index} of fan-in)"
         else:
             if dependency_structure.has_deps(solid_input_handle):
                 raise DagsterInvalidDefinitionError(

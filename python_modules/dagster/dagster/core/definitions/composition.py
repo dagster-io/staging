@@ -93,9 +93,7 @@ class InProgressCompositionContext:
             self._pending_invocations.pop(node_name, None)
             if self._collisions.get(node_name):
                 self._collisions[node_name] += 1
-                node_name = "{node_name}_{n}".format(
-                    node_name=node_name, n=self._collisions[node_name]
-                )
+                node_name = f"{node_name}_{self._collisions[node_name]}"
             else:
                 self._collisions[node_name] = 1
         else:
@@ -184,7 +182,7 @@ class CompleteCompositionContext(
 
                     deps[input_name] = MultiDependencyDefinition(entries)
                 else:
-                    check.failed("Unexpected input binding - got {node}".format(node=node))
+                    check.failed(f"Unexpected input binding - got {node}")
 
             dep_dict[
                 SolidInvocation(
@@ -253,7 +251,7 @@ class CallableNode:
                 output_node,
                 input_name,
                 input_bindings,
-                "(at position {idx})".format(idx=idx),
+                f"(at position {idx})",
             )
 
         # then **kwargs
@@ -299,7 +297,7 @@ class CallableNode:
                 )
 
         return namedtuple(
-            "_{node_def}_outputs".format(node_def=self.node_def.name),
+            f"_{self.node_def.name}_outputs",
             " ".join([output_def.name for output_def in outputs]),
         )(**invoked_output_handles)
 

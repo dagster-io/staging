@@ -237,7 +237,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         check.inst_param(run, "run", PipelineRun)
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
 
-        job_name = "dagster-run-{}".format(run.run_id)
+        job_name = f"dagster-run-{run.run_id}"
         pod_name = job_name
 
         user_defined_k8s_config = get_user_defined_k8s_config(frozentags(run.tags))

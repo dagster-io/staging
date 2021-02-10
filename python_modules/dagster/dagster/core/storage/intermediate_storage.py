@@ -69,9 +69,7 @@ class IntermediateStorageAdapter(IOManager):
                     output_name=context.name,
                     object_store_name=res.object_store_name,
                     serialization_strategy_modifier=(
-                        " using {serialization_strategy_name}".format(
-                            serialization_strategy_name=res.serialization_strategy_name
-                        )
+                        f" using {res.serialization_strategy_name}"
                         if res.serialization_strategy_name
                         else ""
                     ),
@@ -128,9 +126,7 @@ class IntermediateStorageAdapter(IOManager):
                     input_name=context.name,
                     object_store_name=res.object_store_name,
                     serialization_strategy_modifier=(
-                        " using {serialization_strategy_name}".format(
-                            serialization_strategy_name=res.serialization_strategy_name
-                        )
+                        f" using {res.serialization_strategy_name}"
                         if res.serialization_strategy_name
                         else ""
                     ),
@@ -359,17 +355,9 @@ def _object_store_operation_error_message(
         op_name=op_name,
         step_key=step_output_handle.step_key,
         output_name=step_output_handle.output_name,
-        object_store_modifier=(
-            '"{object_store_name}" '.format(object_store_name=object_store_name)
-            if object_store_name
-            else ""
-        ),
+        object_store_modifier=(f'"{object_store_name}" ' if object_store_name else ""),
         serialization_strategy_modifier=(
-            ' using "{serialization_strategy_name}"'.format(
-                serialization_strategy_name=serialization_strategy_name
-            )
-            if serialization_strategy_name
-            else ""
+            f' using "{serialization_strategy_name}"' if serialization_strategy_name else ""
         ),
     )
 

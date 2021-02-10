@@ -29,16 +29,16 @@ class Enum:
     def write(self, printer):
         printer.line(self.name.title() + " = Enum(")
         with printer.with_indent():
-            printer.line("name='{}',".format(self.name.title()))
+            printer.line(f"name='{self.name.title()}',")
             printer.line("enum_values=[")
             with printer.with_indent():
                 if self.enum_descriptions:
                     for name, value in zip(self.enum_names, self.enum_descriptions):
-                        prefix = "EnumValue('{}', description='''".format(name)
+                        prefix = f"EnumValue('{name}', description='''"
                         printer.block(value + "'''),", initial_indent=prefix)
                 else:
                     for name in self.enum_names:
-                        printer.line("EnumValue('{}'),".format(name))
+                        printer.line(f"EnumValue('{name}'),")
 
             printer.line("],")
         printer.line(")")
@@ -86,12 +86,12 @@ class Field:
 
                         # This v is a terminal scalar type, print directly
                         if isinstance(v, str):
-                            printer.line("'{}': {},".format(k, v))
+                            printer.line(f"'{k}': {v},")
 
                         # Recurse nested fields
                         else:
                             with printer.with_indent():
-                                printer.append("'{}': ".format(k))
+                                printer.append(f"'{k}': ")
                             v.write(printer)
                             printer.append(",")
                 printer.line("},")
@@ -116,7 +116,7 @@ class Field:
 
             # Print is_required=True/False if defined; if not defined, default to True
             printer.line(
-                "is_required=%s," % str(self.is_required if self.is_required is not None else True)
+                f"is_required={str(self.is_required if self.is_required is not None else True)},"
             )
         printer.line(")")
         return printer.read()
@@ -127,12 +127,12 @@ class ParsedConfig(namedtuple("_ParsedConfig", "name configs enums")):
         return super(ParsedConfig, cls).__new__(cls, name, configs, enums)
 
     def write_configs(self, base_path):
-        configs_filename = "configs_%s.py" % self.name
+        configs_filename = f"configs_{self.name}.py"
         print("Writing", configs_filename)  # pylint: disable=print-call
         with open(os.path.join(base_path, configs_filename), "wb") as f:
             f.write(self.configs)
 
-        enums_filename = "types_%s.py" % self.name
+        enums_filename = f"types_{self.name}.py"
         with open(os.path.join(base_path, enums_filename), "wb") as f:
             f.write(self.enums)
 
@@ -152,12 +152,10 @@ class ConfigParser:
 
             # Optionally write enum includes
             if self.all_enums:
-                printer.line(
-                    "from .types_{} import {}".format(suffix, ", ".join(self.all_enums.keys()))
-                )
+                printer.line(f"from .types_{suffix} import {', '.join(self.all_enums.keys())}")
                 printer.blank_line()
 
-            printer.line("def define_%s_config():" % suffix)
+            printer.line(f"def define_{suffix}_config():")
             with printer.with_indent():
                 printer.append("return ")
                 base_field.write(printer)

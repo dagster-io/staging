@@ -33,7 +33,7 @@ def check_readme_exists(readme_file, library_name):
     """Verify that a README.md is provided for a Dagster package"""
     exists = os.path.exists(readme_file) and os.path.isfile(readme_file)
     if not exists:
-        print("Missing README.md for library %s!" % library_name)
+        print(f"Missing README.md for library {library_name}!")
         sys.exit(1)
 
 
@@ -49,9 +49,9 @@ def check_readme_contents(readme_file, library_name):
         contents = f.read().decode("utf-8").strip()
         if contents != expected:
             print("=" * 100)
-            print("Readme %s contents do not match!" % readme_file)
-            print("expected:\n%s" % expected)
-            print("\n\nfound:\n%s" % contents)
+            print(f"Readme {readme_file} contents do not match!")
+            print(f"expected:\n{expected}")
+            print(f"\n\nfound:\n{contents}")
             print("=" * 100)
             sys.exit(1)
 
@@ -59,8 +59,8 @@ def check_readme_contents(readme_file, library_name):
 def check_api_docs(library_name):
     api_docs_root = os.path.join(git_repo_root(), "docs", "sections", "api", "apidocs", "libraries")
     underscore_name = library_name.replace("-", "_")
-    if not os.path.exists(os.path.join(api_docs_root, "%s.rst" % underscore_name)):
-        print("API docs not found for library %s!" % library_name)
+    if not os.path.exists(os.path.join(api_docs_root, f"{underscore_name}.rst")):
+        print(f"API docs not found for library {library_name}!")
         sys.exit(1)
 
 

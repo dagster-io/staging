@@ -90,7 +90,7 @@ class SqlScheduleStorage(ScheduleStorage):
         check.inst_param(job, "job", JobState)
         if not self.get_job_state(job.job_origin_id):
             raise DagsterInvariantViolationError(
-                "JobState {id} is not present in storage".format(id=job.job_origin_id)
+                f"JobState {job.job_origin_id} is not present in storage"
             )
 
         with self.connect() as conn:
@@ -108,7 +108,7 @@ class SqlScheduleStorage(ScheduleStorage):
 
         if not self.get_job_state(job_origin_id):
             raise DagsterInvariantViolationError(
-                "JobState {id} is not present in storage".format(id=job_origin_id)
+                f"JobState {job_origin_id} is not present in storage"
             )
 
         with self.connect() as conn:

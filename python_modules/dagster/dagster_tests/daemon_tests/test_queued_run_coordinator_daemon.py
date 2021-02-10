@@ -85,7 +85,7 @@ def test_get_queued_runs_max_runs(instance, num_in_progress_runs):
     max_runs = 4
 
     # fill run store with ongoing runs
-    in_progress_run_ids = ["in_progress-run-{}".format(i) for i in range(num_in_progress_runs)]
+    in_progress_run_ids = [f"in_progress-run-{i}" for i in range(num_in_progress_runs)]
     for i, run_id in enumerate(in_progress_run_ids):
         # get a selection of all in progress statuses
         status = IN_PROGRESS_RUN_STATUSES[i % len(IN_PROGRESS_RUN_STATUSES)]
@@ -96,7 +96,7 @@ def test_get_queued_runs_max_runs(instance, num_in_progress_runs):
         )
 
     # add more queued runs than should be launched
-    queued_run_ids = ["queued-run-{}".format(i) for i in range(max_runs + 1)]
+    queued_run_ids = [f"queued-run-{i}" for i in range(max_runs + 1)]
     for run_id in queued_run_ids:
         create_run(
             instance,

@@ -60,7 +60,7 @@ class InProcessExecutorChildProcessCommand(ChildProcessCommand):
             ).build_subset_plan([self.step_key])
 
             yield instance.report_engine_event(
-                "Executing step {} in subprocess".format(self.step_key),
+                f"Executing step {self.step_key} in subprocess",
                 self.pipeline_run,
                 EngineEventData(
                     [
@@ -250,7 +250,7 @@ class MultiprocessExecutor(Executor):
 
         yield DagsterEvent.engine_event(
             step_context,
-            "Launching subprocess for {}".format(step.key),
+            f"Launching subprocess for {step.key}",
             EngineEventData(marker_start=DELEGATE_MARKER),
             step_handle=step.handle,
         )
@@ -262,4 +262,4 @@ class MultiprocessExecutor(Executor):
                 if isinstance(ret, ChildProcessSystemErrorEvent):
                     errors[ret.pid] = ret.error_info
             else:
-                check.failed("Unexpected return value from child process {}".format(type(ret)))
+                check.failed(f"Unexpected return value from child process {type(ret)}")

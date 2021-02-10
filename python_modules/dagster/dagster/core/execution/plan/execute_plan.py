@@ -206,7 +206,7 @@ def _dagster_event_sequence_for_step(
             prev_attempts = retries.get_attempt_count(step_context.step.key)
             if prev_attempts >= retry_request.max_retries:
                 fail_err = SerializableErrorInfo(
-                    message="Exceeded max_retries of {}".format(retry_request.max_retries),
+                    message=f"Exceeded max_retries of {retry_request.max_retries}",
                     stack=retry_err_info.stack,
                     cls_name=retry_err_info.cls_name,
                     cause=retry_err_info.cause,

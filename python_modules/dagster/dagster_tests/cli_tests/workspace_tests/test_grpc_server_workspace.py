@@ -16,17 +16,15 @@ def test_grpc_socket_workspace():
         with second_server_process.create_ephemeral_client() as second_server:
             first_socket = first_server.socket
             second_socket = second_server.socket
-            workspace_yaml = """
+            workspace_yaml = f"""
 load_from:
 - grpc_server:
     host: localhost
-    socket: {socket_one}
+    socket: {first_socket}
 - grpc_server:
-    socket: {socket_two}
+    socket: {second_socket}
     location_name: 'local_port_default_host'
-                """.format(
-                socket_one=first_socket, socket_two=second_socket
-            )
+                """
 
             workspace = load_workspace_from_config(
                 yaml.safe_load(workspace_yaml),
@@ -36,7 +34,7 @@ load_from:
             assert isinstance(workspace, Workspace)
             assert len(workspace.repository_location_handles) == 2
 
-            default_location_name = "grpc:localhost:{socket}".format(socket=first_socket)
+            default_location_name = f"grpc:localhost:{first_socket}"
             assert workspace.has_repository_location_handle(default_location_name)
             local_port = workspace.get_repository_location_handle(default_location_name)
 
@@ -65,17 +63,15 @@ def test_grpc_server_workspace():
         with second_server_process.create_ephemeral_client() as second_server:
             first_port = first_server.port
             second_port = second_server.port
-            workspace_yaml = """
+            workspace_yaml = f"""
 load_from:
 - grpc_server:
     host: localhost
-    port: {port_one}
+    port: {first_port}
 - grpc_server:
-    port: {port_two}
+    port: {second_port}
     location_name: 'local_port_default_host'
-                """.format(
-                port_one=first_port, port_two=second_port
-            )
+                """
 
             workspace = load_workspace_from_config(
                 yaml.safe_load(workspace_yaml),
@@ -85,7 +81,7 @@ load_from:
             assert isinstance(workspace, Workspace)
             assert len(workspace.repository_location_handles) == 2
 
-            default_location_name = "grpc:localhost:{port}".format(port=first_port)
+            default_location_name = f"grpc:localhost:{first_port}"
             assert workspace.has_repository_location_handle(default_location_name)
             local_port = workspace.get_repository_location_handle(default_location_name)
 

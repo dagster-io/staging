@@ -51,7 +51,7 @@ def dataframe_materializer(_context, config, pandas_df):
     elif file_type == "pickle":
         pandas_df.to_pickle(file_options["path"])
     else:
-        check.failed("Unsupported file_type {file_type}".format(file_type=file_type))
+        check.failed(f"Unsupported file_type {file_type}")
 
     return AssetMaterialization.file(file_options["path"])
 
@@ -82,9 +82,7 @@ def dataframe_loader(_context, config):
     elif file_type == "pickle":
         return pd.read_pickle(file_options["path"])
     else:
-        raise DagsterInvariantViolationError(
-            "Unsupported file_type {file_type}".format(file_type=file_type)
-        )
+        raise DagsterInvariantViolationError(f"Unsupported file_type {file_type}")
 
 
 def df_type_check(_, value):
@@ -113,9 +111,7 @@ DataFrame = DagsterType(
 
 def _construct_constraint_list(constraints):
     def add_bullet(constraint_list, constraint_description):
-        return constraint_list + "+ {constraint_description}\n".format(
-            constraint_description=constraint_description
-        )
+        return constraint_list + f"+ {constraint_description}\n"
 
     constraint_list = ""
     for constraint in constraints:
@@ -125,7 +121,7 @@ def _construct_constraint_list(constraints):
 
 
 def _build_column_header(column_name, constraints):
-    header = "**{column_name}**".format(column_name=column_name)
+    header = f"**{column_name}**"
     for constraint in constraints:
         if isinstance(constraint, ColumnDTypeInSetConstraint):
             dtypes_tuple = tuple(constraint.expected_dtype_set)
@@ -133,9 +129,7 @@ def _build_column_header(column_name, constraints):
                 expected_dtypes=dtypes_tuple if len(dtypes_tuple) > 1 else dtypes_tuple[0]
             )
         elif isinstance(constraint, ColumnDTypeFnConstraint):
-            return header + ": Validator `{expected_dtype_fn}`".format(
-                expected_dtype_fn=constraint.type_fn.__name__
-            )
+            return header + f": Validator `{constraint.type_fn.__name__}`"
     return header
 
 
@@ -290,10 +284,10 @@ def create_structured_dataframe_type(
             metadata.append(
                 EventMetadataEntry.json(
                     result_dict,
-                    "{}-constraint-metadata".format(key),
+                    f"{key}-constraint-metadata",
                 )
             )
-            constraint_clauses.append("{} failing constraints, {}".format(key, result.description))
+            constraint_clauses.append(f"{key} failing constraints, {result.description}")
         # returns aggregates, then column, then dataframe
         return TypeCheck(
             success=typechecks_succeeded,

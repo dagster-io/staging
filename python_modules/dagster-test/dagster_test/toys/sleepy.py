@@ -21,7 +21,7 @@ from dagster import (
 def sleeper(context, units):
     tot = 0
     for sec in units:
-        context.log.info("Sleeping for {} seconds".format(sec))
+        context.log.info(f"Sleeping for {sec} seconds")
         sleep(sec)
         tot += sec
 

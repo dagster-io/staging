@@ -29,7 +29,7 @@ def pythonpath(path):
     old_path = os.environ.get("PYTHONPATH", "")
     old_sys_path = sys.path
     try:
-        os.environ["PYTHONPATH"] = "{old_path}{path}:".format(old_path=old_path, path=path)
+        os.environ["PYTHONPATH"] = f"{old_path}{path}:"
         sys.path.insert(0, path)
         yield
     finally:
@@ -70,19 +70,13 @@ def check_for_worker(name, args=None, present=True):
     assert result.exit_code == 0, str(result.exception)
     retry_count = 0
     while retry_count < 10 and (
-        not "{name}@".format(name=name) in result.output
-        if present
-        else "{name}@".format(name=name) in result.output
+        not f"{name}@" in result.output if present else f"{name}@" in result.output
     ):
         time.sleep(1)
         result = runner.invoke(main, ["worker", "list"] + args)
         assert result.exit_code == 0, str(result.exception)
         retry_count += 1
-    return (
-        "{name}@".format(name=name) in result.output
-        if present
-        else "{name}@".format(name=name) not in result.output
-    )
+    return f"{name}@" in result.output if present else f"{name}@" not in result.output
 
 
 def test_invoke_entrypoint():

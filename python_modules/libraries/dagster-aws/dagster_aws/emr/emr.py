@@ -112,11 +112,7 @@ class EmrJobRunner:
             if cluster["Name"] == cluster_name:
                 return cluster["Id"]
 
-        raise EmrError(
-            "cluster {cluster_name} not found in region {region}".format(
-                cluster_name=cluster_name, region=self.region
-            )
-        )
+        raise EmrError(f"cluster {cluster_name} not found in region {self.region}")
 
     @staticmethod
     def construct_step_dict_for_command(step_name, command, action_on_failure="CONTINUE"):
@@ -186,7 +182,7 @@ class EmrJobRunner:
         )
         cluster_id = emr_client.run_job_flow(**cluster_config)["JobFlowId"]
 
-        log.info("Created new cluster %s" % cluster_id)
+        log.info(f"Created new cluster {cluster_id}")
 
         # set EMR tags for the cluster
         tags = cluster_config.get("Tags", {})
@@ -257,9 +253,9 @@ class EmrJobRunner:
             cluster = self.describe_cluster(cluster_id)["Cluster"]
 
             reason = _get_reason(cluster)
-            reason_desc = (": %s" % reason) if reason else ""
+            reason_desc = f": {reason}" if reason else ""
 
-            log.info("PENDING (cluster is %s%s)" % (cluster["Status"]["State"], reason_desc))
+            log.info(f"PENDING (cluster is {cluster['Status']['State']}{reason_desc})")
             return False
 
         elif step_state == EmrStepState.Running:
@@ -267,9 +263,9 @@ class EmrJobRunner:
 
             start = step["Status"]["Timeline"].get("StartDateTime")
             if start:
-                time_running_desc = " for %s" % strip_microseconds(_boto3_now() - start)
+                time_running_desc = f" for {strip_microseconds(_boto3_now() - start)}"
 
-            log.info("RUNNING%s" % time_running_desc)
+            log.info(f"RUNNING{time_running_desc}")
             return False
 
         # we're done, will return at the end of this
@@ -280,15 +276,15 @@ class EmrJobRunner:
             # step has failed somehow. *reason* seems to only be set
             # when job is cancelled (e.g. 'Job terminated')
             reason = _get_reason(step)
-            reason_desc = (" (%s)" % reason) if reason else ""
+            reason_desc = f" ({reason})" if reason else ""
 
-            log.info("%s%s" % (step_state.value, reason_desc))
+            log.info(f"{step_state.value}{reason_desc}")
 
             # print cluster status; this might give more context
             # why step didn't succeed
             cluster = self.describe_cluster(cluster_id)["Cluster"]
             reason = _get_reason(cluster)
-            reason_desc = (": %s" % reason) if reason else ""
+            reason_desc = f": {reason}" if reason else ""
             log.info(
                 "Cluster %s %s %s%s"
                 % (
@@ -307,9 +303,9 @@ class EmrJobRunner:
                 # See: https://github.com/dagster-io/dagster/issues/1954
 
         if step_state == EmrStepState.Failed:
-            log.error("EMR step %s failed" % emr_step_id)
+            log.error(f"EMR step {emr_step_id} failed")
 
-        raise EmrError("EMR step %s failed" % emr_step_id)
+        raise EmrError(f"EMR step {emr_step_id} failed")
 
     def _check_for_missing_default_iam_roles(self, log, cluster):
         """If cluster couldn't start due to missing IAM roles, tell user what to do."""
@@ -318,7 +314,7 @@ class EmrJobRunner:
 
         reason = _get_reason(cluster)
         if any(
-            reason.endswith("/%s is invalid" % role)
+            reason.endswith(f"/{role} is invalid")
             for role in (_FALLBACK_INSTANCE_PROFILE, _FALLBACK_SERVICE_ROLE)
         ):
             log.warning(
@@ -371,11 +367,9 @@ class EmrJobRunner:
 
         log_bucket, log_key_prefix = self.log_location_for_cluster(cluster_id)
 
-        prefix = "{log_key_prefix}{cluster_id}/steps/{step_id}".format(
-            log_key_prefix=log_key_prefix, cluster_id=cluster_id, step_id=step_id
-        )
-        stdout_log = self.wait_for_log(log, log_bucket, "{prefix}/stdout.gz".format(prefix=prefix))
-        stderr_log = self.wait_for_log(log, log_bucket, "{prefix}/stderr.gz".format(prefix=prefix))
+        prefix = f"{log_key_prefix}{cluster_id}/steps/{step_id}"
+        stdout_log = self.wait_for_log(log, log_bucket, f"{prefix}/stdout.gz")
+        stderr_log = self.wait_for_log(log, log_bucket, f"{prefix}/stderr.gz")
         return stdout_log, stderr_log
 
     def wait_for_log(self, log, log_bucket, log_key, waiter_delay=30, waiter_max_attempts=20):
@@ -399,11 +393,7 @@ class EmrJobRunner:
         check.int_param(waiter_delay, "waiter_delay")
         check.int_param(waiter_max_attempts, "waiter_max_attempts")
 
-        log.info(
-            "Attempting to get log: s3://{log_bucket}/{log_key}".format(
-                log_bucket=log_bucket, log_key=log_key
-            )
-        )
+        log.info(f"Attempting to get log: s3://{log_bucket}/{log_key}")
 
         s3 = _wrap_aws_client(boto3.client("s3"), min_backoff=self.check_cluster_every)
         waiter = s3.get_waiter("object_exists")

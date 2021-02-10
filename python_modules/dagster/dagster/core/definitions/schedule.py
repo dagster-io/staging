@@ -167,11 +167,7 @@ class ScheduleDefinition(JobDefinition):
                     lambda: f"Error occurred during the execution of should_execute for schedule {name}",
                 ):
                     if not should_execute(context):
-                        yield SkipReason(
-                            "should_execute function for {schedule_name} returned false.".format(
-                                schedule_name=name
-                            )
-                        )
+                        yield SkipReason(f"should_execute function for {name} returned false.")
                         return
 
                 with user_code_error_boundary(
@@ -200,9 +196,7 @@ class ScheduleDefinition(JobDefinition):
                 pendulum.timezone(self._execution_timezone)
             except ValueError:
                 raise DagsterInvalidDefinitionError(
-                    "Invalid execution timezone {timezone} for {schedule_name}".format(
-                        schedule_name=name, timezone=self._execution_timezone
-                    )
+                    f"Invalid execution timezone {self._execution_timezone} for {name}"
                 )
 
     @property

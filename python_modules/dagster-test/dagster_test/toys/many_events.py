@@ -30,7 +30,7 @@ def create_raw_file_solid(name):
         return ExpectationResult(
             success=True,
             label="output_table_exists",
-            description="Checked {name} exists".format(name=name),
+            description=f"Checked {name} exists",
         )
 
     @solid(
@@ -43,7 +43,7 @@ def create_raw_file_solid(name):
         yield AssetMaterialization(
             asset_key="table_info",
             metadata_entries=[
-                EventMetadataEntry.path(label="table_path", path="/path/to/{}.raw".format(name))
+                EventMetadataEntry.path(label="table_path", path=f"/path/to/{name}.raw")
             ],
         )
         yield do_expectation(_context, name)
@@ -85,11 +85,9 @@ def many_table_materializations(_context):
                 asset_key="table_info",
                 metadata_entries=[
                     EventMetadataEntry.text(text=table, label="table_name"),
-                    EventMetadataEntry.fspath(path="/path/to/{}".format(table), label="table_path"),
+                    EventMetadataEntry.fspath(path=f"/path/to/{table}", label="table_path"),
                     EventMetadataEntry.json(data={"name": table}, label="table_data"),
-                    EventMetadataEntry.url(
-                        url="https://bigty.pe/{}".format(table), label="table_name_big"
-                    ),
+                    EventMetadataEntry.url(url=f"https://bigty.pe/{table}", label="table_name_big"),
                     EventMetadataEntry.md(md_str=md_str, label="table_blurb"),
                 ],
             )
@@ -118,13 +116,13 @@ def many_materializations_and_passing_expectations(_context):
         yield AssetMaterialization(
             asset_key="table_info",
             metadata_entries=[
-                EventMetadataEntry.path(label="table_path", path="/path/to/{}.raw".format(table))
+                EventMetadataEntry.path(label="table_path", path=f"/path/to/{table}.raw")
             ],
         )
         yield ExpectationResult(
             success=True,
-            label="{table}.row_count".format(table=table),
-            description="Row count passed for {table}".format(table=table),
+            label=f"{table}.row_count",
+            description=f"Row count passed for {table}",
         )
 
 

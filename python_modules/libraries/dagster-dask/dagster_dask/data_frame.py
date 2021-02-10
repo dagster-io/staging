@@ -402,9 +402,7 @@ def dataframe_loader(_context, config):
     if not read_type:
         raise DagsterInvariantViolationError("No read_type found. Expected read key in config.")
     if not read_type in DataFrameReadTypes:
-        raise DagsterInvariantViolationError(
-            "Unsupported read_type {read_type}.".format(read_type=read_type)
-        )
+        raise DagsterInvariantViolationError(f"Unsupported read_type {read_type}.")
 
     # Get the metadata entry for the read_type in order to know which function
     # to call and whether it uses path as the first argument. And, make
@@ -484,7 +482,7 @@ def dataframe_materializer(_context, config, dask_df):
     # Materialize to specified types
     for to_type, to_options in to_specs.items():
         if not to_type in DataFrameToTypes:
-            check.failed("Unsupported to_type {to_type}".format(to_type=to_type))
+            check.failed(f"Unsupported to_type {to_type}")
 
         # Get the metadata entry for the read_type in order to know which method
         # to call and whether it uses path as the first argument. And, make

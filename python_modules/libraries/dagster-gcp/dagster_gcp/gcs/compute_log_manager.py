@@ -125,7 +125,7 @@ class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
     def _from_local_file_data(self, run_id, key, io_type, local_file_data):
         is_complete = self.is_watch_completed(run_id, key)
         path = (
-            "gs://{}/{}".format(self._bucket_name, self._bucket_key(run_id, key, io_type))
+            f"gs://{self._bucket_name}/{self._bucket_key(run_id, key, io_type)}"
             if is_complete
             else local_file_data.path
         )
@@ -158,7 +158,7 @@ class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
             "storage",
             run_id,
             "compute_logs",
-            "{}.{}".format(key, extension),
+            f"{key}.{extension}",
         ]
 
         return "/".join(paths)  # path delimiter

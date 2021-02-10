@@ -194,6 +194,6 @@ class AzureBlobComputeLogManager(ComputeLogManager, ConfigurableClass):
             "storage",
             run_id,
             "compute_logs",
-            "{}.{}".format(key, extension),
+            f"{key}.{extension}",
         ]
         return "/".join(paths)  # blob path delimiter

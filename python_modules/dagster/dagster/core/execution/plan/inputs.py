@@ -270,16 +270,13 @@ class FromStepOutput(
 def _generate_error_boundary_msg_for_step_input(
     context: "SystemStepExecutionContext", input_name: str
 ):
-    return lambda: """Error occurred during input loading:
+    return (
+        lambda: f"""Error occurred during input loading:
     input name: "{input_name}"
-    step key: "{key}"
-    solid invocation: "{solid}"
-    solid definition: "{solid_def}"
-    """.format(
-        input_name=input_name,
-        key=context.step.key,
-        solid_def=context.solid_def.name,
-        solid=context.solid.name,
+    step key: "{context.step.key}"
+    solid invocation: "{context.solid.name}"
+    solid definition: "{context.solid_def.name}"
+    """
     )
 
 

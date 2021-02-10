@@ -170,11 +170,7 @@ def version():
             )
         )
     else:
-        click.echo(
-            "All modules in lockstep with most recent tagged version: {git_tag}".format(
-                git_tag=git_tag
-            )
-        )
+        click.echo(f"All modules in lockstep with most recent tagged version: {git_tag}")
 
 
 @cli.command()
@@ -262,7 +258,7 @@ def helm(helm_repo, ver, dry_run):
     click.echo(subprocess.check_output(cmd, cwd=helm_repo))
 
     # Commit and push Helm updates for this Dagster release
-    msg = "Helm release for Dagster release {}".format(ver)
+    msg = f"Helm release for Dagster release {ver}"
     git_commit_updates(helm_repo, msg)
     git_push(cwd=helm_repo, dry_run=dry_run)
 

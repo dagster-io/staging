@@ -27,7 +27,7 @@ class ADLS2FileCache(FileCache):
         return True
 
     def get_full_key(self, file_key):
-        return "{base_key}/{file_key}".format(base_key=self.prefix, file_key=file_key)
+        return f"{self.prefix}/{file_key}"
 
     def write_file_object(self, file_key, source_file_object):
         check.str_param(file_key, "file_key")

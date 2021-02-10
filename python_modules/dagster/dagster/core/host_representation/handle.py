@@ -27,7 +27,7 @@ def _get_repository_python_origin(
 ):
     if repository_name not in repository_code_pointer_dict:
         raise DagsterInvariantViolationError(
-            "Unable to find repository name {} on GRPC server.".format(repository_name)
+            f"Unable to find repository name {repository_name} on GRPC server."
         )
 
     code_pointer = repository_code_pointer_dict[repository_name]

@@ -33,7 +33,7 @@ def loadable_targets_from_loaded_module(module):
 
     if not loadable_pipelines:
         raise DagsterInvariantViolationError(
-            'No pipelines or repositories found in "{}".'.format(module.__name__)
+            f'No pipelines or repositories found in "{module.__name__}".'
         )
 
     elif len(loadable_pipelines) > 1:

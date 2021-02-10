@@ -163,7 +163,7 @@ def test_create_delete_dataset():
     config = {"solids": {"create_solid": {"config": {"dataset": dataset, "exists_ok": False}}}}
     with pytest.raises(
         google.api_core.exceptions.Conflict,
-        match="Already Exists: Dataset %s:%s" % (client.project, dataset),
+        match=f"Already Exists: Dataset {client.project}:{dataset}",
     ):
         execute_pipeline(create_pipeline, config)
 
@@ -183,7 +183,7 @@ def test_create_delete_dataset():
     config = {"solids": {"delete_solid": {"config": {"dataset": dataset, "not_found_ok": False}}}}
     with pytest.raises(
         google.api_core.exceptions.NotFound,
-        match="Not found: Dataset %s:%s" % (client.project, dataset),
+        match=f"Not found: Dataset {client.project}:{dataset}",
     ):
         execute_pipeline(delete_pipeline, config)
 
@@ -194,13 +194,13 @@ def test_create_delete_dataset():
 @pytest.mark.skip
 def test_pd_df_load():
     dataset = get_dataset()
-    table = "%s.%s" % (dataset, "df")
+    table = f"{dataset}.{'df'}"
 
     test_df = pd.DataFrame({"num1": [1, 3], "num2": [2, 4]})
 
     create_solid = bq_create_dataset.alias("create_solid")
     load_solid = import_df_to_bq.alias("load_solid")
-    query_solid = bq_solid_for_queries(["SELECT num1, num2 FROM %s" % table]).alias("query_solid")
+    query_solid = bq_solid_for_queries([f"SELECT num1, num2 FROM {table}"]).alias("query_solid")
     delete_solid = bq_delete_dataset.alias("delete_solid")
 
     @solid(
@@ -252,7 +252,7 @@ def test_pd_df_load():
 @pytest.mark.skip
 def test_gcs_load():
     dataset = get_dataset()
-    table = "%s.%s" % (dataset, "df")
+    table = f"{dataset}.{'df'}"
 
     create_solid = bq_create_dataset.alias("create_solid")
     query_solid = bq_solid_for_queries(

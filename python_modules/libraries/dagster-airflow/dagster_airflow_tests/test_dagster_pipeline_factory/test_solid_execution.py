@@ -208,22 +208,8 @@ def test_template_task_dag():
                     )
                     == 1
                 )
-                assert (
-                    file_contents.count(
-                        "INFO - {execution_date_iso}\n".format(
-                            execution_date_iso=execution_date_iso
-                        )
-                    )
-                    == 5
-                )
-                assert (
-                    file_contents.count(
-                        "INFO - {execution_date_add_one_week_iso}\n".format(
-                            execution_date_add_one_week_iso=execution_date_add_one_week_iso
-                        )
-                    )
-                    == 5
-                )
+                assert file_contents.count(f"INFO - {execution_date_iso}\n") == 5
+                assert file_contents.count(f"INFO - {execution_date_add_one_week_iso}\n") == 5
                 assert file_contents.count("INFO - Parameter I passed in\n") == 5
                 assert file_contents.count("INFO - Command exited with return code 0") == 1
 

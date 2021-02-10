@@ -214,7 +214,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
+            name=f"{schedule_name}_partitions",
             pipeline_name=pipeline_name,
             partition_fn=partition_fn,
             run_config_fn_for_partition=lambda partition: fn(partition.value),
@@ -357,7 +357,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
+            name=f"{schedule_name}_partitions",
             pipeline_name=pipeline_name,
             partition_fn=partition_fn,
             run_config_fn_for_partition=lambda partition: fn(partition.value),
@@ -451,9 +451,7 @@ def my_schedule_definition(_):
 """
         )
 
-    cron_schedule = "{minute} {hour} * * *".format(
-        minute=execution_time.minute, hour=execution_time.hour
-    )
+    cron_schedule = f"{execution_time.minute} {execution_time.hour} * * *"
 
     fmt = DEFAULT_DATE_FORMAT
 
@@ -489,7 +487,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
+            name=f"{schedule_name}_partitions",
             pipeline_name=pipeline_name,
             partition_fn=partition_fn,
             run_config_fn_for_partition=lambda partition: fn(partition.value),
@@ -595,7 +593,7 @@ def my_schedule_definition(_):
             "datetime.time(minute={minute}, ...) to fix this warning."
         )
 
-    cron_schedule = "{minute} * * * *".format(minute=execution_time.minute)
+    cron_schedule = f"{execution_time.minute} * * * *"
 
     fmt = (
         DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE
@@ -631,7 +629,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
         partition_set = PartitionSetDefinition(
-            name="{}_partitions".format(schedule_name),
+            name=f"{schedule_name}_partitions",
             pipeline_name=pipeline_name,
             partition_fn=partition_fn,
             run_config_fn_for_partition=lambda partition: fn(partition.value),

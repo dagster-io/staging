@@ -15,7 +15,7 @@ def define_dagster_checker():
         priority = -1
         msgs = {
             "W0001": (
-                "Yield in finally without handling GeneratorExit (see {})".format(INFO_LINK),
+                f"Yield in finally without handling GeneratorExit (see {INFO_LINK})",
                 "finally-yield",
                 "Cannot yield in a finally block without handling GeneratorExit (see {})".format(
                     INFO_LINK

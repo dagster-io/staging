@@ -150,10 +150,7 @@ def log_step_event(step_context, event):
     log_fn = step_context.log.error if event_type in FAILURE_EVENTS else step_context.log.debug
 
     log_fn(
-        event.message
-        or "{event_type} for step {step_key}".format(
-            event_type=event_type, step_key=step_context.step.key
-        ),
+        event.message or f"{event_type} for step {step_context.step.key}",
         dagster_event=event,
         pipeline_name=step_context.pipeline_name,
     )
@@ -167,10 +164,7 @@ def log_pipeline_event(pipeline_context, event, step_key):
     )
 
     log_fn(
-        event.message
-        or "{event_type} for pipeline {pipeline_name}".format(
-            event_type=event_type, pipeline_name=pipeline_context.pipeline_name
-        ),
+        event.message or f"{event_type} for pipeline {pipeline_context.pipeline_name}",
         dagster_event=event,
         pipeline_name=pipeline_context.pipeline_name,
         step_key=step_key,
@@ -523,7 +517,7 @@ class DagsterEvent(
             event_type=DagsterEventType.STEP_FAILURE,
             step_context=step_context,
             event_specific_data=step_failure_data,
-            message='Execution of step "{step_key}" failed.'.format(step_key=step_context.step.key),
+            message=f'Execution of step "{step_context.step.key}" failed.',
         )
 
     @staticmethod
@@ -567,9 +561,7 @@ class DagsterEvent(
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_START,
             step_context=step_context,
-            message='Started execution of step "{step_key}".'.format(
-                step_key=step_context.step.key
-            ),
+            message=f'Started execution of step "{step_context.step.key}".',
         )
 
     @staticmethod
@@ -599,9 +591,7 @@ class DagsterEvent(
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_SKIPPED,
             step_context=step_context,
-            message='Skipped execution of step "{step_key}".'.format(
-                step_key=step_context.step.key
-            ),
+            message=f'Skipped execution of step "{step_context.step.key}".',
         )
 
     @staticmethod
@@ -713,7 +703,7 @@ class DagsterEvent(
             resource_time = resource_init_times[resource_key]
             metadata_entries.append(
                 EventMetadataEntry.python_artifact(
-                    resource_obj.__class__, resource_key, "Initialized in {}".format(resource_time)
+                    resource_obj.__class__, resource_key, f"Initialized in {resource_time}"
                 )
             )
 
@@ -736,7 +726,7 @@ class DagsterEvent(
         return DagsterEvent.from_resource(
             execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
             log_manager=check.inst_param(log_manager, "log_manager", DagsterLogManager),
-            message="Initialization of resources [{}] failed.".format(", ".join(resource_keys)),
+            message=f"Initialization of resources [{', '.join(resource_keys)}] failed.",
             event_specific_data=EngineEventData(
                 metadata_entries=[],
                 marker_end="resources",
@@ -751,7 +741,7 @@ class DagsterEvent(
         return DagsterEvent.from_resource(
             execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
             log_manager=check.inst_param(log_manager, "log_manager", DagsterLogManager),
-            message="Teardown of resources [{}] failed.".format(", ".join(resource_keys)),
+            message=f"Teardown of resources [{', '.join(resource_keys)}] failed.",
             event_specific_data=EngineEventData(
                 metadata_entries=[],
                 marker_start=None,
@@ -778,9 +768,7 @@ class DagsterEvent(
         )
         log_manager.error(
             event.message
-            or "{event_type} for pipeline {pipeline_name}".format(
-                event_type=DagsterEventType.PIPELINE_INIT_FAILURE, pipeline_name=pipeline_name
-            ),
+            or f"{DagsterEventType.PIPELINE_INIT_FAILURE} for pipeline {pipeline_name}",
             dagster_event=event,
             pipeline_name=pipeline_name,
         )
@@ -805,17 +793,13 @@ class DagsterEvent(
         )
 
         object_store_name = (
-            "{object_store_name} ".format(
-                object_store_name=object_store_operation_result.object_store_name
-            )
+            f"{object_store_operation_result.object_store_name} "
             if object_store_operation_result.object_store_name
             else ""
         )
 
         serialization_strategy_modifier = (
-            " using {serialization_strategy_name}".format(
-                serialization_strategy_name=object_store_operation_result.serialization_strategy_name
-            )
+            f" using {object_store_operation_result.serialization_strategy_name}"
             if object_store_operation_result.serialization_strategy_name
             else ""
         )

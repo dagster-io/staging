@@ -87,9 +87,7 @@ class DagsterModule(namedtuple("_DagsterModule", "name is_library additional_ste
         with open(self.version_file_path) as fp:
             exec(fp.read(), module_version)  # pylint: disable=W0122
 
-        assert "__version__" in module_version, "Bad version for module {name}".format(
-            name=self.name
-        )
+        assert "__version__" in module_version, f"Bad version for module {self.name}"
 
         return {
             "__version__": module_version["__version__"],
@@ -103,13 +101,13 @@ class DagsterModule(namedtuple("_DagsterModule", "name is_library additional_ste
         """
         assert isinstance(new_version, str)
 
-        output = '__version__ = "{}"\n'.format(new_version)
+        output = f'__version__ = "{new_version}"\n'
 
         version_file = self.version_file_path
 
         if dry_run:
             click.echo(
-                click.style("Dry run; not running. Would write to: %s\n" % version_file, fg="red")
+                click.style(f"Dry run; not running. Would write to: {version_file}\n", fg="red")
                 + output
                 + "\n"
             )
@@ -131,10 +129,10 @@ class DagsterModule(namedtuple("_DagsterModule", "name is_library additional_ste
                 if dry_run:
                     click.echo(
                         click.style("Dry run; not running.", fg="red")
-                        + " Would run {cwd}:$ {cmd}".format(cmd=command, cwd=cwd)
+                        + f" Would run {cwd}:$ {command}"
                     )
                 else:
-                    click.echo("About to run command {cwd}:$ {cmd}".format(cmd=command, cwd=cwd))
+                    click.echo(f"About to run command {cwd}:$ {command}")
                     process = subprocess.Popen(
                         command, stderr=subprocess.PIPE, cwd=cwd, shell=True, stdout=subprocess.PIPE
                     )

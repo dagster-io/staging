@@ -152,7 +152,7 @@ class DagsterType:
         self.is_builtin = check.bool_param(is_builtin, "is_builtin")
         check.invariant(
             self.display_name is not None,
-            "All types must have a valid display name, got None for key {}".format(key),
+            f"All types must have a valid display name, got None for key {key}",
         )
 
         self.kind = check.inst_param(kind, "kind", DagsterTypeKind)
@@ -192,7 +192,7 @@ class DagsterType:
         """The unique name of this type. Can be None if the type is not unique, such as container types"""
         check.invariant(
             self._name is not None,
-            "unique_name requested but is None for type {}".format(self.display_name),
+            f"unique_name requested but is None for type {self.display_name}",
         )
         return self._name
 
@@ -432,7 +432,7 @@ class _Nothing(DagsterType):
         if value is not None:
             return TypeCheck(
                 success=False,
-                description="Value must be None, got a {value_type}".format(value_type=type(value)),
+                description=f"Value must be None, got a {type(value)}",
             )
 
         return TypeCheck(success=True)
@@ -785,7 +785,7 @@ def resolve_dagster_type(dagster_type):
 
     check.invariant(
         not (isinstance(dagster_type, type) and issubclass(dagster_type, DagsterType)),
-        "Do not pass runtime type classes. Got {}".format(dagster_type),
+        f"Do not pass runtime type classes. Got {dagster_type}",
     )
 
     # First check to see if it part of python's typing library
@@ -836,9 +836,7 @@ def resolve_dagster_type(dagster_type):
             )
         )
 
-    raise DagsterInvalidDefinitionError(
-        "{dagster_type} is not a valid dagster type.".format(dagster_type=dagster_type)
-    )
+    raise DagsterInvalidDefinitionError(f"{dagster_type} is not a valid dagster type.")
 
 
 ALL_RUNTIME_BUILTINS = list(_RUNTIME_MAP.values())

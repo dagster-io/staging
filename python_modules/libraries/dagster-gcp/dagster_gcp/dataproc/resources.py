@@ -73,9 +73,7 @@ class DataprocResource:
         done = DataprocResource._iter_and_sleep_until_ready(iter_fn)
         if not done:
             cluster = self.get_cluster()
-            raise DataprocError(
-                "Could not provision cluster -- status: %s" % str(cluster["status"])
-            )
+            raise DataprocError(f"Could not provision cluster -- status: {str(cluster['status'])}")
 
     def get_cluster(self):
         return self.dataproc_clusters.get(
@@ -106,7 +104,7 @@ class DataprocResource:
 
             # Handle exceptions
             if result["status"]["state"] in {"CANCELLED", "ERROR"}:
-                raise DataprocError("Job error: %s" % str(result["status"]))
+                raise DataprocError(f"Job error: {str(result['status'])}")
 
             if result["status"]["state"] == "DONE":
                 return True
@@ -116,7 +114,7 @@ class DataprocResource:
         done = DataprocResource._iter_and_sleep_until_ready(iter_fn)
         if not done:
             job = self.get_job(job_id)
-            raise DataprocError("Job run timed out: %s" % str(job["status"]))
+            raise DataprocError(f"Job run timed out: {str(job['status'])}")
 
     @staticmethod
     def _iter_and_sleep_until_ready(

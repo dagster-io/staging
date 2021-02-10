@@ -113,9 +113,7 @@ def execute_query_against_remote(host, query, variables):
     sanity_check = requests.get(urljoin(host, "/dagit_info"))
     sanity_check.raise_for_status()
     if "dagit" not in sanity_check.text:
-        raise click.UsageError(
-            "Host {host} failed sanity check. It is not a dagit server.".format(host=host)
-        )
+        raise click.UsageError(f"Host {host} failed sanity check. It is not a dagit server.")
 
     response = requests.post(
         urljoin(host, "/graphql"), params={"query": query, "variables": variables}

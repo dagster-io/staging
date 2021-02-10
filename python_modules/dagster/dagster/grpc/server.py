@@ -881,11 +881,7 @@ class CouldNotStartServerProcess(Exception):
     def __init__(self, port=None, socket=None):
         super(CouldNotStartServerProcess, self).__init__(
             "Could not start server with "
-            + (
-                "port {port}".format(port=port)
-                if port is not None
-                else "socket {socket}".format(socket=socket)
-            )
+            + (f"port {port}" if port is not None else f"socket {socket}")
         )
 
 
@@ -897,9 +893,7 @@ def wait_for_grpc_server(server_process, ipc_output_file, timeout=15):
     elif isinstance(event, GrpcServerStartedEvent):
         return True
     else:
-        raise Exception(
-            "Received unexpected IPC event from gRPC Server: {event}".format(event=event)
-        )
+        raise Exception(f"Received unexpected IPC event from gRPC Server: {event}")
 
 
 def open_server_process(
@@ -919,9 +913,7 @@ def open_server_process(
     from dagster.core.test_utils import get_mocked_system_timezone
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        output_file = os.path.join(
-            temp_dir, "grpc-server-startup-{uuid}".format(uuid=uuid.uuid4().hex)
-        )
+        output_file = os.path.join(temp_dir, f"grpc-server-startup-{uuid.uuid4().hex}")
 
         mocked_system_timezone = get_mocked_system_timezone()
 

@@ -73,7 +73,7 @@ def merge_yaml_strings(yaml_strs):
     for yaml_dict in yaml_dicts:
         check.invariant(
             isinstance(yaml_dict, dict),
-            'Expected YAML dictionary, instead got: "%s"' % str(yaml_dict),
+            f'Expected YAML dictionary, instead got: "{str(yaml_dict)}"',
         )
 
     return functools.reduce(deep_merge_dicts, yaml_dicts, {})

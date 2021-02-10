@@ -31,9 +31,7 @@ class DagsterScheduleReconciliationError(DagsterError):
         error_messages = []
         for i_error, error in enumerate(self.errors):
             error_messages.append(str(error))
-            error_msg += "\n    Error {i_error}: {error_message}".format(
-                i_error=i_error + 1, error_message=str(error)
-            )
+            error_msg += f"\n    Error {i_error + 1}: {str(error)}"
 
         self.message = error_msg
         self.error_messages = error_messages

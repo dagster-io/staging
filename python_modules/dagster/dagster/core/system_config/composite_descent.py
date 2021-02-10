@@ -113,7 +113,7 @@ def _composite_descent(parent_stack, solids_config_dict, resource_defs):
             )
             if not config_mapped_solid_config.success:
                 raise DagsterInvalidConfigError(
-                    "Error in config for solid {}".format(solid.name),
+                    f"Error in config for solid {solid.name}",
                     config_mapped_solid_config.errors,
                     config_mapped_solid_config,
                 )
@@ -168,7 +168,7 @@ def _get_mapped_solids_dict(
     config_mapped_solid_config = graph_def.apply_config_mapping(current_solid_config)
     if not config_mapped_solid_config.success:
         raise DagsterInvalidConfigError(
-            "Error in config for composite solid {}".format(composite.name),
+            f"Error in config for composite solid {composite.name}",
             config_mapped_solid_config.errors,
             config_mapped_solid_config,
         )

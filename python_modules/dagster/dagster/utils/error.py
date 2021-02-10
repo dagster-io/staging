@@ -24,7 +24,7 @@ class SerializableErrorInfo(namedtuple("SerializableErrorInfo", "message stack c
             if self.cause
             else ""
         )
-        return "{err.message}{stack}{cause}".format(err=self, stack=stack_str, cause=cause_str)
+        return f"{self.message}{stack_str}{cause_str}"
 
 
 def _serializable_error_info_from_tb(tb: traceback.TracebackException) -> SerializableErrorInfo:

@@ -112,7 +112,7 @@ class GrapheneJobTick(graphene.ObjectType):
         )
 
     def resolve_id(self, _):
-        return "%s:%s" % (self._job_tick.job_origin_id, self._job_tick.timestamp)
+        return f"{self._job_tick.job_origin_id}:{self._job_tick.timestamp}"
 
     def resolve_runs(self, graphene_info):
         from .pipelines.pipeline import GraphenePipelineRun

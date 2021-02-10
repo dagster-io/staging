@@ -29,9 +29,7 @@ def create_task(celery_app, **task_kwargs):
         retries = Retries.from_config(execute_step_args.retries_dict)
 
         pipeline_run = instance.get_run_by_id(execute_step_args.pipeline_run_id)
-        check.invariant(
-            pipeline_run, "Could not load run {}".format(execute_step_args.pipeline_run_id)
-        )
+        check.invariant(pipeline_run, f"Could not load run {execute_step_args.pipeline_run_id}")
 
         step_keys_str = ", ".join(execute_step_args.step_keys_to_execute)
 
@@ -43,7 +41,7 @@ def create_task(celery_app, **task_kwargs):
         )
 
         engine_event = instance.report_engine_event(
-            "Executing steps {} in celery worker".format(step_keys_str),
+            f"Executing steps {step_keys_str} in celery worker",
             pipeline_run,
             EngineEventData(
                 [

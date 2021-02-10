@@ -9,11 +9,7 @@ def git_check_status():
     changes = subprocess.check_output(["git", "status", "--porcelain"]).decode("utf-8").strip()
 
     if changes != "":
-        raise Exception(
-            "Bailing: Cannot publish with changes present in git repo:\n{changes}".format(
-                changes=changes
-            )
-        )
+        raise Exception(f"Bailing: Cannot publish with changes present in git repo:\n{changes}")
 
 
 def git_user():
@@ -140,11 +136,9 @@ def set_git_tag(tag, signed=False, dry_run=True):
 def git_commit_updates(repo_dir, message):
     cmds = [
         "git add -A",
-        'git commit -m "{}"'.format(message),
+        f'git commit -m "{message}"',
     ]
 
-    print(  # pylint: disable=print-call
-        "Committing to {} with message {}".format(repo_dir, message)
-    )
+    print(f"Committing to {repo_dir} with message {message}")  # pylint: disable=print-call
     for cmd in cmds:
         subprocess.call(cmd, cwd=repo_dir, shell=True)

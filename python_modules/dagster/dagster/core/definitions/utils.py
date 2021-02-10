@@ -64,13 +64,13 @@ def is_valid_name(name):
 
 
 def _kv_str(key, value):
-    return '{key}="{value}"'.format(key=key, value=repr(value))
+    return f'{key}="{repr(value)}"'
 
 
 def struct_to_string(name, **kwargs):
     # Sort the kwargs to ensure consistent representations across Python versions
     props_str = ", ".join([_kv_str(key, value) for key, value in sorted(kwargs.items())])
-    return "{name}({props_str})".format(name=name, props_str=props_str)
+    return f"{name}({props_str})"
 
 
 def validate_tags(tags):
@@ -78,7 +78,7 @@ def validate_tags(tags):
     for key, value in check.opt_dict_param(tags, "tags", key_type=str).items():
         if not isinstance(value, str):
             valid = False
-            err_reason = 'Could not JSON encode value "{}"'.format(value)
+            err_reason = f'Could not JSON encode value "{value}"'
             try:
                 str_val = seven.json.dumps(value)
                 err_reason = 'JSON encoding "{json}" of value "{val}" is not equivalent to original value'.format(

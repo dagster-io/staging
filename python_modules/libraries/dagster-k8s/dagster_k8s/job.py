@@ -119,7 +119,7 @@ def get_k8s_resource_requirements(tags):
 
     if not result.success:
         raise DagsterInvalidConfigError(
-            "Error in tags for {}".format(K8S_RESOURCE_REQUIREMENTS_KEY),
+            f"Error in tags for {K8S_RESOURCE_REQUIREMENTS_KEY}",
             result.errors,
             result,
         )
@@ -141,7 +141,7 @@ def get_user_defined_k8s_config(tags):
 
         if not result.success:
             raise DagsterInvalidConfigError(
-                "Error in tags for {}".format(USER_DEFINED_K8S_CONFIG_KEY),
+                f"Error in tags for {USER_DEFINED_K8S_CONFIG_KEY}",
                 result.errors,
                 result,
             )
@@ -167,7 +167,7 @@ def get_user_defined_k8s_config(tags):
 
 
 def get_job_name_from_run_id(run_id):
-    return "dagster-run-{}".format(run_id)
+    return f"dagster-run-{run_id}"
 
 
 @whitelist_for_serdes
@@ -447,9 +447,7 @@ def construct_dagster_k8s_job(
         volume_mounts=[
             kubernetes.client.V1VolumeMount(
                 name="dagster-instance",
-                mount_path="{dagster_home}/dagster.yaml".format(
-                    dagster_home=job_config.dagster_home
-                ),
+                mount_path=f"{job_config.dagster_home}/dagster.yaml",
                 sub_path="dagster.yaml",
             )
         ],

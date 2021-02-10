@@ -121,7 +121,7 @@ class SqlEventLogStorage(EventLogStorage):
         check.int_param(cursor, "cursor")
         check.invariant(
             cursor >= -1,
-            "Don't know what to do with negative cursor {cursor}".format(cursor=cursor),
+            f"Don't know what to do with negative cursor {cursor}",
         )
 
         # cursor starts at 0 & auto-increment column starts at 1 so adjust
@@ -163,7 +163,7 @@ class SqlEventLogStorage(EventLogStorage):
         check.int_param(cursor, "cursor")
         check.invariant(
             cursor >= -1,
-            "Don't know what to do with negative cursor {cursor}".format(cursor=cursor),
+            f"Don't know what to do with negative cursor {cursor}",
         )
 
         events_by_id = self.get_logs_for_run_by_log_id(run_id, cursor)
@@ -352,12 +352,12 @@ class SqlEventLogStorage(EventLogStorage):
         for migration_name, migration_fn in REINDEX_DATA_MIGRATIONS.items():
             if self.has_secondary_index(migration_name):
                 if not force:
-                    print_fn("Skipping already reindexed summary: {}".format(migration_name))
+                    print_fn(f"Skipping already reindexed summary: {migration_name}")
                     continue
-            print_fn("Starting reindex: {}".format(migration_name))
+            print_fn(f"Starting reindex: {migration_name}")
             migration_fn()(self, print_fn)
             self.enable_secondary_index(migration_name)
-            print_fn("Finished reindexing: {}".format(migration_name))
+            print_fn(f"Finished reindexing: {migration_name}")
 
     def wipe(self):
         """Clears the event log storage."""
@@ -684,7 +684,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
                 else:
                     events.append(event_record)
             except seven.JSONDecodeError:
-                logging.warning("Could not parse asset event record id `{}`.".format(row_id))
+                logging.warning(f"Could not parse asset event record id `{row_id}`.")
         return events
 
     def get_asset_run_ids(self, asset_key):
@@ -767,4 +767,4 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
                 self.update_event_log_record(row_id, updated_record)
 
             except seven.JSONDecodeError:
-                logging.warning("Could not parse asset event record id `{}`.".format(row_id))
+                logging.warning(f"Could not parse asset event record id `{row_id}`.")

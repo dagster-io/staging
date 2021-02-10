@@ -57,11 +57,7 @@ def canonicalize_backcompat_args(new_val, new_arg, old_val, old_arg, breaking_ve
     check.opt_int_param(stacklevel, "stacklevel")
     if new_val is not None:
         if old_val is not None:
-            check.failed(
-                'Do not use deprecated "{old_arg}" now that you are using "{new_arg}".'.format(
-                    old_arg=old_arg, new_arg=new_arg
-                )
-            )
+            check.failed(f'Do not use deprecated "{old_arg}" now that you are using "{new_arg}".')
         return new_val
     if old_val is not None:
         warnings.warn(

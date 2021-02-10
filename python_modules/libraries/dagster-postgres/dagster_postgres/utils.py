@@ -43,13 +43,7 @@ def pg_url_from_config(config_value):
 
 
 def get_conn_string(username, password, hostname, db_name, port="5432"):
-    return "postgresql://{username}:{password}@{hostname}:{port}/{db_name}".format(
-        username=username,
-        password=urlquote(password),
-        hostname=hostname,
-        db_name=db_name,
-        port=port,
-    )
+    return f"postgresql://{username}:{urlquote(password)}@{hostname}:{port}/{db_name}"
 
 
 def retry_pg_creation_fn(fn, retry_limit=5, retry_wait=0.2):
@@ -140,7 +134,7 @@ def create_pg_connection(engine, dunder_file, storage_type_desc=None):
         with handle_schema_errors(
             conn,
             get_alembic_config(dunder_file),
-            msg="Postgres {}storage requires migration".format(storage_type_desc),
+            msg=f"Postgres {storage_type_desc}storage requires migration",
         ):
             yield conn
     finally:
@@ -150,4 +144,4 @@ def create_pg_connection(engine, dunder_file, storage_type_desc=None):
 
 def pg_statement_timeout(millis):
     check.int_param(millis, "millis")
-    return "-c statement_timeout={}".format(millis)
+    return f"-c statement_timeout={millis}"

@@ -84,7 +84,7 @@ class DagsterDockerImage(namedtuple("_DagsterDockerImage", "image build_cm")):
 
         last_updated = self._get_last_updated_for_python_version(python_version)
         tag = python_version_image_tag(python_version, last_updated)
-        return "{}/{}:{}".format(DEFAULT_LOCAL_PREFIX, self.image, tag)
+        return f"{DEFAULT_LOCAL_PREFIX}/{self.image}:{tag}"
 
     def aws_image(self, python_version=None, custom_tag=None):
         """Generates the AWS ECR image name, like:
@@ -134,7 +134,7 @@ class DagsterDockerImage(namedtuple("_DagsterDockerImage", "image build_cm")):
             elif source == "local":
                 docker_args["BASE_IMAGE"] = base_image.local_image(python_version)
             else:
-                raise Exception("Unrecognized source {}".format(source))
+                raise Exception(f"Unrecognized source {source}")
 
         # Set Dagster version
         docker_args["DAGSTER_VERSION"] = current_dagster_version

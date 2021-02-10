@@ -58,7 +58,7 @@ def get_default_docker_image_tag():
     # Detect the python version we're running on
     majmin = str(sys.version_info.major) + str(sys.version_info.minor)
 
-    return "py{majmin}-{image_version}".format(majmin=majmin, image_version="latest")
+    return f"py{majmin}-latest"
 
 
 def get_test_project_docker_image():
@@ -84,5 +84,5 @@ def get_test_project_docker_image():
         image_name=image_name,
         tag=docker_image_tag,
     )
-    print("Using Docker image: %s" % final_docker_image)  # pylint: disable=print-call
+    print(f"Using Docker image: {final_docker_image}")  # pylint: disable=print-call
     return final_docker_image

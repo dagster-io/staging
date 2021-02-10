@@ -58,7 +58,7 @@ def test_notebook_view():
             workspace,
             DagsterInstance.ephemeral(),
         ).test_client() as client:
-            res = client.get("/dagit/notebook?path={}".format(notebook_path))
+            res = client.get(f"/dagit/notebook?path={notebook_path}")
 
         assert res.status_code == 200
         # This magic guid is hardcoded in the notebook

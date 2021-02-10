@@ -159,7 +159,7 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
         if not queued_runs:
             self._logger.info("Poll returned no queued runs.")
         else:
-            self._logger.info("Retrieved {} queued runs, checking limits.".format(len(queued_runs)))
+            self._logger.info(f"Retrieved {len(queued_runs)} queued runs, checking limits.")
 
         # place in order
         sorted_runs = self._priority_sort(queued_runs)
@@ -184,7 +184,7 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
 
                 yield
 
-        self._logger.info("Launched {} runs.".format(num_dequeued_runs))
+        self._logger.info(f"Launched {num_dequeued_runs} runs.")
 
     def _get_queued_runs(self, instance):
         queued_runs_filter = PipelineRunsFilter(statuses=[PipelineRunStatus.QUEUED])

@@ -143,11 +143,11 @@ class KubernetesPodOperator(BaseOperator):
                     launcher.delete_pod(pod)
 
             if final_state != State.SUCCESS:
-                raise AirflowException("Pod returned a failure: {state}".format(state=final_state))
+                raise AirflowException(f"Pod returned a failure: {final_state}")
             if self.xcom_push:
                 return result
         except AirflowException as ex:
-            raise AirflowException("Pod Launching failed: {error}".format(error=ex))
+            raise AirflowException(f"Pod Launching failed: {ex}")
 
     @apply_defaults
     def __init__(  # pylint: disable=keyword-arg-before-vararg

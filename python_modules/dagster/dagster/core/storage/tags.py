@@ -5,37 +5,37 @@ from dagster import check
 SYSTEM_TAG_PREFIX = "dagster/"
 HIDDEN_TAG_PREFIX = ".dagster/"
 
-SCHEDULE_NAME_TAG = "{prefix}schedule_name".format(prefix=SYSTEM_TAG_PREFIX)
+SCHEDULE_NAME_TAG = f"{SYSTEM_TAG_PREFIX}schedule_name"
 
-SENSOR_NAME_TAG = "{prefix}sensor_name".format(prefix=SYSTEM_TAG_PREFIX)
+SENSOR_NAME_TAG = f"{SYSTEM_TAG_PREFIX}sensor_name"
 
-BACKFILL_ID_TAG = "{prefix}backfill".format(prefix=SYSTEM_TAG_PREFIX)
+BACKFILL_ID_TAG = f"{SYSTEM_TAG_PREFIX}backfill"
 
-PARTITION_NAME_TAG = "{prefix}partition".format(prefix=SYSTEM_TAG_PREFIX)
+PARTITION_NAME_TAG = f"{SYSTEM_TAG_PREFIX}partition"
 
-PARTITION_SET_TAG = "{prefix}partition_set".format(prefix=SYSTEM_TAG_PREFIX)
+PARTITION_SET_TAG = f"{SYSTEM_TAG_PREFIX}partition_set"
 
-PARENT_RUN_ID_TAG = "{prefix}parent_run_id".format(prefix=SYSTEM_TAG_PREFIX)
+PARENT_RUN_ID_TAG = f"{SYSTEM_TAG_PREFIX}parent_run_id"
 
-ROOT_RUN_ID_TAG = "{prefix}root_run_id".format(prefix=SYSTEM_TAG_PREFIX)
+ROOT_RUN_ID_TAG = f"{SYSTEM_TAG_PREFIX}root_run_id"
 
-RESUME_RETRY_TAG = "{prefix}is_resume_retry".format(prefix=SYSTEM_TAG_PREFIX)
+RESUME_RETRY_TAG = f"{SYSTEM_TAG_PREFIX}is_resume_retry"
 
-MEMOIZED_RUN_TAG = "{prefix}is_memoized_run".format(prefix=SYSTEM_TAG_PREFIX)
+MEMOIZED_RUN_TAG = f"{SYSTEM_TAG_PREFIX}is_memoized_run"
 
-STEP_SELECTION_TAG = "{prefix}step_selection".format(prefix=SYSTEM_TAG_PREFIX)
+STEP_SELECTION_TAG = f"{SYSTEM_TAG_PREFIX}step_selection"
 
-SOLID_SELECTION_TAG = "{prefix}solid_selection".format(prefix=SYSTEM_TAG_PREFIX)
+SOLID_SELECTION_TAG = f"{SYSTEM_TAG_PREFIX}solid_selection"
 
-PRESET_NAME_TAG = "{prefix}preset_name".format(prefix=SYSTEM_TAG_PREFIX)
+PRESET_NAME_TAG = f"{SYSTEM_TAG_PREFIX}preset_name"
 
-GRPC_INFO_TAG = "{prefix}grpc_info".format(prefix=HIDDEN_TAG_PREFIX)
+GRPC_INFO_TAG = f"{HIDDEN_TAG_PREFIX}grpc_info"
 
-SCHEDULED_EXECUTION_TIME_TAG = "{prefix}scheduled_execution_time".format(prefix=HIDDEN_TAG_PREFIX)
+SCHEDULED_EXECUTION_TIME_TAG = f"{HIDDEN_TAG_PREFIX}scheduled_execution_time"
 
-RUN_KEY_TAG = "{prefix}run_key".format(prefix=SYSTEM_TAG_PREFIX)
+RUN_KEY_TAG = f"{SYSTEM_TAG_PREFIX}run_key"
 
-PRIORITY_TAG = "{prefix}priority".format(prefix=SYSTEM_TAG_PREFIX)
+PRIORITY_TAG = f"{SYSTEM_TAG_PREFIX}priority"
 
 
 class TagType(Enum):
@@ -65,5 +65,5 @@ def check_tags(obj, name):
     for tag in obj.keys():
         check.invariant(
             not tag.startswith(SYSTEM_TAG_PREFIX),
-            desc="User attempted to set tag with reserved system prefix: {tag}".format(tag=tag),
+            desc=f"User attempted to set tag with reserved system prefix: {tag}",
         )

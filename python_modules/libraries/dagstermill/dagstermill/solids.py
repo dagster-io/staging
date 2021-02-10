@@ -97,7 +97,7 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
 
     run_id = compute_context.run_id
 
-    marshal_dir = "/tmp/dagstermill/{run_id}/marshal".format(run_id=run_id)
+    marshal_dir = f"/tmp/dagstermill/{run_id}/marshal"
     mkdir_p(marshal_dir)
 
     if not isinstance(compute_context.pipeline, ReconstructablePipeline):
@@ -122,10 +122,10 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
     for input_name, input_value in inputs.items():
         assert (
             input_name not in RESERVED_INPUT_NAMES
-        ), "Dagstermill solids cannot have inputs named {input_name}".format(input_name=input_name)
+        ), f"Dagstermill solids cannot have inputs named {input_name}"
         dagster_type = input_def_dict[input_name].dagster_type
         parameter_value = write_value(
-            dagster_type, input_value, os.path.join(marshal_dir, "input-{}".format(input_name))
+            dagster_type, input_value, os.path.join(marshal_dir, f"input-{input_name}")
         )
         parameters[input_name] = parameter_value
 
@@ -158,11 +158,11 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
             with safe_tempfile_path() as output_log_path:
 
                 parameterized_notebook_path = os.path.join(
-                    output_notebook_dir, "{prefix}-inter.ipynb".format(prefix=str(uuid.uuid4()))
+                    output_notebook_dir, f"{str(uuid.uuid4())}-inter.ipynb"
                 )
 
                 executed_notebook_path = os.path.join(
-                    output_notebook_dir, "{prefix}-out.ipynb".format(prefix=str(uuid.uuid4()))
+                    output_notebook_dir, f"{str(uuid.uuid4())}-out.ipynb"
                 )
 
                 # Scaffold the registration here
@@ -215,10 +215,7 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                     raise
 
             system_compute_context.log.debug(
-                "Notebook execution complete for {name} at {executed_notebook_path}.".format(
-                    name=name,
-                    executed_notebook_path=executed_notebook_path,
-                )
+                f"Notebook execution complete for {name} at {executed_notebook_path}."
             )
 
             executed_notebook_file_handle = None

@@ -28,7 +28,7 @@ class InProcessExecutor(Executor):
 
         yield DagsterEvent.engine_event(
             pipeline_context,
-            "Executing steps in process (pid: {pid})".format(pid=os.getpid()),
+            f"Executing steps in process (pid: {os.getpid()})",
             event_specific_data=EngineEventData.in_process(os.getpid(), step_keys_to_execute),
         )
 

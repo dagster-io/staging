@@ -16,7 +16,7 @@ def validate_reexecution_memoization(pipeline_context, execution_plan):
 
     if not pipeline_context.instance.has_run(parent_run_id):
         raise DagsterRunNotFoundError(
-            "Run id {} set as parent run id was not found in instance".format(parent_run_id),
+            f"Run id {parent_run_id} set as parent run id was not found in instance",
             invalid_run_id=parent_run_id,
         )
 
