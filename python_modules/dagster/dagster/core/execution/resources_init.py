@@ -116,6 +116,9 @@ def _core_resource_initialization_event_generator(
                 if not resource_name in resource_keys_to_init:
                     continue
 
+                resources = ScopedResourcesBuilder(resource_instances).build(
+                    resource_def.required_resource_keys
+                )
                 resource_context = InitResourceContext(
                     resource_def=resource_def,
                     resource_config=environment_config.resources.get(resource_name, {}).get(
@@ -127,8 +130,7 @@ def _core_resource_initialization_event_generator(
                         resource_name=resource_name,
                         resource_fn_name=str(resource_def.resource_fn.__name__),
                     ),
-                    resource_instance_dict=resource_instances,
-                    required_resource_keys=resource_def.required_resource_keys,
+                    resources=resources,
                     instance_for_backwards_compat=instance,
                     pipeline_def_for_backwards_compat=pipeline_def,
                 )

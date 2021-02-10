@@ -1,20 +1,11 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from dagster import check
 from dagster.config.field import Field
 from dagster.config.field_utils import convert_potential_field
 from dagster.config.validate import process_config
 from dagster.core.errors import DagsterConfigMappingFunctionError, user_code_error_boundary
-
-
-def convert_user_facing_definition_config_schema(potential_schema):
-    return (
-        None
-        if potential_schema is None
-        else potential_schema
-        if isinstance(potential_schema, IDefinitionConfigSchema)
-        else DefinitionConfigSchema(convert_potential_field(potential_schema))
-    )
 
 
 # This structure is used to represent the config schema attached to a definition
@@ -118,3 +109,15 @@ class ConfiguredDefinitionConfigSchema(IDefinitionConfigSchema):
             return self.parent_def.apply_config_mapping(config_evr.value)  # Recursive step
         else:
             return config_evr  # Bubble up the errors
+
+
+def convert_user_facing_definition_config_schema(
+    potential_schema,
+) -> Optional[IDefinitionConfigSchema]:
+    return (
+        None
+        if potential_schema is None
+        else potential_schema
+        if isinstance(potential_schema, IDefinitionConfigSchema)
+        else DefinitionConfigSchema(convert_potential_field(potential_schema))
+    )
