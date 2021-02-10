@@ -1,0 +1,107 @@
+import sqlalchemy as db
+from dagster import check
+from dagster.core.storage.runs import RunStorageSqlMetadata, SqlRunStorage
+from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
+from dagster.serdes import ConfigurableClass, ConfigurableClassData
+
+from ..utils import (
+    create_mysql_connection,
+    mysql_config,
+    mysql_statement_timeout,
+    mysql_url_from_config,
+    retry_mysql_creation_fn,
+)
+
+
+class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
+    """MySQL-backed run storage.
+
+    Users should not directly instantiate this class; it is instantiated by internal machinery when
+    ``dagit`` and ``dagster-graphql`` load, based on the values in the ``dagster.yaml`` file in
+    ``$DAGSTER_HOME``. Configuration of this class should be done by setting values in that file.
+
+    To use MySQL for run storage, you can add a block such as the following to your
+    ``dagster.yaml``:
+
+    .. literalinclude:: ../../../../../examples/docs_snippets/docs_snippets/deploying/dagster-pg.yaml
+       :caption: dagster.yaml
+       :lines: 1-10
+       :language: YAML
+
+    Note that the fields in this config are :py:class:`~dagster.StringSource` and
+    :py:class:`~dagster.IntSource` and can be configured from environment variables.
+    """
+
+    def __init__(self, mysql_url, inst_data=None):
+        self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
+        self.mysql_url = mysql_url
+
+        # Default to not holding any connections open to prevent accumulating connections per DagsterInstance
+        self._engine = create_engine(
+            self.mysql_url,
+            isolation_level="AUTOCOMMIT",
+            poolclass=db.pool.NullPool,
+        )
+
+        with self.connect() as conn:
+            retry_mysql_creation_fn(lambda: RunStorageSqlMetadata.create_all(conn))
+
+    def optimize_for_dagit(self, statement_timeout):
+        # When running in dagit, hold 1 open connection and set statement_timeout
+        self._engine = create_engine(
+            self.mysql_url,
+            isolation_level="AUTOCOMMIT",
+            pool_size=1,
+            connect_args={"options": mysql_statement_timeout(statement_timeout)},
+        )
+
+    @property
+    def inst_data(self):
+        return self._inst_data
+
+    @classmethod
+    def config_type(cls):
+        return mysql_config()
+
+    @staticmethod
+    def from_config_value(inst_data, config_value):
+        return MySQLRunStorage(inst_data=inst_data, mysql_url=mysql_url_from_config(config_value))
+
+    @staticmethod
+    def create_clean_storage(mysql_url):
+        engine = create_engine(mysql_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool)
+        try:
+            RunStorageSqlMetadata.drop_all(engine)
+        finally:
+            engine.dispose()
+        return MySQLRunStorage(mysql_url)
+
+    def connect(self, run_id=None):  # pylint: disable=arguments-differ, unused-argument
+        return create_mysql_connection(self._engine, __file__, "run")
+
+    def upgrade(self):
+        alembic_config = get_alembic_config(__file__)
+        run_alembic_upgrade(alembic_config, self._engine)
+
+    def add_daemon_heartbeat(self, daemon_heartbeat):
+        with self.connect() as _conn:
+            pass
+            # TODO
+            # # insert or update if already present, using mysql-specific on_conflict
+            # conn.execute(
+            #     db.dialects.mysql.insert(DaemonHeartbeatsTable)
+            #     .values(  # pylint: disable=no-value-for-parameter
+            #         timestamp=daemon_heartbeat.timestamp,
+            #         daemon_type=daemon_heartbeat.daemon_type.value,
+            #         daemon_id=daemon_heartbeat.daemon_id,
+            #         info=daemon_heartbeat.info,
+            #     )
+            #     .on_conflict_do_update(
+            #         index_elements=[DaemonHeartbeatsTable.c.daemon_type],
+            #         set_={
+            #             "timestamp": daemon_heartbeat.timestamp,
+            #             "daemon_id": daemon_heartbeat.daemon_id,
+            #             "info": daemon_heartbeat.info,
+            #         },
+            #     )
+            # )
