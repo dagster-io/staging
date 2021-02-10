@@ -1,4 +1,4 @@
-from collections import namedtuple
+from typing import NamedTuple, Optional, Union
 
 from dagster import check
 from dagster.core.events import DagsterEvent
@@ -20,10 +20,19 @@ from dagster.utils.log import (
 
 @whitelist_for_serdes
 class EventRecord(
-    namedtuple(
+    NamedTuple(
         "_EventRecord",
-        "error_info message level user_message run_id timestamp step_key pipeline_name "
-        "dagster_event",
+        [
+            ("error_info", Optional[SerializableErrorInfo]),
+            ("message", str),
+            ("level", Union[str, int]),
+            ("user_message", str),
+            ("run_id", str),
+            ("timestamp", float),
+            ("step_key", Optional[str]),
+            ("pipeline_name", Optional[str]),
+            ("dagster_event", Optional[DagsterEvent]),
+        ],
     )
 ):
     """Entries in the event log.
