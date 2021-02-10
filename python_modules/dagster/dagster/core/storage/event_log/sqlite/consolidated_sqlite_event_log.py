@@ -104,7 +104,7 @@ class ConsolidatedSqliteEventLogStorage(AssetAwareSqlEventLogStorage, Configurab
         return self._connect()
 
     def get_db_path(self):
-        return os.path.join(self._base_dir, "{}.db".format(SQLITE_EVENT_LOG_FILENAME))
+        return os.path.join(self._base_dir, f"{SQLITE_EVENT_LOG_FILENAME}.db")
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)

@@ -371,9 +371,7 @@ def test_launch_failure(external_repo_context, capfd):
             )
 
             captured = capfd.readouterr()
-            assert (
-                "Run {run_id} created successfully but failed to launch.".format(run_id=run.run_id)
-            ) in captured.out
+            assert (f"Run {run.run_id} created successfully but failed to launch.") in captured.out
 
 
 @pytest.mark.parametrize("external_repo_context", repos())

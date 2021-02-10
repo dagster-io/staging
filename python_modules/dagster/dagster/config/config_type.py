@@ -173,7 +173,7 @@ class Noneable(ConfigType):
 
         self.inner_type = resolve_to_config_type(inner_type)
         super(Noneable, self).__init__(
-            key="Noneable.{inner_type}".format(inner_type=self.inner_type.key),
+            key=f"Noneable.{self.inner_type.key}",
             kind=ConfigTypeKind.NONEABLE,
             type_params=[self.inner_type],
         )
@@ -192,14 +192,14 @@ class Array(ConfigType):
 
         self.inner_type = resolve_to_config_type(inner_type)
         super(Array, self).__init__(
-            key="Array.{inner_type}".format(inner_type=self.inner_type.key),
+            key=f"Array.{self.inner_type.key}",
             type_params=[self.inner_type],
             kind=ConfigTypeKind.ARRAY,
         )
 
     @property
     def description(self):
-        return "List of {inner_type}".format(inner_type=self.key)
+        return f"List of {self.key}"
 
 
 class EnumValue:
@@ -374,7 +374,7 @@ class ScalarUnion(ConfigType):
 
         # https://github.com/dagster-io/dagster/issues/2133
         key = check.opt_str_param(
-            _key, "_key", "ScalarUnion.{}-{}".format(self.scalar_type.key, self.non_scalar_type.key)
+            _key, "_key", f"ScalarUnion.{self.scalar_type.key}-{self.non_scalar_type.key}"
         )
 
         super(ScalarUnion, self).__init__(
@@ -411,5 +411,5 @@ ALL_CONFIG_BUILTINS = set(_CONFIG_MAP.values())
 
 def get_builtin_scalar_by_name(type_name):
     if type_name not in _CONFIG_MAP_BY_NAME:
-        check.failed("Scalar {} is not supported".format(type_name))
+        check.failed(f"Scalar {type_name} is not supported")
     return _CONFIG_MAP_BY_NAME[type_name]

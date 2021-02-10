@@ -53,7 +53,7 @@ def _empty_handler(_signal, _frame):
 
 
 def quote_table_name(name):
-    return '"{}"'.format(name)
+    return f'"{name}"'
 
 
 def start_listening(connection, channels):

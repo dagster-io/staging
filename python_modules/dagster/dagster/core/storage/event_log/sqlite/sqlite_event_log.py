@@ -113,7 +113,7 @@ class SqliteEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         ]
 
     def path_for_run_id(self, run_id):
-        return os.path.join(self._base_dir, "{run_id}.db".format(run_id=run_id))
+        return os.path.join(self._base_dir, f"{run_id}.db")
 
     def conn_string_for_shard(self, shard_name):
         check.str_param(shard_name, "shard_name")
@@ -183,7 +183,7 @@ class SqliteEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
                 with handle_schema_errors(
                     conn,
                     get_alembic_config(__file__),
-                    msg="SqliteEventLogStorage for shard {shard}".format(shard=shard),
+                    msg=f"SqliteEventLogStorage for shard {shard}",
                 ):
                     yield conn
             finally:

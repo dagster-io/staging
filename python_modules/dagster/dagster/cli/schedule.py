@@ -54,10 +54,10 @@ def print_changes(external_repository, instance, print_fn=print, preview=False):
     if not errors and not added_schedules and not changed_schedules and not removed_schedules:
         if preview:
             print_fn(click.style("No planned changes to schedules.", fg="magenta", bold=True))
-            print_fn("{num} schedules will remain unchanged".format(num=len(external_schedules)))
+            print_fn(f"{len(external_schedules)} schedules will remain unchanged")
         else:
             print_fn(click.style("No changes to schedules.", fg="magenta", bold=True))
-            print_fn("{num} schedules unchanged".format(num=len(external_schedules)))
+            print_fn(f"{len(external_schedules)} schedules unchanged")
         return
 
     if errors:
@@ -91,9 +91,7 @@ def print_changes(external_repository, instance, print_fn=print, preview=False):
 
         print_fn(
             click.style(
-                "  ~ {name} (update) [{id}]".format(
-                    name=external_schedule.name, id=schedule_origin_id
-                ),
+                f"  ~ {external_schedule.name} (update) [{schedule_origin_id}]",
                 fg="yellow",
             )
         )
@@ -122,9 +120,7 @@ def check_repo_and_scheduler(repository, instance):
     repository_name = repository.name
 
     if not repository.get_external_schedules():
-        raise click.UsageError(
-            "There are no schedules defined for repository {name}.".format(name=repository_name)
-        )
+        raise click.UsageError(f"There are no schedules defined for repository {repository_name}.")
 
     no_scheduler_configured_message = (
         "A scheduler must be configured to run schedule commands."
@@ -221,7 +217,7 @@ def execute_list_command(running_filter, stopped_filter, name_filter, cli_args, 
             repository_name = external_repo.name
 
             if not name_filter:
-                title = "Repository {name}".format(name=repository_name)
+                title = f"Repository {repository_name}"
                 print_fn(title)
                 print_fn("*" * len(title))
 
@@ -254,25 +250,15 @@ def execute_list_command(running_filter, stopped_filter, name_filter, cli_args, 
                     print_fn(schedule_state.job_name)
                     continue
 
-                flag = (
-                    "[{status}]".format(status=schedule_state.status.value)
-                    if schedule_state
-                    else ""
-                )
-                schedule_title = "Schedule: {name} {flag}".format(
-                    name=schedule_state.job_name, flag=flag
-                )
+                flag = f"[{schedule_state.status.value}]" if schedule_state else ""
+                schedule_title = f"Schedule: {schedule_state.job_name} {flag}"
 
                 if not first:
                     print_fn("*" * len(schedule_title))
                 first = False
 
                 print_fn(schedule_title)
-                print_fn(
-                    "Cron Schedule: {cron_schedule}".format(
-                        cron_schedule=schedule_state.job_specific_data.cron_schedule
-                    )
-                )
+                print_fn(f"Cron Schedule: {schedule_state.job_specific_data.cron_schedule}")
 
 
 def extract_schedule_name(schedule_name):
@@ -280,11 +266,7 @@ def extract_schedule_name(schedule_name):
         if len(schedule_name) == 1:
             return schedule_name[0]
         else:
-            check.failed(
-                "Can only handle zero or one schedule args. Got {schedule_name}".format(
-                    schedule_name=repr(schedule_name)
-                )
-            )
+            check.failed(f"Can only handle zero or one schedule args. Got {repr(schedule_name)}")
 
 
 @click.command(name="start", help="Start an existing schedule")
@@ -316,11 +298,7 @@ def execute_start_command(schedule_name, all_flag, cli_args, print_fn):
                     except DagsterInvariantViolationError as ex:
                         raise click.UsageError(ex)
 
-                print_fn(
-                    "Started all schedules for repository {repository_name}".format(
-                        repository_name=repository_name
-                    )
-                )
+                print_fn(f"Started all schedules for repository {repository_name}")
             else:
                 try:
 
@@ -330,7 +308,7 @@ def execute_start_command(schedule_name, all_flag, cli_args, print_fn):
                 except DagsterInvariantViolationError as ex:
                     raise click.UsageError(ex)
 
-                print_fn("Started schedule {schedule_name}".format(schedule_name=schedule_name))
+                print_fn(f"Started schedule {schedule_name}")
 
 
 @click.command(name="stop", help="Stop an existing schedule")
@@ -353,7 +331,7 @@ def execute_stop_command(schedule_name, cli_args, print_fn, instance=None):
             except DagsterInvariantViolationError as ex:
                 raise click.UsageError(ex)
 
-            print_fn("Stopped schedule {schedule_name}".format(schedule_name=schedule_name))
+            print_fn(f"Stopped schedule {schedule_name}")
 
 
 @click.command(name="logs", help="Get logs for a schedule")
@@ -390,17 +368,13 @@ def execute_logs_command(schedule_name, cli_args, print_fn, instance=None):
             )
 
             logs_directory = os.path.dirname(logs_path)
-            result_files = glob.glob("{}/*.result".format(logs_directory))
+            result_files = glob.glob(f"{logs_directory}/*.result")
             most_recent_log = max(result_files, key=os.path.getctime) if result_files else None
 
             output = ""
 
             title = "Scheduler Logs:"
-            output += "{title}\n{sep}\n{info}\n".format(
-                title=title,
-                sep="=" * len(title),
-                info=logs_path,
-            )
+            output += f"{title}\n{'=' * len(title)}\n{logs_path}\n"
 
             title = (
                 "Schedule Execution Logs:"
@@ -408,14 +382,10 @@ def execute_logs_command(schedule_name, cli_args, print_fn, instance=None):
                 "Errors that caused schedule executions to not run or fail can be found here. "
             )
             most_recent_info = (
-                "\nMost recent execution log: {}".format(most_recent_log) if most_recent_log else ""
+                f"\nMost recent execution log: {most_recent_log}" if most_recent_log else ""
             )
-            info = "All execution logs: {}{}".format(logs_directory, most_recent_info)
-            output += "\n{title}\n{sep}\n{info}\n".format(
-                title=title,
-                sep="=" * len(title),
-                info=info,
-            )
+            info = f"All execution logs: {logs_directory}{most_recent_info}"
+            output += f"\n{title}\n{'=' * len(title)}\n{info}\n"
 
             print_fn(output)
 
@@ -457,11 +427,7 @@ def execute_restart_command(schedule_name, all_running_flag, cli_args, print_fn)
                         except DagsterInvariantViolationError as ex:
                             raise click.UsageError(ex)
 
-                print_fn(
-                    "Restarted all running schedules for repository {name}".format(
-                        name=repository_name
-                    )
-                )
+                print_fn(f"Restarted all running schedules for repository {repository_name}")
             else:
                 external_schedule = external_repo.get_external_schedule(schedule_name)
                 schedule_state = instance.get_job_state(external_schedule.get_external_origin_id())
@@ -478,7 +444,7 @@ def execute_restart_command(schedule_name, all_running_flag, cli_args, print_fn)
                 except DagsterInvariantViolationError as ex:
                     raise click.UsageError(ex)
 
-                print_fn("Restarted schedule {schedule_name}".format(schedule_name=schedule_name))
+                print_fn(f"Restarted schedule {schedule_name}")
 
 
 @click.command(name="wipe", help="Deletes schedule history and turns off all schedules.")
@@ -523,16 +489,10 @@ def execute_debug_command(print_fn):
             )
 
         title = "Scheduler Configuration"
-        output += "{title}\n{sep}\n{info}\n".format(
-            title=title,
-            sep="=" * len(title),
-            info=debug_info.scheduler_config_info,
-        )
+        output += f"{title}\n{'=' * len(title)}\n{debug_info.scheduler_config_info}\n"
 
         title = "Scheduler Info"
-        output += "{title}\n{sep}\n{info}\n".format(
-            title=title, sep="=" * len(title), info=debug_info.scheduler_info
-        )
+        output += f"{title}\n{'=' * len(title)}\n{debug_info.scheduler_info}\n"
 
         title = "Scheduler Storage Info"
         output += "\n{title}\n{sep}\n{info}\n".format(

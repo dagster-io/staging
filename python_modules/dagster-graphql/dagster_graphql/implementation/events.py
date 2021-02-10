@@ -81,7 +81,7 @@ def iterate_metadata_entries(metadata_entries):
         else:
             # skip rest for now
             check.not_implemented(
-                "{} unsupported metadata entry for now".format(type(metadata_entry.entry_data))
+                f"{type(metadata_entry.entry_data)} unsupported metadata entry for now"
             )
 
 
@@ -234,11 +234,7 @@ def from_dagster_event_record(event_record, pipeline_name):
             error=GraphenePythonError(dagster_event.hook_errored_data.error), **basic_params
         )
     else:
-        raise Exception(
-            "Unknown DAGSTER_EVENT type {inner_type} found in logs".format(
-                inner_type=dagster_event.event_type
-            )
-        )
+        raise Exception(f"Unknown DAGSTER_EVENT type {dagster_event.event_type} found in logs")
 
 
 def from_event_record(event_record, pipeline_name):

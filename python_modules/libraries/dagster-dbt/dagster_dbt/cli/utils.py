@@ -80,7 +80,7 @@ def execute_cli(
     process.wait()
     return_code = process.returncode
 
-    log.info("dbt exited with return code {return_code}".format(return_code=return_code))
+    log.info(f"dbt exited with return code {return_code}")
 
     raw_output = "\n".join(output)
 

@@ -63,7 +63,7 @@ class GrapheneSchedule(graphene.ObjectType):
         )
 
     def resolve_id(self, _):
-        return "%s:%s" % (self.name, self.pipeline_name)
+        return f"{self.name}:{self.pipeline_name}"
 
     def resolve_partition_set(self, graphene_info):
         from ..partition_sets import GraphenePartitionSet

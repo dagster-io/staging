@@ -39,7 +39,7 @@ class InMemoryRunStorage(RunStorage):
         check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
         if self._runs.get(pipeline_run.run_id):
             raise DagsterRunAlreadyExists(
-                "Can not add same run twice for run_id {run_id}".format(run_id=pipeline_run.run_id),
+                f"Can not add same run twice for run_id {pipeline_run.run_id}",
             )
         if pipeline_run.pipeline_snapshot_id:
             if not self.has_pipeline_snapshot(pipeline_run.pipeline_snapshot_id):

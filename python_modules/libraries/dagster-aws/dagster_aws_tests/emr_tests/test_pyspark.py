@@ -127,7 +127,7 @@ def test_pyspark_emr(mock_is_emr_step_complete, mock_read_events, mock_s3_bucket
             "SlaveInstanceType": "c3.xlarge",
         },
         JobFlowRole="EMR_EC2_DefaultRole",
-        LogUri="s3://{bucket}/log".format(bucket=mock_s3_bucket.name),
+        LogUri=f"s3://{mock_s3_bucket.name}/log",
         Name="cluster",
         ServiceRole="EMR_DefaultRole",
         VisibleToAllUsers=True,
@@ -168,7 +168,7 @@ def sync_code():
         "--exclude='.git/'",
         "--exclude='docs/'",
         "-e",
-        '"ssh -i {aws_emr_pem_file}"'.format(aws_emr_pem_file=os.environ["AWS_EMR_PEM_FILE"]),
+        f"\"ssh -i {os.environ['AWS_EMR_PEM_FILE']}\"",
         os.environ["DAGSTER_DIR"],
         os.environ["AWS_EMR_NODE_ADDRESS"] + ":~/",
     ]

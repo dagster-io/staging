@@ -67,7 +67,7 @@ def execute_script_file(shell_script_path, output_logging, log, cwd=None, env=No
     with open(shell_script_path, "rb") as f:
         shell_command = f.read().decode("utf-8")
 
-    log.info("Running command:\n{command}".format(command=shell_command))
+    log.info(f"Running command:\n{shell_command}")
 
     # pylint: disable=subprocess-popen-preexec-fn
     sub_process = Popen(
@@ -83,7 +83,7 @@ def execute_script_file(shell_script_path, output_logging, log, cwd=None, env=No
     output = ""
 
     if output_logging not in ["STREAM", "BUFFER", "NONE"]:
-        raise Exception("Unrecognized output_logging %s" % output_logging)
+        raise Exception(f"Unrecognized output_logging {output_logging}")
 
     # Stream back logs as they are emitted
     if output_logging == "STREAM":
@@ -105,7 +105,7 @@ def execute_script_file(shell_script_path, output_logging, log, cwd=None, env=No
     elif output_logging == "NONE":
         pass
 
-    log.info("Command exited with return code {retcode}".format(retcode=sub_process.returncode))
+    log.info(f"Command exited with return code {sub_process.returncode}")
 
     return output, sub_process.returncode
 
@@ -134,13 +134,13 @@ def execute(shell_command, output_logging, log, cwd=None, env=None):
 
     with safe_tempfile_path() as tmp_file_path:
         tmp_path = os.path.dirname(tmp_file_path)
-        log.info("Using temporary directory: %s" % tmp_path)
+        log.info(f"Using temporary directory: {tmp_path}")
 
         with open(tmp_file_path, "wb") as tmp_file:
             tmp_file.write(shell_command.encode("utf-8"))
             tmp_file.flush()
             script_location = os.path.abspath(tmp_file.name)
-            log.info("Temporary script location: {location}".format(location=script_location))
+            log.info(f"Temporary script location: {script_location}")
             return execute_script_file(
                 shell_script_path=tmp_file.name,
                 output_logging=output_logging,

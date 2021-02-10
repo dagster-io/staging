@@ -216,7 +216,7 @@ def location_origins_from_load_target(load_target):
     elif isinstance(load_target, EmptyWorkspaceTarget):
         return []
     else:
-        check.not_implemented("Unsupported: {}".format(load_target))
+        check.not_implemented(f"Unsupported: {load_target}")
 
 
 def workspace_from_load_target(load_target):

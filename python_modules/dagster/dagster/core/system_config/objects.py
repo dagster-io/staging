@@ -126,7 +126,7 @@ class EnvironmentConfig(
         )
         if not config_evr.success:
             raise DagsterInvalidConfigError(
-                "Error in config for pipeline {}".format(pipeline_def.name),
+                f"Error in config for pipeline {pipeline_def.name}",
                 config_evr.errors,
                 run_config,
             )
@@ -211,7 +211,7 @@ def config_map_resources(pipeline_def, config_value, mode):
         resource_config_evr = resource_def.apply_config_mapping(resource_config)
         if not resource_config_evr.success:
             raise DagsterInvalidConfigError(
-                "Error in config for resource {}".format(resource_key),
+                f"Error in config for resource {resource_key}",
                 resource_config_evr.errors,
                 resource_config,
             )
@@ -254,7 +254,7 @@ def config_map_loggers(pipeline_def, config_value, mode):
         logger_config_evr = logger_def.apply_config_mapping(logger_config)
         if not logger_config_evr.success:
             raise DagsterInvalidConfigError(
-                "Error in config for logger {}".format(logger_key),
+                f"Error in config for logger {logger_key}",
                 logger_config_evr.errors,
                 logger_config,
             )
@@ -293,7 +293,7 @@ def config_map_objects(config_value, defs, keyed_by, def_type, name_of_def_type)
     obj_config_evr = obj_def.apply_config_mapping(obj_config)
     if not obj_config_evr.success:
         raise DagsterInvalidConfigError(
-            'Invalid configuration provided for {} "{}"'.format(name_of_def_type, obj_name),
+            f'Invalid configuration provided for {name_of_def_type} "{obj_name}"',
             obj_config_evr.errors,
             obj_config,
         )

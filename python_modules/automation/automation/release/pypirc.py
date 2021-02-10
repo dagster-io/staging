@@ -63,7 +63,7 @@ class RCParser:
         """
         path = path or cls.CONFIG_PATH
         if not os.path.exists(path):
-            error = "Config file not found: {0!r}".format(path)
+            error = f"Config file not found: {path!r}"
             raise ConfigFileError(error)
         config = read_config(path)
         return cls(config)

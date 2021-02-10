@@ -75,7 +75,7 @@ def apply_click_params(command, *click_params):
 
 @click.command(
     name="list",
-    help="List the pipelines in a repository. {warning}".format(warning=WORKSPACE_TARGET_WARNING),
+    help=f"List the pipelines in a repository. {WORKSPACE_TARGET_WARNING}",
 )
 @repository_target_argument
 def pipeline_list_command(**kwargs):
@@ -86,12 +86,12 @@ def pipeline_list_command(**kwargs):
 def execute_list_command(cli_args, print_fn, instance):
     check.inst_param(instance, "instance", DagsterInstance)
     with get_external_repository_from_kwargs(cli_args) as external_repository:
-        title = "Repository {name}".format(name=external_repository.name)
+        title = f"Repository {external_repository.name}"
         print_fn(title)
         print_fn("*" * len(title))
         first = True
         for pipeline in external_repository.get_all_external_pipelines():
-            pipeline_title = "Pipeline: {name}".format(name=pipeline.name)
+            pipeline_title = f"Pipeline: {pipeline.name}"
 
             if not first:
                 print_fn("*" * len(pipeline_title))
@@ -151,9 +151,7 @@ def get_partitioned_pipeline_instructions(command_name):
 
 @click.command(
     name="print",
-    help="Print a pipeline.\n\n{instructions}".format(
-        instructions=get_pipeline_instructions("print")
-    ),
+    help=f"Print a pipeline.\n\n{get_pipeline_instructions('print')}",
 )
 @click.option("--verbose", is_flag=True)
 @pipeline_target_argument
@@ -177,19 +175,19 @@ def print_solids(pipeline_snapshot, print_fn):
     check.callable_param(print_fn, "print_fn")
 
     printer = IndentingPrinter(indent_level=2, printer=print_fn)
-    printer.line("Pipeline: {name}".format(name=pipeline_snapshot.name))
+    printer.line(f"Pipeline: {pipeline_snapshot.name}")
 
     printer.line("Solids:")
     for solid in pipeline_snapshot.dep_structure_snapshot.solid_invocation_snaps:
         with printer.with_indent():
-            printer.line("Solid: {name}".format(name=solid.solid_name))
+            printer.line(f"Solid: {solid.solid_name}")
 
 
 def print_pipeline(pipeline_snapshot, print_fn):
     check.inst_param(pipeline_snapshot, "pipeline", PipelineSnapshot)
     check.callable_param(print_fn, "print_fn")
     printer = IndentingPrinter(indent_level=2, printer=print_fn)
-    printer.line("Pipeline: {name}".format(name=pipeline_snapshot.name))
+    printer.line(f"Pipeline: {pipeline_snapshot.name}")
     print_description(printer, pipeline_snapshot.description)
 
     printer.line("Solids:")
@@ -209,12 +207,12 @@ def print_description(printer, desc):
 def print_solid(printer, pipeline_snapshot, solid_invocation_snap):
     check.inst_param(pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot)
     check.inst_param(solid_invocation_snap, "solid_invocation_snap", SolidInvocationSnap)
-    printer.line("Solid: {name}".format(name=solid_invocation_snap.solid_name))
+    printer.line(f"Solid: {solid_invocation_snap.solid_name}")
     with printer.with_indent():
         printer.line("Inputs:")
         for input_dep_snap in solid_invocation_snap.input_dep_snaps:
             with printer.with_indent():
-                printer.line("Input: {name}".format(name=input_dep_snap.input_name))
+                printer.line(f"Input: {input_dep_snap.input_name}")
 
         printer.line("Outputs:")
         for output_def_snap in pipeline_snapshot.get_solid_def_snap(
@@ -269,9 +267,7 @@ def execute_list_versions_command(instance, kwargs):
     for step_output_handle, version in step_output_versions.items():
         table.append(
             [
-                "{key}.{output}".format(
-                    key=step_output_handle.step_key, output=step_output_handle.output_name
-                ),
+                f"{step_output_handle.step_key}.{step_output_handle.output_name}",
                 version,
                 "stored"
                 if step_output_handle.step_key not in step_keys_not_stored
@@ -342,7 +338,7 @@ def execute_execute_command(instance, kwargs):
     result = do_execute_command(pipeline, instance, config, mode, tags, solid_selection, preset)
 
     if not result.success:
-        raise click.ClickException("Pipeline run {} resulted in failure.".format(result.run_id))
+        raise click.ClickException(f"Pipeline run {result.run_id} resulted in failure.")
 
     return result
 
@@ -361,9 +357,7 @@ def _check_execute_external_pipeline_args(
     check.opt_str_param(preset, "preset")
     check.invariant(
         not (mode is not None and preset is not None),
-        "You may set only one of `mode` (got {mode}) or `preset` (got {preset}).".format(
-            mode=mode, preset=preset
-        ),
+        f"You may set only one of `mode` (got {mode}) or `preset` (got {preset}).",
     )
 
     tags = check.opt_dict_param(tags, "tags", key_type=str)
@@ -692,7 +686,7 @@ def gen_partition_names_from_args(partition_names, kwargs):
         if len(selected_partitions) < len(selected_args):
             selected_names = [partition for partition in selected_partitions]
             unknown = [selected for selected in selected_args if selected not in selected_names]
-            raise click.UsageError("Unknown partitions: {}".format(unknown.join(", ")))
+            raise click.UsageError(f"Unknown partitions: {unknown.join(', ')}")
         return selected_partitions
 
     start = validate_partition_slice(partition_names, "from", kwargs.get("from"))
@@ -780,7 +774,7 @@ def validate_partition_slice(partition_names, name, value):
     if value is None:
         return 0 if is_start else len(partition_names)
     if value not in partition_names:
-        raise click.UsageError("invalid value {} for {}".format(value, name))
+        raise click.UsageError(f"invalid value {value} for {name}")
     index = partition_names.index(value)
     return index if is_start else index + 1
 
@@ -856,9 +850,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
     }
 
     if not pipeline_partition_set_names:
-        raise click.UsageError(
-            "No partition sets found for pipeline `{}`".format(external_pipeline.name)
-        )
+        raise click.UsageError(f"No partition sets found for pipeline `{external_pipeline.name}`")
     partition_set_name = cli_args.get("partition_set")
     if not partition_set_name:
         if len(pipeline_partition_set_names) == 1:
@@ -875,7 +867,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
     partition_set = pipeline_partition_set_names.get(partition_set_name)
 
     if not partition_set:
-        raise click.UsageError("No partition set found named `{}`".format(partition_set_name))
+        raise click.UsageError(f"No partition set found named `{partition_set_name}`")
 
     mode = partition_set.mode
     solid_selection = partition_set.solid_selection
@@ -906,13 +898,13 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
     )
 
     # Print backfill info
-    print_fn("\n     Pipeline: {}".format(external_pipeline.name))
-    print_fn("Partition set: {}".format(partition_set_name))
-    print_fn("   Partitions: {}\n".format(print_partition_format(partition_names, indent_level=15)))
+    print_fn(f"\n     Pipeline: {external_pipeline.name}")
+    print_fn(f"Partition set: {partition_set_name}")
+    print_fn(f"   Partitions: {print_partition_format(partition_names, indent_level=15)}\n")
 
     # Confirm and launch
     if noprompt or click.confirm(
-        "Do you want to proceed with the backfill ({} partitions)?".format(len(partition_names))
+        f"Do you want to proceed with the backfill ({len(partition_names)} partitions)?"
     ):
 
         print_fn("Launching runs... ")
@@ -926,7 +918,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
         )
 
         if isinstance(partition_execution_data, ExternalPartitionExecutionErrorData):
-            return print_fn("Backfill failed: {}".format(partition_execution_data.error))
+            return print_fn(f"Backfill failed: {partition_execution_data.error}")
 
         assert isinstance(partition_execution_data, ExternalPartitionSetExecutionParamData)
 
@@ -946,7 +938,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
 
             instance.submit_run(run.run_id, external_pipeline)
 
-        print_fn("Launched backfill job `{}`".format(backfill_id))
+        print_fn(f"Launched backfill job `{backfill_id}`")
 
     else:
         print_fn("Aborted!")

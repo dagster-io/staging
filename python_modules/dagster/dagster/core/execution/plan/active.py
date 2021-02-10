@@ -109,7 +109,7 @@ class ActiveExecution:
                     action_str="\nSteps pending action: {}".format(pending_action)
                     if pending_action
                     else "",
-                    retry_str="\nSteps waiting to retry: {}".format(self._waiting_to_retry.keys())
+                    retry_str=f"\nSteps waiting to retry: {self._waiting_to_retry.keys()}"
                     if self._waiting_to_retry
                     else "",
                 )
@@ -353,7 +353,7 @@ class ActiveExecution:
     def mark_up_for_retry(self, step_key: str, at_time: Optional[float] = None) -> None:
         check.invariant(
             not self._retries.disabled,
-            "Attempted to mark {} as up for retry but retries are disabled".format(step_key),
+            f"Attempted to mark {step_key} as up for retry but retries are disabled",
         )
         check.opt_float_param(at_time, "at_time")
 

@@ -355,7 +355,7 @@ def test_s3_intermediate_storage_with_custom_prefix(mock_s3_bucket):
 
             assert intermediate_storage.has_intermediate(context, StepOutputHandle("true"))
             assert intermediate_storage.uri_for_paths(["true"]).startswith(
-                "s3://%s/custom_prefix" % mock_s3_bucket.name
+                f"s3://{mock_s3_bucket.name}/custom_prefix"
             )
 
     finally:

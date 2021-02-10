@@ -692,9 +692,10 @@ def test_run_group_not_found():
             assert result.data["runGroupOrError"]
             assert result.data["runGroupOrError"]["__typename"] == "RunGroupNotFoundError"
             assert result.data["runGroupOrError"]["runId"] == "foo"
-            assert result.data["runGroupOrError"][
-                "message"
-            ] == "Run group of run {run_id} could not be found.".format(run_id="foo")
+            assert (
+                result.data["runGroupOrError"]["message"]
+                == "Run group of run foo could not be found."
+            )
 
 
 def test_run_groups():

@@ -401,7 +401,7 @@ def test_config_defaults():
 def test_config_with_and_without_config():
     @solid(config_schema={"prefix": Field(str, is_required=False, default_value="_")})
     def prefix_value(context, v):
-        return "{prefix}{v}".format(prefix=context.solid_config["prefix"], v=v)
+        return f"{context.solid_config['prefix']}{v}"
 
     @composite_solid(
         config_fn=lambda cfg: {"prefix_value": {"config": {"prefix": cfg["prefix"]}}},

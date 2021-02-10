@@ -213,13 +213,13 @@ def test_start_and_stop_schedule(
 
             assert "schedules" in os.listdir(tempdir)
 
-            assert "{}.sh".format(schedule_origin_id) in os.listdir(
+            assert f"{schedule_origin_id}.sh" in os.listdir(
                 os.path.join(tempdir, "schedules", "scripts")
             )
 
             instance.stop_schedule_and_update_storage_state(schedule_origin_id)
 
-            assert "{}.sh".format(schedule_origin_id) not in os.listdir(
+            assert f"{schedule_origin_id}.sh" not in os.listdir(
                 os.path.join(tempdir, "schedules", "scripts")
             )
 
@@ -627,7 +627,7 @@ def test_stop_schedule_fails(
 
             assert "schedules" in os.listdir(tempdir)
 
-            assert "{}.sh".format(schedule_origin_id) in os.listdir(
+            assert f"{schedule_origin_id}.sh" in os.listdir(
                 os.path.join(tempdir, "schedules", "scripts")
             )
 

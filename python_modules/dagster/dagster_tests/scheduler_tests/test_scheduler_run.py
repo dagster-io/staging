@@ -61,7 +61,7 @@ def _never(_context):
 
 @solid(config_schema={"partition_time": str})
 def the_solid(context):
-    return "Ran at this partition date: {}".format(context.solid_config["partition_time"])
+    return f"Ran at this partition date: {context.solid_config['partition_time']}"
 
 
 @pipeline

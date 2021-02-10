@@ -10,24 +10,22 @@ def nonce_solid(name, n_inputs, n_outputs):
 
     @solid(
         name=name,
-        input_defs=[InputDefinition(name="input_{}".format(i)) for i in range(n_inputs)],
-        output_defs=[OutputDefinition(name="output_{}".format(i)) for i in range(n_outputs)],
+        input_defs=[InputDefinition(name=f"input_{i}") for i in range(n_inputs)],
+        output_defs=[OutputDefinition(name=f"output_{i}") for i in range(n_outputs)],
     )
     def solid_fn(context, **_kwargs):
         for i in range(200):
             time.sleep(0.02)
             if i % 1000 == 420:
-                context.log.error("Error message seq={i} from solid {name}".format(i=i, name=name))
+                context.log.error(f"Error message seq={i} from solid {name}")
             elif i % 100 == 0:
-                context.log.warning(
-                    "Warning message seq={i} from solid {name}".format(i=i, name=name)
-                )
+                context.log.warning(f"Warning message seq={i} from solid {name}")
             elif i % 10 == 0:
-                context.log.info("Info message seq={i} from solid {name}".format(i=i, name=name))
+                context.log.info(f"Info message seq={i} from solid {name}")
             else:
-                context.log.debug("Debug message seq={i} from solid {name}".format(i=i, name=name))
+                context.log.debug(f"Debug message seq={i} from solid {name}")
         for i in range(n_outputs):
-            yield Output(value="foo", output_name="output_{}".format(i))
+            yield Output(value="foo", output_name=f"output_{i}")
 
     return solid_fn
 

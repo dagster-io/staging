@@ -87,9 +87,7 @@ def execute_windows_tail(path, stream):
     stream = stream if _fileno(stream) else None
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        ipc_output_file = os.path.join(
-            temp_dir, "execute-windows-tail-{uuid}".format(uuid=uuid.uuid4().hex)
-        )
+        ipc_output_file = os.path.join(temp_dir, f"execute-windows-tail-{uuid.uuid4().hex}")
 
         try:
             tail_process = open_ipc_subprocess(
@@ -113,7 +111,7 @@ def execute_windows_tail(path, stream):
 @contextmanager
 def execute_posix_tail(path, stream):
     # open a subprocess to tail the file and print to stdout
-    tail_cmd = "tail -F -c +0 {}".format(path).split(" ")
+    tail_cmd = f"tail -F -c +0 {path}".split(" ")
     stream = stream if _fileno(stream) else None
 
     try:

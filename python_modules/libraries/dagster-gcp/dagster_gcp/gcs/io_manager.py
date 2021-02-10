@@ -45,7 +45,7 @@ class PickledObjectGCSIOManager(IOManager):
 
     def _uri_for_key(self, key):
         check.str_param(key, "key")
-        return "gs://" + self.bucket + "/" + "{key}".format(key=key)
+        return "gs://" + self.bucket + "/" + f"{key}"
 
     def load_input(self, context):
         key = self._get_path(context.upstream_output)

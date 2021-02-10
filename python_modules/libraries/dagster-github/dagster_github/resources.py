@@ -52,7 +52,7 @@ class GithubResource:
         if headers is None:
             headers = {}
         self.__check_app_token()
-        headers["Authorization"] = "Bearer {}".format(self.app_token["value"])
+        headers["Authorization"] = f"Bearer {self.app_token['value']}"
         headers["Accept"] = "application/vnd.github.machine-man-preview+json"
         request = self.client.get(
             "https://api.github.com/app/installations",
@@ -65,10 +65,10 @@ class GithubResource:
         if headers is None:
             headers = {}
         self.__check_app_token()
-        headers["Authorization"] = "Bearer {}".format(self.app_token["value"])
+        headers["Authorization"] = f"Bearer {self.app_token['value']}"
         headers["Accept"] = "application/vnd.github.machine-man-preview+json"
         request = requests.post(
-            "https://api.github.com/app/installations/{}/access_tokens".format(installation_id),
+            f"https://api.github.com/app/installations/{installation_id}/access_tokens",
             headers=headers,
         )
         request.raise_for_status()

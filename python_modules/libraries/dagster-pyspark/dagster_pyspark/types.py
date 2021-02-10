@@ -352,7 +352,7 @@ def dataframe_materializer(_context, config, spark_df):
             file_options.get("path", 'There was no "path" key in "file_options".')
         )
     else:
-        raise DagsterInvariantViolationError("Unsupported file_type {}".format(file_type))
+        raise DagsterInvariantViolationError(f"Unsupported file_type {file_type}")
 
 
 @dagster_type_loader(
@@ -962,9 +962,7 @@ def dataframe_loader(_context, config):
     elif file_type == "other":
         return spark_read.load(**file_options)
     else:
-        raise DagsterInvariantViolationError(
-            "Unsupported file_type {file_type}".format(file_type=file_type)
-        )
+        raise DagsterInvariantViolationError(f"Unsupported file_type {file_type}")
 
 
 class SparkDataFrameS3StoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init

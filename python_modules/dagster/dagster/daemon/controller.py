@@ -62,7 +62,7 @@ class DagsterDaemonController:
             self._daemon_threads[daemon_type] = threading.Thread(
                 target=daemon.run_loop,
                 args=(self._daemon_uuid, self._daemon_shutdown_event),
-                name="dagster-daemon-{daemon_type}".format(daemon_type=daemon_type),
+                name=f"dagster-daemon-{daemon_type}",
             )
             self._daemon_threads[daemon_type].start()
 
@@ -124,7 +124,7 @@ def create_daemons_from_instance(instance):
         elif daemon_type == QueuedRunCoordinatorDaemon.daemon_type():
             daemons.append(QueuedRunCoordinatorDaemon.create_from_instance(DagsterInstance.get()))
         else:
-            raise Exception("Unexpected daemon type {daemon_type}".format(daemon_type=daemon_type))
+            raise Exception(f"Unexpected daemon type {daemon_type}")
 
     return daemons
 

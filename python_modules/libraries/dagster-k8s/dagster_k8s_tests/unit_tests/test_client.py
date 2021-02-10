@@ -382,7 +382,7 @@ def test_wait_for_pod_success():
 
     assert_logger_calls(
         mock_client.logger,
-        ['Waiting for pod "%s"' % pod_name, 'Pod "%s" is ready, done waiting' % pod_name],
+        [f'Waiting for pod "{pod_name}"', f'Pod "{pod_name}" is ready, done waiting'],
     )
 
 
@@ -402,9 +402,9 @@ def test_wait_for_launch_then_success():
     assert_logger_calls(
         mock_client.logger,
         [
-            'Waiting for pod "%s"' % pod_name,
-            'Waiting for pod "%s" to launch...' % pod_name,
-            'Pod "%s" is ready, done waiting' % pod_name,
+            f'Waiting for pod "{pod_name}"',
+            f'Waiting for pod "{pod_name}" to launch...',
+            f'Pod "{pod_name}" is ready, done waiting',
         ],
     )
 
@@ -429,9 +429,9 @@ def test_wait_for_statuses_then_success():
     assert_logger_calls(
         mock_client.logger,
         [
-            'Waiting for pod "%s"' % pod_name,
+            f'Waiting for pod "{pod_name}"',
             "Waiting for pod container status to be set by kubernetes...",
-            'Pod "%s" is ready, done waiting' % pod_name,
+            f'Pod "{pod_name}" is ready, done waiting',
         ],
     )
 
@@ -496,9 +496,9 @@ def test_running_but_not_ready():
     assert_logger_calls(
         mock_client.logger,
         [
-            'Waiting for pod "%s"' % pod_name,
-            'Waiting for pod "%s" to become ready...' % pod_name,
-            'Pod "%s" is ready, done waiting' % pod_name,
+            f'Waiting for pod "{pod_name}"',
+            f'Waiting for pod "{pod_name}" to become ready...',
+            f'Pod "{pod_name}" is ready, done waiting',
         ],
     )
     # slept only once
@@ -525,8 +525,8 @@ def test_wait_for_ready_but_terminated():
     assert_logger_calls(
         mock_client.logger,
         [
-            'Waiting for pod "%s"' % pod_name,
-            "Pod {pod_name} exitted successfully".format(pod_name=pod_name),
+            f'Waiting for pod "{pod_name}"',
+            f"Pod {pod_name} exitted successfully",
         ],
     )
 
@@ -592,8 +592,8 @@ def test_wait_for_termination_ready_then_terminate():
     assert_logger_calls(
         mock_client.logger,
         [
-            'Waiting for pod "%s"' % pod_name,
-            "Pod {pod_name} exitted successfully".format(pod_name=pod_name),
+            f'Waiting for pod "{pod_name}"',
+            f"Pod {pod_name} exitted successfully",
         ],
     )
 
@@ -624,9 +624,9 @@ def test_waiting_for_pod_initialize():
     assert_logger_calls(
         mock_client.logger,
         [
-            'Waiting for pod "%s"' % pod_name,
-            'Waiting for pod "%s" to initialize...' % pod_name,
-            'Pod "%s" is ready, done waiting' % pod_name,
+            f'Waiting for pod "{pod_name}"',
+            f'Waiting for pod "{pod_name}" to initialize...',
+            f'Pod "{pod_name}" is ready, done waiting',
         ],
     )
     # slept only once
@@ -656,9 +656,9 @@ def test_waiting_for_pod_container_creation():
     assert_logger_calls(
         mock_client.logger,
         [
-            'Waiting for pod "%s"' % pod_name,
+            f'Waiting for pod "{pod_name}"',
             "Waiting for container creation...",
-            'Pod "%s" is ready, done waiting' % pod_name,
+            f'Pod "{pod_name}" is ready, done waiting',
         ],
     )
     # slept only once
@@ -687,9 +687,7 @@ def test_valid_failure_waiting_reasons():
         pod_name = "a_pod"
         with pytest.raises(DagsterK8sError) as exc_info:
             mock_client.wait_for_pod(pod_name=pod_name, namespace="namespace")
-        assert str(exc_info.value) == 'Failed: Reason="{reason}" Message="bad things"'.format(
-            reason=reason
-        )
+        assert str(exc_info.value) == f'Failed: Reason="{reason}" Message="bad things"'
 
 
 def test_bad_waiting_state():

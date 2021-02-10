@@ -14,8 +14,8 @@ def create_run_cli_group():
 def run_list_command(limit):
     with DagsterInstance.get() as instance:
         for run in instance.get_runs(limit=limit):
-            click.echo("Run: {}".format(run.run_id))
-            click.echo("     Pipeline: {}".format(run.pipeline_name))
+            click.echo(f"Run: {run.run_id}")
+            click.echo(f"     Pipeline: {run.pipeline_name}")
 
 
 @click.command(

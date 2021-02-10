@@ -174,14 +174,13 @@ class DagsterKubernetesClient:
         while not job:
             if self.timer() - start > wait_timeout:
                 raise DagsterK8sTimeoutError(
-                    "Timed out while waiting for job {job_name}"
-                    " to launch".format(job_name=job_name)
+                    f"Timed out while waiting for job {job_name} to launch"
                 )
 
             # Get all jobs in the namespace and find the matching job
             def _get_jobs_for_namespace():
                 jobs = self.batch_api.list_namespaced_job(
-                    namespace=namespace, field_selector="metadata.name={}".format(job_name)
+                    namespace=namespace, field_selector=f"metadata.name={job_name}"
                 )
                 if jobs.items:
                     check.invariant(
@@ -199,7 +198,7 @@ class DagsterKubernetesClient:
             )
 
             if not job:
-                self.logger('Job "{job_name}" not yet launched, waiting'.format(job_name=job_name))
+                self.logger(f'Job "{job_name}" not yet launched, waiting')
                 self.sleeper(wait_time_between_attempts)
 
     def wait_for_job_success(
@@ -249,8 +248,7 @@ class DagsterKubernetesClient:
         while True:
             if self.timer() - start > wait_timeout:
                 raise DagsterK8sTimeoutError(
-                    "Timed out while waiting for job {job_name}"
-                    " to complete".format(job_name=job_name)
+                    f"Timed out while waiting for job {job_name} to complete"
                 )
 
             # Reads the status of the specified job. Returns a V1Job object that
@@ -354,7 +352,7 @@ class DagsterKubernetesClient:
         check.str_param(namespace, "namespace")
 
         pods = self.core_api.list_namespaced_pod(
-            namespace=namespace, label_selector="job-name={}".format(job_name)
+            namespace=namespace, label_selector=f"job-name={job_name}"
         ).items
         return [p.metadata.name for p in pods]
 
@@ -387,24 +385,24 @@ class DagsterKubernetesClient:
         check.numeric_param(wait_timeout, "wait_timeout")
         check.numeric_param(wait_time_between_attempts, "wait_time_between_attempts")
 
-        self.logger('Waiting for pod "%s"' % pod_name)
+        self.logger(f'Waiting for pod "{pod_name}"')
 
         start = self.timer()
 
         while True:
 
             pods = self.core_api.list_namespaced_pod(
-                namespace=namespace, field_selector="metadata.name=%s" % pod_name
+                namespace=namespace, field_selector=f"metadata.name={pod_name}"
             ).items
             pod = pods[0] if pods else None
 
             if self.timer() - start > wait_timeout:
                 raise DagsterK8sError(
-                    "Timed out while waiting for pod to become ready with pod info: %s" % str(pod)
+                    f"Timed out while waiting for pod to become ready with pod info: {str(pod)}"
                 )
 
             if pod is None:
-                self.logger('Waiting for pod "%s" to launch...' % pod_name)
+                self.logger(f'Waiting for pod "{pod_name}" to launch...')
                 self.sleeper(wait_time_between_attempts)
                 continue
 
@@ -425,11 +423,11 @@ class DagsterKubernetesClient:
                     # ready is boolean field of container status
                     ready = container_status.ready
                     if not ready:
-                        self.logger('Waiting for pod "%s" to become ready...' % pod_name)
+                        self.logger(f'Waiting for pod "{pod_name}" to become ready...')
                         self.sleeper(wait_time_between_attempts)
                         continue
                     else:
-                        self.logger('Pod "%s" is ready, done waiting' % pod_name)
+                        self.logger(f'Pod "{pod_name}" is ready, done waiting')
                         break
                 else:
                     check.invariant(
@@ -441,7 +439,7 @@ class DagsterKubernetesClient:
             elif state.waiting is not None:
                 # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#containerstatewaiting-v1-core
                 if state.waiting.reason == KubernetesWaitingReasons.PodInitializing:
-                    self.logger('Waiting for pod "%s" to initialize...' % pod_name)
+                    self.logger(f'Waiting for pod "{pod_name}" to initialize...')
                     self.sleeper(wait_time_between_attempts)
                     continue
                 elif state.waiting.reason == KubernetesWaitingReasons.ContainerCreating:
@@ -460,7 +458,7 @@ class DagsterKubernetesClient:
                         )
                     )
                 else:
-                    raise DagsterK8sError("Unknown issue: %s" % state.waiting)
+                    raise DagsterK8sError(f"Unknown issue: {state.waiting}")
 
             # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.18/#containerstateterminated-v1-core
             elif state.terminated is not None:
@@ -472,7 +470,7 @@ class DagsterKubernetesClient:
                         f'and pod logs: "{raw_logs}"'
                     )
                 else:
-                    self.logger("Pod {pod_name} exitted successfully".format(pod_name=pod_name))
+                    self.logger(f"Pod {pod_name} exitted successfully")
                 break
 
             else:

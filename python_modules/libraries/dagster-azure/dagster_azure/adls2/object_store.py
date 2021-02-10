@@ -37,7 +37,7 @@ class ADLS2ObjectStore(ObjectStore):
         )  # cannot be none here
 
         if self.has_object(key):
-            logging.warning("Removing existing ADLS2 key: {key}".format(key=key))
+            logging.warning(f"Removing existing ADLS2 key: {key}")
             self.rm_object(key)
 
         file = self.file_system_client.create_file(key)

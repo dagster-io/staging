@@ -48,19 +48,9 @@ def check_compute_logs(manager, result, execution_date_fmt):
         stdout_file.close()
 
         assert (
-            file_contents.count(
-                "INFO - Running command: \n    echo '{execution_date_fmt}'\n".format(
-                    execution_date_fmt=execution_date_fmt
-                )
-            )
-            == 1
+            file_contents.count(f"INFO - Running command: \n    echo '{execution_date_fmt}'\n") == 1
         )
-        assert (
-            file_contents.count(
-                "INFO - {execution_date_fmt}\n".format(execution_date_fmt=execution_date_fmt)
-            )
-            == 1
-        )
+        assert file_contents.count(f"INFO - {execution_date_fmt}\n") == 1
         assert file_contents.count("INFO - Command exited with return code 0") == 1
 
 

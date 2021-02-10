@@ -19,7 +19,7 @@ from .configs import define_dataproc_submit_job_config
 def dataproc_solid(context):
     job_config = context.solid_config["job_config"]
 
-    context.log.info("submitting job with config: %s" % str(json.dumps(job_config)))
+    context.log.info(f"submitting job with config: {str(json.dumps(job_config))}")
 
     if context.solid_config["job_scoped_cluster"]:
         # Cluster context manager, creates and then deletes cluster
@@ -28,7 +28,7 @@ def dataproc_solid(context):
             result = cluster.submit_job(job_config)
 
             job_id = result["reference"]["jobId"]
-            context.log.info("Submitted job ID {}".format(job_id))
+            context.log.info(f"Submitted job ID {job_id}")
             cluster.wait_for_job(job_id)
     else:
         # Submit to an existing cluster
@@ -36,5 +36,5 @@ def dataproc_solid(context):
         result = context.resources.dataproc.submit_job(job_config)
 
         job_id = result["reference"]["jobId"]
-        context.log.info("Submitted job ID {}".format(job_id))
+        context.log.info(f"Submitted job ID {job_id}")
         context.resources.dataproc.wait_for_job(job_id)

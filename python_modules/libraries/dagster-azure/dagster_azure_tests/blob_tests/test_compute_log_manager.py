@@ -79,9 +79,7 @@ def test_compute_log_manager(
         # Check ADLS2 directly
         adls2_object = fake_client.get_blob_client(
             container=container,
-            blob="{prefix}/storage/{run_id}/compute_logs/easy.err".format(
-                prefix="my_prefix", run_id=result.run_id
-            ),
+            blob=f"my_prefix/storage/{result.run_id}/compute_logs/easy.err",
         )
         adls2_stderr = adls2_object.download_blob().readall().decode("utf-8")
         for expected in EXPECTED_LOGS:
@@ -103,7 +101,7 @@ def test_compute_log_manager(
 def test_compute_log_manager_from_config(storage_account, container, credential):
     prefix = "foobar"
 
-    dagster_yaml = """
+    dagster_yaml = f"""
 compute_logs:
   module: dagster_azure.blob.compute_log_manager
   class: AzureBlobComputeLogManager
@@ -112,10 +110,8 @@ compute_logs:
     container: {container}
     secret_key: {credential}
     local_dir: "/tmp/cool"
-    prefix: "{prefix}"
-""".format(
-        storage_account=storage_account, container=container, credential=credential, prefix=prefix
-    )
+    prefix: "{prefix}\"
+"""
 
     with tempfile.TemporaryDirectory() as tempdir:
         with open(os.path.join(tempdir, "dagster.yaml"), "wb") as f:

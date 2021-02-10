@@ -221,12 +221,12 @@ class DatabricksPySparkStepLauncher(StepLauncher):
 
     def _dbfs_path(self, run_id, step_key, filename):
         path = "/".join([self.staging_prefix, run_id, step_key, os.path.basename(filename)])
-        return "dbfs://{}".format(path)
+        return f"dbfs://{path}"
 
     def _internal_dbfs_path(self, run_id, step_key, filename):
         """Scripts running on Databricks should access DBFS at /dbfs/."""
         path = "/".join([self.staging_prefix, run_id, step_key, os.path.basename(filename)])
-        return "/dbfs/{}".format(path)
+        return f"/dbfs/{path}"
 
 
 class DatabricksConfig:
@@ -321,7 +321,7 @@ class DatabricksConfig:
             key = secret["key"]
             scope = secret["scope"]
             print(  # pylint: disable=print-call
-                "Exporting {} from Databricks secret {}, scope {}".format(name, key, scope)
+                f"Exporting {name} from Databricks secret {key}, scope {scope}"
             )
             val = dbutils.secrets.get(scope=scope, key=key)
             os.environ[name] = val

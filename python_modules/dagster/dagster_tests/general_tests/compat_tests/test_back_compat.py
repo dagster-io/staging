@@ -19,11 +19,11 @@ def _migration_regex(warning, current_revision, expected_revision=None):
     instruction = re.escape("Please run `dagster instance migrate`.")
     if expected_revision:
         revision = re.escape(
-            "Database is at revision {}, head is {}.".format(current_revision, expected_revision)
+            f"Database is at revision {current_revision}, head is {expected_revision}."
         )
     else:
-        revision = "Database is at revision {}, head is [a-z0-9]+.".format(current_revision)
-    return "{} {} {}".format(warning, revision, instruction)
+        revision = f"Database is at revision {current_revision}, head is [a-z0-9]+."
+    return f"{warning} {revision} {instruction}"
 
 
 def _run_storage_migration_regex(current_revision, expected_revision=None):
@@ -106,7 +106,7 @@ def get_current_alembic_version(db_path):
 def get_sqlite3_columns(db_path, table_name):
     con = sqlite3.connect(db_path)
     cursor = con.cursor()
-    cursor.execute('PRAGMA table_info("{}");'.format(table_name))
+    cursor.execute(f'PRAGMA table_info("{table_name}");')
     return [r[1] for r in cursor.fetchall()]
 
 

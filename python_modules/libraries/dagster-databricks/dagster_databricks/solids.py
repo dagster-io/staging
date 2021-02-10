@@ -87,6 +87,4 @@ def create_ui_url(databricks_client, solid_config):
             cluster_id=solid_config["job"]["existing_cluster_id"],
         )
     else:
-        return "https://{host}/?o={workspace_id}#joblist".format(
-            host=host, workspace_id=workspace_id
-        )
+        return f"https://{host}/?o={workspace_id}#joblist"

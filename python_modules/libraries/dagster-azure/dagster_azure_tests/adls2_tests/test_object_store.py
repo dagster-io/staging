@@ -33,8 +33,7 @@ def test_adls2_object_store(
     adls2_obj_store.rm_object(key)
     assert not adls2_obj_store.has_object(key)
 
-    assert adls2_obj_store.uri_for_key(
-        key
-    ) == "abfss://{fs}@{account}.dfs.core.windows.net/{key}".format(
-        fs=file_system, account=storage_account, key=key
+    assert (
+        adls2_obj_store.uri_for_key(key)
+        == f"abfss://{file_system}@{storage_account}.dfs.core.windows.net/{key}"
     )

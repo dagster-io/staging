@@ -50,7 +50,7 @@ def migrate_asset_key_data(event_log_storage, print_fn=lambda _: None):
     with event_log_storage.index_connection() as conn:
         print_fn("Querying event logs.")
         to_insert = conn.execute(query).fetchall()
-        print_fn("Found {} records to index".format(len(to_insert)))
+        print_fn(f"Found {len(to_insert)} records to index")
         for (asset_key,) in tqdm(to_insert):
             try:
                 conn.execute(

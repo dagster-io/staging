@@ -154,11 +154,7 @@ def _get_input_snap(solid_def, name):
         if inp.name == name:
             return inp
 
-    check.failed(
-        "Could not find input {input_name} in solid def {solid_def_name}".format(
-            input_name=name, solid_def_name=solid_def.name
-        )
-    )
+    check.failed(f"Could not find input {name} in solid def {solid_def.name}")
 
 
 # shared impl for CompositeSolidDefSnap and SolidDefSnap
@@ -168,11 +164,7 @@ def _get_output_snap(solid_def, name):
         if out.name == name:
             return out
 
-    check.failed(
-        "Could not find output {output_name} in solid def {solid_def_name}".format(
-            output_name=name, solid_def_name=solid_def.name
-        )
-    )
+    check.failed(f"Could not find output {name} in solid def {solid_def.name}")
 
 
 @whitelist_for_serdes

@@ -172,9 +172,7 @@ class DatabricksJobRunner:
         python_libraries = {x["pypi"]["package"].split("==")[0] for x in libraries if "pypi" in x}
         for library in ["dagster", "dagster_databricks", "dagster_pyspark"]:
             if library not in python_libraries:
-                libraries.append(
-                    {"pypi": {"package": "{}=={}".format(library, dagster.__version__)}}
-                )
+                libraries.append({"pypi": {"package": f"{library}=={dagster.__version__}"}})
 
         # Only one task should be able to be chosen really; make sure of that here.
         check.invariant(
@@ -230,7 +228,7 @@ class DatabricksJobRunner:
     ):
         """Attempt up to `waiter_max_attempts` attempts to get logs from DBFS."""
         path = "/".join([prefix, cluster_id, "driver", filename])
-        log.info("Retrieving logs from {}".format(path))
+        log.info(f"Retrieving logs from {path}")
         num_attempts = 0
         while num_attempts <= waiter_max_attempts:
             try:
@@ -250,15 +248,15 @@ class DatabricksJobRunner:
 def wait_for_run_to_complete(client, log, databricks_run_id, poll_interval_sec, max_wait_time_sec):
     """Wait for a Databricks run to complete."""
     check.int_param(databricks_run_id, "databricks_run_id")
-    log.info("Waiting for Databricks run %s to complete..." % databricks_run_id)
+    log.info(f"Waiting for Databricks run {databricks_run_id} to complete...")
     start = time.time()
     while True:
-        log.debug("Waiting %.1f seconds..." % poll_interval_sec)
+        log.debug(f"Waiting {poll_interval_sec:.1f} seconds...")
         time.sleep(poll_interval_sec)
         run_state = client.get_run_state(databricks_run_id)
         if run_state.has_terminated():
             if run_state.is_successful():
-                log.info("Run %s completed successfully" % databricks_run_id)
+                log.info(f"Run {databricks_run_id} completed successfully")
                 return
             else:
                 error_message = "Run %s failed with result state: %s. Message: %s" % (
@@ -269,7 +267,7 @@ def wait_for_run_to_complete(client, log, databricks_run_id, poll_interval_sec, 
                 log.error(error_message)
                 raise DatabricksError(error_message)
         else:
-            log.info("Run %s in state %s" % (databricks_run_id, run_state))
+            log.info(f"Run {databricks_run_id} in state {run_state}")
         if time.time() - start > max_wait_time_sec:
             raise DatabricksError(
                 "Job run {} took more than {}s to complete; failing".format(

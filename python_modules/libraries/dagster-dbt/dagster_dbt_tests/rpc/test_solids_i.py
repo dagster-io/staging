@@ -114,9 +114,9 @@ class TestDBTSingleOperationSolids:
         def mock_dbt_rpc_resource(_init_context):
             return mocked_rpc_client
 
-        response_sentinel_value = "<rpc response: {}>".format(uuid.uuid4())
+        response_sentinel_value = f"<rpc response: {uuid.uuid4()}>"
         mocked_client_op_method.return_value.text = response_sentinel_value
-        request_token_sentinel_value = "<request token: {}>".format(uuid.uuid4())
+        request_token_sentinel_value = f"<request token: {uuid.uuid4()}>"
         mocked_client_op_method.return_value.json.return_value = {
             "result": {"request_token": request_token_sentinel_value}
         }

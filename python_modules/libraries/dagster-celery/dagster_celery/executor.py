@@ -116,7 +116,7 @@ def _submit_task(app, pipeline_context, step, queue, priority):
     return task_signature.apply_async(
         priority=priority,
         queue=queue,
-        routing_key="{queue}.execute_plan".format(queue=queue),
+        routing_key=f"{queue}.execute_plan",
     )
 
 

@@ -501,7 +501,7 @@ class RepositoryData:
         check.str_param(name, "name")
 
         if not self.has_solid(name):
-            check.failed("could not find solid_def for solid {name}".format(name=name))
+            check.failed(f"could not find solid_def for solid {name}")
 
         return self._all_solids[name]
 

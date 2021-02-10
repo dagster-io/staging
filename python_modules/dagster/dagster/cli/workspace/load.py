@@ -310,7 +310,7 @@ def _location_origin_from_location_config(location_config, yaml_path):
             location_config["python_environment"], yaml_path
         )
     else:
-        check.not_implemented("Unsupported location config: {}".format(location_config))
+        check.not_implemented(f"Unsupported location config: {location_config}")
 
 
 def is_target_config(potential_target_config):

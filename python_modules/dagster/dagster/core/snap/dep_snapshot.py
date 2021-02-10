@@ -127,12 +127,7 @@ class DependencyStructureIndex:
             if input_dep_snap.input_name == input_name:
                 return input_dep_snap.upstream_output_snaps
 
-        check.failed(
-            "Input {input_name} not found for solid {solid_name}".format(
-                input_name=input_name,
-                solid_name=solid_name,
-            )
-        )
+        check.failed(f"Input {input_name} not found for solid {solid_name}")
 
     def get_upstream_output(self, solid_name, input_name):
         check.str_param(solid_name, "solid_name")

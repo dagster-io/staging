@@ -229,9 +229,7 @@ class FileCodePointer(
         module = load_python_file(self.python_file, self.working_directory)
         if not hasattr(module, self.fn_name):
             raise DagsterInvariantViolationError(
-                "{name} not found at module scope in file {file}.".format(
-                    name=self.fn_name, file=self.python_file
-                )
+                f"{self.fn_name} not found at module scope in file {self.python_file}."
             )
 
         return getattr(module, self.fn_name)
@@ -278,9 +276,7 @@ class ModuleCodePointer(namedtuple("_ModuleCodePointer", "module fn_name"), Code
 
         if not hasattr(module, self.fn_name):
             raise DagsterInvariantViolationError(
-                "{name} not found in module {module}. dir: {dir}".format(
-                    name=self.fn_name, module=self.module, dir=dir(module)
-                )
+                f"{self.fn_name} not found in module {self.module}. dir: {dir(module)}"
             )
         return getattr(module, self.fn_name)
 
@@ -288,7 +284,7 @@ class ModuleCodePointer(namedtuple("_ModuleCodePointer", "module fn_name"), Code
         return "from {self.module} import {self.fn_name}".format(self=self)
 
     def get_cli_args(self):
-        return "-m {module} -a {fn_name}".format(module=self.module, fn_name=self.fn_name)
+        return f"-m {self.module} -a {self.fn_name}"
 
     def get_loadable_target_origin(self, executable_path):
         return LoadableTargetOrigin(
@@ -320,7 +316,7 @@ class PackageCodePointer(namedtuple("_PackageCodePointer", "module attribute"), 
         return "from {self.module} import {self.attribute}".format(self=self)
 
     def get_cli_args(self):
-        return "-m {module} -a {attribute}".format(module=self.module, attribute=self.attribute)
+        return f"-m {self.module} -a {self.attribute}"
 
     def get_loadable_target_origin(self, executable_path):
         return LoadableTargetOrigin(
@@ -358,9 +354,7 @@ class CustomPointer(
             check.invariant(isinstance(reconstructable_kwarg[0], str), "Bad kwarg key")
             check.invariant(
                 len(reconstructable_kwarg) == 2,
-                "Bad kwarg of length {length}, should be 2".format(
-                    length=len(reconstructable_kwarg)
-                ),
+                f"Bad kwarg of length {len(reconstructable_kwarg)}, should be 2",
             )
 
         # These are frozenlists, rather than lists, so that they can be hashed and the pointer

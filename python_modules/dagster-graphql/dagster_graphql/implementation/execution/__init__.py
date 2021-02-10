@@ -93,7 +93,7 @@ def terminate_pipeline_execution(graphene_info, run_id, terminate_policy):
         _force_mark_as_canceled(graphene_info, run_id)
         if force_mark_as_canceled
         else GrapheneTerminatePipelineExecutionFailure(
-            run=pipeline_run, message="Unable to terminate run {run_id}".format(run_id=run.run_id)
+            run=pipeline_run, message=f"Unable to terminate run {run.run_id}"
         )
     )
 
@@ -132,7 +132,7 @@ def get_pipeline_run_observable(graphene_info, run_id, after=None):
         def _get_error_observable(observer):
             observer.on_next(
                 GraphenePipelineRunLogsSubscriptionFailure(
-                    missingRunId=run_id, message="Could not load run with id {}".format(run_id)
+                    missingRunId=run_id, message=f"Could not load run with id {run_id}"
                 )
             )
 

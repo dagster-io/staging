@@ -112,11 +112,7 @@ class _PlanBuilder:
         # Keep track of the step keys we've seen so far to ensure we don't add duplicates
         if step.handle in self._seen_handles:
             keys = list(self._steps.keys())
-            check.failed(
-                "Duplicated key {key}. Full list seen so far: {key_list}.".format(
-                    key=step.key, key_list=keys
-                )
-            )
+            check.failed(f"Duplicated key {step.key}. Full list seen so far: {keys}.")
         self._seen_handles.add(step.handle)
         self._steps[step.solid_handle.to_string()] = step
 

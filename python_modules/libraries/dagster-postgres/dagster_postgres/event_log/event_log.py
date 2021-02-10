@@ -129,7 +129,7 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
             res = result_proxy.fetchone()
             result_proxy.close()
             conn.execute(
-                """NOTIFY {channel}, %s; """.format(channel=CHANNEL_NAME),
+                f"""NOTIFY {CHANNEL_NAME}, %s; """,
                 (res[0] + "_" + str(res[1]),),
             )
 

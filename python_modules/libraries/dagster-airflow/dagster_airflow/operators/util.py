@@ -14,7 +14,7 @@ def check_events_for_failures(events):
     for event in events:
         if event.event_type_value == "STEP_FAILURE":
             raise AirflowException(
-                "step failed with error: %s" % event.event_specific_data.error.to_string()
+                f"step failed with error: {event.event_specific_data.error.to_string()}"
             )
 
 

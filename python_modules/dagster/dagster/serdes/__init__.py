@@ -74,13 +74,11 @@ def _check_serdes_tuple_class_invariants(klass):
     cls_param = dunder_new_params[0]
 
     def _with_header(msg):
-        return "For namedtuple {class_name}: {msg}".format(class_name=klass.__name__, msg=msg)
+        return f"For namedtuple {klass.__name__}: {msg}"
 
     if cls_param.name not in {"cls", "_cls"}:
         raise SerdesClassUsageError(
-            _with_header(
-                'First parameter must be _cls or cls. Got "{name}".'.format(name=cls_param.name)
-            )
+            _with_header(f'First parameter must be _cls or cls. Got "{cls_param.name}".')
         )
 
     value_params = dunder_new_params[1:]
@@ -140,7 +138,7 @@ def _whitelist_for_serdes(whitelist_map):
             _check_serdes_tuple_class_invariants(klass)
             whitelist_map["types"]["tuple"][klass.__name__] = klass
         else:
-            check.failed("Can not whitelist class {klass} for serdes".format(klass=klass))
+            check.failed(f"Can not whitelist class {klass} for serdes")
 
         return klass
 
@@ -171,7 +169,7 @@ def _pack_value(val, whitelist_map):
         klass_name = val.__class__.__name__
         check.invariant(
             klass_name in whitelist_map["types"]["tuple"],
-            "Can only serialize whitelisted namedtuples, received tuple {}".format(val),
+            f"Can only serialize whitelisted namedtuples, received tuple {val}",
         )
         if klass_name in whitelist_map["persistence"]:
             return val.to_storage_value()
@@ -182,7 +180,7 @@ def _pack_value(val, whitelist_map):
         klass_name = val.__class__.__name__
         check.invariant(
             klass_name in whitelist_map["types"]["enum"],
-            "Can only serialize whitelisted Enums, received {}".format(klass_name),
+            f"Can only serialize whitelisted Enums, received {klass_name}",
         )
         return {"__enum__": str(val)}
     if isinstance(val, set):
@@ -349,9 +347,7 @@ class ConfigurableClassData(
         if not issubclass(klass, ConfigurableClass):
             raise check.CheckError(
                 klass,
-                "class {class_name} in module {module_name}".format(
-                    class_name=self.class_name, module_name=self.module_name
-                ),
+                f"class {self.class_name} in module {self.module_name}",
                 ConfigurableClass,
             )
 
@@ -359,7 +355,7 @@ class ConfigurableClassData(
         result = process_config(resolve_to_config_type(klass.config_type()), config_dict)
         if not result.success:
             raise DagsterInvalidConfigError(
-                "Errors whilst loading configuration for {}.".format(klass.config_type()),
+                f"Errors whilst loading configuration for {klass.config_type()}.",
                 result.errors,
                 config_dict,
             )

@@ -43,11 +43,7 @@ def construct_scaffolded_file_contents(module_name, pipeline_name, run_config):
 
     printer = IndentingStringIoPrinter(indent_level=4)
     printer.line("'''")
-    printer.line(
-        "The airflow DAG scaffold for {module_name}.{pipeline_name}".format(
-            module_name=module_name, pipeline_name=pipeline_name
-        )
-    )
+    printer.line(f"The airflow DAG scaffold for {module_name}.{pipeline_name}")
     printer.blank_line()
     printer.line('Note that this docstring must contain the strings "airflow" and "DAG" for')
     printer.line("Airflow to properly detect it as a DAG")
@@ -90,12 +86,10 @@ def construct_scaffolded_file_contents(module_name, pipeline_name, run_config):
     printer.blank_line()
     printer.line("dag, tasks = make_airflow_dag(")
     with printer.with_indent():
-        printer.comment(
-            "NOTE: you must ensure that {module_name} is ".format(module_name=module_name)
-        )
+        printer.comment(f"NOTE: you must ensure that {module_name} is ")
         printer.comment("installed or available on sys.path, otherwise, this import will fail.")
-        printer.line("module_name='{module_name}',".format(module_name=module_name))
-        printer.line("pipeline_name='{pipeline_name}',".format(pipeline_name=pipeline_name))
+        printer.line(f"module_name='{module_name}',")
+        printer.line(f"pipeline_name='{pipeline_name}',")
         printer.line("run_config=yaml.safe_load(ENVIRONMENT),")
         printer.line("dag_kwargs={'default_args': DEFAULT_ARGS, 'max_active_runs': 1}")
     printer.line(")")
@@ -159,7 +153,7 @@ def scaffold(module_name, pipeline_name, output_path, config, preset):
 
     dag_file = os.path.join(os.path.expanduser(output_path), "dags", pipeline_name + ".py")
 
-    click.echo("Wrote DAG scaffold to file: %s" % dag_file)
+    click.echo(f"Wrote DAG scaffold to file: {dag_file}")
 
     with open(dag_file, "wb") as f:
         f.write(file_contents)

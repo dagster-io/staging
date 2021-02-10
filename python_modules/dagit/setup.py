@@ -43,8 +43,8 @@ if __name__ == "__main__":
             "PyYAML",
             # cli
             "click>=7.0",
-            "dagster=={ver}".format(ver=ver),
-            "dagster-graphql=={ver}".format(ver=ver),
+            f"dagster=={ver}",
+            f"dagster-graphql=={ver}",
             # graphql
             "graphql-core>=2.1,<3",
             # server

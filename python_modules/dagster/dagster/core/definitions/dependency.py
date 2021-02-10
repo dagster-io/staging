@@ -263,9 +263,7 @@ class SolidHandle(namedtuple("_SolidHandle", "name parent")):
         check.inst_param(ancestor, "ancestor", SolidHandle)
         check.invariant(
             self.is_or_descends_from(ancestor),
-            "Handle {handle} does not descend from {ancestor}".format(
-                handle=self.to_string(), ancestor=ancestor.to_string()
-            ),
+            f"Handle {self.to_string()} does not descend from {ancestor.to_string()}",
         )
 
         return SolidHandle.from_path(self.path[len(ancestor.path) :])
@@ -594,9 +592,7 @@ class DependencyStructure:
         dep = self._handle_dict[solid_input_handle]
         check.invariant(
             isinstance(dep, SolidOutputHandle),
-            "Cannot call get_singular_dep when dep is not singular, got {dep}".format(
-                dep=type(dep)
-            ),
+            f"Cannot call get_singular_dep when dep is not singular, got {type(dep)}",
         )
         return dep
 
@@ -609,7 +605,7 @@ class DependencyStructure:
         dep = self._handle_dict[solid_input_handle]
         check.invariant(
             isinstance(dep, list),
-            "Cannot call get_multi_dep when dep is singular, got {dep}".format(dep=type(dep)),
+            f"Cannot call get_multi_dep when dep is singular, got {type(dep)}",
         )
         return dep
 
@@ -776,7 +772,7 @@ class MultiDependencyDefinition(
             elif dep is MappedInputPlaceholder:
                 pass
             else:
-                check.failed("Unexpected dependencies entry {}".format(dep))
+                check.failed(f"Unexpected dependencies entry {dep}")
 
         return super(MultiDependencyDefinition, cls).__new__(cls, deps)
 

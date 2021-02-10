@@ -109,14 +109,12 @@ def push_dockerhub(name, dagster_version):
     local_image = image.local_image(python_version)
 
     # Tag image as Dagster version (plan to release this image w/ Dagster releases)
-    image_with_dagster_version_tag = "dagster/{image}:{tag}".format(
-        image=name, tag=current_dagster_version
-    )
+    image_with_dagster_version_tag = f"dagster/{name}:{current_dagster_version}"
     execute_docker_tag(local_image, image_with_dagster_version_tag)
     execute_docker_push(image_with_dagster_version_tag)
 
     # Also push latest tag
-    latest_tag = "dagster/{}:latest".format(name)
+    latest_tag = f"dagster/{name}:latest"
     execute_docker_tag(local_image, latest_tag)
     execute_docker_push(latest_tag)
 

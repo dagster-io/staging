@@ -149,7 +149,7 @@ class DagsterDockerOperator(DockerOperator):
 
         with self.get_host_tmp_dir() as host_tmp_dir:
             self.environment["AIRFLOW_TMP_DIR"] = self.tmp_dir
-            self.volumes.append("{0}:{1}".format(host_tmp_dir, self.tmp_dir))
+            self.volumes.append(f"{host_tmp_dir}:{self.tmp_dir}")
 
             self.container = self.cli.create_container(
                 command=self.get_docker_command(context.get("ts")),
@@ -221,8 +221,8 @@ class DagsterDockerOperator(DockerOperator):
             )
         )
 
-        command = "dagster api execute_step {}".format(json.dumps(input_json))
-        self.log.info("Executing: {command}\n".format(command=command))
+        command = f"dagster api execute_step {json.dumps(input_json)}"
+        self.log.info(f"Executing: {command}\n")
         return command
 
     def get_docker_command(self, airflow_ts):
@@ -281,9 +281,7 @@ class DagsterDockerOperator(DockerOperator):
                 events = [deserialize_json_to_dagster_namedtuple(line) for line in res if line]
 
             except Exception:  # pylint: disable=broad-except
-                raise AirflowException(
-                    "Could not parse response {response}".format(response=repr(res))
-                )
+                raise AirflowException(f"Could not parse response {repr(res)}")
 
             if len(events) == 1 and isinstance(events[0], StepExecutionSkipped):
                 raise AirflowSkipException(

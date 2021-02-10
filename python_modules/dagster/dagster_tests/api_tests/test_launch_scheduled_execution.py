@@ -44,7 +44,7 @@ def _never(_context):
 
 @solid(config_schema={"work_amt": str})
 def the_solid(context):
-    return "0.8.0 was {} of work".format(context.solid_config["work_amt"])
+    return f"0.8.0 was {context.solid_config['work_amt']} of work"
 
 
 @pipeline
@@ -171,8 +171,8 @@ def sync_launch_scheduled_execution(schedule_origin, system_tz=None):
                 output_file,
             ]
             + xplat_shlex_split(schedule_origin.get_repo_cli_args())
-            + ["--schedule_name={}".format(schedule_origin.job_name)]
-            + (["--override-system-timezone={}".format(system_tz)] if system_tz else [])
+            + [f"--schedule_name={schedule_origin.job_name}"]
+            + ([f"--override-system-timezone={system_tz}"] if system_tz else [])
         )
         subprocess.check_call(parts)
         result = read_unary_response(output_file)
@@ -181,13 +181,11 @@ def sync_launch_scheduled_execution(schedule_origin, system_tz=None):
         elif isinstance(result, IPCErrorMessage):
             error = result.serializable_error_info
             raise DagsterSubprocessError(
-                "Error in API subprocess: {message}\n\n{err}".format(
-                    message=result.message, err=error.to_string()
-                ),
+                f"Error in API subprocess: {result.message}\n\n{error.to_string()}",
                 subprocess_error_infos=[error],
             )
         else:
-            check.failed("Unexpected result {}".format(result))
+            check.failed(f"Unexpected result {result}")
 
 
 @pytest.mark.parametrize(
@@ -219,9 +217,7 @@ def test_launch_successful_execution_telemetry(schedule_origin_context):
         with schedule_origin_context("simple_schedule") as schedule_origin:
             sync_launch_scheduled_execution(schedule_origin)
 
-            event_log_path = "{logs_dir}/event.log".format(
-                logs_dir=get_dir_from_dagster_home("logs")
-            )
+            event_log_path = f"{get_dir_from_dagster_home('logs')}/event.log"
             with open(event_log_path, "r") as f:
                 event_log = f.readlines()
                 assert len(event_log) == 2

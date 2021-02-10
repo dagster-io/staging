@@ -103,9 +103,7 @@ class GraphExecutionResult:
 
     def _result_for_handle(self, solid, handle):
         if not solid:
-            raise DagsterInvariantViolationError(
-                "Can not find solid handle {handle_str}.".format(handle_str=handle.to_string())
-            )
+            raise DagsterInvariantViolationError(f"Can not find solid handle {handle.to_string()}.")
 
         events_by_kind = defaultdict(list)
 
@@ -414,7 +412,7 @@ class SolidExecutionResult:
             if step_event.event_type == DagsterEventType.STEP_SUCCESS:
                 return step_event
 
-        check.failed("Step success not found for solid {}".format(self.solid.name))
+        check.failed(f"Step success not found for solid {self.solid.name}")
 
     @property
     def compute_step_failure_event(self):

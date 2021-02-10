@@ -27,7 +27,7 @@ result_backend = \'rpc://\'
 foo = \'bar\'
 """
 
-CONFIG_PYTHON_FILE = "{config_module_name}.py".format(config_module_name="dagster_celery_config")
+CONFIG_PYTHON_FILE = "dagster_celery_config.py"
 
 
 def test_config_value_from_yaml():

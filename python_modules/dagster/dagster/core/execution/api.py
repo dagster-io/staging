@@ -483,9 +483,7 @@ def reexecute_pipeline(
         parent_pipeline_run = execute_instance.get_run_by_id(parent_run_id)
         check.invariant(
             parent_pipeline_run,
-            "No parent run with id {parent_run_id} found in instance.".format(
-                parent_run_id=parent_run_id
-            ),
+            f"No parent run with id {parent_run_id} found in instance.",
         )
 
         # resolve step selection DSL queries using parent execution plan snapshot
@@ -581,9 +579,7 @@ def reexecute_pipeline_iterator(
         parent_pipeline_run = execute_instance.get_run_by_id(parent_run_id)
         check.invariant(
             parent_pipeline_run,
-            "No parent run with id {parent_run_id} found in instance.".format(
-                parent_run_id=parent_run_id
-            ),
+            f"No parent run with id {parent_run_id} found in instance.",
         )
 
         # resolve step selection DSL queries using parent execution plan snapshot
@@ -757,7 +753,7 @@ def pipeline_execution_iterator(
         elif failed_steps:
             event = DagsterEvent.pipeline_failure(
                 pipeline_context,
-                "Steps failed: {}.".format(failed_steps),
+                f"Steps failed: {failed_steps}.",
             )
         else:
             event = DagsterEvent.pipeline_success(pipeline_context)
@@ -834,9 +830,7 @@ def _check_execute_pipeline_args(
     check.opt_str_param(preset, "preset")
     check.invariant(
         not (mode is not None and preset is not None),
-        "You may set only one of `mode` (got {mode}) or `preset` (got {preset}).".format(
-            mode=mode, preset=preset
-        ),
+        f"You may set only one of `mode` (got {mode}) or `preset` (got {preset}).",
     )
 
     tags = check.opt_dict_param(tags, "tags", key_type=str)

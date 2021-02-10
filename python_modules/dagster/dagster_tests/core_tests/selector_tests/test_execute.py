@@ -76,9 +76,7 @@ def test_execute_pipeline_with_solid_selection_invalid():
     with pytest.raises(
         DagsterInvalidSubsetError,
         match=re.escape(
-            "No qualified solids to execute found for solid_selection={input}".format(
-                input=invalid_input
-            )
+            f"No qualified solids to execute found for solid_selection={invalid_input}"
         ),
     ):
         execute_pipeline(foo_pipeline, solid_selection=invalid_input)

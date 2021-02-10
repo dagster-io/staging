@@ -266,12 +266,8 @@ def get_test_project_docker_image():
         # Detect the python version we're running on
         majmin = str(sys.version_info.major) + str(sys.version_info.minor)
 
-        docker_image_tag = "py{majmin}-{image_version}".format(
-            majmin=majmin, image_version="latest"
-        )
+        docker_image_tag = f"py{majmin}-latest"
 
-    final_docker_image = "{repository}/{image_name}:{tag}".format(
-        repository=docker_repository, image_name=image_name, tag=docker_image_tag
-    )
-    print("Using Docker image: %s" % final_docker_image)  # pylint: disable=print-call
+    final_docker_image = f"{docker_repository}/{image_name}:{docker_image_tag}"
+    print(f"Using Docker image: {final_docker_image}")  # pylint: disable=print-call
     return final_docker_image

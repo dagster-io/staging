@@ -199,7 +199,7 @@ def _submit_task_docker(app, pipeline_context, step, queue, priority):
     return task_signature.apply_async(
         priority=priority,
         queue=queue,
-        routing_key="{queue}.execute_step_docker".format(queue=queue),
+        routing_key=f"{queue}.execute_step_docker",
     )
 
 
@@ -226,13 +226,13 @@ def create_docker_task(celery_app, **task_kwargs):
         check.inst(
             pipeline_run,
             PipelineRun,
-            "Could not load run {}".format(execute_step_args.pipeline_run_id),
+            f"Could not load run {execute_step_args.pipeline_run_id}",
         )
         step_keys_str = ", ".join(execute_step_args.step_keys_to_execute)
 
         input_json = serialize_dagster_namedtuple(execute_step_args)
 
-        command = "dagster api execute_step {}".format(json.dumps(input_json))
+        command = f"dagster api execute_step {json.dumps(input_json)}"
 
         docker_image = (
             docker_config["image"]
@@ -254,7 +254,7 @@ def create_docker_task(celery_app, **task_kwargs):
 
         # Post event for starting execution
         engine_event = instance.report_engine_event(
-            "Executing steps {} in Docker container {}".format(step_keys_str, docker_image),
+            f"Executing steps {step_keys_str} in Docker container {docker_image}",
             pipeline_run,
             EngineEventData(
                 [
@@ -288,7 +288,7 @@ def create_docker_task(celery_app, **task_kwargs):
             res = docker_response.decode("utf-8")
         except docker.errors.ContainerError as err:
             instance.report_engine_event(
-                "Failed to run steps {} in Docker container {}".format(step_keys_str, docker_image),
+                f"Failed to run steps {step_keys_str} in Docker container {docker_image}",
                 pipeline_run,
                 EngineEventData(
                     [

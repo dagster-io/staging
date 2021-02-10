@@ -59,7 +59,7 @@ def test_execute_run():
                 [input_json],
             )
 
-        assert "PIPELINE_SUCCESS" in result.stdout, "no match, result: {}".format(result)
+        assert "PIPELINE_SUCCESS" in result.stdout, f"no match, result: {result}"
 
 
 def runner_execute_step(runner, cli_args):

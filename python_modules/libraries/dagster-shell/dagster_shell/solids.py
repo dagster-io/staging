@@ -74,9 +74,7 @@ def shell_solid(context, shell_command):
     )
 
     if return_code:
-        raise Failure(
-            description="Shell command execution failed with output: {output}".format(output=output)
-        )
+        raise Failure(description=f"Shell command execution failed with output: {output}")
 
     return output
 
@@ -136,11 +134,7 @@ def create_shell_command_solid(
         )
 
         if return_code:
-            raise Failure(
-                description="Shell command execution failed with output: {output}".format(
-                    output=output
-                )
-            )
+            raise Failure(description=f"Shell command execution failed with output: {output}")
 
         return output
 
@@ -203,11 +197,7 @@ def create_shell_script_solid(
         )
 
         if return_code:
-            raise Failure(
-                description="Shell command execution failed with output: {output}".format(
-                    output=output
-                )
-            )
+            raise Failure(description=f"Shell command execution failed with output: {output}")
 
         return output
 

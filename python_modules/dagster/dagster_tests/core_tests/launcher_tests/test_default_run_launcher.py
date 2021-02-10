@@ -156,10 +156,7 @@ def _check_event_log_contains(event_log, expected_type_and_message):
         assert any(
             event_type == expected_event_type and expected_message_fragment in message
             for event_type, message in types_and_messages
-        ), "Missing {expected_event_type}:{expected_message_fragment}".format(
-            expected_event_type=expected_event_type,
-            expected_message_fragment=expected_message_fragment,
-        )
+        ), f"Missing {expected_event_type}:{expected_message_fragment}"
 
 
 @pytest.mark.parametrize(

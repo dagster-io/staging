@@ -36,9 +36,7 @@ DEFAULT_DB_STATEMENT_TIMEOUT = 5000  # 5 sec
 @click.command(
     name="ui",
     help=(
-        "Run dagit. Loads a repository or pipeline.\n\n{warning}".format(
-            warning=WORKSPACE_TARGET_WARNING
-        )
+        f"Run dagit. Loads a repository or pipeline.\n\n{WORKSPACE_TARGET_WARNING}"
         + (
             "\n\nExamples:"
             "\n\n1. dagit (works if .{default_filename} exists)"
@@ -67,7 +65,7 @@ DEFAULT_DB_STATEMENT_TIMEOUT = 5000  # 5 sec
     "--port",
     "-p",
     type=click.INT,
-    help="Port to run server on, default is {default_port}".format(default_port=DEFAULT_DAGIT_PORT),
+    help=f"Port to run server on, default is {DEFAULT_DAGIT_PORT}",
 )
 @click.option(
     "--path-prefix",
@@ -128,7 +126,7 @@ def host_dagit_ui(
 
         with get_workspace_from_kwargs(kwargs) as workspace:
             if not workspace:
-                raise Exception("Unable to load workspace with cli_args: {}".format(kwargs))
+                raise Exception(f"Unable to load workspace with cli_args: {kwargs}")
 
             host_dagit_ui_with_workspace(instance, workspace, host, port, path_prefix, port_lookup)
 
@@ -162,9 +160,7 @@ def start_server(instance, host, port, path_prefix, app, port_lookup, port_looku
     server = pywsgi.WSGIServer((host, port), app, handler_class=WebSocketHandler)
 
     print(  # pylint: disable=print-call
-        "Serving on http://{host}:{port}{path_prefix} in process {pid}".format(
-            host=host, port=port, path_prefix=path_prefix, pid=os.getpid()
-        )
+        f"Serving on http://{host}:{port}{path_prefix} in process {os.getpid()}"
     )
 
     log_action(instance, START_DAGIT_WEBSERVER)

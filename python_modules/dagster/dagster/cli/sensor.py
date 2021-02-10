@@ -42,10 +42,10 @@ def print_changes(external_repository, instance, print_fn=print, preview=False):
     if not added_sensors and not removed_sensors:
         if preview:
             print_fn(click.style("No planned changes to sensors.", fg="magenta", bold=True))
-            print_fn("{num} sensors will remain unchanged".format(num=len(external_sensors)))
+            print_fn(f"{len(external_sensors)} sensors will remain unchanged")
         else:
             print_fn(click.style("No changes to sensors.", fg="magenta", bold=True))
-            print_fn("{num} sensors unchanged".format(num=len(external_sensors)))
+            print_fn(f"{len(external_sensors)} sensors unchanged")
         return
 
     print_fn(
@@ -80,9 +80,7 @@ def check_repo_and_scheduler(repository, instance):
     repository_name = repository.name
 
     if not repository.get_external_sensors():
-        raise click.UsageError(
-            "There are no sensors defined for repository {name}.".format(name=repository_name)
-        )
+        raise click.UsageError(f"There are no sensors defined for repository {repository_name}.")
 
     if not os.getenv("DAGSTER_HOME"):
         raise click.UsageError(
@@ -131,7 +129,7 @@ def execute_list_command(running_filter, stopped_filter, name_filter, cli_args, 
             repository_name = external_repo.name
 
             if not name_filter:
-                title = "Repository {name}".format(name=repository_name)
+                title = f"Repository {repository_name}"
                 print_fn(title)
                 print_fn("*" * len(title))
 
@@ -168,8 +166,8 @@ def execute_list_command(running_filter, stopped_filter, name_filter, cli_args, 
                     print_fn(job_state.job_name)
                     continue
 
-                flag = "[{status}]".format(status=job_state.status.value) if job_state else ""
-                job_title = "Sensor: {name} {flag}".format(name=job_state.job_name, flag=flag)
+                flag = f"[{job_state.status.value}]" if job_state else ""
+                job_title = f"Sensor: {job_state.job_name} {flag}"
 
                 if not first:
                     print_fn("*" * len(job_title))
@@ -198,11 +196,7 @@ def execute_start_command(sensor_name, all_flag, cli_args, print_fn):
                 try:
                     for external_sensor in external_repo.get_external_sensors():
                         instance.start_sensor(external_sensor)
-                    print_fn(
-                        "Started all sensors for repository {repository_name}".format(
-                            repository_name=repository_name
-                        )
-                    )
+                    print_fn(f"Started all sensors for repository {repository_name}")
                 except DagsterInvariantViolationError as ex:
                     raise click.UsageError(ex)
             else:
@@ -212,7 +206,7 @@ def execute_start_command(sensor_name, all_flag, cli_args, print_fn):
                 except DagsterInvariantViolationError as ex:
                     raise click.UsageError(ex)
 
-                print_fn("Started sensor {sensor_name}".format(sensor_name=sensor_name))
+                print_fn(f"Started sensor {sensor_name}")
 
 
 @click.command(name="stop", help="Stop an existing sensor")
@@ -233,7 +227,7 @@ def execute_stop_command(sensor_name, cli_args, print_fn, instance=None):
             except DagsterInvariantViolationError as ex:
                 raise click.UsageError(ex)
 
-            print_fn("Stopped sensor {sensor_name}".format(sensor_name=sensor_name))
+            print_fn(f"Stopped sensor {sensor_name}")
 
 
 @click.command(name="preview", help="Preview an existing sensor execution")

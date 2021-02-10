@@ -50,6 +50,4 @@ def scaffold_type(config_type, skip_non_required=True):
     elif config_type.kind == ConfigTypeKind.ENUM:
         return "|".join(sorted(map(lambda v: v.config_value, config_type.enum_values)))
     else:
-        check.failed(
-            "Do not know how to scaffold {type_name}".format(type_name=config_type.given_name)
-        )
+        check.failed(f"Do not know how to scaffold {config_type.given_name}")

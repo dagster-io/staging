@@ -247,9 +247,7 @@ def single_resource_event_generator(context, resource_name, resource_def):
                     resource = next(gen)
                 resource = InitializedResource(resource, format_duration(timer_result.millis))
             except StopIteration:
-                check.failed(
-                    "Resource generator {name} must yield one item.".format(name=resource_name)
-                )
+                check.failed(f"Resource generator {resource_name} must yield one item.")
 
         yield resource
 
@@ -262,9 +260,7 @@ def single_resource_event_generator(context, resource_name, resource_def):
         except StopIteration:
             pass
         else:
-            check.failed(
-                "Resource generator {name} yielded more than one item.".format(name=resource_name)
-            )
+            check.failed(f"Resource generator {resource_name} yielded more than one item.")
 
 
 def get_required_resource_keys_to_init(execution_plan, intermediate_storage_def):

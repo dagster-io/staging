@@ -65,9 +65,7 @@ def test_compute_log_manager(mock_s3_bucket):
 
         # Check S3 directly
         s3_object = mock_s3_bucket.Object(
-            key="{prefix}/storage/{run_id}/compute_logs/easy.err".format(
-                prefix="my_prefix", run_id=result.run_id
-            ),
+            key=f"my_prefix/storage/{result.run_id}/compute_logs/easy.err",
         )
         stderr_s3 = s3_object.get()["Body"].read().decode("utf-8")
         for expected in EXPECTED_LOGS:
@@ -89,17 +87,15 @@ def test_compute_log_manager(mock_s3_bucket):
 def test_compute_log_manager_from_config(mock_s3_bucket):
     s3_prefix = "foobar"
 
-    dagster_yaml = """
+    dagster_yaml = f"""
 compute_logs:
   module: dagster_aws.s3.compute_log_manager
   class: S3ComputeLogManager
   config:
-    bucket: "{s3_bucket}"
+    bucket: "{mock_s3_bucket.name}"
     local_dir: "/tmp/cool"
-    prefix: "{s3_prefix}"
-""".format(
-        s3_bucket=mock_s3_bucket.name, s3_prefix=s3_prefix
-    )
+    prefix: "{s3_prefix}\"
+"""
 
     with tempfile.TemporaryDirectory() as tempdir:
         with open(os.path.join(tempdir, "dagster.yaml"), "wb") as f:

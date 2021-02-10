@@ -23,11 +23,7 @@ def add_to_examples_json(name):
         examples = json.load(examples_file)
 
     if name in {example["name"] for example in examples}:
-        raise click.UsageError(
-            "Example with name {name} already exists in {path}".format(
-                name=name, path=EXAMPLES_JSON_PATH
-            )
-        )
+        raise click.UsageError(f"Example with name {name} already exists in {EXAMPLES_JSON_PATH}")
 
     examples.append({"name": name, "title": "", "description": ""})
 
@@ -47,12 +43,10 @@ def cli():
 def library(name):
     """Scaffolds a Dagster library <NAME> in python_modules/libraries/dagster-<NAME>."""
     template_library_path = os.path.join(ASSETS_PATH, "dagster-library-tmpl")
-    new_template_library_path = os.path.abspath(
-        "python_modules/libraries/dagster-{name}".format(name=name)
-    )
+    new_template_library_path = os.path.abspath(f"python_modules/libraries/dagster-{name}")
 
     if os.path.exists(new_template_library_path):
-        raise click.UsageError("Library with name {name} already exists".format(name=name))
+        raise click.UsageError(f"Library with name {name} already exists")
 
     copy_directory(template_library_path, new_template_library_path)
 
@@ -74,11 +68,11 @@ def library(name):
             new_fpath = os.path.join(dname, new_fname)
 
             shutil.move(fpath, new_fpath)
-            print("Created {path}".format(path=os.path.join(new_dname, new_fname)))
+            print(f"Created {os.path.join(new_dname, new_fname)}")
 
         shutil.move(dname, new_dname)
 
-    print("Library created at {path}".format(path=new_template_library_path))
+    print(f"Library created at {new_template_library_path}")
 
 
 @cli.command()
@@ -86,14 +80,14 @@ def library(name):
 def example(name):
     """Scaffolds a Dagster example in the top-level examples/ folder."""
     template_library_path = os.path.join(ASSETS_PATH, "dagster-example-tmpl")
-    new_template_library_path = os.path.abspath("examples/{name}".format(name=name))
-    doc_path = os.path.abspath("./docs/next/src/pages/examples/{name}.mdx".format(name=name))
+    new_template_library_path = os.path.abspath(f"examples/{name}")
+    doc_path = os.path.abspath(f"./docs/next/src/pages/examples/{name}.mdx")
 
     if os.path.exists(new_template_library_path):
-        raise click.UsageError("Example with name {name} already exists".format(name=name))
+        raise click.UsageError(f"Example with name {name} already exists")
 
     if os.path.exists(doc_path):
-        raise click.UsageError("Docs page already exists: {doc_path}".format(doc_path=doc_path))
+        raise click.UsageError(f"Docs page already exists: {doc_path}")
 
     add_to_examples_json(name)
 
@@ -114,16 +108,16 @@ def example(name):
             new_fname = fname.replace(".tmpl", "").replace("{{EXAMPLE_NAME}}", name)
             new_fpath = os.path.join(dname, new_fname)
             shutil.move(fpath, new_fpath)
-            print("Created {path}".format(path=new_fpath))
+            print(f"Created {new_fpath}")
 
         new_dname = dname.replace("example-tmpl", name)
         shutil.move(dname, new_dname)
 
     shutil.move(os.path.join(new_template_library_path, "README.mdx"), doc_path)
 
-    print("Example created at {path}".format(path=new_template_library_path))
-    print("Documentation stub created at {path}".format(path=doc_path))
-    print("Added metadata to {path}".format(path=EXAMPLES_JSON_PATH))
+    print(f"Example created at {new_template_library_path}")
+    print(f"Documentation stub created at {doc_path}")
+    print(f"Added metadata to {EXAMPLES_JSON_PATH}")
 
 
 def main():

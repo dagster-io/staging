@@ -45,7 +45,7 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
         check.int_param(cursor, "cursor")
         check.invariant(
             cursor >= -1,
-            "Don't know what to do with negative cursor {cursor}".format(cursor=cursor),
+            f"Don't know what to do with negative cursor {cursor}",
         )
 
         cursor = cursor + 1

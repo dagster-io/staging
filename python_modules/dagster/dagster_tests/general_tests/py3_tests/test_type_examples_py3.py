@@ -306,7 +306,7 @@ def div_y_var(context, x: Float) -> float:
 
 @solid(config_schema=Field(String))
 def hello(context) -> str:
-    return "Hello, {friend}!".format(friend=context.solid_config)
+    return f"Hello, {context.solid_config}!"
 
 
 @solid(config_schema=Field(String))
@@ -354,11 +354,11 @@ def hello_world(context) -> str:
 )
 def hello_world_default(context) -> str:
     if "haw" in context.solid_config:
-        return "Aloha {whom}!".format(whom=context.solid_config["haw"]["whom"])
+        return f"Aloha {context.solid_config['haw']['whom']}!"
     if "cn" in context.solid_config:
-        return "你好，{whom}!".format(whom=context.solid_config["cn"]["whom"])
+        return f"你好，{context.solid_config['cn']['whom']}!"
     if "en" in context.solid_config:
-        return "Hello, {whom}!".format(whom=context.solid_config["en"]["whom"])
+        return f"Hello, {context.solid_config['en']['whom']}!"
 
 
 @solid(config_schema=Field(Permissive({"required": Field(String)})))

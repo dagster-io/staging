@@ -66,11 +66,7 @@ def test_compute_log_manager(gcs_bucket):
         stderr_gcs = (
             storage.Client()
             .get_bucket(gcs_bucket)
-            .blob(
-                "{prefix}/storage/{run_id}/compute_logs/easy.err".format(
-                    prefix="my_prefix", run_id=result.run_id
-                )
-            )
+            .blob(f"my_prefix/storage/{result.run_id}/compute_logs/easy.err")
             .download_as_bytes()
             .decode("utf-8")
         )
@@ -94,17 +90,15 @@ def test_compute_log_manager(gcs_bucket):
 def test_compute_log_manager_from_config(gcs_bucket):
     s3_prefix = "foobar"
 
-    dagster_yaml = """
+    dagster_yaml = f"""
 compute_logs:
   module: dagster_gcp.gcs.compute_log_manager
   class: GCSComputeLogManager
   config:
-    bucket: "{bucket}"
+    bucket: "{gcs_bucket}"
     local_dir: "/tmp/cool"
-    prefix: "{prefix}"
-""".format(
-        bucket=gcs_bucket, prefix=s3_prefix
-    )
+    prefix: "{s3_prefix}\"
+"""
 
     with tempfile.TemporaryDirectory() as tempdir:
         with open(os.path.join(tempdir, "dagster.yaml"), "wb") as f:

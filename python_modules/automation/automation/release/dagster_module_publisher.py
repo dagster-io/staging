@@ -185,9 +185,7 @@ class DagsterModulePublisher:
         git_tag = get_git_tag()
         assert (
             module_version == git_tag
-        ), "Version {version} does not match expected git tag {git_tag}".format(
-            version=module_version, git_tag=git_tag
-        )
+        ), f"Version {module_version} does not match expected git tag {git_tag}"
 
         return module_version
 
@@ -272,7 +270,7 @@ class DagsterModulePublisher:
                 "commit",
                 "--no-verify",
                 "-m",
-                "{new_version}".format(new_version=new_version),
+                f"{new_version}",
             ]
             check_output(cmd, dry_run=dry_run)
 

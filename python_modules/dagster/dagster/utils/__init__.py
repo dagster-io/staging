@@ -419,7 +419,7 @@ class EventGenerationManager:
                     self.object,
                     "self.object",
                     self.object_cls,
-                    "generator never yielded object of type {}".format(self.object_cls.__name__),
+                    f"generator never yielded object of type {self.object_cls.__name__}",
                 )
 
     def get_object(self):

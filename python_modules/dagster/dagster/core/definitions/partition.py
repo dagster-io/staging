@@ -113,9 +113,7 @@ class PartitionSetDefinition(
                 return x
             if isinstance(x, str):
                 return Partition(x)
-            raise DagsterInvalidDefinitionError(
-                "Expected <Partition> | <str>, received {type}".format(type=type(x))
-            )
+            raise DagsterInvalidDefinitionError(f"Expected <Partition> | <str>, received {type(x)}")
 
         def _wrap_partition_fn(current_time=None):
             if not current_time:
@@ -166,7 +164,7 @@ class PartitionSetDefinition(
             if partition.name == name:
                 return partition
 
-        check.failed("Partition name {} not found!".format(name))
+        check.failed(f"Partition name {name} not found!")
 
     def get_partition_names(self, current_time=None):
         return [part.name for part in self.get_partitions(current_time)]
@@ -235,11 +233,7 @@ class PartitionSetDefinition(
                 lambda: f"Error occurred during the execution of should_execute for schedule {schedule_name}",
             ):
                 if should_execute and not should_execute(context):
-                    yield SkipReason(
-                        "should_execute function for {schedule_name} returned false.".format(
-                            schedule_name=schedule_name
-                        )
-                    )
+                    yield SkipReason(f"should_execute function for {schedule_name} returned false.")
                     return
 
             with user_code_error_boundary(

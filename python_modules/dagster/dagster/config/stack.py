@@ -63,7 +63,7 @@ def get_friendly_path_info(stack):
                 comp = ":" + entry.field_name
                 comps.append(comp)
             elif isinstance(entry, EvaluationStackListItemEntry):
-                comps.append("[{i}]".format(i=entry.list_index))
+                comps.append(f"[{entry.list_index}]")
             else:
                 check.failed("unsupported")
 

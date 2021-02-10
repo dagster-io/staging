@@ -64,7 +64,7 @@ def _recursively_resolve_defaults(context, config_value):
     elif context.config_type.kind == ConfigTypeKind.SCALAR_UNION:
         return _recurse_in_to_scalar_union(context, config_value)
     else:
-        check.failed("Unsupported type {name}".format(name=context.config_type.name))
+        check.failed(f"Unsupported type {context.config_type.name}")
 
 
 def _post_process(context, config_value):

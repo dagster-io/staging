@@ -114,9 +114,7 @@ def build_pipeline_with_input_stubs(pipeline_def, inputs):
         solid = pipeline_def.solid_named(solid_name)
         for input_name, input_value in input_dict.items():
             stub_solid_def = define_stub_solid(
-                "__stub_{solid_name}_{input_name}".format(
-                    solid_name=solid_name, input_name=input_name
-                ),
+                f"__stub_{solid_name}_{input_name}",
                 input_value,
             )
             stub_solid_defs.append(stub_solid_def)
@@ -313,7 +311,7 @@ def execute_solid(
 
     result = execute_pipeline(
         PipelineDefinition(
-            name="ephemeral_{}_solid_pipeline".format(solid_def.name),
+            name=f"ephemeral_{solid_def.name}_solid_pipeline",
             solid_defs=solid_defs,
             dependencies=dependencies,
             mode_defs=[mode_def] if mode_def else None,

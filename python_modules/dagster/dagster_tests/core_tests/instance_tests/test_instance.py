@@ -164,7 +164,7 @@ def test_dagster_home_not_abspath(dirname):
     with environ({"DAGSTER_HOME": dirname}):
         with pytest.raises(
             DagsterInvariantViolationError,
-            match=re.escape('$DAGSTER_HOME "{}" must be an absolute path.'.format(dirname)),
+            match=re.escape(f'$DAGSTER_HOME "{dirname}" must be an absolute path.'),
         ):
             _dagster_home()
 
@@ -175,8 +175,6 @@ def test_dagster_home_not_dir():
     with environ({"DAGSTER_HOME": dirname}):
         with pytest.raises(
             DagsterInvariantViolationError,
-            match=re.escape(
-                '$DAGSTER_HOME "{}" is not a directory or does not exist.'.format(dirname)
-            ),
+            match=re.escape(f'$DAGSTER_HOME "{dirname}" is not a directory or does not exist.'),
         ):
             _dagster_home()

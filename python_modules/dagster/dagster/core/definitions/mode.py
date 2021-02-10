@@ -100,7 +100,7 @@ class ModeDefinition(
             if intermediate_storage_def.name == name:
                 return intermediate_storage_def
 
-        check.failed("{} storage definition not found".format(name))
+        check.failed(f"{name} storage definition not found")
 
     @staticmethod
     def from_resources(resources, name=None):

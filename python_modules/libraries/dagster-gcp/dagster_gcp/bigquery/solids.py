@@ -43,7 +43,7 @@ def bq_solid_for_queries(sql_queries):
     m = hashlib.sha1()
     for query in sql_queries:
         m.update(query.encode("utf-8"))
-    name = "bq_solid_{hash}".format(hash=m.hexdigest()[:10])
+    name = f"bq_solid_{m.hexdigest()[:10]}"
 
     @solid(
         name=name,
@@ -148,7 +148,7 @@ def bq_create_dataset(context):
     Expects a BQ client to be provisioned in resources as context.resources.bigquery.
     """
     (dataset, exists_ok) = [context.solid_config.get(k) for k in ("dataset", "exists_ok")]
-    context.log.info("executing BQ create_dataset for dataset %s" % (dataset))
+    context.log.info(f"executing BQ create_dataset for dataset {dataset}")
     context.resources.bigquery.create_dataset(dataset, exists_ok)
 
 
@@ -169,7 +169,7 @@ def bq_delete_dataset(context):
         context.solid_config.get(k) for k in ("dataset", "delete_contents", "not_found_ok")
     ]
 
-    context.log.info("executing BQ delete_dataset for dataset %s" % dataset)
+    context.log.info(f"executing BQ delete_dataset for dataset {dataset}")
 
     context.resources.bigquery.delete_dataset(
         dataset, delete_contents=delete_contents, not_found_ok=not_found_ok

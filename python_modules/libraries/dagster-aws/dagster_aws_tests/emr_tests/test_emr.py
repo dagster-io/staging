@@ -108,9 +108,7 @@ def test_emr_retrieve_logs(emr_cluster_config, mock_s3_bucket):
         with gzip.GzipFile(fileobj=out, mode="w") as fo:
             fo.write(b"some log")
 
-        prefix = "elasticmapreduce/{cluster_id}/steps/{step_id}".format(
-            cluster_id=cluster_id, step_id="s-123456123456"
-        )
+        prefix = f"elasticmapreduce/{cluster_id}/steps/s-123456123456"
 
         for name in ["stdout.gz", "stderr.gz"]:
             mock_s3_bucket.Object(prefix + "/" + name).put(  # pylint: disable=no-member

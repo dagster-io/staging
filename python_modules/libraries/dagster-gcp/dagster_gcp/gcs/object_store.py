@@ -29,7 +29,7 @@ class GCSObjectStore(ObjectStore):
         )  # cannot be none here
 
         if self.has_object(key):
-            logging.warning("Removing existing GCS key: {key}".format(key=key))
+            logging.warning(f"Removing existing GCS key: {key}")
             backoff(self.rm_object, args=[key], retry_on=(TooManyRequests,))
 
         with (
@@ -99,4 +99,4 @@ class GCSObjectStore(ObjectStore):
     def uri_for_key(self, key, protocol=None):
         check.str_param(key, "key")
         protocol = check.opt_str_param(protocol, "protocol", default="gs://")
-        return protocol + self.bucket + "/" + "{key}".format(key=key)
+        return protocol + self.bucket + "/" + f"{key}"
