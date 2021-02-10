@@ -74,6 +74,7 @@ def test_connection_leak(hostname, conn_string):
     tempdir.cleanup()
 
 
+@pytest.mark.skip("TODO: Post GH issue detailing need for statement-timeout in mysql")
 def test_statement_timeouts(hostname):
     with instance_for_test(overrides=yaml.safe_load(full_mysql_config(hostname))) as instance:
         instance.optimize_for_dagit(statement_timeout=500)  # 500ms
