@@ -15,7 +15,7 @@ from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
 from dagster.core.system_config.objects import EnvironmentConfig
 
-from .outputs import StepOutput
+from .outputs import StepOutput, StepOutputHandle
 
 SolidOutputUnion = Union[
     DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult
@@ -105,6 +105,14 @@ def execute_core_compute(
         yield step_output
         if isinstance(step_output, (DynamicOutput, Output)):
             all_results.append(step_output)
+            if compute_context.output_capture is not None:
+                compute_context.output_capture[
+                    StepOutputHandle(
+                        step.key,
+                        step_output.output_name,
+                        step_output.mapping_key if isinstance(step_output, DynamicOutput) else None,
+                    )
+                ] = step_output.value
 
     emitted_result_names = {r.output_name for r in all_results}
     solid_output_names = {output.name for output in step.step_outputs}
