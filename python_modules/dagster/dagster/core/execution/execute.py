@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from dagster import check
 from dagster.core.definitions import (
@@ -13,6 +13,7 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.decorators.solid import solid
 from dagster.core.definitions.dependency import SolidHandle
+from dagster.core.definitions.events import DynamicOutput, Output
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.mem_io_manager import mem_io_manager
@@ -45,6 +46,7 @@ def execute_in_process(
     loggers: Optional[Dict[str, LoggerDefinition]] = None,
     input_values: Optional[Dict[str, Any]] = None,
     instance: DagsterInstance = None,
+    output_recording_enabled: Optional[bool] = True,
 ) -> ExecutionResult:
     node = check.inst_param(node, "node", NodeDefinition)
     resources = check.opt_dict_param(
@@ -79,6 +81,8 @@ def execute_in_process(
 
     execution_plan = create_execution_plan(pipeline, run_config=run_config, mode=mode_def.name)
 
+    recorder: Dict[str, Union[Output, DynamicOutput]] = {}
+
     with ephemeral_instance_if_missing(instance) as execute_instance:
         pipeline_run = execute_instance.create_run_for_pipeline(
             pipeline_def=pipeline_def,
@@ -94,6 +98,7 @@ def execute_in_process(
                 pipeline_run=pipeline_run,
                 instance=execute_instance,
                 run_config=run_config,
+                output_recorder=recorder if output_recording_enabled else None,
             ),
         )
         event_list = list(_execute_run_iterable)
@@ -106,4 +111,6 @@ def execute_in_process(
         if event.solid_handle and event.solid_handle.is_or_descends_from(top_level_node_handle)
     ]
 
-    return ExecutionResult(node, event_list_for_top_lvl_node)
+    return ExecutionResult(
+        node, event_list_for_top_lvl_node, recorder if output_recording_enabled else None
+    )
