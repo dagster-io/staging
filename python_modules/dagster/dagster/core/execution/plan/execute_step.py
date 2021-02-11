@@ -339,6 +339,8 @@ def _type_check_and_store_output(
     step_output_handle = StepOutputHandle(
         step_key=step_context.step.key, output_name=output.output_name, mapping_key=mapping_key
     )
+    if step_context.output_capture is not None:
+        step_context.output_capture[step_output_handle] = output.value
 
     version = (
         step_context.execution_plan.resolve_step_output_versions().get(step_output_handle)
