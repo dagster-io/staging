@@ -157,11 +157,13 @@ def created_workspace_load_target(kwargs):
             "empty_working_directory",
             "grpc_socket",
         )
-        return GrpcServerTarget(
-            port=kwargs.get("grpc_port"),
-            socket=None,
-            host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
-        )
+        return [
+            GrpcServerTarget(
+                port=kwargs.get("grpc_port"),
+                socket=None,
+                host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
+            )
+        ]
     elif kwargs.get("grpc_socket"):
         _check_cli_arguments_none(
             kwargs,
@@ -169,11 +171,28 @@ def created_workspace_load_target(kwargs):
             "working_directory",
             "empty_working_directory",
         )
-        return GrpcServerTarget(
-            port=None,
-            socket=kwargs.get("grpc_socket"),
-            host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
+        return [
+            GrpcServerTarget(
+                port=None,
+                socket=kwargs.get("grpc_socket"),
+                host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
+            )
+        ]
+    elif kwargs.get("kubernetes_dynamic_workspace"):
+        _check_cli_arguments_none(
+            kwargs,
+            "python_file",
+            "working_directory",
+            "empty_working_directory",
+            "module_name",
+            "package_name",
+            "attribute",
+            "grpc_host",
+            "grpc_port",
+            "grpc_socket",
         )
+        # use kubernetes api to dynamically find hosts and ports of dagster user code services
+        return [GrpcServerTarget(port="", socket=None, host="")]
     else:
         _cli_load_invariant(False)
 
@@ -205,13 +224,16 @@ def location_origins_from_load_target(load_target):
                 load_target.attribute,
             )
         ]
-    elif isinstance(load_target, GrpcServerTarget):
+    elif isinstance(load_target, list) and all(
+        isinstance(target, GrpcServerTarget) for target in load_target
+    ):
         return [
             GrpcServerRepositoryLocationOrigin(
-                port=load_target.port,
-                socket=load_target.socket,
-                host=load_target.host,
+                port=target.port,
+                socket=target.socket,
+                host=target.host,
             )
+            for target in load_target
         ]
     elif isinstance(load_target, EmptyWorkspaceTarget):
         return []
@@ -293,6 +315,16 @@ def grpc_server_target_click_options():
     ]
 
 
+def kubernetes_dynamic_grpc_service_target_click_options():
+    return [
+        click.option(
+            "--kubernetes-dynamic-workspace",
+            is_flag=True,
+            help="Dynamically construct workspace using available Dagster user code services.",
+        )
+    ]
+
+
 def workspace_target_click_options():
     return (
         [
@@ -307,6 +339,7 @@ def workspace_target_click_options():
         ]
         + python_target_click_options()
         + grpc_server_target_click_options()
+        + kubernetes_dynamic_grpc_service_target_click_options()
     )
 
 

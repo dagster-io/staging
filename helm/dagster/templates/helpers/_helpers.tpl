@@ -31,7 +31,7 @@ If release name contains chart name it will be used as a full name.
 
 {{- define "dagster.dagit.dagitCommand" -}}
 {{- if .Values.userDeployments.enabled }}
-dagit -h 0.0.0.0 -p 80 -w /dagster-workspace/workspace.yaml
+dagit -h 0.0.0.0 -p 80 --kubernetes-dynamic-workspace
 {{- else -}}
 dagit -h 0.0.0.0 -p 80
 {{- end -}}

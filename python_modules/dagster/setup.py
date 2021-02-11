@@ -86,6 +86,7 @@ if __name__ == "__main__":
         ],
         extras_require={
             "docker": ["docker"],
+            "kubernetes": ["kubernetes"],
             "test": [
                 "astroid>=2.3.3",
                 "black==20.8b1",

@@ -80,11 +80,6 @@ spec:
             - name: dagster-instance
               mountPath: "{{ .Values.dagsterHome }}/dagster.yaml"
               subPath: dagster.yaml
-            {{- if .Values.userDeployments.enabled }}
-            - name: dagster-workspace-yaml
-              mountPath: "/dagster-workspace/workspace.yaml"
-              subPath: workspace.yaml
-            {{- end }}
           ports:
             - name: http
               containerPort: 80
@@ -108,11 +103,6 @@ spec:
         - name: dagster-instance
           configMap:
             name: {{ template "dagster.fullname" . }}-instance
-        {{- if .Values.userDeployments.enabled }}
-        - name: dagster-workspace-yaml
-          configMap:
-            name: {{ template "dagster.fullname" . }}-workspace-yaml
-        {{- end }}
     {{- with .Values.dagit.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
