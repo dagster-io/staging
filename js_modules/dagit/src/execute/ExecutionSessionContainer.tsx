@@ -590,7 +590,7 @@ const ExecutionSessionContainer: React.FC<IExecutionSessionContainerProps> = (pr
       second={
         <>
           <LoadingOverlay
-            isLoading={!runConfigSchema || previewLoading}
+            isLoading={previewLoading}
             message={!runConfigSchema ? LOADING_CONFIG_SCHEMA : LOADING_RUN_PREVIEW}
           />
           <RunPreview
