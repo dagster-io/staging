@@ -18,9 +18,10 @@ def _construct_events_by_step_key(event_list):
 
 
 class ExecutionResult:
-    def __init__(self, node_def, event_list):
+    def __init__(self, node_def, event_list, output_dict):
         self.node_def = node_def
         self.event_list = event_list
+        self.output_dict = output_dict
 
     @property
     def success(self):

@@ -4,6 +4,7 @@ import pytest
 from dagster import DagsterInvalidDefinitionError, solid
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.execution.execute import execute_in_process
+from dagster.core.execution.plan.outputs import StepOutputHandle
 
 
 def get_solids():
@@ -21,9 +22,10 @@ def get_solids():
 def test_execute_solid():
     emit_one, _ = get_solids()
 
-    result = execute_in_process(emit_one)
+    result = execute_in_process(emit_one, output_capturing_enabled=True)
 
     assert result.success
+    assert result.output_dict[StepOutputHandle("emit_one", "result")] == 1
 
 
 def test_execute_graph():
@@ -37,9 +39,15 @@ def test_execute_graph():
     def emit_three():
         return add(emit_two(), emit_one())
 
-    result = execute_in_process(emit_three)
+    result = execute_in_process(emit_three, output_capturing_enabled=True)
 
     assert result.success
+
+    assert result.output_dict[StepOutputHandle("emit_three.add", "result")] == 3
+    assert result.output_dict[StepOutputHandle("emit_three.emit_two.add", "result")] == 2
+    assert result.output_dict[StepOutputHandle("emit_three.emit_one", "result")] == 1
+    assert result.output_dict[StepOutputHandle("emit_three.emit_two.emit_one", "result")] == 1
+    assert result.output_dict[StepOutputHandle("emit_three.emit_two.emit_one_2", "result")] == 1
 
 
 def test_execute_solid_with_inputs():
@@ -47,8 +55,10 @@ def test_execute_solid_with_inputs():
     def add_one(_, x):
         return 1 + x
 
-    result = execute_in_process(add_one, input_values={"x": 5})
+    result = execute_in_process(add_one, input_values={"x": 5}, output_capturing_enabled=True)
     assert result.success
+
+    assert result.output_dict[StepOutputHandle("add_one", "result")] == 6
 
 
 def test_execute_graph_with_inputs():
@@ -58,8 +68,10 @@ def test_execute_graph_with_inputs():
     def add_one(x):
         return add(x, emit_one())
 
-    result = execute_in_process(add_one, input_values={"x": 5})
+    result = execute_in_process(add_one, input_values={"x": 5}, output_capturing_enabled=True)
     assert result.success
+    assert result.output_dict[StepOutputHandle("add_one.add", "result")] == 6
+    assert result.output_dict[StepOutputHandle("add_one.emit_one", "result")] == 1
 
 
 def test_execute_graph_nonexistent_inputs():
