@@ -45,6 +45,7 @@ def execute_in_process(
     loggers: Optional[Dict[str, LoggerDefinition]] = None,
     input_values: Optional[Dict[str, Any]] = None,
     instance: DagsterInstance = None,
+    output_recording_enabled: Optional[bool] = False,
 ) -> ExecutionResult:
     node = check.inst_param(node, "node", NodeDefinition)
     resources = check.opt_dict_param(
@@ -94,6 +95,7 @@ def execute_in_process(
                 pipeline_run=pipeline_run,
                 instance=execute_instance,
                 run_config=run_config,
+                output_recording_enabled=output_recording_enabled,
             ),
         )
         event_list = list(_execute_run_iterable)
@@ -106,4 +108,6 @@ def execute_in_process(
         if event.solid_handle and event.solid_handle.is_or_descends_from(top_level_node_handle)
     ]
 
-    return ExecutionResult(node, event_list_for_top_lvl_node)
+    return ExecutionResult(
+        node, event_list_for_top_lvl_node, _execute_run_iterable.pipeline_context.output_recorder
+    )

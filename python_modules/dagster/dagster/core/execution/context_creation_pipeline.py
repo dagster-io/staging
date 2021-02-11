@@ -112,6 +112,7 @@ class ExecutionContextManager(ABC):
         intermediate_storage=None,
         raise_on_error=False,
         resource_instances_to_override=None,
+        output_recording_enabled=False,
     ):
         scoped_resources_builder_cm = check.opt_callable_param(
             scoped_resources_builder_cm,
@@ -127,6 +128,7 @@ class ExecutionContextManager(ABC):
             intermediate_storage,
             raise_on_error,
             resource_instances_to_override,
+            output_recording_enabled,
         )
 
         self._manager = EventGenerationManager(generator, self.context_type, raise_on_error)
@@ -143,6 +145,7 @@ class ExecutionContextManager(ABC):
         intermediate_storage,
         log_manager,
         raise_on_error,
+        output_recording_enabled,
     ):
         pass
 
@@ -165,6 +168,7 @@ class ExecutionContextManager(ABC):
         intermediate_storage=None,
         raise_on_error=False,
         resource_instances_to_override=None,
+        output_recording_enabled=False,
     ):
         execution_plan = check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
         pipeline_def = execution_plan.pipeline.get_definition()
@@ -222,6 +226,7 @@ class ExecutionContextManager(ABC):
                 log_manager=log_manager,
                 intermediate_storage=intermediate_storage,
                 raise_on_error=raise_on_error,
+                output_recording_enabled=output_recording_enabled,
             )
 
             _validate_plan_with_context(execution_context, execution_plan)
@@ -271,6 +276,7 @@ class PipelineExecutionContextManager(ExecutionContextManager):
         intermediate_storage,
         log_manager,
         raise_on_error,
+        output_recording_enabled=False,
     ):
         executor = check.inst(
             create_executor(context_creation_data), Executor, "Must return an Executor"
@@ -287,6 +293,7 @@ class PipelineExecutionContextManager(ExecutionContextManager):
             ),
             executor=executor,
             log_manager=log_manager,
+            output_recording_enabled=output_recording_enabled,
         )
 
 
@@ -322,6 +329,7 @@ class PlanExecutionContextManager(ExecutionContextManager):
         intermediate_storage,
         log_manager,
         raise_on_error,
+        output_recording_enabled=False,
     ):
         return SystemExecutionContext(
             construct_execution_context_data(
@@ -333,6 +341,7 @@ class PlanExecutionContextManager(ExecutionContextManager):
                 raise_on_error=raise_on_error,
             ),
             log_manager=log_manager,
+            output_recording_enabled=output_recording_enabled,
         )
 
 

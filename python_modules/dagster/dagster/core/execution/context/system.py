@@ -5,9 +5,10 @@ so we have a different layer of objects that encode the explicit public API
 in the user_context module
 """
 from collections import namedtuple
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set, Tuple, Union
 
 from dagster import check
+from dagster.core.definitions.events import DynamicOutput, Output
 from dagster.core.definitions.hook import HookDefinition
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
@@ -107,15 +108,22 @@ class SystemExecutionContextData(
 
 
 class SystemExecutionContext:
-    __slots__ = ["_execution_context_data", "_log_manager"]
+    __slots__ = ["_execution_context_data", "_log_manager", "output_recorder"]
 
     def __init__(
-        self, execution_context_data: SystemExecutionContextData, log_manager: DagsterLogManager
+        self,
+        execution_context_data: SystemExecutionContextData,
+        log_manager: DagsterLogManager,
+        output_recording_enabled: Optional[bool] = False,
     ):
         self._execution_context_data = check.inst_param(
             execution_context_data, "execution_context_data", SystemExecutionContextData
         )
         self._log_manager = check.inst_param(log_manager, "log_manager", DagsterLogManager)
+
+        self.output_recorder: Optional[Dict[Tuple[str, str], Any]] = (
+            {} if output_recording_enabled else None
+        )
 
     @property
     def pipeline_run(self) -> PipelineRun:
@@ -204,6 +212,7 @@ class SystemExecutionContext:
             self._execution_context_data,
             self._log_manager.with_tags(**step.logging_tags),
             step,
+            self.output_recorder,
         )
 
     def for_type(self, dagster_type: DagsterType) -> "TypeCheckContext":
@@ -218,8 +227,11 @@ class SystemPipelineExecutionContext(SystemExecutionContext):
         execution_context_data: SystemExecutionContextData,
         log_manager: DagsterLogManager,
         executor: Executor,
+        output_recording_enabled: Optional[bool] = False,
     ):
-        super(SystemPipelineExecutionContext, self).__init__(execution_context_data, log_manager)
+        super(SystemPipelineExecutionContext, self).__init__(
+            execution_context_data, log_manager, output_recording_enabled=output_recording_enabled
+        )
         self._executor = check.inst_param(executor, "executor", Executor)
 
     @property
@@ -235,6 +247,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
         execution_context_data: SystemExecutionContextData,
         log_manager: DagsterLogManager,
         step: ExecutionStep,
+        output_recorder: Optional[Dict[Tuple[str, str], Any]] = None,
     ):
         from dagster.core.execution.resources_init import get_required_resource_keys_for_step
 
@@ -264,9 +277,12 @@ class SystemStepExecutionContext(SystemExecutionContext):
             self._step_launcher = step_launcher_resources[0]
 
         self._log_manager = log_manager
+        self.output_recorder = output_recorder
 
     def for_compute(self) -> "SystemComputeExecutionContext":
-        return SystemComputeExecutionContext(self._execution_context_data, self.log, self.step)
+        return SystemComputeExecutionContext(
+            self._execution_context_data, self.log, self.step, self.output_recorder
+        )
 
     @property
     def step(self) -> ExecutionStep:
@@ -388,6 +404,10 @@ class SystemComputeExecutionContext(SystemStepExecutionContext):
     def solid_config(self) -> Any:
         solid_config = self.environment_config.solids.get(str(self.solid_handle))
         return solid_config.config if solid_config else None
+
+    def record_output(self, step_key: str, output: Union[Output, DynamicOutput]):
+        if self.output_recorder is not None:
+            self.output_recorder[(step_key, output.output_name)] = output.value
 
 
 class TypeCheckContext(SystemExecutionContext):
