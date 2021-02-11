@@ -105,6 +105,8 @@ def execute_core_compute(
         yield step_output
         if isinstance(step_output, (DynamicOutput, Output)):
             all_results.append(step_output)
+            if compute_context.output_recorder:
+                compute_context.output_recorder(step.key, step_output)
 
     emitted_result_names = {r.output_name for r in all_results}
     solid_output_names = {output.name for output in step.step_outputs}
