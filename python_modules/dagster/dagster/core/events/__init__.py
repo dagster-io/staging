@@ -606,14 +606,15 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def step_materialization(step_context, materialization):
+    def step_materialization(step_context, materialization, parent_asset_keys=None):
         check.inst_param(
             materialization, "materialization", (AssetMaterialization, Materialization)
         )
+        check.opt_list_param(parent_asset_keys, "parent_asset_keys", AssetKey)
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_MATERIALIZATION,
             step_context=step_context,
-            event_specific_data=StepMaterializationData(materialization),
+            event_specific_data=StepMaterializationData(materialization, parent_asset_keys),
             message=materialization.description
             if materialization.description
             else "Materialized value{label_clause}.".format(
@@ -1020,7 +1021,9 @@ def get_step_output_event(events, step_key, output_name="result"):
 
 
 @whitelist_for_serdes
-class StepMaterializationData(namedtuple("_StepMaterializationData", "materialization")):
+class StepMaterializationData(
+    namedtuple("_StepMaterializationData", "materialization parent_asset_keys")
+):
     pass
 
 
