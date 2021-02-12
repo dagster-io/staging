@@ -524,8 +524,11 @@ rabbitmq:
 # Redis: Configuration values for Redis. Can be used instead of RabbitMQ.
 ####################################################################################################
 redis:
-  # if enabled, external redis will be used instead of rabbitmq
+  # If enabled is true, then redis will be used instead of rabbitmq
   enabled: false
+
+  # If external is true, then an external redis will be used
+  external: true
 
   # Redis host URL
   host: ""
