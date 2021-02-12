@@ -9,7 +9,7 @@ Welcome to your new Dagster repository.
 | `{{ repo_name }}/` | A Python module that contains code for your Dagster repository |
 | `{{ repo_name }}_tests/` | A Python module that contains tests for `{{ repo_name }}` |
 | `README.md` | A description and guide for this code repository |
-| `requirements.txt` | A list of Python package dependencies for this code repository |
+| `setup.py` | A build script with Python package dependencies for this code repository |
 
 ## Getting up and running
 
@@ -45,7 +45,7 @@ pip install --editable .
 server that, by default, is served on http://localhost:3000.
 
 ```bash
-dagit -m {{ repo_name }}.repository
+dagit
 ```
 
 2. (Optional) If you want to enable Dagster
