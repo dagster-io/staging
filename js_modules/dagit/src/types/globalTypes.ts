@@ -8,6 +8,12 @@
 // START Enums and Input Objects
 //==============================================================
 
+export enum BackfillJobStatus {
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+  REQUESTED = "REQUESTED",
+}
+
 export enum ComputeIOType {
   STDERR = "STDERR",
   STDOUT = "STDOUT",

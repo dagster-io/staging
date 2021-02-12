@@ -13,12 +13,23 @@ from .graphql_context_test_suite import (
     GraphQLContextVariant,
     make_graphql_context_test_suite,
 )
-from .utils import (
-    get_all_logs_for_finished_run_via_subscription,
-    step_did_fail,
-    step_did_not_run,
-    step_did_succeed,
-)
+
+PARTITION_PROGRESS_QUERY = """
+  query PartitionProgressQuery($backfillId: String!) {
+    partitionBackfillOrError(backfillId: $backfillId) {
+      ... on PartitionBackfill {
+        __typename
+        backfillId
+        status
+        isPersisted
+        requested
+        total
+        fromFailure
+        reexecutionSteps
+      }
+    }
+  }
+"""
 
 
 class TestPartitionBackfill(ExecutingGraphQLContextTestMatrix):
@@ -37,10 +48,23 @@ class TestPartitionBackfill(ExecutingGraphQLContextTestMatrix):
                 }
             },
         )
+
         assert not result.errors
         assert result.data
         assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
-        assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
+        backfill_id = result.data["launchPartitionBackfill"]["backfillId"]
+
+        result = execute_dagster_graphql(
+            graphql_context, PARTITION_PROGRESS_QUERY, variables={"backfillId": backfill_id}
+        )
+
+        assert not result.errors
+        assert result.data
+        assert result.data["partitionBackfillOrError"]["__typename"] == "PartitionBackfill"
+        assert result.data["partitionBackfillOrError"]["status"] == "REQUESTED"
+        assert result.data["partitionBackfillOrError"]["isPersisted"]
+        assert result.data["partitionBackfillOrError"]["requested"] == 0
+        assert result.data["partitionBackfillOrError"]["total"] == 2
 
     def test_launch_partial_backfill(self, graphql_context):
         # execute a full pipeline, without the failure environment variable
@@ -49,27 +73,6 @@ class TestPartitionBackfill(ExecutingGraphQLContextTestMatrix):
             "repositorySelector": repository_selector,
             "partitionSetName": "chained_integer_partition",
         }
-        result = execute_dagster_graphql_and_finish_runs(
-            graphql_context,
-            LAUNCH_PARTITION_BACKFILL_MUTATION,
-            variables={
-                "backfillParams": {
-                    "selector": partition_set_selector,
-                    "partitionNames": ["2", "3"],
-                }
-            },
-        )
-        assert not result.errors
-        assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
-        assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
-        for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
-            logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
-                "pipelineRunLogs"
-            ]["messages"]
-            assert step_did_succeed(logs, "always_succeed")
-            assert step_did_succeed(logs, "conditionally_fail")
-            assert step_did_succeed(logs, "after_failure")
 
         # reexecute a partial pipeline
         partial_steps = ["after_failure"]
@@ -86,16 +89,21 @@ class TestPartitionBackfill(ExecutingGraphQLContextTestMatrix):
         )
         assert not result.errors
         assert result.data
-
         assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
-        assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
-        for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
-            logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
-                "pipelineRunLogs"
-            ]["messages"]
-            assert step_did_not_run(logs, "always_succeed")
-            assert step_did_not_run(logs, "conditionally_fail")
-            assert step_did_succeed(logs, "after_failure")
+        backfill_id = result.data["launchPartitionBackfill"]["backfillId"]
+
+        result = execute_dagster_graphql(
+            graphql_context, PARTITION_PROGRESS_QUERY, variables={"backfillId": backfill_id}
+        )
+
+        assert not result.errors
+        assert result.data
+        assert result.data["partitionBackfillOrError"]["__typename"] == "PartitionBackfill"
+        assert result.data["partitionBackfillOrError"]["status"] == "REQUESTED"
+        assert result.data["partitionBackfillOrError"]["isPersisted"]
+        assert result.data["partitionBackfillOrError"]["requested"] == 0
+        assert result.data["partitionBackfillOrError"]["total"] == 2
+        assert result.data["partitionBackfillOrError"]["reexecutionSteps"] == ["after_failure"]
 
 
 class TestLaunchBackfillFromFailure(
@@ -135,14 +143,6 @@ class TestLaunchBackfillFromFailure(
         assert not result.errors
         assert result.data
         assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
-        assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
-        for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
-            logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
-                "pipelineRunLogs"
-            ]["messages"]
-            assert step_did_succeed(logs, "always_succeed")
-            assert step_did_fail(logs, "conditionally_fail")
-            assert step_did_not_run(logs, "after_failure")
 
         # re-execute from failure (without the failure file)
         result = execute_dagster_graphql_and_finish_runs(
@@ -156,14 +156,20 @@ class TestLaunchBackfillFromFailure(
                 }
             },
         )
+
         assert not result.errors
         assert result.data
         assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
-        assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
-        for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
-            logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
-                "pipelineRunLogs"
-            ]["messages"]
-            assert step_did_not_run(logs, "always_succeed")
-            assert step_did_succeed(logs, "conditionally_fail")
-            assert step_did_succeed(logs, "after_failure")
+        backfill_id = result.data["launchPartitionBackfill"]["backfillId"]
+
+        result = execute_dagster_graphql(
+            graphql_context, PARTITION_PROGRESS_QUERY, variables={"backfillId": backfill_id}
+        )
+        assert not result.errors
+        assert result.data
+        assert result.data["partitionBackfillOrError"]["__typename"] == "PartitionBackfill"
+        assert result.data["partitionBackfillOrError"]["status"] == "REQUESTED"
+        assert result.data["partitionBackfillOrError"]["isPersisted"]
+        assert result.data["partitionBackfillOrError"]["requested"] == 0
+        assert result.data["partitionBackfillOrError"]["total"] == 2
+        assert result.data["partitionBackfillOrError"]["fromFailure"]
