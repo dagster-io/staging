@@ -140,3 +140,19 @@ def create_0_10_0_schedule_tables():
 
     if has_table("schedule_ticks"):
         op.drop_table("schedule_ticks")
+
+
+def create_backfill_table():
+    if not has_table("runs"):
+        return
+
+    if not has_table("backfills"):
+        op.create_table(
+            "backfills",
+            db.Column("id", db.Integer, primary_key=True, autoincrement=True),
+            db.Column("backfill_id", db.String(32), unique=True, nullable=False),
+            db.Column("partition_set_origin_id", db.String(255), nullable=False),
+            db.Column("status", db.String(255), nullable=False),
+            db.Column("timestamp", db.types.TIMESTAMP, nullable=False),
+            db.Column("body", db.Text),
+        )

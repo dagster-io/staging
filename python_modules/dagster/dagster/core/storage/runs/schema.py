@@ -59,5 +59,16 @@ DaemonHeartbeatsTable = db.Table(
     db.Column("body", db.Text),  # serialized DaemonHeartbeat
 )
 
+BackfillsTable = db.Table(
+    "backfills",
+    RunStorageSqlMetadata,
+    db.Column("id", db.Integer, primary_key=True, autoincrement=True),
+    db.Column("backfill_id", db.String(32), unique=True, nullable=False),
+    db.Column("partition_set_origin_id", db.String(255), nullable=False),
+    db.Column("status", db.String(255), nullable=False),
+    db.Column("timestamp", db.types.TIMESTAMP, nullable=False),
+    db.Column("body", db.Text),
+)
+
 db.Index("idx_run_tags", RunTagsTable.c.key, RunTagsTable.c.value)
 db.Index("idx_run_partitions", RunsTable.c.partition_set, RunsTable.c.partition)
