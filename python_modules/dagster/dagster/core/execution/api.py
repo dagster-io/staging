@@ -7,7 +7,7 @@ from dagster.core.definitions import IPipeline, PipelineDefinition
 from dagster.core.definitions.pipeline import PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
-from dagster.core.events import DagsterEvent
+from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
 from dagster.core.execution.plan.plan import ExecutionPlan
@@ -152,8 +152,7 @@ def execute_run(
     if pipeline_run.status == PipelineRunStatus.CANCELED:
         message = "Not starting execution since the run was canceled before execution could start"
         instance.report_engine_event(
-            message,
-            pipeline_run,
+            message, pipeline_run,
         )
         raise DagsterInvariantViolationError(message)
 
@@ -473,11 +472,7 @@ def reexecute_pipeline(
 
     with ephemeral_instance_if_missing(instance) as execute_instance:
         (pipeline, run_config, mode, tags, _, _) = _check_execute_pipeline_args(
-            pipeline=pipeline,
-            run_config=run_config,
-            mode=mode,
-            preset=preset,
-            tags=tags,
+            pipeline=pipeline, run_config=run_config, mode=mode, preset=preset, tags=tags,
         )
 
         parent_pipeline_run = execute_instance.get_run_by_id(parent_run_id)
@@ -756,13 +751,46 @@ def pipeline_execution_iterator(
             )
         elif failed_steps:
             event = DagsterEvent.pipeline_failure(
-                pipeline_context,
-                "Steps failed: {}.".format(failed_steps),
+                pipeline_context, "Steps failed: {}.".format(failed_steps),
             )
         else:
             event = DagsterEvent.pipeline_success(pipeline_context)
+
         if not generator_closed:
             yield event
+            for e in _trigger_hook(pipeline_context, event):
+                yield e
+
+
+def _trigger_hook(
+    pipeline_context: SystemPipelineExecutionContext, event: DagsterEvent
+) -> Iterator[DagsterEvent]:
+    """Trigger hooks and record hook's operatonal events"""
+    hook_defs = pipeline_context.pipeline.get_definition().pipeline_hook_defs
+    # when the pipeline doesn't have a hook configured
+    if hook_defs is None:
+        return
+
+    for hook_def in hook_defs:
+        hook_context = pipeline_context.for_pipeline_hook(hook_def)
+        # TODO: user_code_error_boundary
+        hook_execution_result = hook_def.hook_fn(hook_context, event)
+        # TODO check.invariant hook_execution_result
+
+        # TODO: handle events properly
+        if hook_execution_result and hook_execution_result.is_skipped:
+            yield DagsterEvent.from_pipeline(
+                DagsterEventType.HOOK_SKIPPED,
+                hook_context,
+                message=f'Skipped the execution of hook "{hook_def.name}" triggered for pipeline "{hook_context.pipeline_def.name}".',
+            )
+        else:
+            # hook_fn finishes successfully
+            yield DagsterEvent.from_pipeline(
+                DagsterEventType.HOOK_COMPLETED,
+                hook_context,
+                message=f'Finished the execution of hook "{hook_def.name}" triggered for pipeline "{hook_context.pipeline_def.name}".',
+            )
 
 
 class ExecuteRunWithPlanIterable:
@@ -791,13 +819,18 @@ class ExecuteRunWithPlanIterable:
         # process that performs the execution.
         with capture_interrupts():
             yield from self.execution_context_manager.prepare_context()
+
+            # TODO: alert on pipeline init event
+            # pipeline_context hasn't created yet: Called `get_object` before `generate_setup_events`
+            # for e in _trigger_hook(None, event_generator):
+            #     yield e
+
             self.pipeline_context = self.execution_context_manager.get_context()
             generator_closed = False
             try:
                 if self.pipeline_context:  # False if we had a pipeline init failure
                     yield from self.iterator(
-                        execution_plan=self.execution_plan,
-                        pipeline_context=self.pipeline_context,
+                        execution_plan=self.execution_plan, pipeline_context=self.pipeline_context,
                     )
             except GeneratorExit:
                 # Shouldn't happen, but avoid runtime-exception in case this generator gets GC-ed
@@ -818,12 +851,7 @@ def _check_execute_pipeline_args(
     tags: Optional[Dict[str, Any]],
     solid_selection: Optional[List[str]] = None,
 ) -> Tuple[
-    IPipeline,
-    Optional[dict],
-    Optional[str],
-    Dict[str, Any],
-    FrozenSet[str],
-    Optional[List[str]],
+    IPipeline, Optional[dict], Optional[str], Dict[str, Any], FrozenSet[str], Optional[List[str]],
 ]:
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
@@ -884,9 +912,7 @@ def _check_execute_pipeline_args(
                     "You have attempted to execute pipeline {name} with mode {mode}. "
                     "Available modes: {modes}"
                 ).format(
-                    name=pipeline_def.name,
-                    mode=mode,
-                    modes=pipeline_def.available_modes,
+                    name=pipeline_def.name, mode=mode, modes=pipeline_def.available_modes,
                 )
             )
     else:

@@ -22,7 +22,7 @@ from .dependency import (
     SolidInvocation,
 )
 from .graph import GraphDefinition
-from .hook import HookDefinition
+from .hook import HookDefinition, PipelineHookDefinition
 from .mode import ModeDefinition
 from .preset import PresetDefinition
 from .solid import NodeDefinition
@@ -134,6 +134,7 @@ class PipelineDefinition(GraphDefinition):
         config_mapping=None,
         positional_inputs=None,
         _parent_pipeline_def=None,  # https://github.com/dagster-io/dagster/issues/2115
+        pipeline_hook_defs=None,
     ):
         if not name:
             warnings.warn(
@@ -190,6 +191,9 @@ class PipelineDefinition(GraphDefinition):
             seen_modes.add(mode_def.name)
 
         self._hook_defs = check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
+        self._pipeline_hook_defs = check.opt_set_param(
+            pipeline_hook_defs, "pipeline_hook_defs", of_type=PipelineHookDefinition
+        )
 
         self._preset_defs = check.opt_list_param(preset_defs, "preset_defs", PresetDefinition)
         self._preset_dict = {}
@@ -217,6 +221,7 @@ class PipelineDefinition(GraphDefinition):
             self._dagster_type_dict,
             self._solid_dict,
             self._hook_defs,
+            self._pipeline_hook_defs,
         )
 
         # Validate unsatisfied inputs can be materialized from config
@@ -420,6 +425,10 @@ class PipelineDefinition(GraphDefinition):
     def hook_defs(self):
         return self._hook_defs
 
+    @property
+    def pipeline_hook_defs(self):
+        return self._pipeline_hook_defs
+
     def get_all_hooks_for_handle(self, handle):
         """Gather all the hooks for the given solid from all places possibly attached with a hook.
 
@@ -472,6 +481,25 @@ class PipelineDefinition(GraphDefinition):
             preset_defs=self.preset_defs,
             tags=self.tags,
             hook_defs=hook_defs.union(self.hook_defs),
+            _parent_pipeline_def=self._parent_pipeline_def,
+        )
+
+    def with_pipeline_hooks(self, pipeline_hook_defs):
+        """Apply a set of hooks to all solid instances within the pipeline."""
+
+        pipeline_hook_defs = check.set_param(
+            pipeline_hook_defs, "pipeline_hook_defs", of_type=PipelineHookDefinition
+        )
+
+        return PipelineDefinition(
+            solid_defs=self.top_level_solid_defs,
+            name=self.name,
+            description=self.description,
+            dependencies=self.dependencies,
+            mode_defs=self.mode_definitions,
+            preset_defs=self.preset_defs,
+            tags=self.tags,
+            pipeline_hook_defs=pipeline_hook_defs.union(self.pipeline_hook_defs),
             _parent_pipeline_def=self._parent_pipeline_def,
         )
 
@@ -570,7 +598,7 @@ def _get_pipeline_subset_def(pipeline_def, solids_to_execute):
 
 
 def _validate_resource_dependencies(
-    mode_definitions, node_defs, dagster_type_dict, solid_dict, pipeline_hook_defs
+    mode_definitions, node_defs, dagster_type_dict, solid_dict, hook_defs, pipeline_hook_defs
 ):
     """This validation ensures that each pipeline context provides the resources that are required
     by each solid.
@@ -579,7 +607,8 @@ def _validate_resource_dependencies(
     check.list_param(node_defs, "node_defs", of_type=NodeDefinition)
     check.dict_param(dagster_type_dict, "dagster_type_dict")
     check.dict_param(solid_dict, "solid_dict")
-    check.set_param(pipeline_hook_defs, "pipeline_hook_defs", of_type=HookDefinition)
+    check.set_param(hook_defs, "hook_defs", of_type=HookDefinition)
+    check.set_param(pipeline_hook_defs, "pipeline_hook_defs", of_type=PipelineHookDefinition)
 
     for mode_def in mode_definitions:
         mode_resources = set(mode_def.resource_defs.keys())
@@ -627,7 +656,7 @@ def _validate_resource_dependencies(
                             )
                         )
 
-        for hook_def in pipeline_hook_defs:
+        for hook_def in hook_defs:
             for required_resource in hook_def.required_resource_keys:
                 if required_resource not in mode_resources:
                     raise DagsterInvalidDefinitionError(
@@ -637,6 +666,20 @@ def _validate_resource_dependencies(
                         ).format(
                             resource=required_resource,
                             hook_name=hook_def.name,
+                            mode_name=mode_def.name,
+                        )
+                    )
+
+        for pipeline_hook_def in pipeline_hook_defs:
+            for required_resource in pipeline_hook_def.required_resource_keys:
+                if required_resource not in mode_resources:
+                    raise DagsterInvalidDefinitionError(
+                        (
+                            'Resource "{resource}" is required by pipeline hook "{hook_name}", but is not '
+                            'provided by mode "{mode_name}".'
+                        ).format(
+                            resource=required_resource,
+                            hook_name=pipeline_hook_def.name,
                             mode_name=mode_def.name,
                         )
                     )

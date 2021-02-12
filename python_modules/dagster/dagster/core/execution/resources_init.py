@@ -96,9 +96,7 @@ def _core_resource_initialization_event_generator(
     try:
         if resource_keys_to_init:
             yield DagsterEvent.resource_init_start(
-                execution_plan,
-                resource_log_manager,
-                resource_keys_to_init,
+                execution_plan, resource_log_manager, resource_keys_to_init,
             )
 
         resource_dependencies = _resolve_resource_dependencies(mode_definition.resource_defs)
@@ -281,6 +279,9 @@ def get_required_resource_keys_to_init(execution_plan, intermediate_storage_def)
         )
     for hook_def in execution_plan.get_all_hook_defs():
         resource_keys = resource_keys.union(hook_def.required_resource_keys)
+
+    for pipeline_hook_def in execution_plan.pipeline_def.pipeline_hook_defs:
+        resource_keys = resource_keys.union(pipeline_hook_def.required_resource_keys)
 
     return frozenset(resource_keys)
 

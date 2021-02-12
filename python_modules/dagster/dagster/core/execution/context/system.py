@@ -8,7 +8,7 @@ from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
 from dagster import check
-from dagster.core.definitions.hook import HookDefinition
+from dagster.core.definitions.hook import HookDefinition, PipelineHookDefinition
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.pipeline_base import IPipeline
@@ -201,9 +201,7 @@ class SystemExecutionContext:
         check.inst_param(step, "step", ExecutionStep)
 
         return SystemStepExecutionContext(
-            self._execution_context_data,
-            self._log_manager.with_tags(**step.logging_tags),
-            step,
+            self._execution_context_data, self._log_manager.with_tags(**step.logging_tags), step,
         )
 
     def for_type(self, dagster_type: DagsterType) -> "TypeCheckContext":
@@ -225,6 +223,11 @@ class SystemPipelineExecutionContext(SystemExecutionContext):
     @property
     def executor(self) -> Executor:
         return self._executor
+
+    def for_pipeline_hook(self, pipeline_hook_def: PipelineHookDefinition) -> "PipelineHookContext":
+        return PipelineHookContext(
+            self._execution_context_data, self.log, self.executor, pipeline_hook_def
+        )
 
 
 class SystemStepExecutionContext(SystemExecutionContext):
@@ -474,6 +477,46 @@ class HookContext(SystemExecutionContext):
     def solid_config(self) -> Any:
         solid_config = self.environment_config.solids.get(str(self._step.solid_handle))
         return solid_config.config if solid_config else None
+
+
+class PipelineHookContext(SystemPipelineExecutionContext):
+    """The ``context`` object available to a pipeline hook function on an DagsterEvent.
+
+    TODO
+    """
+
+    def __init__(
+        self,
+        execution_context_data: SystemExecutionContextData,
+        log_manager: DagsterLogManager,
+        executor: Executor,
+        hook_def: PipelineHookDefinition,
+    ):
+
+        super(PipelineHookContext, self).__init__(execution_context_data, log_manager, executor)
+        self._log_manager = log_manager
+        self._hook_def = check.inst_param(hook_def, "hook_def", PipelineHookDefinition)
+
+        self._required_resource_keys = hook_def.required_resource_keys
+        self._resources = self._execution_context_data.scoped_resources_builder.build(
+            self._required_resource_keys
+        )
+
+    @property
+    def hook_def(self) -> PipelineHookDefinition:
+        return self._hook_def
+
+    @property
+    def pipeline_def(self) -> PipelineDefinition:
+        return self._execution_context_data.pipeline.get_definition()
+
+    @property
+    def resources(self) -> NamedTuple:
+        return self._resources
+
+    @property
+    def required_resource_keys(self) -> Set[str]:
+        return self._required_resource_keys
 
 
 class OutputContext(
