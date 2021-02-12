@@ -58,7 +58,8 @@ def test_io_manager_with_required_resource_keys():
         def __init__(self, prefix):
             self._prefix = prefix
 
-        def load_input(self, _context):
+        def load_input(self, context):
+            assert context.resources.foo_resource == "foo"
             return self._prefix + "bar"
 
         def handle_output(self, _context, obj):
@@ -140,10 +141,7 @@ def test_fs_io_manager_reexecution():
         assert result.success
 
         re_result = reexecute_pipeline(
-            pipeline_def,
-            result.run_id,
-            instance=instance,
-            step_selection=["solid_b"],
+            pipeline_def, result.run_id, instance=instance, step_selection=["solid_b"],
         )
 
         # re-execution should yield asset_store_operation events instead of intermediate events
@@ -162,8 +160,7 @@ def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
     plan = create_execution_plan(pipeline_def, step_keys_to_execute=step_keys_to_execute)
     with DagsterInstance.ephemeral() as instance:
         pipeline_run = instance.create_run_for_pipeline(
-            pipeline_def=pipeline_def,
-            step_keys_to_execute=step_keys_to_execute,
+            pipeline_def=pipeline_def, step_keys_to_execute=step_keys_to_execute,
         )
         return execute_plan(plan, instance, pipeline_run)
 
@@ -251,9 +248,7 @@ def test_multi_materialization():
 
 
 def test_different_io_managers():
-    @solid(
-        output_defs=[OutputDefinition(io_manager_key="my_io_manager")],
-    )
+    @solid(output_defs=[OutputDefinition(io_manager_key="my_io_manager")],)
     def solid_a(_context):
         return 1
 
@@ -403,16 +398,9 @@ def test_configured():
 
 def test_mem_io_manager_execution():
     mem_io_manager_instance = InMemoryIOManager()
-    output_context = OutputContext(
-        step_key="step_key",
-        name="output_name",
-        pipeline_name="foo",
-    )
+    output_context = OutputContext(step_key="step_key", name="output_name", pipeline_name="foo",)
     mem_io_manager_instance.handle_output(output_context, 1)
-    input_context = InputContext(
-        pipeline_name="foo",
-        upstream_output=output_context,
-    )
+    input_context = InputContext(pipeline_name="foo", upstream_output=output_context,)
     assert mem_io_manager_instance.load_input(input_context) == 1
 
 
