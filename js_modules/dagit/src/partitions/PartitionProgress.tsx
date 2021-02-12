@@ -9,7 +9,7 @@ import {PYTHON_ERROR_FRAGMENT} from 'src/app/PythonErrorInfo';
 import {QueryCountdown} from 'src/app/QueryCountdown';
 import {
   PartitionProgressQuery,
-  PartitionProgressQuery_pipelineRunsOrError_PipelineRuns_results,
+  PartitionProgressQuery_partitionBackfillOrError_PartitionBackfill,
 } from 'src/partitions/types/PartitionProgressQuery';
 import {RunStatusDot} from 'src/runs/RunStatusDots';
 import {
@@ -24,21 +24,17 @@ import {POLL_INTERVAL} from 'src/runs/useCursorPaginatedQuery';
 import {PipelineRunStatus} from 'src/types/globalTypes';
 import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
-import {stringFromValue, TokenizingFieldValue} from 'src/ui/TokenizingField';
+import {stringFromValue} from 'src/ui/TokenizingField';
 import {RepoAddress} from 'src/workspace/types';
 import {workspacePathFromAddress} from 'src/workspace/workspacePath';
 interface Props {
   pipelineName: string;
   repoAddress: RepoAddress;
-  runTags: TokenizingFieldValue[];
+  backfillId: string;
 }
 
 export const PartitionProgress = (props: Props) => {
-  const {pipelineName, repoAddress, runTags} = props;
-  const tags = runTags.map((token) => {
-    const [key, value] = token.value.split('=');
-    return {key, value};
-  });
+  const {pipelineName, repoAddress, backfillId} = props;
   const [shouldPoll, setShouldPoll] = React.useState(true);
   const [isTerminating, setIsTerminating] = React.useState(false);
 
@@ -47,26 +43,23 @@ export const PartitionProgress = (props: Props) => {
     pollInterval: shouldPoll ? POLL_INTERVAL : undefined,
     notifyOnNetworkStatusChange: true,
     variables: {
-      filter: {pipelineName, tags},
+      backfillId,
       limit: 100000,
     },
   });
 
   const {data, refetch} = queryResult;
 
-  const results:
-    | PartitionProgressQuery_pipelineRunsOrError_PipelineRuns_results[]
-    | null = React.useMemo(() => {
-    if (!data || !data?.pipelineRunsOrError) {
+  const results: PartitionProgressQuery_partitionBackfillOrError_PartitionBackfill | null = React.useMemo(() => {
+    if (!data || !data?.partitionBackfillOrError) {
       return null;
     }
 
-    const runs = data.pipelineRunsOrError;
-    if (runs.__typename === 'InvalidPipelineRunsFilterError' || runs.__typename === 'PythonError') {
+    if (data.partitionBackfillOrError.__typename === 'PythonError') {
       return null;
     }
 
-    return runs.results;
+    return data.partitionBackfillOrError;
   }, [data]);
 
   const counts = React.useMemo(() => {
@@ -74,8 +67,8 @@ export const PartitionProgress = (props: Props) => {
       return null;
     }
 
-    const total = results.length;
-    const {queued, inProgress, succeeded, failed} = results.reduce(
+    const totalRuns = results.runs.length;
+    const {queued, inProgress, succeeded, failed} = results.runs.reduce(
       (accum, {status}) => {
         return {
           queued: accum.queued + (queuedStatuses.has(status) ? 1 : 0),
@@ -86,13 +79,13 @@ export const PartitionProgress = (props: Props) => {
       },
       {queued: 0, inProgress: 0, succeeded: 0, failed: 0},
     );
-    return {queued, inProgress, succeeded, failed, total};
+    return {queued, inProgress, succeeded, failed, totalRuns};
   }, [results]);
 
   React.useEffect(() => {
     if (counts) {
-      const {total, succeeded, failed} = counts;
-      setShouldPoll(total !== succeeded + failed);
+      const {totalRuns, succeeded, failed} = counts;
+      setShouldPoll(totalRuns !== succeeded + failed);
     }
   }, [counts]);
 
@@ -100,8 +93,11 @@ export const PartitionProgress = (props: Props) => {
     return <div />;
   }
 
-  const {queued, inProgress, succeeded, failed, total} = counts;
+  const {queued, inProgress, succeeded, failed, totalRuns} = counts;
   const finished = succeeded + failed;
+  const unscheduled = (results.total || 0) - (results.requested || 0);
+  const skipped = results.isPersisted ? totalRuns - (results.requested || 0) : 0;
+  const total = results.isPersisted ? results.total || 0 : totalRuns;
 
   const table = (
     <TooltipTable>
@@ -130,30 +126,49 @@ export const PartitionProgress = (props: Props) => {
           count={failed}
           total={total}
         />
+        {results.isPersisted && totalRuns < (results.requested || 0) ? (
+          <TooltipTableRow humanText="Skipped" count={skipped} total={total} />
+        ) : null}
+        {results.isPersisted ? (
+          <TooltipTableRow humanText="To be scheduled" count={unscheduled} total={total} />
+        ) : null}
       </tbody>
     </TooltipTable>
   );
 
-  const unfinishedMap: {[id: string]: boolean} = results
+  const unfinishedMap: {[id: string]: boolean} = results.runs
     .filter((run) => !doneStatuses.has(run?.status))
     .reduce((accum, run) => ({...accum, [run.id]: run.canTerminate}), {});
 
   return (
     <Box flex={{alignItems: 'center', grow: 1, justifyContent: 'space-between'}}>
       <Group direction="row" spacing={8} alignItems="center">
-        <div style={{fontVariantNumeric: 'tabular-nums'}}>
-          <Tooltip content={table}>
-            <Link
-              to={workspacePathFromAddress(
-                repoAddress,
-                `/pipelines/${pipelineName}/runs?${qs.stringify({q: stringFromValue(runTags)})}`,
-              )}
-            >
-              {finished}/{total} runs
-            </Link>
-          </Tooltip>{' '}
-          done ({((finished / total) * 100).toFixed(1)}%)
-        </div>
+        <Tooltip content={table}>
+          <Group direction="row" spacing={8} alignItems="center">
+            {totalRuns ? (
+              <div style={{fontVariantNumeric: 'tabular-nums'}}>
+                <Link
+                  to={workspacePathFromAddress(
+                    repoAddress,
+                    `/pipelines/${pipelineName}/runs?${qs.stringify({
+                      q: stringFromValue([{token: 'tag', value: `dagster/backfill=${backfillId}`}]),
+                    })}`,
+                  )}
+                >
+                  {finished}/{totalRuns} runs
+                </Link>
+                {totalRuns && unscheduled ? (
+                  <> completed, </>
+                ) : totalRuns ? (
+                  <> completed ({((finished / totalRuns) * 100).toFixed(1)}%)</>
+                ) : null}
+              </div>
+            ) : null}
+            {unscheduled ? (
+              <div style={{fontVariantNumeric: 'tabular-nums'}}>{unscheduled} to be scheduled</div>
+            ) : null}
+          </Group>
+        </Tooltip>
         {Object.keys(unfinishedMap).length ? (
           <>
             <Button minimal icon="stop" intent="danger" onClick={() => setIsTerminating(true)}>
@@ -176,7 +191,7 @@ export const PartitionProgress = (props: Props) => {
 };
 
 const TooltipTableRow: React.FC<{
-  runStatus: PipelineRunStatus;
+  runStatus?: PipelineRunStatus;
   humanText: string;
   count: number;
   total: number;
@@ -189,7 +204,7 @@ const TooltipTableRow: React.FC<{
     <tr>
       <td>
         <Group direction="row" spacing={8} alignItems="center">
-          <RunStatusDot status={runStatus} size={10} />
+          {runStatus ? <RunStatusDot status={runStatus} size={10} /> : null}
           <div>{humanText}</div>
         </Group>
       </td>
@@ -214,17 +229,19 @@ const TooltipTable = styled.table`
 `;
 
 const PARTITION_PROGRESS_QUERY = gql`
-  query PartitionProgressQuery($filter: PipelineRunsFilter!, $limit: Int) {
-    pipelineRunsOrError(filter: $filter, limit: $limit) {
-      ... on PipelineRuns {
-        results {
+  query PartitionProgressQuery($backfillId: String!, $limit: Int) {
+    partitionBackfillOrError(backfillId: $backfillId) {
+      ... on PartitionBackfill {
+        backfillId
+        status
+        isPersisted
+        requested
+        total
+        runs(limit: $limit) {
           id
           canTerminate
           status
         }
-      }
-      ... on InvalidPipelineRunsFilterError {
-        message
       }
       ... on PythonError {
         ...PythonErrorFragment
