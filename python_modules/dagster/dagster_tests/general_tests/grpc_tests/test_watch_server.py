@@ -1,6 +1,7 @@
 # pylint: disable=cell-var-from-loop
 
 import time
+from multiprocessing import Process, Queue
 
 import pytest
 from dagster.grpc.client import DagsterGrpcClient
@@ -157,8 +158,16 @@ def test_grpc_watch_thread_server_error():
     assert called["on_error"]
 
 
-@pytest.mark.skip
 def test_grpc_watch_thread_server_complex_cycle():
+    queue = Queue()
+    p = Process(target=perform_complex_cycle, args=[queue])
+    p.start()
+    p.join()  # this blocks until the process terminates
+    result = queue.get()
+    assert result
+
+
+def perform_complex_cycle(q):
     # Server goes down, comes back up as the same server three times, then goes away and comes
     # back as a new server
 
@@ -218,6 +227,8 @@ def test_grpc_watch_thread_server_complex_cycle():
     assert "on_disconnect" in events
     assert "on_reconnected" in events
     assert events[-1] == "on_updated"
+
+    q.put(True)
 
 
 @pytest.mark.skip
