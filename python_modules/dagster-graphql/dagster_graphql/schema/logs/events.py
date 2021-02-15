@@ -357,6 +357,7 @@ class GrapheneStepMaterializationEvent(graphene.ObjectType):
         name = "StepMaterializationEvent"
 
     materialization = graphene.NonNull(GrapheneMaterialization)
+    parentAssetKeys = graphene.List(GrapheneAssetKey)
     stepStats = graphene.NonNull(lambda: GraphenePipelineRunStepStats)
 
     def resolve_stepStats(self, graphene_info):

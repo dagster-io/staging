@@ -119,9 +119,8 @@ class StepInputSource(ABC):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
-    @abstractmethod
     def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
-        raise NotImplementedError()
+        return []
 
 
 class FromRootInputManager(
