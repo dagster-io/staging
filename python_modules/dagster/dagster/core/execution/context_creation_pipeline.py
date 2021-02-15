@@ -63,9 +63,9 @@ def executor_def_from_config(mode_definition, environment_config):
 class ContextCreationData(
     namedtuple(
         "_ContextCreationData",
-        "pipeline environment_config pipeline_run mode_def "
-        "intermediate_storage_def executor_def instance resource_keys_to_init "
-        "execution_plan",
+        "pipeline environment_config mode_def intermediate_storage_def "
+        "executor_def instance resource_keys_to_init execution_plan run_id "
+        "pipeline_run",
     )
 ):
     @property
@@ -76,20 +76,22 @@ class ContextCreationData(
 def create_context_creation_data(
     execution_plan,
     run_config,
-    pipeline_run,
     instance,
+    run_id,
+    pipeline_run=None,
 ):
     pipeline_def = execution_plan.pipeline.get_definition()
-    environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=pipeline_run.mode)
+    environment_config = EnvironmentConfig.build(
+        pipeline_def, run_config, mode=execution_plan.environment_config.mode
+    )
 
-    mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
+    mode_def = pipeline_def.get_mode_definition(environment_config.mode)
     intermediate_storage_def = environment_config.intermediate_storage_def_for_mode(mode_def)
     executor_def = executor_def_from_config(mode_def, environment_config)
 
     return ContextCreationData(
         pipeline=execution_plan.pipeline,
         environment_config=environment_config,
-        pipeline_run=pipeline_run,
         mode_def=mode_def,
         intermediate_storage_def=intermediate_storage_def,
         executor_def=executor_def,
@@ -98,6 +100,8 @@ def create_context_creation_data(
             execution_plan, intermediate_storage_def
         ),
         execution_plan=execution_plan,
+        run_id=run_id,
+        pipeline_run=pipeline_run,
     )
 
 
@@ -191,8 +195,9 @@ class ExecutionContextManager(ABC):
             context_creation_data = create_context_creation_data(
                 execution_plan,
                 run_config,
-                pipeline_run,
                 instance,
+                pipeline_run.run_id,
+                pipeline_run=pipeline_run,
             )
 
             log_manager = create_log_manager(context_creation_data)
@@ -477,10 +482,11 @@ def scoped_pipeline_context(
 def create_log_manager(context_creation_data):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
 
-    pipeline_def, mode_def, environment_config, pipeline_run = (
+    pipeline_def, mode_def, environment_config, run_id, pipeline_run = (
         context_creation_data.pipeline_def,
         context_creation_data.mode_def,
         context_creation_data.environment_config,
+        context_creation_data.run_id,
         context_creation_data.pipeline_run,
     )
 
@@ -498,7 +504,7 @@ def create_log_manager(context_creation_data):
                         environment_config.loggers.get(logger_key, {}).get("config"),
                         pipeline_def,
                         logger_def,
-                        pipeline_run.run_id,
+                        run_id,
                     )
                 )
             )
@@ -507,7 +513,7 @@ def create_log_manager(context_creation_data):
         for (logger_def, logger_config) in default_system_loggers():
             loggers.append(
                 logger_def.logger_fn(
-                    InitLoggerContext(logger_config, pipeline_def, logger_def, pipeline_run.run_id)
+                    InitLoggerContext(logger_config, pipeline_def, logger_def, run_id)
                 )
             )
 
@@ -515,7 +521,7 @@ def create_log_manager(context_creation_data):
     loggers.append(context_creation_data.instance.get_logger())
 
     return DagsterLogManager(
-        run_id=pipeline_run.run_id,
+        run_id=run_id,
         logging_tags=get_logging_tags(pipeline_run, context_creation_data.pipeline_def),
         loggers=loggers,
     )
