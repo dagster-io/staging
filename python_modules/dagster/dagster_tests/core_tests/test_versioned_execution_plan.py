@@ -1,9 +1,9 @@
 import hashlib
+import tempfile
 
 import pytest
 from dagster import (
     Bool,
-    DagsterInstance,
     Field,
     Float,
     Int,
@@ -28,8 +28,29 @@ from dagster.core.execution.resolve_versions import (
     resolve_memoized_execution_plan,
     resolve_resource_versions,
 )
+from dagster.core.instance import DagsterInstance, InstanceType
+from dagster.core.launcher import DefaultRunLauncher
+from dagster.core.run_coordinator import DefaultRunCoordinator
+from dagster.core.storage.event_log import InMemoryEventLogStorage
 from dagster.core.storage.memoizable_io_manager import MemoizableIOManager
+from dagster.core.storage.noop_compute_log_manager import NoOpComputeLogManager
+from dagster.core.storage.root import LocalArtifactStorage
+from dagster.core.storage.runs import InMemoryRunStorage
+from dagster.core.storage.schedules import SqliteScheduleStorage
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
+
+
+def get_ephemeral_instance(temp_dir):
+    instance = DagsterInstance(
+        instance_type=InstanceType.EPHEMERAL,
+        local_artifact_storage=LocalArtifactStorage(temp_dir),
+        run_storage=InMemoryRunStorage(),
+        event_storage=InMemoryEventLogStorage(),
+        compute_log_manager=NoOpComputeLogManager(),
+        run_launcher=DefaultRunLauncher(),
+        run_coordinator=DefaultRunCoordinator(),
+    )
+    return instance
 
 
 class VersionedInMemoryIOManager(MemoizableIOManager):
@@ -209,60 +230,69 @@ def no_version_pipeline():
 
 
 def test_resolve_memoized_execution_plan_no_stored_results():
-    versioned_pipeline = versioned_pipeline_factory(VersionedInMemoryIOManager())
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        versioned_pipeline = versioned_pipeline_factory(VersionedInMemoryIOManager())
+        speculative_execution_plan = create_execution_plan(versioned_pipeline)
 
-    memoized_execution_plan = resolve_memoized_execution_plan(speculative_execution_plan)
+        memoized_execution_plan = resolve_memoized_execution_plan(
+            speculative_execution_plan, get_ephemeral_instance(temp_dir)
+        )
 
-    assert set(memoized_execution_plan.step_keys_to_execute) == {
-        "versioned_solid_no_input",
-        "versioned_solid_takes_input",
-    }
+        assert set(memoized_execution_plan.step_keys_to_execute) == {
+            "versioned_solid_no_input",
+            "versioned_solid_takes_input",
+        }
 
 
 def test_resolve_memoized_execution_plan_yes_stored_results():
-    manager = VersionedInMemoryIOManager()
-    versioned_pipeline = versioned_pipeline_factory(manager)
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
-    step_output_version = speculative_execution_plan.resolve_step_output_versions()[
-        step_output_handle
-    ]
-    manager.values[
-        (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
-    ] = 4
+    with tempfile.TemporaryDirectory() as temp_dir:
+        manager = VersionedInMemoryIOManager()
+        versioned_pipeline = versioned_pipeline_factory(manager)
+        speculative_execution_plan = create_execution_plan(versioned_pipeline)
+        step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
+        step_output_version = speculative_execution_plan.resolve_step_output_versions()[
+            step_output_handle
+        ]
+        manager.values[
+            (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
+        ] = 4
 
-    memoized_execution_plan = resolve_memoized_execution_plan(speculative_execution_plan)
+        memoized_execution_plan = resolve_memoized_execution_plan(
+            speculative_execution_plan, get_ephemeral_instance(temp_dir)
+        )
 
-    assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input"]
+        assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input"]
 
-    expected_handle = StepOutputHandle(step_key="versioned_solid_no_input", output_name="result")
+        expected_handle = StepOutputHandle(
+            step_key="versioned_solid_no_input", output_name="result"
+        )
 
-    assert (
-        memoized_execution_plan.get_step_by_key("versioned_solid_takes_input")
-        .step_input_dict["intput"]
-        .source.step_output_handle
-        == expected_handle
-    )
+        assert (
+            memoized_execution_plan.get_step_by_key("versioned_solid_takes_input")
+            .step_input_dict["intput"]
+            .source.step_output_handle
+            == expected_handle
+        )
 
 
 def test_resolve_memoized_execution_plan_partial_versioning():
-    manager = VersionedInMemoryIOManager()
+    with tempfile.TemporaryDirectory() as temp_dir:
+        manager = VersionedInMemoryIOManager()
 
-    partially_versioned_pipeline = partially_versioned_pipeline_factory(manager)
-    speculative_execution_plan = create_execution_plan(partially_versioned_pipeline)
-    step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
+        partially_versioned_pipeline = partially_versioned_pipeline_factory(manager)
+        speculative_execution_plan = create_execution_plan(partially_versioned_pipeline)
+        step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
 
-    step_output_version = speculative_execution_plan.resolve_step_output_versions()[
-        step_output_handle
-    ]
-    manager.values[
-        (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
-    ] = 4
+        step_output_version = speculative_execution_plan.resolve_step_output_versions()[
+            step_output_handle
+        ]
+        manager.values[
+            (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
+        ] = 4
 
-    assert resolve_memoized_execution_plan(speculative_execution_plan).step_keys_to_execute == [
-        "solid_takes_input"
-    ]
+        assert resolve_memoized_execution_plan(
+            speculative_execution_plan, get_ephemeral_instance(temp_dir)
+        ).step_keys_to_execute == ["solid_takes_input"]
 
 
 def _get_ext_version(config_value):
