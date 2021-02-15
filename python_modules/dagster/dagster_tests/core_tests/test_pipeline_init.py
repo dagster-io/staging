@@ -19,7 +19,6 @@ from dagster.core.execution.resources_init import (
 )
 from dagster.core.log_manager import DagsterLogManager
 from dagster.core.system_config.objects import EnvironmentConfig
-from dagster.core.utils import make_new_run_id
 
 
 def test_generator_exit():
