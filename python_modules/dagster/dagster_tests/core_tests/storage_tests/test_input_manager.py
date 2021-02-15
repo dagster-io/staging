@@ -352,3 +352,15 @@ def test_resource_not_input_manager():
         "IInputManagerDefinition",
     ):
         execute_pipeline(basic)
+
+
+def test_mode_missing_input_manager():
+    @solid(input_defs=[InputDefinition("a", root_manager_key="missing_root_manager")])
+    def my_solid(_, a):
+        return a + 1
+
+    with pytest.raises(DagsterInvalidDefinitionError):
+
+        @pipeline
+        def _my_pipeline():
+            my_solid()
