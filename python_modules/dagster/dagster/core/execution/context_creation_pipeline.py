@@ -363,7 +363,7 @@ def create_intermediate_storage(
                 mode_def=context_creation_data.mode_def,
                 intermediate_storage_def=intermediate_storage_def,
                 intermediate_storage_config=environment_config.intermediate_storage.intermediate_storage_config,
-                pipeline_run=pipeline_run,
+                run_id=pipeline_run.run_id,
                 instance=context_creation_data.instance,
                 environment_config=environment_config,
                 type_storage_plugin_registry=construct_type_storage_plugin_registry(

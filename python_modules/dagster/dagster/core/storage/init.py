@@ -7,7 +7,6 @@ from dagster.core.definitions import (
     PipelineDefinition,
 )
 from dagster.core.instance import DagsterInstance
-from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.type_storage import TypeStoragePluginRegistry
 from dagster.core.system_config.objects import EnvironmentConfig
 
@@ -16,7 +15,7 @@ class InitIntermediateStorageContext(
     namedtuple(
         "InitIntermediateStorageContext",
         (
-            "pipeline_def mode_def intermediate_storage_def pipeline_run instance environment_config "
+            "pipeline_def mode_def intermediate_storage_def run_id instance environment_config "
             "type_storage_plugin_registry resources intermediate_storage_config"
         ),
     )
@@ -28,7 +27,7 @@ class InitIntermediateStorageContext(
         mode_def (ModeDefinition): The definition of the mode in context.
         intermediate_storage_def (IntermediateStorageDefinition): The definition of the intermediate storage to be
             constructed.
-        pipeline_run (PipelineRun): The pipeline run in context.
+        run_id (str): The id of the pipeline run.
         instance (DagsterInstance): The instance.
         environment_config (EnvironmentConfig): The environment config.
         type_storage_plugin_registry (TypeStoragePluginRegistry): Registry containing custom type
@@ -44,7 +43,7 @@ class InitIntermediateStorageContext(
         pipeline_def,
         mode_def,
         intermediate_storage_def,
-        pipeline_run,
+        run_id,
         instance,
         environment_config,
         type_storage_plugin_registry,
@@ -58,7 +57,7 @@ class InitIntermediateStorageContext(
             intermediate_storage_def=check.inst_param(
                 intermediate_storage_def, "intermediate_storage_def", IntermediateStorageDefinition
             ),
-            pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
+            run_id=check.str_param(run_id, "run_id"),
             instance=check.inst_param(instance, "instance", DagsterInstance),
             environment_config=check.inst_param(
                 environment_config, "environment_config", EnvironmentConfig

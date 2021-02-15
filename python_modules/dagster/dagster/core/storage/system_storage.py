@@ -9,7 +9,6 @@ from dagster.core.storage.type_storage import (
     TypeStoragePluginRegistry,
     construct_type_storage_plugin_registry,
 )
-from dagster.core.system_config.objects import EnvironmentConfig
 
 from .init import InitIntermediateStorageContext
 from .intermediate_storage import IntermediateStorageAdapter, ObjectStoreIntermediateStorage
@@ -35,7 +34,7 @@ def build_intermediate_storage_from_object_store(
 
     return ObjectStoreIntermediateStorage(
         object_store=object_store,
-        run_id=init_context.pipeline_run.run_id,
+        run_id=init_context.run_id,
         root_for_run_id=root_for_run_id,
         type_storage_plugin_registry=init_context.type_storage_plugin_registry
         if init_context.type_storage_plugin_registry
@@ -137,27 +136,23 @@ def io_manager_from_intermediate_storage(intermediate_storage_def):
 
     @io_manager
     def _io_manager(init_context):
-        pipeline_run = init_context.pipeline_run
         instance = init_context.instance_for_backwards_compat
         pipeline_def = init_context.pipeline_def_for_backwards_compat
         # depend on InitResourceContext.instance_for_backwards_compat and pipeline_def_for_backwards_compat
-        environment_config = EnvironmentConfig.build(
-            pipeline_def, pipeline_run.run_config, mode=pipeline_run.mode
-        )
-        mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
+        mode_def = pipeline_def.get_mode_definition(init_context.mode)
 
         intermediate_storage_context = InitIntermediateStorageContext(
             pipeline_def=pipeline_def,
             mode_def=mode_def,
             intermediate_storage_def=intermediate_storage_def,
-            pipeline_run=pipeline_run,
+            run_id=init_context.run_id,
             instance=instance,
-            environment_config=environment_config,
+            environment_config=init_context.environment_config,
             type_storage_plugin_registry=construct_type_storage_plugin_registry(
                 pipeline_def, intermediate_storage_def
             ),
             resources=init_context.resources,
-            intermediate_storage_config=environment_config.intermediate_storage.intermediate_storage_config,
+            intermediate_storage_config=init_context.environment_config.intermediate_storage.intermediate_storage_config,
         )
 
         intermediate_storage = intermediate_storage_def.intermediate_storage_creation_fn(
