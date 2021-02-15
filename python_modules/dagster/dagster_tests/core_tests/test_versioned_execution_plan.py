@@ -3,7 +3,6 @@ import hashlib
 import pytest
 from dagster import (
     Bool,
-    DagsterInstance,
     Field,
     Float,
     Int,
@@ -28,6 +27,7 @@ from dagster.core.execution.resolve_versions import (
     resolve_memoized_execution_plan,
     resolve_resource_versions,
 )
+from dagster.core.instance import DagsterInstance
 from dagster.core.storage.memoizable_io_manager import MemoizableIOManager
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 
