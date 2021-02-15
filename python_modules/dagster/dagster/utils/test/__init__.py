@@ -68,7 +68,9 @@ def create_test_pipeline_execution_context(logger_defs=None):
     pipeline_run = PipelineRun(pipeline_name="test_legacy_context", run_config=run_config)
     instance = DagsterInstance.ephemeral()
     execution_plan = create_execution_plan(pipeline=pipeline_def, run_config=run_config)
-    creation_data = create_context_creation_data(execution_plan, run_config, pipeline_run, instance)
+    creation_data = create_context_creation_data(
+        execution_plan, run_config, instance, pipeline_run.run_id, pipeline_run=pipeline_run
+    )
     log_manager = create_log_manager(creation_data)
     scoped_resources_builder = ScopedResourcesBuilder()
     executor = create_executor(creation_data)
