@@ -121,7 +121,7 @@ def _core_resource_initialization_event_generator(
                     resource_config=environment_config.resources.get(resource_name, {}).get(
                         "config"
                     ),
-                    pipeline_run=pipeline_run,
+                    run_id=pipeline_run.run_id,
                     # Add tags with information about the resource
                     log_manager=resource_log_manager.with_tags(
                         resource_name=resource_name,
