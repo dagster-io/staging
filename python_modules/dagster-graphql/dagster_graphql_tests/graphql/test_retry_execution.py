@@ -563,29 +563,8 @@ def _do_retry_intermediates_test(graphql_context, run_id, reexecution_run_id):
     return retry_one
 
 
-class TestRetryExecutionSyncOnlyBehavior(
-    make_graphql_context_test_suite(
-        context_variants=[GraphQLContextVariant.in_memory_instance_in_process_env()]
-    )
-):
-    def test_retry_requires_intermediates_sync_only(self, graphql_context):
-        run_id = make_new_run_id()
-        reexecution_run_id = make_new_run_id()
-
-        retry_one = _do_retry_intermediates_test(graphql_context, run_id, reexecution_run_id)
-        assert not retry_one.errors
-        assert retry_one.data
-        assert retry_one.data["launchPipelineReexecution"]["__typename"] == "PythonError"
-        assert (
-            "Cannot perform reexecution with in-memory asset stores"
-            in retry_one.data["launchPipelineReexecution"]["message"]
-        )
-
-
 class TestRetryExecutionAsyncOnlyBehavior(
-    make_graphql_context_test_suite(
-        context_variants=GraphQLContextVariant.all_out_of_process_executing_variants()
-    )
+    make_graphql_context_test_suite(context_variants=GraphQLContextVariant.all_executing_variants())
 ):
     def test_retry_requires_intermediates_async_only(self, graphql_context):
         run_id = make_new_run_id()

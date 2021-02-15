@@ -222,7 +222,7 @@ def location_origins_from_load_target(load_target):
 def workspace_from_load_target(load_target):
     check.inst_param(load_target, "load_target", WorkspaceLoadTarget)
 
-    return Workspace(location_origins_from_load_target(load_target))
+    return Workspace(load_target)
 
 
 def get_workspace_from_kwargs(kwargs):
