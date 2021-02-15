@@ -1,0 +1,59 @@
+import { ExampleReferenceLink } from 'components/ExampleReference';
+
+# User in the Loop
+
+<ExampleReferenceLink filePath="examples/user_in_loop" />
+
+This example demonstrates how to set conditions for whether a pipeline should pause or continue running.
+
+## Set conditions
+
+Imagine this pipeline is written for the calculation of US import duties and taxes.
+
+You receive a list of difference prices for the garlic presses of different sizes.
+The garlic press has an import rate of 3%. The calculation is as simple as what shows below:
+
+```python literalinclude caption=repo.py
+file:/user_in_loop/user_in_loop/repo.py
+startAfter:start_loop_marker_0
+endBefore:end_loop_marker_0
+```
+
+However, you don't need to pay any taxes if the garlic presses you ordered are under $2500. 
+You colleague will email you a file if the price of the garlic presses in total is over $2500.
+Without the file, you don't need to pay, so you want to pause the pipeline.
+Once you receive it, you will continue running the pipeline to finish the calculation.
+
+You can use a while loop to check whether the condition is met.
+Below is how you set the conditions to check if there exists such a file.
+
+```python literalinclude caption=repo.py
+file:/user_in_loop/user_in_loop/repo.py
+startAfter:start_loop_marker_1
+endBefore:end_loop_marker_1
+```
+
+In the example, `context.solid_config` is used to get the file path, and the `config_schema` for the file is a string.
+When executing the pipeline, you can provide the file path by passing the `run_config` like below.
+If the file doesn't exist according to the path, which means the condition is not met,
+the while loop will continue to check the condition again every five seconds.
+If the file exists, the condition is met and the loop breaks.
+Then, the pipeline will continue to run the next task, adding taxes to get the final price list.
+
+```python literalinclude caption=test_user_in_loop_pipeline.py
+file:/user_in_loop/tests/test_user_in_loop_pipeline.py
+startAfter:start_loop_marker_2
+endBefore:end_loop_marker_2
+```
+
+## Open in a playground
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#EXAMPLE=user_in_loop/https://github.com/dagster-io/dagster)
+
+## Download
+
+```
+curl https://codeload.github.com/dagster-io/dagster/tar.gz/master | tar -xz --strip=2 dagster-master/examples/user_in_loop
+cd user_in_loop
+pip install -e .
+```
