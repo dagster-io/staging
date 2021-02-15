@@ -3,7 +3,6 @@ from dagster.core.execution.context.init import InitResourceContext
 from dagster.core.execution.context.system import get_output_context
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.step import is_executable_step
-from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.utils.backcompat import experimental
 
 from .plan.inputs import join_and_hash
@@ -182,9 +181,8 @@ def resolve_memoized_execution_plan(execution_plan):
             resource_context = InitResourceContext(
                 resource_config,
                 resource_def,
-                pipeline_run=PipelineRun(
-                    pipeline_name=pipeline_def.name, run_id="", mode=environment_config.mode
-                ),
+                run_id="",
+                environment_config=environment_config,
             )
             io_manager = resource_def.resource_fn(resource_context)
             context = get_output_context(
