@@ -6,6 +6,7 @@ from enum import Enum
 
 from dagster import check
 from dagster.core.definitions import (
+    AssetKey,
     AssetMaterialization,
     EventMetadataEntry,
     ExpectationResult,
@@ -605,14 +606,15 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def step_materialization(step_context, materialization):
+    def step_materialization(step_context, materialization, parent_asset_keys=None):
         check.inst_param(
             materialization, "materialization", (AssetMaterialization, Materialization)
         )
+        check.opt_list_param(parent_asset_keys, "parent_asset_keys", AssetKey)
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_MATERIALIZATION,
             step_context=step_context,
-            event_specific_data=StepMaterializationData(materialization),
+            event_specific_data=StepMaterializationData(materialization, parent_asset_keys),
             message=materialization.description
             if materialization.description
             else "Materialized value{label_clause}.".format(
@@ -877,28 +879,30 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def handled_output(step_context, output_name, manager_key, message_override=None):
+    def handled_output(
+        step_context,
+        output_name,
+        manager_key,
+        metadata_entries=None,  # asset_key=None
+    ):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
-        message = f'Handled output "{output_name}" using output manager "{manager_key}"'
+        message = f'Handled output "{output_name}" using output manager ' f'"{manager_key}"'
         return DagsterEvent.from_step(
             event_type=DagsterEventType.HANDLED_OUTPUT,
             step_context=step_context,
             event_specific_data=HandledOutputData(
                 output_name=output_name,
                 manager_key=manager_key,
+                metadata_entries=metadata_entries if metadata_entries else [],
+                # asset_key=asset_key,
             ),
-            message=message_override or message,
+            message=message,
         )
 
     @staticmethod
     def loaded_input(
-        step_context,
-        input_name,
-        manager_key,
-        upstream_output_name=None,
-        upstream_step_key=None,
-        message_override=None,
+        step_context, input_name, manager_key, upstream_output_name=None, upstream_step_key=None
     ):
 
         check.str_param(input_name, "input_name")
@@ -906,7 +910,7 @@ class DagsterEvent(
         check.opt_str_param(upstream_output_name, "upstream_output_name")
         check.opt_str_param(upstream_step_key, "upstream_step_key")
 
-        message = f'Loaded input "{input_name}" using input manager "{manager_key}"'
+        message = f'Loaded input "{input_name}" using input manager ' f'"{manager_key}"'
         if upstream_output_name:
             message += f', from output "{upstream_output_name}" of step ' f'"{upstream_step_key}"'
 
@@ -919,7 +923,7 @@ class DagsterEvent(
                 upstream_output_name=upstream_output_name,
                 upstream_step_key=upstream_step_key,
             ),
-            message=message_override or message,
+            message=message,
         )
 
     @staticmethod
@@ -1017,7 +1021,9 @@ def get_step_output_event(events, step_key, output_name="result"):
 
 
 @whitelist_for_serdes
-class StepMaterializationData(namedtuple("_StepMaterializationData", "materialization")):
+class StepMaterializationData(
+    namedtuple("_StepMaterializationData", "materialization parent_asset_keys")
+):
     pass
 
 
@@ -1140,12 +1146,18 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
 
 
 @whitelist_for_serdes
-class HandledOutputData(namedtuple("_HandledOutputData", "output_name manager_key")):
-    def __new__(cls, output_name, manager_key):
+class HandledOutputData(
+    namedtuple("_HandledOutputData", "output_name manager_key metadata_entries")
+):
+    def __new__(cls, output_name, manager_key, metadata_entries):
         return super(HandledOutputData, cls).__new__(
             cls,
             output_name=check.str_param(output_name, "output_name"),
             manager_key=check.str_param(manager_key, "manager_key"),
+            metadata_entries=check.opt_list_param(
+                metadata_entries, "metadata_entries", EventMetadataEntry
+            ),
+            # asset_key=check.opt_inst_param(asset_key, "asset_key", AssetKey),
         )
 
 
@@ -1212,7 +1224,7 @@ def _handle_back_compat(event_type_value, event_specific_data):
             return (
                 DagsterEventType.HANDLED_OUTPUT.value,
                 HandledOutputData(
-                    event_specific_data.output_name, event_specific_data.asset_store_key
+                    event_specific_data.output_name, event_specific_data.asset_store_key, []
                 ),
             )
     else:
