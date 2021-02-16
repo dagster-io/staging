@@ -24,7 +24,7 @@ class HelmTemplate:
 
     def render(self, values: HelmValues) -> List[Any]:
         with NamedTemporaryFile() as tmp_file:
-            values_json = json.loads(values.json(exclude_none=True))
+            values_json = json.loads(values.json(exclude_none=True, by_alias=True))
             pprint(values_json)
             content = yaml.dump(values_json)
             tmp_file.write(content.encode())
