@@ -24,7 +24,19 @@ def check_schema_compat(schema):
 
 # These columns (in dagster/core/storage/*/schema.py) need
 # migration or a compiles directive to be compatible with MySQL.
-MYSQL_MIGRATION_PLANNED_COLUMNS = frozenset(["secondary_indexes.name", "asset_keys.asset_key"])
+MYSQL_TYPE_MIGRATION_PLANNED_COLUMNS = frozenset(["secondary_indexes.name", "asset_keys.asset_key"])
+MYSQL_CURRENT_TIMESTAMP_UPDATE_PLANNED_COLUMNS = frozenset(
+    [
+        "secondary_indexes.create_timestamp",
+        "runs.create_timestamp",
+        "runs.update_timestamp",
+        "asset_keys.create_timestamp",
+        "jobs.create_timestamp",
+        "jobs.update_timestamp",
+        "job_ticks.create_timestamp",
+        "job_ticks.update_timestamp",
+    ]
+)
 
 
 def validate_column(column: Column):
@@ -46,13 +58,24 @@ def validate_column(column: Column):
     elif (
         isinstance(column.type, db.Text)
         and column.unique
-        and str(column) not in MYSQL_MIGRATION_PLANNED_COLUMNS
+        and str(column) not in MYSQL_TYPE_MIGRATION_PLANNED_COLUMNS
     ):
         raise Exception(
             f"Column {column} is type TEXT and has a UNIQUE constraint; "
             "cannot use bare db.Text type w/ a UNIQUE constaint "
             "since it is incompatible with certain databases (MySQL). "
             "Use a fixed-length db.String(123) instead."
+        )
+    elif (
+        column.server_default
+        and isinstance(column.server_default.arg, db.sql.elements.TextClause)
+        and str(column.server_default.arg) == "CURRENT_TIMESTAMP"
+        and str(column) not in MYSQL_CURRENT_TIMESTAMP_UPDATE_PLANNED_COLUMNS
+    ):
+        raise Exception(
+            f"Column {column} is has a server default of CURRENT_TIMESTAMP w/o precision specified "
+            "to keep MySQL semantically equivalent to Postgres and Sqllite, use "
+            "dagster.core.storage.sql.py::get_current_timestamp() instead"
         )
 
 
