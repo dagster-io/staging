@@ -13,7 +13,10 @@ from .helm_template import HelmTemplate
 
 @pytest.fixture(name="template")
 def helm_template() -> HelmTemplate:
-    return HelmTemplate(output="templates/deployment-user.yaml", model=models.V1Deployment)
+    return HelmTemplate(
+        output="charts/dagster-user-deployments/templates/deployment-user.yaml",
+        model=models.V1Deployment,
+    )
 
 
 def create_simple_user_deployment(name: str) -> UserDeployment:
@@ -79,6 +82,7 @@ def helm_values_single_user_deployment() -> HelmValues:
     return HelmValues.construct(
         userDeployments=UserDeployments(
             enabled=True,
+            enableSubchart=True,
             deployments=[create_simple_user_deployment("simple-deployment-one")],
         )
     )
@@ -89,6 +93,7 @@ def helm_values_single_complex_user_deployment() -> HelmValues:
     return HelmValues.construct(
         userDeployments=UserDeployments(
             enabled=True,
+            enableSubchart=True,
             deployments=[create_complex_user_deployment("complex-deployment-one")],
         )
     )
@@ -99,6 +104,7 @@ def helm_values_multi_user_deployment() -> HelmValues:
     return HelmValues.construct(
         userDeployments=UserDeployments(
             enabled=True,
+            enableSubchart=True,
             deployments=[
                 create_simple_user_deployment("simple-deployment-one"),
                 create_simple_user_deployment("simple-deployment-two"),
@@ -112,6 +118,7 @@ def helm_values_multi_complex_user_deployment() -> HelmValues:
     return HelmValues.construct(
         userDeployments=UserDeployments(
             enabled=True,
+            enableSubchart=True,
             deployments=[
                 create_complex_user_deployment("complex-deployment-one"),
                 create_complex_user_deployment("complex-deployment-two"),
@@ -211,7 +218,18 @@ def assert_user_deployment_template(
 def test_deployments_do_not_render(template: HelmTemplate, capsys):
     with pytest.raises(subprocess.CalledProcessError):
         values = HelmValues.construct(
-            userDeployments=UserDeployments(enabled=False, deployments=[])
+            userDeployments=UserDeployments(enabled=False, enableSubchart=False, deployments=[])
+        )
+        template.render(values)
+
+        _, err = capsys.readouterr()
+        assert "Error: could not find template" in err
+
+
+def test_subchart_disabled_deployments_do_not_render(template: HelmTemplate, capsys):
+    with pytest.raises(subprocess.CalledProcessError):
+        values = HelmValues.construct(
+            userDeployments=UserDeployments(enabled=True, enableSubchart=False, deployments=[])
         )
         template.render(values)
 

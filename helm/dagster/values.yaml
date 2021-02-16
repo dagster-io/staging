@@ -161,9 +161,13 @@ computeLogManager:
 #
 # All user code will be invoked within the images.
 ####################################################################################################
-userDeployments:
-  # Whether launching user deployments is enabled.
+dagster-user-deployments:
+  # Creates a workspace file with the gRPC servers hosting your user code.
   enabled: true
+
+  # If you plan on deploying user code in a separate Helm release, set this to false.
+  isSubchart: true
+
   # List of unique deployments
   deployments:
     - name: "k8s-example-user-code-1"
