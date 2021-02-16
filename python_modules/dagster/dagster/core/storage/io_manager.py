@@ -94,6 +94,12 @@ class IOManager(InputManager, OutputManager):
             obj (Any): The object, returned by the solid, to be stored.
         """
 
+    def get_output_asset_keys(self, _context):
+        return []
+
+    def get_input_asset_keys(self, context):
+        return self.get_output_asset_keys(context.upstream_output)
+
 
 def io_manager(
     config_schema=None,
