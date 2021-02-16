@@ -15,6 +15,7 @@ Why not pickle?
 """
 import hashlib
 import importlib
+import json
 import sys
 from abc import ABC, abstractmethod, abstractproperty
 from collections import namedtuple
@@ -22,7 +23,7 @@ from enum import Enum
 from inspect import Parameter, signature
 
 import yaml
-from dagster import check, seven
+from dagster import check
 from dagster.utils import compose
 
 _WHITELIST_MAP = {
@@ -196,16 +197,16 @@ def _pack_value(val, whitelist_map):
 
 
 def _serialize_dagster_namedtuple(nt, whitelist_map, **json_kwargs):
-    return seven.json.dumps(_pack_value(nt, whitelist_map), **json_kwargs)
+    return json.dumps(_pack_value(nt, whitelist_map), **json_kwargs)
 
 
 def serialize_value(val):
-    return seven.json.dumps(_pack_value(val, whitelist_map=_WHITELIST_MAP))
+    return json.dumps(_pack_value(val, whitelist_map=_WHITELIST_MAP))
 
 
 def deserialize_value(val):
     return _unpack_value(
-        seven.json.loads(check.str_param(val, "val")),
+        json.loads(check.str_param(val, "val")),
         whitelist_map=_WHITELIST_MAP,
     )
 
@@ -279,7 +280,7 @@ def deserialize_json_to_dagster_namedtuple(json_str):
 
 
 def _deserialize_json_to_dagster_namedtuple(json_str, whitelist_map):
-    return _unpack_value(seven.json.loads(json_str), whitelist_map=whitelist_map)
+    return _unpack_value(json.loads(json_str), whitelist_map=whitelist_map)
 
 
 def default_to_storage_value(value, whitelist_map):

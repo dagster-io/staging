@@ -1,11 +1,13 @@
 import datetime
 
-import pendulum
-from croniter import croniter
 from dagster import check
 
 
 def schedule_execution_time_iterator(start_timestamp, cron_schedule, execution_timezone):
+    # defer imports for perf
+    import pendulum
+    from croniter import croniter
+
     check.float_param(start_timestamp, "start_timestamp")
     check.str_param(cron_schedule, "cron_schedule")
     check.opt_str_param(execution_timezone, "execution_timezone")

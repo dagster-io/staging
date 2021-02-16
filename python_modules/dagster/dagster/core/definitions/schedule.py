@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import pendulum
-from croniter import croniter
 from dagster import check
 from dagster.core.errors import (
     DagsterInvalidDefinitionError,
@@ -111,6 +110,8 @@ class ScheduleDefinition(JobDefinition):
         execution_timezone=None,
         execution_fn=None,
     ):
+        # defer import for perf
+        from croniter import croniter
 
         super(ScheduleDefinition, self).__init__(
             check_valid_name(name),

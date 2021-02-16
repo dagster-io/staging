@@ -1,21 +1,14 @@
 """Internal py2/3 compatibility library. A little more than six."""
 
-import datetime
 import inspect
 import multiprocessing
 import os
 import shlex
-import signal
 import sys
-import tempfile
 import threading
 import time
 from contextlib import contextmanager
-from types import MethodType
 
-import pendulum
-
-from .json import JSONDecodeError, dump, dumps
 from .temp_dir import get_system_temp_directory
 
 IS_WINDOWS = os.name == "nt"
@@ -130,10 +123,14 @@ def get_utc_timezone():
 
 
 def get_current_datetime_in_utc():
+    import pendulum
+
     return pendulum.now("UTC")
 
 
 def get_timestamp_from_utc_datetime(utc_datetime):
+    import pendulum
+
     if isinstance(utc_datetime, pendulum.Pendulum):
         return utc_datetime.timestamp()
 

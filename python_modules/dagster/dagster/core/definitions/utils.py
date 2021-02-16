@@ -3,7 +3,6 @@ import os
 import re
 from glob import glob
 
-import pkg_resources
 import yaml
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
@@ -169,6 +168,7 @@ def config_from_yaml_strings(yaml_strings):
 
 
 def config_from_pkg_resources(pkg_resource_defs):
+
     """Load a run config from a package resource, using :py:func:`pkg_resources.resource_string`.
 
     Example:
@@ -194,6 +194,9 @@ def config_from_pkg_resources(pkg_resource_defs):
         DagsterInvariantViolationError: When one of the YAML documents is invalid and has a
             parse error.
     """
+    # defer import for perf
+    import pkg_resources
+
     pkg_resource_defs = check.opt_list_param(pkg_resource_defs, "pkg_resource_defs", of_type=tuple)
 
     try:

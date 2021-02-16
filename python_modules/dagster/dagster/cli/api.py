@@ -6,8 +6,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 import click
-import pendulum
-from dagster import DagsterInvariantViolationError, check, seven
+from dagster import check
 from dagster.cli.workspace.cli_target import (
     get_repository_location_from_kwargs,
     get_repository_origin_from_kwargs,
@@ -15,7 +14,7 @@ from dagster.cli.workspace.cli_target import (
     python_origin_target_argument,
     repository_target_argument,
 )
-from dagster.core.errors import DagsterSubprocessError
+from dagster.core.errors import DagsterInvariantViolationError, DagsterSubprocessError
 from dagster.core.events import EngineEventData
 from dagster.core.execution.api import create_execution_plan, execute_plan_iterator
 from dagster.core.execution.plan.plan import should_skip_step
@@ -44,7 +43,7 @@ from dagster.serdes import (
     whitelist_for_serdes,
 )
 from dagster.serdes.ipc import ipc_write_stream
-from dagster.seven import nullcontext
+from dagster.seven import IS_WINDOWS, nullcontext
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_pipeline_from_origin
 from dagster.utils.interrupts import capture_interrupts
@@ -391,7 +390,7 @@ def grpc_command(
     override_system_timezone=None,
     **kwargs,
 ):
-    if seven.IS_WINDOWS and port is None:
+    if IS_WINDOWS and port is None:
         raise click.UsageError(
             "You must pass a valid --port/-p on Windows: --socket/-s not supported."
         )
@@ -464,7 +463,7 @@ def grpc_command(
     help="Hostname at which to serve. Default is localhost.",
 )
 def grpc_health_check_command(port=None, socket=None, host="localhost"):
-    if seven.IS_WINDOWS and port is None:
+    if IS_WINDOWS and port is None:
         raise click.UsageError(
             "You must pass a valid --port/-p on Windows: --socket/-s not supported."
         )
@@ -492,6 +491,9 @@ def grpc_health_check_command(port=None, socket=None, host="localhost"):
 @click.option("--schedule_name")
 @click.option("--override-system-timezone")
 def launch_scheduled_execution(output_file, schedule_name, override_system_timezone, **kwargs):
+    # lazy import for performance
+    import pendulum
+
     with (
         mock_system_timezone(override_system_timezone)
         if override_system_timezone
