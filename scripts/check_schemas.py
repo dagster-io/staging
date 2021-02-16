@@ -33,7 +33,15 @@ def validate_column(column: Column):
         1. plain db.String not allowed (MySQL compatability)
         2. db.Text + unique=True not allowed (MySQL compatability)
     """
-    if (
+    column_type_str = str(column.type)
+    if str(column) in MYSQL_MIGRATION_PLANNED_COLUMNS:
+        if column_type_str != "TEXT":
+            raise Exception(
+                f"Column {column} is type {column_type_str} but should be TEXT"
+                " these columns are due for migration on the 0.11.0 release to be compatible with MySQL."
+                " Make sure that by default they map to TEXT as to prevent unnecessary migrations."
+            )
+    elif (
         isinstance(column.type, db.String)
         and not isinstance(column.type, (db.Text, db.Unicode))
         and column.type.length is None
