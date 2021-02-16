@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional, Union
+from typing import Any, NamedTuple, Optional, Union
 
 from dagster import check
 from dagster.core.definitions import AssetMaterialization, Materialization, SolidHandle
@@ -16,6 +16,7 @@ class StepOutput(
             ("name", str),
             ("dagster_type_key", str),
             ("is_required", bool),
+            ("asset_keys_fn", Any),
             ("should_materialize", Optional[bool]),
         ],
     )
@@ -28,6 +29,7 @@ class StepOutput(
         name: str,
         dagster_type_key: str,
         is_required: bool,
+        asset_keys_fn,  # TODO: create type for this
         should_materialize: Optional[bool] = None,
     ):
         return super(StepOutput, cls).__new__(
@@ -36,6 +38,7 @@ class StepOutput(
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             is_required=check.bool_param(is_required, "is_required"),
+            asset_keys_fn=asset_keys_fn,
             should_materialize=check.opt_bool_param(should_materialize, "should_materialize"),
         )
 
@@ -69,6 +72,7 @@ class StepOutputData(
             ),
             type_check_data=check.opt_inst_param(type_check_data, "type_check_data", TypeCheckData),
             version=check.opt_str_param(version, "version"),
+            # potentially put metadata entries here
         )
 
     @property
