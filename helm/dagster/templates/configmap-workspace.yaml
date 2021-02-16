@@ -1,4 +1,5 @@
-{{- if .Values.userDeployments.enabled }}
+{{- $userDeployments := index .Values "dagster-user-deployments" }}
+{{- if $userDeployments.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -11,7 +12,7 @@ metadata:
 data:
   workspace.yaml: |
     load_from:
-      {{- range $deployment := .Values.userDeployments.deployments }}
+      {{- range $deployment := $userDeployments.deployments }}
       - grpc_server:
           host: {{ $deployment.name }}
           port: {{ $deployment.port }}
