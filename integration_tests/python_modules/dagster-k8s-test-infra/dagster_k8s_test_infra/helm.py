@@ -285,8 +285,9 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
                 pod_names=pod_names
             )
 
-        if helm_config.get("userDeployments") and helm_config.get("userDeployments", {}).get(
-            "enabled"
+        dagster_user_deployments_values = helm_config.get("dagster-user-deployments", {})
+        if dagster_user_deployments_values.get("enabled") and dagster_user_deployments_values.get(
+            "enableSubchart"
         ):
             # Wait for user code deployments to be ready
             print("Waiting for user code deployments")
@@ -320,7 +321,8 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {"enabled": False},
+        "global": {"fullnameOverride": "dagster-integration"},
+        "dagster-user-deployments": {"enabled": False, "enableSubchart": False},
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
@@ -408,7 +410,8 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {"enabled": False},
+        "global": {"fullnameOverride": "dagster-integration"},
+        "dagster-user-deployments": {"enabled": False, "enableSubchart": False},
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
@@ -467,8 +470,10 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {
+        "global": {"fullnameOverride": "dagster-integration"},
+        "dagster-user-deployments": {
             "enabled": True,
+            "enableSubchart": True,
             "deployments": [
                 {
                     "name": "user-code-deployment-1",
@@ -570,8 +575,10 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {
+        "global": {"fullnameOverride": "dagster-integration"},
+        "dagster-user-deployments": {
             "enabled": True,
+            "enableSubchart": True,
             "deployments": [
                 {
                     "name": "user-code-deployment-1",
