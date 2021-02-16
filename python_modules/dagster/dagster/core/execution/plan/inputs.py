@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, List, NamedTuple, Optiona
 
 from dagster import check
 from dagster.core.definitions import (
+    AssetKey,
     Failure,
     InputDefinition,
     PipelineDefinition,
@@ -118,6 +119,9 @@ class StepInputSource(ABC):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return []
+
 
 class FromRootInputManager(
     NamedTuple(
@@ -161,6 +165,9 @@ class FromRootInputManager(
     def required_resource_keys(self, pipeline_def: PipelineDefinition) -> Set[str]:
         input_def = self.get_input_def(pipeline_def)
         return {input_def.root_manager_key}
+
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return []
 
 
 class FromStepOutput(
@@ -263,6 +270,20 @@ class FromStepOutput(
 
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
+
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        source_handle = self.step_output_handle
+        input_manager = step_context.get_io_manager(source_handle)
+        load_context = self.get_load_context(step_context)
+        ret = input_manager.get_input_asset_keys(load_context)
+        # TODO: need to figure out better logic here
+        # also need to allow for asset_keys_fns defined on the input
+        upstream_output_asset_keys_fn = step_context.execution_plan.get_step_output(
+            self.step_output_handle
+        ).asset_keys_fn
+        if upstream_output_asset_keys_fn:
+            ret.extend(upstream_output_asset_keys_fn(load_context.upstream_output))
+        return ret
 
 
 class FromConfig(
@@ -431,6 +452,13 @@ class FromMultipleSources(
                 for inner_source in self.sources
             ]
         )
+
+    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return [
+            asset_key
+            for source in self.sources
+            for asset_key in source.get_asset_keys(step_context)
+        ]
 
 
 def _load_input_with_input_manager(input_manager: "InputManager", context: "InputContext"):

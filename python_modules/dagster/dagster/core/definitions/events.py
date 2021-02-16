@@ -72,7 +72,7 @@ class AssetKey(namedtuple("_AssetKey", "path")):
             represent the hierarchical structure of the asset_key.
     """
 
-    def __new__(cls, path=None):
+    def __new__(cls, path=None, partition=None):
         if isinstance(path, str):
             path = [path]
         elif isinstance(path, list):
@@ -80,7 +80,9 @@ class AssetKey(namedtuple("_AssetKey", "path")):
         else:
             path = check.tuple_param(path, "path", of_type=str)
 
-        return super(AssetKey, cls).__new__(cls, path=path)
+        partition = check.opt_str_param(partition, "partition")
+
+        return super(AssetKey, cls).__new__(cls, path=path, partition=partition)
 
     def __str__(self):
         return "AssetKey({})".format(self.path)
@@ -467,7 +469,25 @@ EntryDataUnion = (
 )
 
 
-class Output(namedtuple("_Output", "value output_name")):
+class PartitionSpecificMetadataEntry(
+    namedtuple("_PartitionSpecificMetadataEntry", "partition entry")
+):
+    """Event containing an :py:class:`EventMetdataEntry` and the name of a partition that the entry
+    applies to.
+
+    This can be yielded or returned in place of EventMetadataEntries for cases where you are trying
+    to associate metadata more precisely.
+    """
+
+    def __new__(cls, partition: str, entry: EventMetadataEntry):
+        return super(PartitionSpecificMetadataEntry, cls).__new__(
+            cls,
+            check.str_param(partition, "partition"),
+            check.inst_param(entry, "entry", EventMetadataEntry),
+        )
+
+
+class Output(namedtuple("_Output", "value output_name metadata_entries")):
     """Event corresponding to one of a solid's outputs.
 
     Solid compute functions must explicitly yield events of this type when they have more than
@@ -484,15 +504,20 @@ class Output(namedtuple("_Output", "value output_name")):
             "result")
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None):
         return super(Output, cls).__new__(
             cls,
             value,
             check.str_param(output_name, "output_name"),
+            check.opt_list_param(
+                metadata_entries,
+                "metadata_entries",
+                (EventMetadataEntry, PartitionSpecificMetadataEntry),
+            ),
         )
 
 
-class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name")):
+class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name metadata_entries")):
     """
     (Experimental) Variant of :py:class:`Output` used to support mapping. Each DynamicOutput
     produced by a solid will result in the downstream dag being cloned to run on that individual
@@ -507,13 +532,14 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name"
             Name of the corresponding output definition. (default: "result")
     """
 
-    def __new__(cls, value, mapping_key, output_name=DEFAULT_OUTPUT):
+    def __new__(cls, value, mapping_key, output_name=DEFAULT_OUTPUT, metadata_entries=None):
 
         return super(DynamicOutput, cls).__new__(
             cls,
             value,
             check_valid_name(check.str_param(mapping_key, "mapping_key")),
             check.str_param(output_name, "output_name"),
+            check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
         )
 
 
