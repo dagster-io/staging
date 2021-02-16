@@ -1,5 +1,5 @@
-{{- if .Values.userDeployments.enabled }}
-{{ range $deployment := .Values.userDeployments.deployments }}
+{{ if .Values.enabled }}
+{{ range $deployment := .Values.deployments }}
 apiVersion: v1
 kind: Service
 metadata:
