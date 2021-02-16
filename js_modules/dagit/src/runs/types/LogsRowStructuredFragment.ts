@@ -18,6 +18,11 @@ export interface LogsRowStructuredFragment_ExecutionStepSkippedEvent {
   stepKey: string | null;
 }
 
+export interface LogsRowStructuredFragment_StepMaterializationEvent_parentAssetKeys {
+  __typename: "AssetKey";
+  path: string[];
+}
+
 export interface LogsRowStructuredFragment_StepMaterializationEvent_materialization_assetKey {
   __typename: "AssetKey";
   path: string[];
@@ -96,6 +101,7 @@ export interface LogsRowStructuredFragment_StepMaterializationEvent {
   timestamp: string;
   level: LogLevel;
   stepKey: string | null;
+  parentAssetKeys: (LogsRowStructuredFragment_StepMaterializationEvent_parentAssetKeys | null)[] | null;
   materialization: LogsRowStructuredFragment_StepMaterializationEvent_materialization;
 }
 

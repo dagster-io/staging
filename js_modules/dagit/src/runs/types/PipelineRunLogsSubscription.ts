@@ -19,6 +19,11 @@ export interface PipelineRunLogsSubscription_pipelineRunLogs_PipelineRunLogsSubs
   stepKey: string | null;
 }
 
+export interface PipelineRunLogsSubscription_pipelineRunLogs_PipelineRunLogsSubscriptionSuccess_messages_StepMaterializationEvent_parentAssetKeys {
+  __typename: "AssetKey";
+  path: string[];
+}
+
 export interface PipelineRunLogsSubscription_pipelineRunLogs_PipelineRunLogsSubscriptionSuccess_messages_StepMaterializationEvent_materialization_assetKey {
   __typename: "AssetKey";
   path: string[];
@@ -98,6 +103,7 @@ export interface PipelineRunLogsSubscription_pipelineRunLogs_PipelineRunLogsSubs
   timestamp: string;
   level: LogLevel;
   stepKey: string | null;
+  parentAssetKeys: (PipelineRunLogsSubscription_pipelineRunLogs_PipelineRunLogsSubscriptionSuccess_messages_StepMaterializationEvent_parentAssetKeys | null)[] | null;
   materialization: PipelineRunLogsSubscription_pipelineRunLogs_PipelineRunLogsSubscriptionSuccess_messages_StepMaterializationEvent_materialization;
 }
 

@@ -18,6 +18,11 @@ export interface RunPipelineRunEventFragment_ExecutionStepSkippedEvent {
   stepKey: string | null;
 }
 
+export interface RunPipelineRunEventFragment_StepMaterializationEvent_parentAssetKeys {
+  __typename: "AssetKey";
+  path: string[];
+}
+
 export interface RunPipelineRunEventFragment_StepMaterializationEvent_materialization_assetKey {
   __typename: "AssetKey";
   path: string[];
@@ -96,6 +101,7 @@ export interface RunPipelineRunEventFragment_StepMaterializationEvent {
   timestamp: string;
   level: LogLevel;
   stepKey: string | null;
+  parentAssetKeys: (RunPipelineRunEventFragment_StepMaterializationEvent_parentAssetKeys | null)[] | null;
   materialization: RunPipelineRunEventFragment_StepMaterializationEvent_materialization;
 }
 

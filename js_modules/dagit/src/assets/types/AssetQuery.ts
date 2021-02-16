@@ -40,6 +40,11 @@ export interface AssetQuery_assetOrError_Asset_assetMaterializations_materializa
   startTime: number | null;
 }
 
+export interface AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_parentAssetKeys {
+  __typename: "AssetKey";
+  path: string[];
+}
+
 export interface AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_materialization_metadataEntries_EventPathMetadataEntry {
   __typename: "EventPathMetadataEntry";
   label: string;
@@ -112,6 +117,7 @@ export interface AssetQuery_assetOrError_Asset_assetMaterializations_materializa
   timestamp: string;
   stepKey: string | null;
   stepStats: AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_stepStats;
+  parentAssetKeys: (AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_parentAssetKeys | null)[] | null;
   materialization: AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_materialization;
 }
 

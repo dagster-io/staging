@@ -336,6 +336,7 @@ def core_dagster_event_sequence_for_step(
                     )
                 )
 
+    step_context.log.info(repr(input_asset_keys))
     yield DagsterEvent.step_success_event(
         step_context, StepSuccessData(duration_ms=timer_result.millis)
     )

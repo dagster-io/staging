@@ -83,6 +83,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
 
   const latest = asset.assetMaterializations[0];
   const latestEvent = latest && latest.materializationEvent;
+  const latestParentAssetKeys = latestEvent && latestEvent.parentAssetKeys;
 
   return (
     <div>
@@ -112,6 +113,19 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
               ) : (
                 'No materialization events'
               ),
+            },
+            {
+              key: 'Parent asset keys',
+              value: latestParentAssetKeys
+                ? latestParentAssetKeys.map((key) => (
+                    <>
+                      <Link to={`/instance/assets/${key?.path.map(encodeURIComponent).join('/')}`}>
+                        {key?.path.join(' > ')}
+                      </Link>
+                      <br></br>
+                    </>
+                  ))
+                : 'No parent asset keys',
             },
             ...latestEvent?.materialization.metadataEntries.map((entry) => ({
               key: entry.label,
@@ -213,6 +227,9 @@ const ASSET_QUERY = gql`
             stepStats {
               endTime
               startTime
+            }
+            parentAssetKeys {
+              path
             }
             materialization {
               label

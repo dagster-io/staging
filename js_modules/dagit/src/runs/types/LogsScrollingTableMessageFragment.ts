@@ -18,6 +18,11 @@ export interface LogsScrollingTableMessageFragment_ExecutionStepSkippedEvent {
   stepKey: string | null;
 }
 
+export interface LogsScrollingTableMessageFragment_StepMaterializationEvent_parentAssetKeys {
+  __typename: "AssetKey";
+  path: string[];
+}
+
 export interface LogsScrollingTableMessageFragment_StepMaterializationEvent_materialization_assetKey {
   __typename: "AssetKey";
   path: string[];
@@ -96,6 +101,7 @@ export interface LogsScrollingTableMessageFragment_StepMaterializationEvent {
   timestamp: string;
   level: LogLevel;
   stepKey: string | null;
+  parentAssetKeys: (LogsScrollingTableMessageFragment_StepMaterializationEvent_parentAssetKeys | null)[] | null;
   materialization: LogsScrollingTableMessageFragment_StepMaterializationEvent_materialization;
 }
 

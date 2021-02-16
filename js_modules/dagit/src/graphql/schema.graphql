@@ -413,6 +413,7 @@ type Asset {
 }
 
 type AssetMaterialization {
+  parentAssetKeys: [AssetKey]
   materializationEvent: StepMaterializationEvent!
   runOrError: PipelineRunOrError!
   partition: String
@@ -426,6 +427,7 @@ type StepMaterializationEvent implements MessageEvent & StepEvent {
   stepKey: String
   solidHandleID: String
   materialization: Materialization!
+  parentAssetKeys: [AssetKey]
   stepStats: PipelineRunStepStats!
 }
 

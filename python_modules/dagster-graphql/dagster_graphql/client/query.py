@@ -134,6 +134,7 @@ fragment stepEventFragment on StepEvent {
       metadataEntries {
         ...metadataEntryFragment
       }
+      parentAssetKey
     }
   }
 

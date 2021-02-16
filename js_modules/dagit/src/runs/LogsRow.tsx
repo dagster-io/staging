@@ -94,6 +94,9 @@ export const LOGS_ROW_STRUCTURED_FRAGMENT = gql`
       stepKey
     }
     ... on StepMaterializationEvent {
+      parentAssetKeys {
+        path
+      }
       materialization {
         assetKey {
           path
