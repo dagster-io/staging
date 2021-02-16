@@ -1,5 +1,4 @@
-{{- if .Values.userDeployments.enabled }}
-{{ range $deployment := .Values.userDeployments.deployments }}
+{{ range $deployment := .Values.deployments }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -16,5 +15,4 @@ data:
   {{ $name }}: {{ $value | quote }}
   {{- end }}
 ---
-{{ end }}
 {{ end }}
