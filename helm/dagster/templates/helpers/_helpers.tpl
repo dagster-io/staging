@@ -12,10 +12,10 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "dagster.fullname" -}}
-{{- if .Values.fullnameOverride -}}
-{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- if .Values.global.fullnameOverride -}}
+{{- .Values.global.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- $name := default .Chart.Name .Values.global.nameOverride -}}
 {{- if contains $name .Release.Name -}}
 {{- .Release.Name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -30,7 +30,8 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{- define "dagster.dagit.dagitCommand" -}}
-{{- if .Values.userDeployments.enabled }}
+{{- $userDeployments := index .Values "dagster-user-deployments" }}
+{{- if $userDeployments.enabled }}
 dagit -h 0.0.0.0 -p 80 -w /dagster-workspace/workspace.yaml
 {{- else -}}
 dagit -h 0.0.0.0 -p 80
@@ -150,7 +151,7 @@ This environment shared across all containers.
 This includes Dagit, Celery Workers, Run Master, and Step Execution containers.
 */}}
 {{- define "dagster.shared_env" -}}
-DAGSTER_HOME: "{{ .Values.dagsterHome }}"
+DAGSTER_HOME: {{ .Values.global.dagsterHome | quote }}
 DAGSTER_K8S_CELERY_BROKER: "{{ template "dagster.celery.broker_url" . }}"
 DAGSTER_K8S_CELERY_BACKEND: "{{ template "dagster.celery.backend_url" . }}"
 DAGSTER_K8S_PG_PASSWORD_SECRET: "{{ template "dagster.fullname" .}}-postgresql-secret"
