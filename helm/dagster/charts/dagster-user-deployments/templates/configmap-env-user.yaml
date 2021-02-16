@@ -10,8 +10,6 @@ metadata:
     release: {{ $.Release.Name }}
     heritage: {{ $.Release.Service }}
 data:
-  {{ include "dagster.shared_env" $ | nindent 2 }}
-
   {{- range $name, $value := $deployment.env }}
   {{ $name }}: {{ $value | quote }}
   {{- end }}
