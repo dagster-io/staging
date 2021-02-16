@@ -1,7 +1,6 @@
 import os
 
 import click
-from dagster.generate import generate_new_repo
 from dagster.utils.backcompat import experimental
 
 
@@ -16,6 +15,8 @@ def new_repo_command(path: str):
 
     PATH: Location of the new Dagster repository in your filesystem.
     """
+    from dagster.generate import generate_new_repo
+
     if os.path.exists(path):
         raise FileExistsError(
             f"""

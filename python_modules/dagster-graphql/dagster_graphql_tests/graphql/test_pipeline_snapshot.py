@@ -1,6 +1,7 @@
 import pytest
 from dagster import execute_pipeline
-from dagster.seven import json, mock
+from unittest import mock
+import json
 from dagster_graphql.implementation.fetch_pipelines import _get_pipeline_snapshot_from_instance
 from dagster_graphql.implementation.utils import UserFacingGraphQLError
 from dagster_graphql.test.utils import (
