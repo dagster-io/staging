@@ -1,3 +1,4 @@
+{{- $userDeployments := index .Values "dagster-user-deployments" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,8 +44,8 @@ spec:
             ]
           securityContext:
             {{- toYaml .Values.dagit.securityContext | nindent 12 }}
-        {{- if .Values.userDeployments.enabled }}
-        {{- range $deployment := .Values.userDeployments.deployments }}
+        {{- if $userDeployments.enabled }}
+        {{- range $deployment := $userDeployments.deployments }}
         - name: "init-user-deployment-{{- $deployment.name -}}"
           image: {{ include "image.name" $.Values.busybox.image | quote }}
           command: ['sh', '-c', "until nslookup {{ $deployment.name -}}; do echo waiting for user service; sleep 2; done"]
@@ -80,7 +81,7 @@ spec:
             - name: dagster-instance
               mountPath: "{{ .Values.dagsterHome }}/dagster.yaml"
               subPath: dagster.yaml
-            {{- if .Values.userDeployments.enabled }}
+            {{- if $userDeployments.enabled }}
             - name: dagster-workspace-yaml
               mountPath: "/dagster-workspace/workspace.yaml"
               subPath: workspace.yaml
@@ -108,7 +109,7 @@ spec:
         - name: dagster-instance
           configMap:
             name: {{ template "dagster.fullname" . }}-instance
-        {{- if .Values.userDeployments.enabled }}
+        {{- if $userDeployments.enabled }}
         - name: dagster-workspace-yaml
           configMap:
             name: {{ template "dagster.fullname" . }}-workspace-yaml
