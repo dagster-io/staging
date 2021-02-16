@@ -1,4 +1,3 @@
-{{- if .Values.userDeployments.enabled }}
 {{ range $deployment := .Values.userDeployments.deployments }}
 apiVersion: apps/v1
 kind: Deployment
@@ -53,13 +52,13 @@ spec:
             - name: DAGSTER_PG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: "{{ template "dagster.fullname" $ }}-postgresql-secret"
+                  name: "{{ include "dagster.fullname" $ }}-postgresql-secret"
                   key: postgresql-password
             - name: DAGSTER_CURRENT_IMAGE
               value: "{{ $deployment.image.repository }}:{{ $deployment.image.tag }}"
           envFrom:
             - configMapRef:
-                name: {{ template "dagster.fullname" $ }}-{{ $deployment.name }}-user-env
+                name: {{ include "dagster.fullname" $ }}-{{ $deployment.name }}-user-env
             {{- range $envConfigMap := $deployment.envConfigMaps }}
             - configMapRef: {{- $envConfigMap | toYaml | nindent 16 }}
             {{- end }}
@@ -130,5 +129,4 @@ spec:
       affinity: {{ $deployment.affinity | toYaml | nindent 8 }}
       tolerations: {{- $deployment.tolerations | toYaml | nindent 8 }}
 ---
-{{ end }}
 {{ end }}
