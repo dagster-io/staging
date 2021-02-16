@@ -62,6 +62,16 @@ def helm_namespace_for_user_deployments(
 
 
 @pytest.fixture(scope="session")
+def helm_namespace_for_user_deployments_subchart_disabled(
+    dagster_docker_image, cluster_provider, request
+):  # pylint: disable=unused-argument, redefined-outer-name
+    with _helm_namespace_helper(
+        dagster_docker_image, helm_chart_for_user_deployments_subchart_disabled, request
+    ) as namespace:
+        yield namespace
+
+
+@pytest.fixture(scope="session")
 def helm_namespace_for_daemon(
     dagster_docker_image, cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
@@ -285,8 +295,9 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
                 pod_names=pod_names
             )
 
-        if helm_config.get("userDeployments") and helm_config.get("userDeployments", {}).get(
-            "enabled"
+        dagster_user_deployments_values = helm_config.get("dagster-user-deployments", {})
+        if dagster_user_deployments_values.get("enabled") and dagster_user_deployments_values.get(
+            "enableSubchart"
         ):
             # Wait for user code deployments to be ready
             print("Waiting for user code deployments")
@@ -320,7 +331,7 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {"enabled": False},
+        "dagster-user-deployments": {"enabled": False, "enableSubchart": False},
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
@@ -408,7 +419,7 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {"enabled": False},
+        "dagster-user-deployments": {"enabled": False, "enableSubchart": False},
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
@@ -467,8 +478,113 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {
+        "dagster-user-deployments": {
             "enabled": True,
+            "enableSubchart": True,
+            "deployments": [
+                {
+                    "name": "user-code-deployment-1",
+                    "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                    "dagsterApiGrpcArgs": [
+                        "-m",
+                        "dagster_test.test_project.test_pipelines.repo",
+                        "-a",
+                        "define_demo_execution_repo",
+                    ],
+                    "port": 3030,
+                    "replicaCount": 1,
+                }
+            ],
+        },
+        "dagit": {
+            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
+            "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
+            "envSecrets": [{"name": TEST_SECRET_NAME}],
+            "livenessProbe": {
+                "httpGet": {"path": "/dagit_info", "port": 80},
+                "periodSeconds": 20,
+                "failureThreshold": 3,
+            },
+            "startupProbe": {
+                "httpGet": {"path": "/dagit_info", "port": 80},
+                "failureThreshold": 6,
+                "periodSeconds": 10,
+            },
+        },
+        "flower": {
+            "livenessProbe": {
+                "tcpSocket": {"port": "flower"},
+                "periodSeconds": 20,
+                "failureThreshold": 3,
+            },
+            "startupProbe": {
+                "tcpSocket": {"port": "flower"},
+                "failureThreshold": 6,
+                "periodSeconds": 10,
+            },
+        },
+        "runLauncher": {
+            "type": "CeleryK8sRunLauncher",
+            "config": {
+                "celeryK8sRunLauncher": {
+                    "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                    "workerQueues": [
+                        {"name": "dagster", "replicaCount": 2},
+                        {"name": "extra-queue-1", "replicaCount": 1},
+                    ],
+                    "env": {"TEST_SET_ENV_VAR": "test_celery_env_var"},
+                    "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
+                    "envSecrets": [{"name": TEST_SECRET_NAME}],
+                    "livenessProbe": {
+                        "initialDelaySeconds": 15,
+                        "periodSeconds": 10,
+                        "timeoutSeconds": 10,
+                        "successThreshold": 1,
+                        "failureThreshold": 3,
+                    },
+                    "configSource": {
+                        "broker_transport_options": {"priority_steps": [9]},
+                        "worker_concurrency": 1,
+                    },
+                }
+            },
+        },
+        "rabbitmq": {"enabled": True},
+        "scheduler": {
+            "type": "K8sScheduler",
+            "config": {
+                "k8sScheduler": {
+                    "schedulerNamespace": namespace,
+                    "envSecrets": [{"name": TEST_SECRET_NAME}],
+                }
+            },
+        },
+        "serviceAccount": {"name": "dagit-admin"},
+        "postgresqlPassword": "test",
+        "postgresqlDatabase": "test",
+        "postgresqlUser": "test",
+        "dagsterDaemon": {"enabled": False},
+    }
+
+    with _helm_chart_helper(
+        namespace, should_cleanup, helm_config, helm_install_name="helm_chart_for_user_deployments"
+    ):
+        yield
+
+
+@contextmanager
+def helm_chart_for_user_deployments_subchart_disabled(namespace, docker_image, should_cleanup=True):
+    check.str_param(namespace, "namespace")
+    check.str_param(docker_image, "docker_image")
+    check.bool_param(should_cleanup, "should_cleanup")
+
+    repository, tag = docker_image.split(":")
+    pull_policy = image_pull_policy()
+    helm_config = {
+        "dagster-user-deployments": {
+            "enabled": True,
+            "enableSubchart": False,
             "deployments": [
                 {
                     "name": "user-code-deployment-1",
@@ -570,8 +686,9 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
     repository, tag = docker_image.split(":")
     pull_policy = image_pull_policy()
     helm_config = {
-        "userDeployments": {
+        "dagster-user-deployments": {
             "enabled": True,
+            "enableSubchart": True,
             "deployments": [
                 {
                     "name": "user-code-deployment-1",
