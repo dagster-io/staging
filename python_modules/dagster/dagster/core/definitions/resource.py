@@ -118,6 +118,8 @@ class ResourceDefinition(AnonymousConfigurableDefinition):
 
     @staticmethod
     def mock_resource(description=None):
+        from unittest import mock
+
         """A helper function that creates a ``ResourceDefinition`` which wraps a ``mock.MagicMock``.
 
         Args:
@@ -128,7 +130,7 @@ class ResourceDefinition(AnonymousConfigurableDefinition):
                 you mock existing resources.
         """
         return ResourceDefinition.hardcoded_resource(
-            value=seven.mock.MagicMock(), description=description
+            value=mock.MagicMock(), description=description
         )
 
     @staticmethod

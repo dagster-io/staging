@@ -21,7 +21,7 @@ from dagster.core.test_utils import instance_for_test, instance_for_test_tempdir
 from dagster.utils import send_interrupt
 from dagster_celery_tests.repo import COMPOSITE_DEPTH
 from dagster_celery_tests.utils import start_celery_worker
-
+from unittest import mock
 from .utils import (  # isort:skip
     execute_eagerly_on_celery,
     execute_pipeline_on_celery,
@@ -296,7 +296,7 @@ def test_execute_eagerly_retries_pipeline_on_celery():
 
 
 def test_engine_error():
-    with seven.mock.patch(
+    with mock.patch(
         "dagster.core.execution.context.system.SystemExecutionContextData.raise_on_error",
         return_value=True,
     ):

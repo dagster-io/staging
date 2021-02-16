@@ -26,6 +26,7 @@ from dagster.core.execution.api import create_execution_plan, execute_plan, exec
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import coerce_valid_log_level
 from dagster.core.test_utils import instance_for_test
+from unittest import mock
 
 
 def define_string_resource():
@@ -363,7 +364,7 @@ def test_string_resource():
 def test_hardcoded_resource():
     called = {}
 
-    mock_obj = seven.mock.MagicMock()
+    mock_obj = mock.MagicMock()
 
     @solid(required_resource_keys={"hardcoded"})
     def solid_hardcoded(context):

@@ -1,7 +1,7 @@
 import re
+from unittest import mock
 
 import pytest
-from dagster.seven import mock
 from dagster.utils.backcompat import rename_warning
 
 
