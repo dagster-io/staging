@@ -102,6 +102,9 @@ def execute_query_from_cli(workspace, query, instance, variables=None, output=No
 
 
 def execute_query_against_remote(host, query, variables):
+    # lazy import for init perf
+    import requests
+
     parsed_url = urlparse(host)
     if not (parsed_url.scheme and parsed_url.netloc):
         raise click.UsageError(

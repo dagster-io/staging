@@ -23,7 +23,6 @@ from functools import wraps
 from logging.handlers import RotatingFileHandler
 
 import click
-import requests
 import yaml
 from dagster import check
 from dagster.core.definitions.pipeline_base import IPipeline
@@ -530,6 +529,9 @@ def upload_logs(stop_event, raise_errors=False):
 
 
 def _upload_logs(dagster_log_dir, log_size, dagster_log_queue_dir, raise_errors):
+    # lazy import for perf
+    import requests
+
     """Send POST request to telemetry server with the contents of $DAGSTER_HOME/logs/ directory """
 
     try:
