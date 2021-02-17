@@ -1,7 +1,6 @@
 import datetime
 from abc import ABC, abstractmethod, abstractproperty
 
-import pendulum
 from dagster import check
 from dagster.api.snapshot_execution_plan import sync_get_external_execution_plan_grpc
 from dagster.api.snapshot_partition import (
@@ -37,6 +36,7 @@ from dagster.grpc.impl import (
     get_partition_set_execution_param_data,
     get_partition_tags,
 )
+from dagster.seven import pendulum
 from dagster.utils.hosted_user_process import external_repo_from_def
 
 from .selector import PipelineSelector
@@ -261,7 +261,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(schedule_name, "schedule_name")
         check.opt_inst_param(
-            scheduled_execution_time, "scheduled_execution_time", pendulum.Pendulum
+            scheduled_execution_time, "scheduled_execution_time", pendulum.DateTime
         )
 
         return get_external_schedule_execution(

@@ -5,7 +5,6 @@ import tempfile
 import time
 from contextlib import contextmanager
 
-import pendulum
 import pytest
 from dagster import (
     DagsterEventType,
@@ -37,6 +36,7 @@ from dagster.core.test_utils import (
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.daemon import get_default_daemon_logger
 from dagster.scheduler.scheduler import launch_scheduled_runs
+from dagster.seven import pendulum
 from dagster.utils import merge_dicts
 from dagster.utils.partitions import DEFAULT_DATE_FORMAT
 
@@ -572,7 +572,7 @@ def test_schedule_without_timezone(external_repo_context, capfd):
                 "daily_schedule_without_timezone"
             )
             schedule_origin = external_schedule.get_external_origin()
-            initial_datetime = pendulum.create(
+            initial_datetime = pendulum.datetime(
                 year=2019, month=2, day=27, hour=0, minute=0, second=0, tz="US/Eastern"
             )
 
@@ -596,7 +596,7 @@ def test_schedule_without_timezone(external_repo_context, capfd):
                     in captured.out
                 )
 
-                expected_datetime = pendulum.create(
+                expected_datetime = pendulum.datetime(
                     year=2019, month=2, day=27, tz="US/Eastern"
                 ).in_tz("UTC")
 
@@ -612,7 +612,7 @@ def test_schedule_without_timezone(external_repo_context, capfd):
                 validate_run_started(
                     instance.get_runs()[0],
                     execution_time=expected_datetime,
-                    partition_time=pendulum.create(2019, 2, 26, tz="US/Eastern"),
+                    partition_time=pendulum.datetime(2019, 2, 26, tz="US/Eastern"),
                 )
 
                 # Verify idempotence
@@ -1137,7 +1137,7 @@ def test_launch_failure(external_repo_context, capfd):
 
 
 def test_partitionless_schedule(capfd):
-    initial_datetime = pendulum.create(year=2019, month=2, day=27, tz="US/Central")
+    initial_datetime = pendulum.datetime(year=2019, month=2, day=27, tz="US/Central")
     with instance_with_schedules(default_repo) as (instance, external_repo):
         with pendulum.test(initial_datetime):
             external_schedule = external_repo.get_external_schedule("partitionless_schedule")
@@ -1158,14 +1158,14 @@ def test_partitionless_schedule(capfd):
             validate_tick(
                 ticks[0],
                 external_schedule,
-                pendulum.create(year=2019, month=3, day=4, tz="US/Central"),
+                pendulum.datetime(year=2019, month=3, day=4, tz="US/Central"),
                 JobTickStatus.SUCCESS,
                 [run.run_id for run in instance.get_runs()],
             )
 
             validate_run_started(
                 instance.get_runs()[0],
-                execution_time=pendulum.create(year=2019, month=3, day=4, tz="US/Central"),
+                execution_time=pendulum.datetime(year=2019, month=3, day=4, tz="US/Central"),
                 partition_time=None,
             )
 
