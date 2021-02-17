@@ -1,7 +1,7 @@
-from typing import Any, NamedTuple, Optional, Union
+from typing import Any, Callable, NamedTuple, Optional, Union
 
 from dagster import check
-from dagster.core.definitions import AssetMaterialization, Materialization, SolidHandle
+from dagster.core.definitions import AssetKey, AssetMaterialization, Materialization, SolidHandle
 from dagster.serdes import whitelist_for_serdes
 
 from .handle import UnresolvedStepHandle
@@ -16,7 +16,7 @@ class StepOutput(
             ("name", str),
             ("dagster_type_key", str),
             ("is_required", bool),
-            ("asset_fn", Any),
+            ("asset_fn", Optional[Callable]),
             ("should_materialize", Optional[bool]),
         ],
     )
@@ -29,7 +29,7 @@ class StepOutput(
         name: str,
         dagster_type_key: str,
         is_required: bool,
-        asset_fn,  # TODO: create type for this
+        asset_fn: Optional[Callable] = None,
         should_materialize: Optional[bool] = None,
     ):
         return super(StepOutput, cls).__new__(
@@ -38,7 +38,7 @@ class StepOutput(
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             is_required=check.bool_param(is_required, "is_required"),
-            asset_fn=asset_fn,
+            asset_fn=check.opt_inst_param(asset_fn, "asset_fn", Callable),
             should_materialize=check.opt_bool_param(should_materialize, "should_materialize"),
         )
 

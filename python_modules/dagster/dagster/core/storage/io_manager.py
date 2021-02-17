@@ -1,15 +1,14 @@
 from abc import abstractmethod
 from functools import update_wrapper
-from typing import Optional
+from typing import List, Optional
 
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.definition_config_schema import (
     convert_user_facing_definition_config_schema,
 )
+from dagster.core.definitions.events import AssetKey, AssetPartitions
 from dagster.core.definitions.resource import ResourceDefinition
-from dagster.core.definitions.events import AssetPartitions
-
 from dagster.core.storage.input_manager import InputManager
 from dagster.core.storage.output_manager import IOutputManagerDefinition, OutputManager
 from dagster.core.storage.root_input_manager import IInputManagerDefinition
@@ -97,11 +96,33 @@ class IOManager(InputManager, OutputManager):
             obj (Any): The object, returned by the solid, to be stored.
         """
 
-    def get_output_asset(self, _context: "OutputContext") -> Optional[AssetPartitions]:
+    def get_output_asset_key(self, _context: "OutputContext") -> Optional[AssetKey]:
         return None
 
-    def get_input_asset(self, context: "InputContext") -> Optional[AssetPartitions]:
-        return self.get_output_asset(context.upstream_output)
+    def get_output_asset_partitions(self, _context: "OutputContext") -> List[str]:
+        return []
+
+    def get_input_asset_key(self, context: "InputContext") -> Optional[AssetKey]:
+        return self.get_output_asset_key(context.upstream_output)
+
+    def get_input_asset_partitions(self, context: "InputContext") -> List[str]:
+        return self.get_output_asset_partitions(context.upstream_output)
+
+    def _get_output_assets(self, context: "OutputContext") -> Optional[AssetPartitions]:
+        asset_key = self.get_output_asset_key(context)
+        if not asset_key:
+            return None
+        return AssetPartitions(
+            asset_key=asset_key, partitions=self.get_output_asset_partitions(context)
+        )
+
+    def _get_input_assets(self, context: "InputContext") -> Optional[AssetPartitions]:
+        asset_key = self.get_input_asset_key(context)
+        if not asset_key:
+            return None
+        return AssetPartitions(
+            asset_key=asset_key, partitions=self.get_input_asset_partitions(context)
+        )
 
 
 def io_manager(
