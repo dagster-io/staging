@@ -14,10 +14,10 @@ from dagster.core.definitions import (
     TypeCheck,
 )
 from dagster.core.definitions.events import (
+    AssetPartitions,
     DynamicOutput,
     EventMetadataEntry,
     PartitionSpecificMetadataEntry,
-    AssetPartitions,
 )
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,
@@ -247,7 +247,8 @@ def _type_check_output(
     if not type_check.success:
         raise DagsterTypeCheckDidNotPass(
             description='Type check failed for step output "{output_name}" - expected type "{dagster_type}".'.format(
-                output_name=output.output_name, dagster_type=dagster_type.display_name,
+                output_name=output.output_name,
+                dagster_type=dagster_type.display_name,
             ),
             metadata_entries=type_check.metadata_entries,
             dagster_type=dagster_type,
@@ -389,11 +390,13 @@ def _materializations_to_events(
 
 
 def _asset_partitions_for_output(
-    output_context: OutputContext, output_def: OutputDefinition, output_manager: IOManager,
+    output_context: OutputContext,
+    output_def: OutputDefinition,
+    output_manager: IOManager,
 ) -> Optional[AssetPartitions]:
 
     definition_asset = output_def.get_assets(output_context)
-    manager_asset = output_manager.get_output_asset(output_context)
+    manager_asset = output_manager._get_output_assets(output_context)
 
     if definition_asset and manager_asset:
         raise DagsterInvariantViolationError(
@@ -574,7 +577,9 @@ def _user_event_sequence_for_step_compute_fn(
     check.dict_param(evaluated_inputs, "evaluated_inputs", key_type=str)
 
     gen = execute_core_compute(
-        step_context.for_compute(), evaluated_inputs, step_context.solid_def.compute_fn,
+        step_context.for_compute(),
+        evaluated_inputs,
+        step_context.solid_def.compute_fn,
     )
 
     for event in iterate_with_context(

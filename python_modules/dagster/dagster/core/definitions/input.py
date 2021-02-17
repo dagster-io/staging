@@ -1,7 +1,8 @@
-from typing import Optional
 from collections import namedtuple
+from typing import Optional
 
 from dagster import check
+from dagster.core.definitions.events import AssetPartitions
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import (
     BuiltinScalarDagsterType,
@@ -9,7 +10,7 @@ from dagster.core.types.dagster_type import (
     resolve_dagster_type,
 )
 from dagster.utils.backcompat import experimental_arg_warning
-from dagster.core.definitions.events import AssetPartitions
+
 from .utils import check_valid_name
 
 
