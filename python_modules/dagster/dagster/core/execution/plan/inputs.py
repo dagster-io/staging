@@ -11,6 +11,7 @@ from dagster.core.definitions import (
     RetryRequested,
     SolidHandle,
 )
+from dagster.core.definitions.events import AssetPartitions
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
     DagsterTypeLoadingError,
@@ -119,7 +120,11 @@ class StepInputSource(ABC):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
-    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetPartitions]:
+        return []
+        input_def = self.get_input_def(step_context.pipeline_def)
+        if input_def.has_asset_fn:
+            return input_def.get_assets()
         return []
 
 
@@ -165,9 +170,6 @@ class FromRootInputManager(
     def required_resource_keys(self, pipeline_def: PipelineDefinition) -> Set[str]:
         input_def = self.get_input_def(pipeline_def)
         return {input_def.root_manager_key}
-
-    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
-        return []
 
 
 class FromStepOutput(
@@ -271,19 +273,36 @@ class FromStepOutput(
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
-    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetPartitions]:
         source_handle = self.step_output_handle
         input_manager = step_context.get_io_manager(source_handle)
         load_context = self.get_load_context(step_context)
-        ret = input_manager.get_input_asset_keys(load_context)
-        # TODO: need to figure out better logic here
-        # also need to allow for asset_keys_fns defined on the input
-        upstream_output_asset_keys_fn = step_context.execution_plan.get_step_output(
-            self.step_output_handle
-        ).asset_keys_fn
-        if upstream_output_asset_keys_fn:
-            ret.extend(upstream_output_asset_keys_fn(load_context.upstream_output))
-        return ret
+
+        # check input_def
+        input_def = self.get_input_def(step_context.pipeline_def)
+        if input_def.has_asset_fn:
+            return [input_def.asset_fn(load_context)]
+
+        # check io manager
+        io_asset = input_manager.get_input_asset(load_context)
+        if io_asset is not None:
+            return [io_asset]
+
+        # check output_def
+        upstream_output_def = step_context.execution_plan.get_step_output(self.step_output_handle)
+        if upstream_output_def.asset_fn:
+            return [upstream_output_def.asset_fn(load_context.upstream_output)]
+
+        # if nothing definied within scope of this input/output, recurse
+        upstream_step = step_context.execution_plan.get_step_by_key(
+            self.step_output_handle.step_key
+        )
+        # check all outputs of upstream solids
+        return [
+            asset
+            for input in upstream_step.step_inputs
+            for asset in input.source.get_assets(step_context)
+        ]
 
 
 class FromConfig(
@@ -453,12 +472,8 @@ class FromMultipleSources(
             ]
         )
 
-    def get_asset_keys(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
-        return [
-            asset_key
-            for source in self.sources
-            for asset_key in source.get_asset_keys(step_context)
-        ]
+    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+        return [asset for source in self.sources for asset in source.get_assets(step_context)]
 
 
 def _load_input_with_input_manager(input_manager: "InputManager", context: "InputContext"):

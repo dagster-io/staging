@@ -16,7 +16,7 @@ class StepOutput(
             ("name", str),
             ("dagster_type_key", str),
             ("is_required", bool),
-            ("asset_keys_fn", Any),
+            ("asset_fn", Any),
             ("should_materialize", Optional[bool]),
         ],
     )
@@ -29,7 +29,7 @@ class StepOutput(
         name: str,
         dagster_type_key: str,
         is_required: bool,
-        asset_keys_fn,  # TODO: create type for this
+        asset_fn,  # TODO: create type for this
         should_materialize: Optional[bool] = None,
     ):
         return super(StepOutput, cls).__new__(
@@ -38,7 +38,7 @@ class StepOutput(
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             is_required=check.bool_param(is_required, "is_required"),
-            asset_keys_fn=asset_keys_fn,
+            asset_fn=asset_fn,
             should_materialize=check.opt_bool_param(should_materialize, "should_materialize"),
         )
 

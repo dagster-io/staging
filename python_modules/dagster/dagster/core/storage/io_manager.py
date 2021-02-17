@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from functools import update_wrapper
+from typing import Optional
 
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
@@ -7,6 +8,8 @@ from dagster.core.definitions.definition_config_schema import (
     convert_user_facing_definition_config_schema,
 )
 from dagster.core.definitions.resource import ResourceDefinition
+from dagster.core.definitions.events import AssetPartitions
+
 from dagster.core.storage.input_manager import InputManager
 from dagster.core.storage.output_manager import IOutputManagerDefinition, OutputManager
 from dagster.core.storage.root_input_manager import IInputManagerDefinition
@@ -94,11 +97,11 @@ class IOManager(InputManager, OutputManager):
             obj (Any): The object, returned by the solid, to be stored.
         """
 
-    def get_output_asset_keys(self, _context):
-        return []
+    def get_output_asset(self, _context: "OutputContext") -> Optional[AssetPartitions]:
+        return None
 
-    def get_input_asset_keys(self, context):
-        return self.get_output_asset_keys(context.upstream_output)
+    def get_input_asset(self, context: "InputContext") -> Optional[AssetPartitions]:
+        return self.get_output_asset(context.upstream_output)
 
 
 def io_manager(
