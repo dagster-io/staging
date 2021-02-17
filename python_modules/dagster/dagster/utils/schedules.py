@@ -17,10 +17,7 @@ def schedule_execution_time_iterator(start_timestamp, cron_schedule, execution_t
 
     # Go back one iteration so that the next iteration is the first time that is >= start_datetime
     # and matches the cron schedule
-    date_iter.get_prev(datetime.datetime)
-    next_date = pendulum.instance(date_iter.get_next(datetime.datetime)).in_tz(timezone_str)
-
-    yield next_date
+    next_date = pendulum.instance(date_iter.get_prev(datetime.datetime)).in_tz(timezone_str)
 
     cron_parts = cron_schedule.split(" ")
 
