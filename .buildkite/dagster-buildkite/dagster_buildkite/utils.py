@@ -4,6 +4,7 @@ import subprocess
 import yaml
 
 DAGIT_PATH = "js_modules/dagit"
+DOCS_PATH = "docs"
 
 
 def buildkite_yaml_for_steps(steps):
@@ -42,7 +43,7 @@ def check_for_release():
     return False
 
 
-def is_phab_and_dagit_only():
+def is_changes_scoped_to_path(path):
     branch_name = os.getenv("BUILDKITE_BRANCH")
     if branch_name is None:
         branch_name = (
@@ -62,7 +63,7 @@ def is_phab_and_dagit_only():
             .strip()
             .split("\n")
         )
-        return all(filepath.startswith(DAGIT_PATH) for (filepath) in diff_files)
+        return all(filepath.startswith(path) for (filepath) in diff_files)
 
     except subprocess.CalledProcessError:
         return False
