@@ -2,6 +2,7 @@ import pendulum
 import pytest
 from dagster.core.scheduler.job import JobTickStatus
 from dagster.scheduler.scheduler import launch_scheduled_runs
+from dagster.seven import create_pendulum_time
 from dagster.utils.partitions import DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE
 
 from .test_scheduler_run import (
@@ -22,7 +23,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
         instance,
         external_repo,
     ):
-        freeze_datetime = pendulum.create(2019, 2, 27, 23, 59, 59, tz="US/Central").in_tz(
+        freeze_datetime = create_pendulum_time(2019, 2, 27, 23, 59, 59, tz="US/Central").in_tz(
             "US/Pacific"
         )
         with pendulum.test(freeze_datetime):
@@ -69,9 +70,9 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
-            expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Central").in_tz(
-                "UTC"
-            )
+            expected_datetime = create_pendulum_time(
+                year=2019, month=2, day=28, tz="US/Central"
+            ).in_tz("UTC")
 
             validate_tick(
                 ticks[0],
@@ -85,7 +86,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
             validate_run_started(
                 instance.get_runs()[0],
                 expected_datetime,
-                pendulum.create(2019, 2, 27, tz="US/Central"),
+                create_pendulum_time(2019, 2, 27, tz="US/Central"),
             )
 
             captured = capfd.readouterr()
@@ -121,7 +122,7 @@ def test_differing_timezones(external_repo_context):
         instance,
         external_repo,
     ):
-        freeze_datetime = pendulum.create(2019, 2, 27, 23, 59, 59, tz="US/Eastern").in_tz(
+        freeze_datetime = create_pendulum_time(2019, 2, 27, 23, 59, 59, tz="US/Eastern").in_tz(
             "US/Pacific"
         )
         with pendulum.test(freeze_datetime):
@@ -172,9 +173,9 @@ def test_differing_timezones(external_repo_context):
             ticks = instance.get_job_ticks(eastern_origin.get_id())
             assert len(ticks) == 1
 
-            expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Eastern").in_tz(
-                "UTC"
-            )
+            expected_datetime = create_pendulum_time(
+                year=2019, month=2, day=28, tz="US/Eastern"
+            ).in_tz("UTC")
 
             validate_tick(
                 ticks[0],
@@ -191,7 +192,7 @@ def test_differing_timezones(external_repo_context):
             validate_run_started(
                 instance.get_runs()[0],
                 expected_datetime,
-                pendulum.create(2019, 2, 27, tz="US/Eastern"),
+                create_pendulum_time(2019, 2, 27, tz="US/Eastern"),
             )
 
         # Past midnight central time, the central timezone schedule will now run
@@ -213,9 +214,9 @@ def test_differing_timezones(external_repo_context):
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
-            expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Central").in_tz(
-                "UTC"
-            )
+            expected_datetime = create_pendulum_time(
+                year=2019, month=2, day=28, tz="US/Central"
+            ).in_tz("UTC")
 
             validate_tick(
                 ticks[0],
@@ -229,7 +230,7 @@ def test_differing_timezones(external_repo_context):
             validate_run_started(
                 instance.get_runs()[0],
                 expected_datetime,
-                pendulum.create(2019, 2, 27, tz="US/Central"),
+                create_pendulum_time(2019, 2, 27, tz="US/Central"),
             )
 
             # Verify idempotence
@@ -258,7 +259,7 @@ def test_different_days_in_different_timezones(external_repo_context):
         instance,
         external_repo,
     ):
-        freeze_datetime = pendulum.create(2019, 2, 27, 22, 59, 59, tz="US/Central").in_tz(
+        freeze_datetime = create_pendulum_time(2019, 2, 27, 22, 59, 59, tz="US/Central").in_tz(
             "US/Pacific"
         )
         with pendulum.test(freeze_datetime):
@@ -296,7 +297,7 @@ def test_different_days_in_different_timezones(external_repo_context):
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
-            expected_datetime = pendulum.create(
+            expected_datetime = create_pendulum_time(
                 year=2019, month=2, day=27, hour=23, tz="US/Central"
             ).in_tz("UTC")
 
@@ -312,7 +313,7 @@ def test_different_days_in_different_timezones(external_repo_context):
             validate_run_started(
                 instance.get_runs()[0],
                 expected_datetime,
-                pendulum.create(2019, 2, 26, tz="US/Central"),
+                create_pendulum_time(2019, 2, 26, tz="US/Central"),
             )
 
             # Verify idempotence
@@ -337,7 +338,9 @@ def test_hourly_dst_spring_forward(external_repo_context):
         external_repo,
     ):
         # 1AM CST
-        freeze_datetime = pendulum.create(2019, 3, 10, 1, 0, 0, tz="US/Central").in_tz("US/Pacific")
+        freeze_datetime = create_pendulum_time(2019, 3, 10, 1, 0, 0, tz="US/Central").in_tz(
+            "US/Pacific"
+        )
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("hourly_central_time_schedule")
@@ -368,9 +371,9 @@ def test_hourly_dst_spring_forward(external_repo_context):
             assert len(ticks) == 3
 
             expected_datetimes_utc = [
-                pendulum.create(2019, 3, 10, 4, 0, 0, tz="US/Central").in_tz("UTC"),
-                pendulum.create(2019, 3, 10, 3, 0, 0, tz="US/Central").in_tz("UTC"),
-                pendulum.create(2019, 3, 10, 1, 0, 0, tz="US/Central").in_tz("UTC"),
+                create_pendulum_time(2019, 3, 10, 4, 0, 0, tz="US/Central").in_tz("UTC"),
+                create_pendulum_time(2019, 3, 10, 3, 0, 0, tz="US/Central").in_tz("UTC"),
+                create_pendulum_time(2019, 3, 10, 1, 0, 0, tz="US/Central").in_tz("UTC"),
             ]
 
             for i in range(3):
@@ -410,7 +413,7 @@ def test_hourly_dst_fall_back(external_repo_context):
         external_repo,
     ):
         # 12:30 AM CST
-        freeze_datetime = pendulum.create(2019, 11, 3, 0, 30, 0, tz="US/Central").in_tz(
+        freeze_datetime = create_pendulum_time(2019, 11, 3, 0, 30, 0, tz="US/Central").in_tz(
             "US/Pacific"
         )
 
@@ -443,10 +446,10 @@ def test_hourly_dst_fall_back(external_repo_context):
             assert len(ticks) == 4
 
             expected_datetimes_utc = [
-                pendulum.create(2019, 11, 3, 9, 0, 0, tz="UTC"),
-                pendulum.create(2019, 11, 3, 8, 0, 0, tz="UTC"),
-                pendulum.create(2019, 11, 3, 7, 0, 0, tz="UTC"),
-                pendulum.create(2019, 11, 3, 6, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 3, 9, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 3, 8, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 3, 7, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 3, 6, 0, 0, tz="UTC"),
             ]
 
             expected_ct_times = [
@@ -498,7 +501,9 @@ def test_daily_dst_spring_forward(external_repo_context):
         external_repo,
     ):
         # Night before DST
-        freeze_datetime = pendulum.create(2019, 3, 10, 0, 0, 0, tz="US/Central").in_tz("US/Pacific")
+        freeze_datetime = create_pendulum_time(2019, 3, 10, 0, 0, 0, tz="US/Central").in_tz(
+            "US/Pacific"
+        )
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
@@ -529,15 +534,15 @@ def test_daily_dst_spring_forward(external_repo_context):
             # UTC time changed by one hour after the transition, still running daily at the same
             # time in CT
             expected_datetimes_utc = [
-                pendulum.create(2019, 3, 12, 5, 0, 0, tz="UTC"),
-                pendulum.create(2019, 3, 11, 5, 0, 0, tz="UTC"),
-                pendulum.create(2019, 3, 10, 6, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 3, 12, 5, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 3, 11, 5, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 3, 10, 6, 0, 0, tz="UTC"),
             ]
 
             expected_partition_times = [
-                pendulum.create(2019, 3, 11, tz="US/Central"),
-                pendulum.create(2019, 3, 10, tz="US/Central"),
-                pendulum.create(2019, 3, 9, tz="US/Central"),
+                create_pendulum_time(2019, 3, 11, tz="US/Central"),
+                create_pendulum_time(2019, 3, 10, tz="US/Central"),
+                create_pendulum_time(2019, 3, 9, tz="US/Central"),
             ]
 
             for i in range(3):
@@ -576,7 +581,9 @@ def test_daily_dst_fall_back(external_repo_context):
         external_repo,
     ):
         # Night before DST
-        freeze_datetime = pendulum.create(2019, 11, 3, 0, 0, 0, tz="US/Central").in_tz("US/Pacific")
+        freeze_datetime = create_pendulum_time(2019, 11, 3, 0, 0, 0, tz="US/Central").in_tz(
+            "US/Pacific"
+        )
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
@@ -607,15 +614,15 @@ def test_daily_dst_fall_back(external_repo_context):
             # UTC time changed by one hour after the transition, still running daily at the same
             # time in CT
             expected_datetimes_utc = [
-                pendulum.create(2019, 11, 5, 6, 0, 0, tz="UTC"),
-                pendulum.create(2019, 11, 4, 6, 0, 0, tz="UTC"),
-                pendulum.create(2019, 11, 3, 5, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 5, 6, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 4, 6, 0, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 3, 5, 0, 0, tz="UTC"),
             ]
 
             expected_partition_times = [
-                pendulum.create(2019, 11, 4, tz="US/Central"),
-                pendulum.create(2019, 11, 3, tz="US/Central"),
-                pendulum.create(2019, 11, 2, tz="US/Central"),
+                create_pendulum_time(2019, 11, 4, tz="US/Central"),
+                create_pendulum_time(2019, 11, 3, tz="US/Central"),
+                create_pendulum_time(2019, 11, 2, tz="US/Central"),
             ]
 
             for i in range(3):
@@ -655,7 +662,9 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
         external_repo,
     ):
         # Day before DST
-        freeze_datetime = pendulum.create(2019, 3, 9, 0, 0, 0, tz="US/Central").in_tz("US/Pacific")
+        freeze_datetime = create_pendulum_time(2019, 3, 9, 0, 0, 0, tz="US/Central").in_tz(
+            "US/Pacific"
+        )
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule(
@@ -686,15 +695,15 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
             assert len(ticks) == 3
 
             expected_datetimes_utc = [
-                pendulum.create(2019, 3, 11, 2, 30, 0, tz="US/Central").in_tz("UTC"),
-                pendulum.create(2019, 3, 10, 3, 00, 0, tz="US/Central").in_tz("UTC"),
-                pendulum.create(2019, 3, 9, 2, 30, 0, tz="US/Central").in_tz("UTC"),
+                create_pendulum_time(2019, 3, 11, 2, 30, 0, tz="US/Central").in_tz("UTC"),
+                create_pendulum_time(2019, 3, 10, 3, 00, 0, tz="US/Central").in_tz("UTC"),
+                create_pendulum_time(2019, 3, 9, 2, 30, 0, tz="US/Central").in_tz("UTC"),
             ]
 
             expected_partition_times = [
-                pendulum.create(2019, 3, 10, tz="US/Central"),
-                pendulum.create(2019, 3, 9, tz="US/Central"),
-                pendulum.create(2019, 3, 8, tz="US/Central"),
+                create_pendulum_time(2019, 3, 10, tz="US/Central"),
+                create_pendulum_time(2019, 3, 9, tz="US/Central"),
+                create_pendulum_time(2019, 3, 8, tz="US/Central"),
             ]
 
             partition_set_def = the_repo.get_partition_set_def(
@@ -742,7 +751,9 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
     ):
         # A schedule that runs daily during a time that occurs twice during a fall DST transition
         # only executes once for that day
-        freeze_datetime = pendulum.create(2019, 11, 2, 0, 0, 0, tz="US/Central").in_tz("US/Pacific")
+        freeze_datetime = create_pendulum_time(2019, 11, 2, 0, 0, 0, tz="US/Central").in_tz(
+            "US/Pacific"
+        )
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule(
@@ -773,15 +784,15 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
             assert len(ticks) == 3
 
             expected_datetimes_utc = [
-                pendulum.create(2019, 11, 4, 7, 30, 0, tz="UTC"),
-                pendulum.create(2019, 11, 3, 7, 30, 0, tz="UTC"),
-                pendulum.create(2019, 11, 2, 6, 30, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 4, 7, 30, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 3, 7, 30, 0, tz="UTC"),
+                create_pendulum_time(2019, 11, 2, 6, 30, 0, tz="UTC"),
             ]
 
             expected_partition_times = [
-                pendulum.create(2019, 11, 3, tz="US/Central"),
-                pendulum.create(2019, 11, 2, tz="US/Central"),
-                pendulum.create(2019, 11, 1, tz="US/Central"),
+                create_pendulum_time(2019, 11, 3, tz="US/Central"),
+                create_pendulum_time(2019, 11, 2, tz="US/Central"),
+                create_pendulum_time(2019, 11, 1, tz="US/Central"),
             ]
 
             for i in range(3):
