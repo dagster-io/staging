@@ -80,9 +80,7 @@ class AssetKey(namedtuple("_AssetKey", "path")):
         else:
             path = check.tuple_param(path, "path", of_type=str)
 
-        partition = check.opt_str_param(partition, "partition")
-
-        return super(AssetKey, cls).__new__(cls, path=path, partition=partition)
+        return super(AssetKey, cls).__new__(cls, path=path)
 
     def __str__(self):
         return "AssetKey({})".format(self.path)
@@ -131,6 +129,13 @@ class AssetKey(namedtuple("_AssetKey", "path")):
         if asset_key and asset_key.get("path"):
             return AssetKey(asset_key.get("path"))
         return None
+
+
+class AssetPartitions(namedtuple("_AssetPartitions", "asset_key partitions")):
+    def __new__(cls, asset_key, partitions=None):
+        asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
+        partitions = check.opt_list_param(partitions, "partitions", str)
+        return super(AssetPartitions, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
 
 
 @whitelist_for_serdes

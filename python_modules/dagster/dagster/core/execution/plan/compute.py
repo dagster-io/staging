@@ -42,7 +42,7 @@ def create_step_outputs(
             name=output_def.name,
             dagster_type_key=output_def.dagster_type.key,
             is_required=output_def.is_required,
-            asset_keys_fn=output_def.asset_keys_fn,
+            asset_fn=output_def.asset_fn,
             should_materialize=output_def.name in config_output_names,
         )
         for name, output_def in solid.definition.output_dict.items()
