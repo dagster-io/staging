@@ -13,7 +13,7 @@ from dagster.core.definitions import (
     Materialization,
     SolidHandle,
 )
-from dagster.core.definitions.events import ObjectStoreOperationType, AssetPartitions
+from dagster.core.definitions.events import AssetPartitions, ObjectStoreOperationType
 from dagster.core.execution.context.system import (
     HookContext,
     SystemExecutionContext,

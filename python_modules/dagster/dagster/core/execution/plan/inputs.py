@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, List, NamedTuple, Optiona
 
 from dagster import check
 from dagster.core.definitions import (
-    AssetKey,
     Failure,
     InputDefinition,
     PipelineDefinition,
@@ -110,6 +109,9 @@ class StepInputSource(ABC):
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
+    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetPartitions]:
+        return []
+
     @abstractmethod
     def compute_version(
         self,
@@ -119,13 +121,6 @@ class StepInputSource(ABC):
     ) -> Optional[str]:
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
-
-    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetPartitions]:
-        return []
-        input_def = self.get_input_def(step_context.pipeline_def)
-        if input_def.has_asset_fn:
-            return input_def.get_assets()
-        return []
 
 
 class FromRootInputManager(
@@ -281,6 +276,7 @@ class FromStepOutput(
         load_context = self.get_load_context(step_context)
 
         # check input_def
+        # TODO: maybe check that this is a subset of OutputDef's assets?
         input_def = self.get_input_def(step_context.pipeline_def)
         if input_def.has_asset_fn:
             return [input_def.asset_fn(load_context)]
@@ -487,7 +483,7 @@ class FromMultipleSources(
             ]
         )
 
-    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetPartitions]:
         return [asset for source in self.sources for asset in source.get_assets(step_context)]
 
 

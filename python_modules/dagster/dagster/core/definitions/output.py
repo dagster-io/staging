@@ -1,8 +1,8 @@
 from collections import namedtuple
-from typing import List, Optional
+from typing import Optional
 
 from dagster import check
-from dagster.core.definitions.events import AssetKey, AssetPartitions
+from dagster.core.definitions.events import AssetPartitions
 from dagster.core.types.dagster_type import resolve_dagster_type
 from dagster.utils.backcompat import experimental_arg_warning
 
