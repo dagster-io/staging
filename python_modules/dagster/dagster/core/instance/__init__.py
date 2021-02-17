@@ -1190,6 +1190,9 @@ class DagsterInstance:
     def intermediates_directory(self, run_id):
         return self._local_artifact_storage.intermediates_dir(run_id)
 
+    def io_manager_directory(self, run_id):
+        return self._local_artifact_storage.io_manager_dir(run_id)
+
     def schedules_directory(self):
         return self._local_artifact_storage.schedules_dir
 

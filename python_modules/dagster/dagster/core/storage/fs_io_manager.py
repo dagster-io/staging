@@ -11,7 +11,7 @@ from dagster.utils import PICKLE_PROTOCOL, mkdir_p
 from dagster.utils.backcompat import experimental
 
 
-@io_manager(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
+@io_manager(config_schema={"base_dir": Field(StringSource, is_required=False)})
 def fs_io_manager(init_context):
     """Built-in filesystem IO manager that stores and retrieves values using pickling.
 
@@ -59,8 +59,15 @@ def fs_io_manager(init_context):
             solid_b(solid_a())
 
     """
+    if init_context.resource_config["base_dir"] is None:
+        base_dir = init_context.instance_for_backwards_compat.io_manager_directory
+    else:
+        base_dir = init_context.resource_config["base_dir"]
+    import ipdb
 
-    return PickledObjectFilesystemIOManager(init_context.resource_config["base_dir"])
+    ipdb.set_trace()
+
+    return PickledObjectFilesystemIOManager(base_dir=base_dir)
 
 
 class PickledObjectFilesystemIOManager(IOManager):
@@ -163,7 +170,7 @@ class CustomPathPickledObjectFilesystemIOManager(IOManager):
             return pickle.load(read_obj)
 
 
-@io_manager(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
+@io_manager(config_schema={"base_dir": Field(StringSource, is_required=False)})
 @experimental
 def custom_path_fs_io_manager(init_context):
     """Built-in IO manager that allows users to custom output file path per output definition.
@@ -194,4 +201,8 @@ def custom_path_fs_io_manager(init_context):
         def pipe():
             sample_data()
     """
-    return CustomPathPickledObjectFilesystemIOManager(init_context.resource_config["base_dir"])
+    if init_context.resource_config["base_dir"] is None:
+        base_dir = init_context.instance_for_backwards_compat.io_manager_directory
+    else:
+        base_dir = init_context.resource_config["base_dir"]
+    return CustomPathPickledObjectFilesystemIOManager(base_dir=base_dir)

@@ -46,3 +46,11 @@ def test_fs_io_manager():
         assert os.path.isfile(filepath_b)
         with open(filepath_b, "rb") as read_obj:
             assert pickle.load(read_obj) == 1
+
+
+def test_fs_io_manager_base_dir():
+    io_manager = fs_io_manager
+    pipeline_def = define_pipeline(io_manager)
+
+    result = execute_pipeline(pipeline_def)
+    assert result.success

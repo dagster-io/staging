@@ -24,6 +24,9 @@ class LocalArtifactStorage(ConfigurableClass):
     def intermediates_dir(self, run_id):
         return os.path.join(self.base_dir, "storage", run_id, "")
 
+    def io_manager_dir(self, run_id):
+        return os.path.join(self.base_dir, "storage", run_id, "")
+
     @property
     def schedules_dir(self):
         return os.path.join(self.base_dir, "schedules")
