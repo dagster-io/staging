@@ -5,6 +5,7 @@ from dagster import check
 from dagster.core.definitions.partition import Partition, PartitionSetDefinition
 from dagster.core.definitions.schedule import ScheduleExecutionContext
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.seven import PendulumDateTime
 from dagster.utils.schedules import schedule_execution_time_iterator
 
 DEFAULT_MONTHLY_FORMAT = "%Y-%m"
@@ -43,7 +44,7 @@ def schedule_partition_range(
         tz = timezone if timezone else pendulum.now().timezone.name
         _start = (
             start.in_tz(tz)
-            if isinstance(start, pendulum.Pendulum)
+            if isinstance(start, PendulumDateTime)
             else pendulum.instance(start, tz=tz)
         )
 
@@ -55,7 +56,7 @@ def schedule_partition_range(
             _end = pendulum.now(tz)
 
         # coerce to the definition timezone
-        if isinstance(_end, pendulum.Pendulum):
+        if isinstance(_end, PendulumDateTime):
             _end = _end.in_tz(tz)
         else:
             _end = pendulum.instance(_end, tz=tz)
@@ -131,7 +132,7 @@ def date_partition_range(
         tz = timezone if timezone else pendulum.now().timezone.name
         _start = (
             start.in_tz(tz)
-            if isinstance(start, pendulum.Pendulum)
+            if isinstance(start, PendulumDateTime)
             else pendulum.instance(start, tz=tz)
         )
 
@@ -143,7 +144,7 @@ def date_partition_range(
             _end = pendulum.now(tz)
 
         # coerce to the definition timezone
-        if isinstance(_end, pendulum.Pendulum):
+        if isinstance(_end, PendulumDateTime):
             _end = _end.in_tz(tz)
         else:
             _end = pendulum.instance(_end, tz=tz)
