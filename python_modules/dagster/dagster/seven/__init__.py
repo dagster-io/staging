@@ -13,8 +13,6 @@ import time
 from contextlib import contextmanager
 from types import MethodType
 
-import pendulum
-
 from .json import JSONDecodeError, dump, dumps
 from .temp_dir import get_system_temp_directory
 
@@ -130,11 +128,16 @@ def get_utc_timezone():
 
 
 def get_current_datetime_in_utc():
+
+    from dagster.seven import pendulum
+
     return pendulum.now("UTC")
 
 
 def get_timestamp_from_utc_datetime(utc_datetime):
-    if isinstance(utc_datetime, pendulum.Pendulum):
+    from dagster.seven import pendulum
+
+    if isinstance(utc_datetime, pendulum.DateTime):
         return utc_datetime.timestamp()
 
     if utc_datetime.tzinfo != get_utc_timezone():
