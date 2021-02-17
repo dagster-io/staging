@@ -87,6 +87,7 @@ class GrapheneInstance(graphene.ObjectType):
     runQueuingSupported = graphene.NonNull(graphene.Boolean)
     executablePath = graphene.NonNull(graphene.String)
     daemonHealth = graphene.NonNull(GrapheneDaemonHealth)
+    bulkActionsSupported = graphene.NonNull(graphene.Boolean)
 
     class Meta:
         name = "Instance"
@@ -118,3 +119,6 @@ class GrapheneInstance(graphene.ObjectType):
 
     def resolve_daemonHealth(self, _graphene_info):
         return GrapheneDaemonHealth(instance=self._instance)
+
+    def resolve_bulkActionsSupported(self, _graphene_info):
+        return self._instance.has_bulk_actions_table()
