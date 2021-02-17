@@ -1,3 +1,4 @@
+from typing import Optional
 from collections import namedtuple
 
 from dagster import check
@@ -8,7 +9,7 @@ from dagster.core.types.dagster_type import (
     resolve_dagster_type,
 )
 from dagster.utils.backcompat import experimental_arg_warning
-
+from dagster.core.definitions.events import AssetPartitions
 from .utils import check_valid_name
 
 
@@ -72,6 +73,7 @@ class InputDefinition:
         default_value=_NoValueSentinel,
         root_manager_key=None,
         metadata=None,
+        asset_fn=None,
     ):
         ""
         self._name = check_valid_name(name)
@@ -91,6 +93,10 @@ class InputDefinition:
             experimental_arg_warning("metadata", "InputDefinition")
 
         self._metadata = check.opt_dict_param(metadata, "metadata", key_type=str)
+
+        if asset_fn:
+            experimental_arg_warning("asset_fn", "OutputDefinition")
+        self.asset_fn = asset_fn
 
     @property
     def name(self):
@@ -120,6 +126,15 @@ class InputDefinition:
     @property
     def metadata(self):
         return self._metadata
+
+    @property
+    def has_asset_fn(self) -> bool:
+        return self.asset_fn is not None
+
+    def get_assets(self, context: "InputContext") -> Optional[AssetPartitions]:
+        if self.has_asset_fn:
+            return self.asset_fn(context)
+        return None
 
     def mapping_to(self, solid_name, input_name, fan_in_index=None):
         """Create an input mapping to an input of a child solid.

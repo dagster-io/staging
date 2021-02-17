@@ -1,8 +1,8 @@
 from collections import namedtuple
-from typing import List
+from typing import List, Optional
 
 from dagster import check
-from dagster.core.definitions.events import AssetKey
+from dagster.core.definitions.events import AssetKey, AssetPartitions
 from dagster.core.types.dagster_type import resolve_dagster_type
 from dagster.utils.backcompat import experimental_arg_warning
 
@@ -43,7 +43,7 @@ class OutputDefinition:
         is_required=None,
         io_manager_key=None,
         metadata=None,
-        asset_keys_fn=None,
+        asset_fn=None,
     ):
         self._name = check_valid_name(check.opt_str_param(name, "name", DEFAULT_OUTPUT))
         self._dagster_type = resolve_dagster_type(dagster_type)
@@ -55,9 +55,9 @@ class OutputDefinition:
         if metadata:
             experimental_arg_warning("metadata", "OutputDefinition")
         self._metadata = metadata
-        if asset_keys_fn:
-            experimental_arg_warning("asset_keys_fn", "OutputDefinition")
-        self.asset_keys_fn = asset_keys_fn
+        if asset_fn:
+            experimental_arg_warning("asset_fn", "OutputDefinition")
+        self.asset_fn = asset_fn
 
     @property
     def name(self):
@@ -91,10 +91,14 @@ class OutputDefinition:
     def is_dynamic(self):
         return False
 
-    def get_asset_keys(self, context) -> List[AssetKey]:
-        if self.asset_keys_fn:
-            return self.asset_keys_fn(context)
-        return []
+    @property
+    def has_asset_fn(self) -> bool:
+        return self.asset_fn is not None
+
+    def get_assets(self, context: "OutputContext") -> Optional[AssetPartitions]:
+        if self.has_asset_fn:
+            return self.asset_fn(context)
+        return None
 
     def mapping_from(self, solid_name, output_name=None):
         """Create an output mapping from an output of a child solid.
