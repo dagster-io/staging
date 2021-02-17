@@ -53,6 +53,15 @@ after the time when the schedule was turned on (usually in Dagit). If the
 between the `start_date` and when the schedule is turned on by launching a
 [backfill](/overview/partitions-backfill/backfill).
 
+By default, the partition that is filled in will be one partition earlier than the partition
+that includes the execution time, to capture a common ETL use case - for example, a daily schedule
+will fill in the previous day's partition, and a monthly schedule will fill in last month's
+partition. You can customize this behavior by changing the `partition_days_offset` parameter on the
+schedule (or `partition_months_offset` parameters on monthly schedules, etc.). The default value of
+this parameter is 1, but setting it to 0 will cause the schedule to fill in the partition
+that coresponds to the execution time (and increasing it will cause it to fill in an earlier
+partition).
+
 The following examples demonstrate schedules with an underlying partition set, each with a
 different execution interval:
 
