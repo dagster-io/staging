@@ -11,7 +11,7 @@ from dagster.utils import PICKLE_PROTOCOL, mkdir_p
 from dagster.utils.backcompat import experimental
 
 
-@io_manager(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
+@io_manager(config_schema={"base_dir": Field(StringSource, is_required=False)})
 def fs_io_manager(init_context):
     """Built-in filesystem IO manager that stores and retrieves values using pickling.
 
@@ -59,8 +59,11 @@ def fs_io_manager(init_context):
             solid_b(solid_a())
 
     """
+    base_dir = init_context.resource_config.get(
+        "base_dir", init_context.instance_for_backwards_compat.io_manager_directory()
+    )
 
-    return PickledObjectFilesystemIOManager(init_context.resource_config["base_dir"])
+    return PickledObjectFilesystemIOManager(base_dir=base_dir)
 
 
 class PickledObjectFilesystemIOManager(IOManager):
@@ -194,4 +197,6 @@ def custom_path_fs_io_manager(init_context):
         def pipe():
             sample_data()
     """
-    return CustomPathPickledObjectFilesystemIOManager(init_context.resource_config["base_dir"])
+    return CustomPathPickledObjectFilesystemIOManager(
+        base_dir=init_context.resource_config.get("base_dir")
+    )
