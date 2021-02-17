@@ -1,6 +1,5 @@
 import os
 
-import pendulum
 import yaml
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import (
@@ -8,6 +7,7 @@ from dagster.core.host_representation import (
     InProcessRepositoryLocationOrigin,
 )
 from dagster.core.scheduler.job import JobState, JobStatus, JobType, ScheduleJobData
+from dagster.seven import pendulum
 from dagster_graphql.test.utils import (
     execute_dagster_graphql,
     infer_repository_selector,
@@ -276,7 +276,7 @@ def test_get_single_schedule_definition(graphql_context):
 
     schedule_selector = infer_schedule_selector(context, "timezone_schedule")
 
-    future_ticks_start_time = pendulum.create(2019, 2, 27, tz="US/Central").timestamp()
+    future_ticks_start_time = pendulum.datetime(2019, 2, 27, tz="US/Central").timestamp()
 
     result = execute_dagster_graphql(
         context,
@@ -294,14 +294,16 @@ def test_get_single_schedule_definition(graphql_context):
     timestamps = [future_tick["timestamp"] for future_tick in future_ticks["results"]]
 
     assert timestamps == [
-        pendulum.create(2019, 2, 27, tz="US/Central").timestamp(),
-        pendulum.create(2019, 2, 28, tz="US/Central").timestamp(),
-        pendulum.create(2019, 3, 1, tz="US/Central").timestamp(),
+        pendulum.datetime(2019, 2, 27, tz="US/Central").timestamp(),
+        pendulum.datetime(2019, 2, 28, tz="US/Central").timestamp(),
+        pendulum.datetime(2019, 3, 1, tz="US/Central").timestamp(),
     ]
 
     cursor = future_ticks["cursor"]
 
-    assert future_ticks["cursor"] == (pendulum.create(2019, 3, 1, tz="US/Central").timestamp() + 1)
+    assert future_ticks["cursor"] == (
+        pendulum.datetime(2019, 3, 1, tz="US/Central").timestamp() + 1
+    )
 
     result = execute_dagster_graphql(
         context,
@@ -316,9 +318,9 @@ def test_get_single_schedule_definition(graphql_context):
     timestamps = [future_tick["timestamp"] for future_tick in future_ticks["results"]]
 
     assert timestamps == [
-        pendulum.create(2019, 3, 2, tz="US/Central").timestamp(),
-        pendulum.create(2019, 3, 3, tz="US/Central").timestamp(),
-        pendulum.create(2019, 3, 4, tz="US/Central").timestamp(),
+        pendulum.datetime(2019, 3, 2, tz="US/Central").timestamp(),
+        pendulum.datetime(2019, 3, 3, tz="US/Central").timestamp(),
+        pendulum.datetime(2019, 3, 4, tz="US/Central").timestamp(),
     ]
 
 
