@@ -884,6 +884,7 @@ type Instance {
   runQueuingSupported: Boolean!
   executablePath: String!
   daemonHealth: DaemonHealth!
+  bulkActionsSupported: Boolean!
 }
 
 type RunLauncher {
