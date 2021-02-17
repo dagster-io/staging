@@ -14,10 +14,10 @@ from dagster.core.definitions import (
     TypeCheck,
 )
 from dagster.core.definitions.events import (
+    AssetPartitions,
     DynamicOutput,
     EventMetadataEntry,
     PartitionSpecificMetadataEntry,
-    AssetPartitions,
 )
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,

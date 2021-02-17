@@ -7,9 +7,8 @@ from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.definition_config_schema import (
     convert_user_facing_definition_config_schema,
 )
-from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.definitions.events import AssetPartitions
-
+from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.storage.input_manager import InputManager
 from dagster.core.storage.output_manager import IOutputManagerDefinition, OutputManager
 from dagster.core.storage.root_input_manager import IInputManagerDefinition

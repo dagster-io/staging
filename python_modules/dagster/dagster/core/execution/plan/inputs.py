@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, Dict, Iterator, List, NamedTuple, Optiona
 
 from dagster import check
 from dagster.core.definitions import (
-    AssetKey,
     Failure,
     InputDefinition,
     PipelineDefinition,
@@ -121,10 +120,6 @@ class StepInputSource(ABC):
         raise NotImplementedError()
 
     def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetPartitions]:
-        return []
-        input_def = self.get_input_def(step_context.pipeline_def)
-        if input_def.has_asset_fn:
-            return input_def.get_assets()
         return []
 
 
@@ -487,7 +482,7 @@ class FromMultipleSources(
             ]
         )
 
-    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetKey]:
+    def get_assets(self, step_context: "SystemStepExecutionContext") -> List[AssetPartitions]:
         return [asset for source in self.sources for asset in source.get_assets(step_context)]
 
 

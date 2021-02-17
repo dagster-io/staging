@@ -72,7 +72,7 @@ class AssetKey(namedtuple("_AssetKey", "path")):
             represent the hierarchical structure of the asset_key.
     """
 
-    def __new__(cls, path=None, partition=None):
+    def __new__(cls, path=None):
         if isinstance(path, str):
             path = [path]
         elif isinstance(path, list):

@@ -1,3 +1,4 @@
+import pytest
 from dagster import (
     AssetKey,
     ModeDefinition,
@@ -8,15 +9,13 @@ from dagster import (
     pipeline,
     solid,
 )
-
-from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.definitions.events import (
+    AssetPartitions,
     EventMetadataEntry,
     PartitionSpecificMetadataEntry,
-    AssetPartitions,
 )
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.storage.io_manager import IOManager
-import pytest
 
 
 def n_asset_keys(path, n):
@@ -118,7 +117,7 @@ def test_output_definition_multiple_partition_materialization():
 
     for i in range(3):
         event_data = materializations[i].event_specific_data
-        assert event_data.materialization.asset_key == AssetKey(["table1"], str(i))
+        assert event_data.materialization.asset_key == AssetKey(["table1"])
         assert event_data.materialization.metadata_entries == [entry1, partition_entries[i]]
         assert event_data.parent_assets == []
 
@@ -196,7 +195,7 @@ def test_output_definition_transitive_lineage():
         return Output(None, "output1", metadata_entries=[entry1])
 
     @solid
-    def solidX(_, a):
+    def solidX(_, _input):
         return 1
 
     @solid(
@@ -204,7 +203,7 @@ def test_output_definition_transitive_lineage():
             OutputDefinition(name="output3", asset_fn=lambda _: AssetPartitions(AssetKey("table3")))
         ]
     )
-    def solid3(_, _input1):
+    def solid3(_, _input):
         yield Output(
             7,
             "output3",
@@ -335,3 +334,6 @@ def test_multiple_definition_fails():
 
     with pytest.raises(DagsterInvariantViolationError):
         execute_pipeline(my_pipeline)
+
+
+# TODO: Test input definition overrides
