@@ -1,7 +1,20 @@
+from os import path
+
 import pytest
-from dagster import ModeDefinition, PipelineDefinition, check, execute_pipeline, solid
+from dagster import (
+    ModeDefinition,
+    PipelineDefinition,
+    check,
+    execute_pipeline,
+    fs_io_manager,
+    multiprocess_executor,
+    pipeline,
+    reconstructable,
+    solid,
+)
 from dagster.core.definitions.executor import executor
 from dagster.core.execution.retries import Retries
+from dagster.core.test_utils import instance_for_test
 
 
 def assert_pipeline_runs_with_executor(executor_defs, execution_config):
@@ -79,3 +92,41 @@ def test_in_process_executor_dict_config_configured():
     assert_pipeline_runs_with_executor(
         [test_executor_configured], {"configured_test_executor": None}
     )
+
+
+@solid
+def emit_one(_):
+    return 1
+
+
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            executor_defs=[multiprocess_executor.configured({"max_concurrent": 1})],
+            resource_defs={"io_manager": fs_io_manager},
+        )
+    ]
+)
+def multiproc_test():
+    emit_one()
+
+
+def test_multiproc():
+
+    with instance_for_test() as instance:
+
+        result = execute_pipeline(
+            reconstructable(multiproc_test),
+            # https://github.com/dagster-io/dagster/issues/3697
+            # remove the execution part of this config
+            run_config={
+                "execution": {"multiprocess": {}},
+                "resources": {
+                    "io_manager": {
+                        "config": {"base_dir": path.join(instance.root_directory, "storage")}
+                    }
+                },
+            },
+            instance=instance,
+        )
+        assert result.success
