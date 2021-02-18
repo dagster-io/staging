@@ -739,30 +739,46 @@ def make_python_type_usable_as_dagster_type(python_type, dagster_type):
     on a given python type.
     """
     check.inst_param(dagster_type, "dagster_type", DagsterType)
-    if (
-        _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY.get(python_type, dagster_type)
-        is not dagster_type
-    ):
+    registered_dagster_type = _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY.get(
+        python_type, dagster_type
+    )
+    if registered_dagster_type is not None and registered_dagster_type is not dagster_type:
         # This would be just a great place to insert a short URL pointing to the type system
         # documentation into the error message
         # https://github.com/dagster-io/dagster/issues/1831
-        raise DagsterInvalidDefinitionError(
-            (
-                "A Dagster type has already been registered for the Python type "
-                "{python_type}. make_python_type_usable_as_dagster_type can only "
-                "be called once on a python type as it is registering a 1:1 mapping "
-                "between that python type and a dagster type."
-            ).format(python_type=python_type)
-        )
+        if isinstance(registered_dagster_type, AutoWrappedPythonObjectDagsterType):
+            raise DagsterInvalidDefinitionError(
+                f"A Dagster type has already been registered for the Python type "
+                f'{python_type}. The Dagster type was "auto-registered" - i.e. a solid definition '
+                f"used the Python type as an annotation for one of its arguments or for its return "
+                f"value before make_python_type_usable_as_dagster_type was called, and we "
+                f"generated a Dagster type to correspond to it. To override the auto-generated "
+                f"Dagster type, call make_python_type_usable_as_dagster_type before any solid "
+                f"definitions refer to the Python type."
+            )
+        else:
+            raise DagsterInvalidDefinitionError(
+                f"A Dagster type has already been registered for the Python type "
+                f"{python_type}. make_python_type_usable_as_dagster_type can only "
+                f"be called once on a python type as it is registering a 1:1 mapping "
+                f"between that python type and a dagster type."
+            )
 
     _PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY[python_type] = dagster_type
 
 
 DAGSTER_INVALID_TYPE_ERROR_MESSAGE = (
-    "Invalid type: dagster_type must be DagsterType, a python scalar, or a python type "
-    "that has been marked usable as a dagster type via @usable_dagster_type or "
-    "make_python_type_usable_as_dagster_type: got {dagster_type}{additional_msg}"
+    "Invalid type: dagster_type must be an instance of DagsterType or a python type: "
+    "got {dagster_type}{additional_msg}"
 )
+
+
+class AutoWrappedPythonObjectDagsterType(PythonObjectDagsterType):
+    def __init__(self, python_type):
+        super(AutoWrappedPythonObjectDagsterType, self).__init__(
+            python_type,
+            description=f"Auto-generated DagsterType for the Python type {python_type.__name__}",
+        )
 
 
 def resolve_dagster_type(dagster_type):
@@ -835,6 +851,10 @@ def resolve_dagster_type(dagster_type):
                 dagster_type=str(dagster_type), additional_msg="."
             )
         )
+    if isinstance(dagster_type, type):
+        resolved_dagster_type = AutoWrappedPythonObjectDagsterType(dagster_type)
+        make_python_type_usable_as_dagster_type(dagster_type, resolved_dagster_type)
+        return resolved_dagster_type
 
     raise DagsterInvalidDefinitionError(
         "{dagster_type} is not a valid dagster type.".format(dagster_type=dagster_type)

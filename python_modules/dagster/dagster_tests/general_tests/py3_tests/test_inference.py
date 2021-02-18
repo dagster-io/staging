@@ -1,11 +1,16 @@
 from typing import Any, Dict, List, Optional, Tuple
 
+import pytest
 from dagster import (
+    DagsterInvalidDefinitionError,
+    DagsterType,
     InputDefinition,
     Int,
     composite_solid,
+    execute_pipeline,
     execute_solid,
     lambda_solid,
+    make_python_type_usable_as_dagster_type,
     pipeline,
     solid,
     usable_as_dagster_type,
@@ -358,3 +363,51 @@ def test_pipeline_api_stability():
 
     # assert definition does not error
     assert empty
+
+
+def test_unregistered_type_annotation_output():
+    class MyClass:
+        pass
+
+    @solid
+    def my_solid(_) -> MyClass:
+        return MyClass()
+
+    @pipeline
+    def my_pipeline():
+        my_solid()
+
+    execute_pipeline(my_pipeline)
+
+
+def test_unregistered_type_annotation_input():
+    class MyClass:
+        pass
+
+    @solid
+    def solid1(_):
+        return MyClass()
+
+    @solid
+    def solid2(_, _input1: MyClass):
+        pass
+
+    @pipeline
+    def my_pipeline():
+        solid2(solid1())
+
+    execute_pipeline(my_pipeline)
+
+
+def test_register_after_solid_definition():
+    class MyClass:
+        pass
+
+    @solid
+    def _my_solid(_) -> MyClass:
+        return MyClass()
+
+    my_dagster_type = DagsterType(name="aaaa", type_check_fn=lambda _, _a: True)
+
+    with pytest.raises(DagsterInvalidDefinitionError):
+        make_python_type_usable_as_dagster_type(MyClass, my_dagster_type)
