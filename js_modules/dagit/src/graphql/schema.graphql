@@ -428,6 +428,7 @@ type StepMaterializationEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   materialization: Materialization!
   stepStats: PipelineRunStepStats!
 }
@@ -439,6 +440,7 @@ interface MessageEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 enum LogLevel {
@@ -447,6 +449,36 @@ enum LogLevel {
   INFO
   WARNING
   DEBUG
+}
+
+enum DagsterEventType {
+  STEP_OUTPUT
+  STEP_INPUT
+  STEP_FAILURE
+  STEP_START
+  STEP_SUCCESS
+  STEP_SKIPPED
+  STEP_UP_FOR_RETRY
+  STEP_RESTARTED
+  STEP_MATERIALIZATION
+  STEP_EXPECTATION_RESULT
+  PIPELINE_INIT_FAILURE
+  PIPELINE_ENQUEUED
+  PIPELINE_DEQUEUED
+  PIPELINE_STARTING
+  PIPELINE_START
+  PIPELINE_SUCCESS
+  PIPELINE_FAILURE
+  PIPELINE_CANCELING
+  PIPELINE_CANCELED
+  OBJECT_STORE_OPERATION
+  ASSET_STORE_OPERATION
+  LOADED_INPUT
+  HANDLED_OUTPUT
+  ENGINE_EVENT
+  HOOK_COMPLETED
+  HOOK_ERRORED
+  HOOK_SKIPPED
 }
 
 interface StepEvent {
@@ -1098,6 +1130,7 @@ type ExecutionStepFailureEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   error: PythonError!
   failureMetadata: FailureMetadata
 }
@@ -1115,6 +1148,7 @@ type ExecutionStepInputEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   inputName: String!
   typeCheck: TypeCheck!
 }
@@ -1133,6 +1167,7 @@ type ExecutionStepOutputEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   outputName: String!
   typeCheck: TypeCheck!
 }
@@ -1144,6 +1179,7 @@ type ExecutionStepSkippedEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 type ExecutionStepStartEvent implements MessageEvent & StepEvent {
@@ -1153,6 +1189,7 @@ type ExecutionStepStartEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 type ExecutionStepSuccessEvent implements MessageEvent & StepEvent {
@@ -1162,6 +1199,7 @@ type ExecutionStepSuccessEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 type ExecutionStepUpForRetryEvent implements MessageEvent & StepEvent {
@@ -1171,6 +1209,7 @@ type ExecutionStepUpForRetryEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   error: PythonError!
   secondsToWait: Int
 }
@@ -1182,6 +1221,7 @@ type ExecutionStepRestartEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 type LogMessageEvent implements MessageEvent {
@@ -1191,6 +1231,7 @@ type LogMessageEvent implements MessageEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 type PipelineFailureEvent implements MessageEvent & PipelineEvent {
@@ -1200,6 +1241,7 @@ type PipelineFailureEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
   error: PythonError
 }
@@ -1215,6 +1257,7 @@ type PipelineInitFailureEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
   error: PythonError!
 }
@@ -1226,6 +1269,7 @@ type PipelineStartEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
 }
 
@@ -1236,6 +1280,7 @@ type PipelineEnqueuedEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
 }
 
@@ -1246,6 +1291,7 @@ type PipelineDequeuedEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
 }
 
@@ -1256,6 +1302,7 @@ type PipelineStartingEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
 }
 
@@ -1266,6 +1313,7 @@ type PipelineCancelingEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
 }
 
@@ -1276,6 +1324,7 @@ type PipelineCanceledEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
 }
 
@@ -1286,6 +1335,7 @@ type PipelineSuccessEvent implements MessageEvent & PipelineEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   pipelineName: String!
 }
 
@@ -1296,6 +1346,7 @@ type HandledOutputEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   outputName: String!
   managerKey: String!
 }
@@ -1307,6 +1358,7 @@ type LoadedInputEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   inputName: String!
   managerKey: String!
   upstreamOutputName: String
@@ -1320,6 +1372,7 @@ type ObjectStoreOperationEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   operationResult: ObjectStoreOperationResult!
 }
 
@@ -1344,6 +1397,7 @@ type StepExpectationResultEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   expectationResult: ExpectationResult!
 }
 
@@ -1354,6 +1408,7 @@ type EngineEvent implements MessageEvent & DisplayableEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   label: String!
   description: String
   metadataEntries: [EventMetadataEntry!]!
@@ -1369,6 +1424,7 @@ type HookCompletedEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 type HookSkippedEvent implements MessageEvent & StepEvent {
@@ -1378,6 +1434,7 @@ type HookSkippedEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
 }
 
 type HookErroredEvent implements MessageEvent & StepEvent {
@@ -1387,6 +1444,7 @@ type HookErroredEvent implements MessageEvent & StepEvent {
   level: LogLevel!
   stepKey: String
   solidHandleID: String
+  eventType: DagsterEventType
   error: PythonError!
 }
 

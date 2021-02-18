@@ -17,7 +17,7 @@ interface ILogsToolbarProps {
   onSetFilter: (filter: LogFilter) => void;
 }
 
-export const LogsToolbar: React.FunctionComponent<ILogsToolbarProps> = (props) => {
+export const LogsToolbar: React.FC<ILogsToolbarProps> = (props) => {
   const {steps, filter, onSetFilter} = props;
 
   const [queryString, setQueryString] = React.useState<string>(() =>
@@ -43,7 +43,7 @@ export const LogsToolbar: React.FunctionComponent<ILogsToolbarProps> = (props) =
   }, [copyIcon]);
 
   const onChange = (value: string) => {
-    const tokens = value.split(/\s+/g);
+    const tokens = value.split(/\s+/);
     const logQuery = tokens.map((item) => {
       const [token, value] = item.split(':');
       return value ? {token, value} : {value: token};
