@@ -4,6 +4,8 @@ from dagster.core.definitions import PipelineDefinition
 from dagster.core.errors import DagsterRunAlreadyExists, DagsterSnapshotDoesNotExist
 from dagster.core.snap import create_pipeline_snapshot_id
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
+from dagster.core.storage.runs.migration import RUN_DATA_MIGRATIONS
+from dagster.core.storage.runs.sql_run_storage import SqlRunStorage
 from dagster.core.storage.tags import PARENT_RUN_ID_TAG, ROOT_RUN_ID_TAG
 from dagster.core.utils import make_new_run_id
 from dagster.daemon.daemon import SensorDaemon
@@ -938,3 +940,10 @@ class TestRunStorage:
         )
         storage.add_daemon_heartbeat(added_heartbeat)
         storage.wipe_daemon_heartbeats()
+
+    def test_secondary_index(self, storage):
+        if not isinstance(storage, SqlRunStorage):
+            return
+
+        for name in RUN_DATA_MIGRATIONS.keys():
+            assert storage.has_built_index(name)
