@@ -98,13 +98,11 @@ class EventLogStorage(ABC):
 
     @property
     def is_asset_aware(self) -> bool:
-        return isinstance(self, AssetAwareEventLogStorage)
+        return True
 
     def optimize_for_dagit(self, statement_timeout: int):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
 
-
-class AssetAwareEventLogStorage(ABC):
     @abstractmethod
     def has_asset_key(self, asset_key: AssetKey) -> bool:
         pass
