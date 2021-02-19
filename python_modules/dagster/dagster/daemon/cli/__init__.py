@@ -30,8 +30,7 @@ def run_command():
             if instance.is_ephemeral:
                 raise Exception(
                     "dagster-daemon can't run using an in-memory instance. Make sure "
-                    "the DAGSTER_HOME environment variable has been set correctly and that "
-                    "you have created a dagster.yaml file there."
+                    "the DAGSTER_HOME environment variable has been set correctly."
                 )
 
             with DagsterDaemonController(
