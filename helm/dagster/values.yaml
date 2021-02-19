@@ -4,11 +4,11 @@
 # - We recommend using unique tags for user code images, as this will guarantee that the docker
 #   image will be consistent for the pipeline's entire execution.
 ---
-nameOverride: ""
-fullnameOverride: ""
+nameOverride: ''
+fullnameOverride: ''
 rbacEnabled: true
 # The DAGSTER_HOME env var is set by default on all nodes from this value
-dagsterHome: "/opt/dagster/dagster_home"
+dagsterHome: '/opt/dagster/dagster_home'
 
 # Specify secrets to run containers based on images in private registries. See:
 # https://kubernetes.io/docs/concepts/containers/images/#referring-to-an-imagepullsecrets-on-a-pod
@@ -21,8 +21,8 @@ dagit:
   replicaCount: 1
   # REQUIRED: Dagit image repository and tag to deploy
   image:
-    repository: "dagster/dagster-celery-k8s"
-    tag: "latest"
+    repository: 'dagster/dagster-celery-k8s'
+    tag: 'latest'
     pullPolicy: Always
 
   service:
@@ -82,7 +82,7 @@ dagit:
   # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes
   livenessProbe:
     httpGet:
-      path: "/dagit_info"
+      path: '/dagit_info'
       port: 80
     # initialDelaySeconds: 60
     periodSeconds: 20
@@ -96,7 +96,7 @@ dagit:
   # `initialDelaySeconds: 60` under `livenessProbe`
   startupProbe:
     httpGet:
-      path: "/dagit_info"
+      path: '/dagit_info'
       port: 80
     initialDelaySeconds: 1
     periodSeconds: 10
@@ -166,9 +166,9 @@ userDeployments:
   enabled: true
   # List of unique deployments
   deployments:
-    - name: "k8s-example-user-code-1"
+    - name: 'k8s-example-user-code-1'
       image:
-        repository: "dagster/user-code-example"
+        repository: 'dagster/user-code-example'
         tag: latest
         # Change with caution! If you're using a fixed tag for pipeline run images, changing the
         # image pull policy to anything other than "Always" will use a cached/stale image, which is
@@ -183,8 +183,8 @@ userDeployments:
       #   - "-a"
       #   - "define_demo_execution_repo"
       dagsterApiGrpcArgs:
-        - "-f"
-        - "/example_project/example_repo/repo.py"
+        - '-f'
+        - '/example_project/example_repo/repo.py'
       port: 3030
 
       # Additional environment variables to set.
@@ -261,8 +261,8 @@ userDeployments:
 ####################################################################################################
 pipelineRun:
   image:
-    repository: "dagster/user-code-example"
-    tag: "latest"
+    repository: 'dagster/user-code-example'
+    tag: 'latest'
     pullPolicy: Always
 
   # Additional environment variables to set.
@@ -294,8 +294,8 @@ scheduler:
       # (to call `dagster api launch_scheduled_execution`) and instance yaml
       # but does not need access to user code.
       image:
-        repository: "dagster/dagster-celery-k8s"
-        tag: "latest"
+        repository: 'dagster/dagster-celery-k8s'
+        tag: 'latest'
         pullPolicy: Always
 
       # K8s Namespace for K8s CronJob(s) and launched K8s Job(s).
@@ -375,12 +375,12 @@ runLauncher:
     celeryK8sRunLauncher:
       # The Celery workers can be deployed with a fixed image (no user code included)
       image:
-        repository: "dagster/dagster-celery-k8s"
-        tag: "latest"
+        repository: 'dagster/dagster-celery-k8s'
+        tag: 'latest'
         pullPolicy: Always
 
       # Support overriding the name prefix of Celery worker pods
-      nameOverride: "celery-workers"
+      nameOverride: 'celery-workers'
 
       # Additional config options for Celery, applied to all queues.
       # For available options, see:
@@ -391,7 +391,7 @@ runLauncher:
       # provision a "dagster" worker queue, as this is the default queue used by Dagster. Labels field is optional. If specified,
       # the labels are added to each Celery worker in that Celery queue
       workerQueues:
-        - name: "dagster"
+        - name: 'dagster'
           replicaCount: 2
           labels: {}
 
@@ -484,12 +484,12 @@ postgresql:
 
   # Used by init container to check that db is running. (Even if enabled:false)
   image:
-    repository: "postgres"
-    tag: "9.6.16"
+    repository: 'postgres'
+    tag: '9.6.16'
     pullPolicy: IfNotPresent
 
   # set this PostgreSQL hostname when using an external PostgreSQL database
-  postgresqlHost: ""
+  postgresqlHost: ''
 
   postgresqlUsername: test
 
@@ -531,7 +531,7 @@ redis:
   external: true
 
   # Redis host URL
-  host: ""
+  host: ''
 
   # Redis port
   port: 6379
@@ -549,8 +549,8 @@ flower:
   enabled: false
 
   image:
-    repository: "mher/flower"
-    tag: "0.9.5"
+    repository: 'mher/flower'
+    tag: '0.9.5'
     pullPolicy: Always
 
   service:
@@ -583,7 +583,7 @@ flower:
   # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes
   livenessProbe:
     tcpSocket:
-      port: "flower"
+      port: 'flower'
     # initialDelaySeconds: 60
     periodSeconds: 20
     failureThreshold: 3
@@ -594,7 +594,7 @@ flower:
   # `initialDelaySeconds: 60` under `livenessProbe`
   startupProbe:
     tcpSocket:
-      port: "flower"
+      port: 'flower'
     periodSeconds: 10
     failureThreshold: 6
 
@@ -610,7 +610,7 @@ ingress:
     # Ingress hostname for Dagit e.g. dagit.mycompany.com
     # NOTE: Dagit doesn't yet support hosting on a path, e.g. mycompany.com/dagit
     # See: https://github.com/dagster-io/dagster/issues/2073
-    host: ""
+    host: ''
 
     # Different http paths to add to the ingress before the default dagit path
     # Example:
@@ -632,10 +632,10 @@ ingress:
 
   flower:
     # Ingress hostname for Flower e.g. flower.mycompany.com
-    host: ""
+    host: ''
     # if path is '/flower', Flower will be accessible at 'mycompany.com/flower'
     # NOTE: do NOT keep trailing slash. For root configuration, set as empty string
-    path: ""
+    path: ''
 
     # Different http paths to add to the ingress before the default flower path
     # Example:
@@ -656,8 +656,8 @@ ingress:
     succeedingPaths: []
 
 ####################################################################################################
-# Dagster Daemon (Optional) Deploy a daemon for launching queued runs and running schedules and
-# sensors.
+# Dagster Daemon (Optional) Deploy a daemon for launching queued runs, running partition backfills,
+# and running schedules and sensors.
 #
 # By default, this daemon is included in your deployment and used to run schedules and sensors.
 # Setting `enabled` to false will stop the daemon from being included in your deployment.
@@ -667,18 +667,24 @@ ingress:
 #
 # Setting `enabled` in `queuedRunCoordinator` allows you to set limits on the total number of runs
 # that can execute at once.
+#
+# Setting `enabled` in `backfill` allows you to schedule backfills asynchronously instead of in a
+# dagit request (which might aggressively tie up resources for large backfill jobs).
 ####################################################################################################
 dagsterDaemon:
   enabled: true
 
   image:
-    repository: "dagster/dagster-celery-k8s"
-    tag: "latest"
+    repository: 'dagster/dagster-celery-k8s'
+    tag: 'latest'
     pullPolicy: Always
 
   queuedRunCoordinator:
     enabled: false
     config: {}
+
+  backfill:
+    enabled: false
 
   # Additional environment variables to set.
   # A Kubernetes ConfigMap will be created with these environment variables. See:
@@ -720,8 +726,8 @@ dagsterDaemon:
   livenessProbe:
     exec:
       command:
-        - "dagster-daemon"
-        - "liveness-check"
+        - 'dagster-daemon'
+        - 'liveness-check'
     # initialDelaySeconds: 60
     periodSeconds: 30
     failureThreshold: 3
@@ -734,8 +740,8 @@ dagsterDaemon:
   startupProbe:
     exec:
       command:
-        - "dagster-daemon"
-        - "liveness-check"
+        - 'dagster-daemon'
+        - 'liveness-check'
     periodSeconds: 10
     failureThreshold: 12
     timeoutSeconds: 3
