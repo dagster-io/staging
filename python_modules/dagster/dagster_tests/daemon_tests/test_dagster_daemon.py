@@ -101,7 +101,7 @@ def test_ephemeral_instance():
     with pytest.raises(
         Exception,
         match=re.escape(
-            "dagster-daemon can't run using an in-memory instance. Make sure the DAGSTER_HOME environment variable has been set correctly and that you have created a dagster.yaml file there."
+            "dagster-daemon can't run using an ephemeral instance. Make sure the DAGSTER_HOME environment variable has been set correctly."
         ),
     ):
         runner.invoke(run_command, env={"DAGSTER_HOME": ""}, catch_exceptions=False)
