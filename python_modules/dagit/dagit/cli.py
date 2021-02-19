@@ -1,7 +1,7 @@
 import os
 import sys
-import tempfile
 import threading
+import warnings
 from contextlib import contextmanager
 
 import click
@@ -98,34 +98,46 @@ def ui(host, port, path_prefix, storage_fallback, db_statement_timeout, **kwargs
         port_lookup = False
 
     if storage_fallback is None:
-        with tempfile.TemporaryDirectory() as storage_fallback:
+        with DagsterInstance.get() as instance:
+            if instance.is_ephemeral:
+                warnings.warn(
+                    "Starting dagit using an ephemeral instance. To persistently store run "
+                    "information, set the DAGSTER_HOME environment variable."
+                )
+
             host_dagit_ui(
                 host,
                 port,
                 path_prefix,
-                storage_fallback,
+                instance,
                 db_statement_timeout,
                 port_lookup,
                 **kwargs,
             )
     else:
-        host_dagit_ui(
-            host, port, path_prefix, storage_fallback, db_statement_timeout, port_lookup, **kwargs
-        )
+        with DagsterInstance.get(storage_fallback) as instance:
+            host_dagit_ui(
+                host,
+                port,
+                path_prefix,
+                instance,
+                db_statement_timeout,
+                port_lookup,
+                **kwargs,
+            )
 
 
 def host_dagit_ui(
-    host, port, path_prefix, storage_fallback, db_statement_timeout, port_lookup=True, **kwargs
+    host, port, path_prefix, instance, db_statement_timeout, port_lookup=True, **kwargs
 ):
-    with DagsterInstance.get(storage_fallback) as instance:
-        # Allow the instance components to change behavior in the context of a long running server process
-        instance.optimize_for_dagit(db_statement_timeout)
+    # Allow the instance components to change behavior in the context of a long running server process
+    instance.optimize_for_dagit(db_statement_timeout)
 
-        with get_workspace_from_kwargs(kwargs) as workspace:
-            if not workspace:
-                raise Exception("Unable to load workspace with cli_args: {}".format(kwargs))
+    with get_workspace_from_kwargs(kwargs) as workspace:
+        if not workspace:
+            raise Exception("Unable to load workspace with cli_args: {}".format(kwargs))
 
-            host_dagit_ui_with_workspace(instance, workspace, host, port, path_prefix, port_lookup)
+        host_dagit_ui_with_workspace(instance, workspace, host, port, path_prefix, port_lookup)
 
 
 def host_dagit_ui_with_workspace(instance, workspace, host, port, path_prefix, port_lookup=True):

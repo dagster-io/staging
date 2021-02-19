@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 import requests
 from dagster import execute_pipeline
+from dagster.core.test_utils import instance_for_test
 from trigger_pipeline.trigger_pipeline.repo import do_math
 from trigger_pipeline.trigger_pipeline.trigger import launch_pipeline_over_graphql
 
@@ -21,12 +22,13 @@ def test_trigger_do_math_pipeline():
 
 @contextmanager
 def dagit_service_up():
-    proc = subprocess.Popen(["dagit", "-f", "trigger_pipeline/repo.py"])
-    try:
-        yield proc
-    finally:
-        proc.kill()
-        proc.wait()
+    with instance_for_test():
+        proc = subprocess.Popen(["dagit", "-f", "trigger_pipeline/repo.py"])
+        try:
+            yield proc
+        finally:
+            proc.kill()
+            proc.wait()
 
 
 def test_trigger_pipeline_by_gql():
