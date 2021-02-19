@@ -45,15 +45,15 @@
           },
           {
             "title": "A Single-Solid Pipeline",
-            "path": "/tutorial/intro-tutorial/execute"
+            "path": "/tutorial/intro-tutorial/single-solid-pipeline"
           },
           {
             "title": "Connecting Solids in Pipelines",
-            "path": "/tutorial/intro-tutorial/basics-pipelines"
+            "path": "/tutorial/intro-tutorial/connecting-solids"
           },
           {
             "title": "Configuring Solids",
-            "path": "/tutorial/intro-tutorial/basics-solids"
+            "path": "/tutorial/intro-tutorial/configuring-solids"
           },
           {
             "title": "Testing Solids and Pipelines",
