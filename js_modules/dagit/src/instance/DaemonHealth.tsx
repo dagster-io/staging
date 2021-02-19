@@ -96,7 +96,6 @@ export const DaemonHealth = (props: Props) => {
                 ) : (
                   <div>
                     {errorCount} errors running daemon type <strong>{daemon.daemonType}</strong>.
-                    Try restarting the daemon after resolving the issues.
                   </div>
                 )}
                 <Trace>
