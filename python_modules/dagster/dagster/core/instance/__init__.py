@@ -951,10 +951,6 @@ class DagsterInstance:
 
     # asset storage
 
-    @property
-    def is_asset_aware(self):
-        return self._event_storage.is_asset_aware
-
     def all_asset_keys(self, prefix_path=None):
         return self._event_storage.get_all_asset_keys(prefix_path)
 
