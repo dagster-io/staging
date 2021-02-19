@@ -2,6 +2,7 @@ import subprocess
 
 from click.testing import CliRunner
 from dagit.cli import ui
+from dagster.core.test_utils import instance_for_test
 from dagster.utils import file_relative_path
 from gevent import pywsgi
 
@@ -13,25 +14,27 @@ def test_invoke_ui():
 
 
 def test_invoke_ui_with_port_taken(monkeypatch):
-    def serve_forever(self):
-        if self.server_port == 3000:
-            raise OSError("Address already in use")
+    with instance_for_test():
 
-    monkeypatch.setattr(pywsgi.WSGIServer, "serve_forever", serve_forever)
-    runner = CliRunner()
-    result = runner.invoke(
-        ui,
-        ["-f", file_relative_path(__file__, "./pipeline.py"), "-a", "test_repository"],
-        input="n\n",
-    )
-    assert result.exception
+        def serve_forever(self):
+            if self.server_port == 3000:
+                raise OSError("Address already in use")
 
-    result = runner.invoke(
-        ui,
-        ["-f", file_relative_path(__file__, "./pipeline.py"), "-a", "test_repository"],
-        input="y\n",
-    )
-    assert ":3001" in result.output
+        monkeypatch.setattr(pywsgi.WSGIServer, "serve_forever", serve_forever)
+        runner = CliRunner()
+        result = runner.invoke(
+            ui,
+            ["-f", file_relative_path(__file__, "./pipeline.py"), "-a", "test_repository"],
+            input="n\n",
+        )
+        assert result.exception
+
+        result = runner.invoke(
+            ui,
+            ["-f", file_relative_path(__file__, "./pipeline.py"), "-a", "test_repository"],
+            input="y\n",
+        )
+        assert ":3001" in result.output
 
 
 def test_invoke_cli_wrapper_with_nonexistant_option():
@@ -42,10 +45,13 @@ def test_invoke_cli_wrapper_with_nonexistant_option():
 
 
 def test_invoke_cli_wrapper_with_invalid_option():
-    process = subprocess.Popen(["dagit", "-d", "."], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    _, stderr = process.communicate()
-    assert process.returncode != 0
-    assert (
-        b"Error: Invalid set of CLI arguments for loading repository/pipeline. See --help for details.\n"
-        in stderr
-    )
+    with instance_for_test():
+        process = subprocess.Popen(
+            ["dagit", "-d", "."], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        _, stderr = process.communicate()
+        assert process.returncode != 0
+        assert (
+            b"Error: Invalid set of CLI arguments for loading repository/pipeline. See --help for details.\n"
+            in stderr
+        )
