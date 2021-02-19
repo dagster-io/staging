@@ -17,8 +17,6 @@ def hello_cereal(context):
 
     context.log.info(f"Found {len(cereals)} cereals")
 
-    return cereals
-
 
 # end_solid_marker
 

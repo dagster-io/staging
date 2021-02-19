@@ -18,9 +18,8 @@ def sort_by_calories(_, cereals):
     sorted_cereals = list(
         sorted(cereals, key=lambda cereal: cereal["calories"])
     )
-    least_caloric = sorted_cereals[0]["name"]
-    most_caloric = sorted_cereals[-1]["name"]
-    return (least_caloric, most_caloric)
+    most_calories = sorted_cereals[-1]["name"]
+    return most_calories
 
 
 @solid
@@ -28,23 +27,22 @@ def sort_by_protein(_, cereals):
     sorted_cereals = list(
         sorted(cereals, key=lambda cereal: cereal["protein"])
     )
-    least_protein = sorted_cereals[0]["name"]
     most_protein = sorted_cereals[-1]["name"]
-    return (least_protein, most_protein)
+    return most_protein
 
 
 @solid
-def display_results(context, calorie_results, protein_results):
-    context.log.info(f"Most caloric cereal: {calorie_results[-1]}")
-    context.log.info(f"Most protein-rich cereal: {protein_results[-1]}")
+def display_results(context, most_calories, most_protein):
+    context.log.info(f"Most caloric cereal: {most_calories}")
+    context.log.info(f"Most protein-rich cereal: {most_protein}")
 
 
 @pipeline
 def complex_pipeline():
     cereals = load_cereals()
     display_results(
-        calorie_results=sort_by_calories(cereals),
-        protein_results=sort_by_protein(cereals),
+        most_calories=sort_by_calories(cereals),
+        most_protein=sort_by_protein(cereals),
     )
 
 

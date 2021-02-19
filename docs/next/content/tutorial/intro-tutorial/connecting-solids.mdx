@@ -1,11 +1,11 @@
 ---
 title: Connecting Solids in Pipelines | Dagster
-description: Dagster pipeline is a set of solids which have data dependencies on each other to create a directed acyclic graph.
+description: A Dagster pipeline is a set of solids which have data dependencies on each other to create a directed acyclic graph.
 ---
 
 # Connecting Solids in Pipelines
 
-<CodeReferenceLink filePath="examples/docs_snippets/docs_snippets/intro_tutorial/basics/e03_pipelines/" />
+<CodeReferenceLink filePath="examples/docs_snippets/docs_snippets/intro_tutorial/basics/connecting_solids/" />
 
 Our pipelines wouldn't be very interesting if they were limited to solids acting in isolation from
 each other. Pipelines are useful because they let us connect solids into arbitrary
@@ -23,7 +23,7 @@ We'll expand the pipeline we worked with in the first section of the tutorial in
 - The second solid will consume the cereals produced by the first solid and find the most caloric
   cereal.
 
-```python file=/intro_tutorial/basics/e03_pipelines/serial_pipeline.py startafter=start_serial_pipeline_marker_0 endbefore=end_serial_pipeline_marker_0
+```python file=/intro_tutorial/basics/connecting_solids/serial_pipeline.py startafter=start_serial_pipeline_marker_0 endbefore=end_serial_pipeline_marker_0
 import csv
 import os
 
@@ -86,7 +86,7 @@ Solids don't need to be wired together serially. The output of one solid can be 
 number of other solids, and the outputs of several different solids can be consumed by a single
 solid.
 
-```python file=/intro_tutorial/basics/e03_pipelines/complex_pipeline.py startafter=start_complex_pipeline_marker_0 endbefore=end_complex_pipeline_marker_0
+```python file=/intro_tutorial/basics/connecting_solids/complex_pipeline.py startafter=start_complex_pipeline_marker_0 endbefore=end_complex_pipeline_marker_0
 @solid
 def load_cereals(_):
     dataset_path = os.path.join(os.path.dirname(__file__), "cereal.csv")
@@ -100,9 +100,8 @@ def sort_by_calories(_, cereals):
     sorted_cereals = list(
         sorted(cereals, key=lambda cereal: cereal["calories"])
     )
-    least_caloric = sorted_cereals[0]["name"]
-    most_caloric = sorted_cereals[-1]["name"]
-    return (least_caloric, most_caloric)
+    most_calories = sorted_cereals[-1]["name"]
+    return most_calories
 
 
 @solid
@@ -110,23 +109,22 @@ def sort_by_protein(_, cereals):
     sorted_cereals = list(
         sorted(cereals, key=lambda cereal: cereal["protein"])
     )
-    least_protein = sorted_cereals[0]["name"]
     most_protein = sorted_cereals[-1]["name"]
-    return (least_protein, most_protein)
+    return most_protein
 
 
 @solid
-def display_results(context, calorie_results, protein_results):
-    context.log.info(f"Most caloric cereal: {calorie_results[-1]}")
-    context.log.info(f"Most protein-rich cereal: {protein_results[-1]}")
+def display_results(context, most_calories, most_protein):
+    context.log.info(f"Most caloric cereal: {most_calories}")
+    context.log.info(f"Most protein-rich cereal: {most_protein}")
 
 
 @pipeline
 def complex_pipeline():
     cereals = load_cereals()
     display_results(
-        calorie_results=sort_by_calories(cereals),
-        protein_results=sort_by_protein(cereals),
+        most_calories=sort_by_calories(cereals),
+        most_protein=sort_by_protein(cereals),
     )
 ```
 
@@ -154,73 +152,13 @@ output) and before `display_results` (because `display_results` depends on both 
 We'll write a simple test for this pipeline showing how we can assert that all four of its solids
 executed successfully.
 
-```python file=/intro_tutorial/basics/e03_pipelines/complex_pipeline.py startafter= start_complex_pipeline_marker_1 endbefore= end_complex_pipeline_marker_1
-import csv
-import os
-
-from dagster import execute_pipeline, pipeline, solid
-
-
-# start_complex_pipeline_marker_0
-@solid
-def load_cereals(_):
-    dataset_path = os.path.join(os.path.dirname(__file__), "cereal.csv")
-    with open(dataset_path, "r") as fd:
-        cereals = [row for row in csv.DictReader(fd)]
-    return cereals
-
-
-@solid
-def sort_by_calories(_, cereals):
-    sorted_cereals = list(
-        sorted(cereals, key=lambda cereal: cereal["calories"])
-    )
-    least_caloric = sorted_cereals[0]["name"]
-    most_caloric = sorted_cereals[-1]["name"]
-    return (least_caloric, most_caloric)
-
-
-@solid
-def sort_by_protein(_, cereals):
-    sorted_cereals = list(
-        sorted(cereals, key=lambda cereal: cereal["protein"])
-    )
-    least_protein = sorted_cereals[0]["name"]
-    most_protein = sorted_cereals[-1]["name"]
-    return (least_protein, most_protein)
-
-
-@solid
-def display_results(context, calorie_results, protein_results):
-    context.log.info(f"Most caloric cereal: {calorie_results[-1]}")
-    context.log.info(f"Most protein-rich cereal: {protein_results[-1]}")
-
-
-@pipeline
-def complex_pipeline():
-    cereals = load_cereals()
-    display_results(
-        calorie_results=sort_by_calories(cereals),
-        protein_results=sort_by_protein(cereals),
-    )
-
-
-# end_complex_pipeline_marker_0
-
-if __name__ == "__main__":
-    result = execute_pipeline(complex_pipeline)
-    assert result.success
-
-# start_complex_pipeline_marker_1
+```python file=/intro_tutorial/basics/connecting_solids/complex_pipeline.py startafter=start_complex_pipeline_marker_1 endbefore=end_complex_pipeline_marker_1
 def test_complex_pipeline():
     res = execute_pipeline(complex_pipeline)
     assert res.success
     assert len(res.solid_result_list) == 4
     for solid_res in res.solid_result_list:
         assert solid_res.success
-
-
-# end_complex_pipeline_marker_1
 ```
 
 <br />
