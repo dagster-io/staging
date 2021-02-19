@@ -1,2 +1,3 @@
 from .consolidated_sqlite_event_log import ConsolidatedSqliteEventLogStorage
 from .sqlite_event_log import SqliteEventLogStorage
+from .sqlite_polling_event_log import SqlitePollingEventLogStorage
