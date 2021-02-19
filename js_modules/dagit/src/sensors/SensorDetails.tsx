@@ -167,6 +167,12 @@ export const SensorDetails: React.FC<{
       />
       <MetadataTable
         rows={[
+          sensor.description
+            ? {
+                key: 'Description',
+                value: sensor.description,
+              }
+            : null,
           {
             key: 'Latest tick',
             value: latestTick ? (
