@@ -3,6 +3,7 @@ from dagster import check
 from dagster.core.events.log import EventRecord
 from dagster.core.storage.event_log import (
     AssetAwareSqlEventLogStorage,
+    AssetKeyTable,
     SqlEventLogStorageMetadata,
     SqlPollingEventWatcher,
 )
@@ -103,7 +104,21 @@ class MySQLEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         if not event.is_dagster_event or not event.dagster_event.asset_key:
             return
 
-        # TODO: Insert or do nothing on UNIQUE (asset_key) conflict
+        with self.index_connection() as conn:
+            event_asset_key: str = event.dagster_event.asset_key.to_string()
+            do_nothing_on_conflict_insert_stmt: db.sql.expression.Insert = db.insert(
+                AssetKeyTable
+            ).from_select(
+                ["asset_key"],
+                db.select([db.literal_column(f"'{event_asset_key}'")]).where(
+                    ~db.exists(
+                        db.select([AssetKeyTable.c.asset_key]).where(
+                            AssetKeyTable.c.asset_key == event_asset_key
+                        )
+                    )
+                ),
+            )
+            conn.execute(do_nothing_on_conflict_insert_stmt)
 
     def _connect(self):
         return create_mysql_connection(self._engine, __file__, "event log")

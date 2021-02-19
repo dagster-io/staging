@@ -1,8 +1,9 @@
 import sqlalchemy as db
 from dagster import check
-from dagster.core.storage.runs import RunStorageSqlMetadata, SqlRunStorage
+from dagster.core.storage.runs import DaemonHeartbeatsTable, RunStorageSqlMetadata, SqlRunStorage
 from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
-from dagster.serdes import ConfigurableClass, ConfigurableClassData
+from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
+from dagster.utils import utc_datetime_from_timestamp
 
 from ..utils import (
     create_mysql_connection,
@@ -80,24 +81,18 @@ class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
             run_alembic_upgrade(alembic_config, conn)
 
     def add_daemon_heartbeat(self, daemon_heartbeat):
-        with self.connect() as _conn:
-            pass
-            # TODO
-            # # insert or update if already present, using mysql-specific on_conflict
-            # conn.execute(
-            #     db.dialects.mysql.insert(DaemonHeartbeatsTable)
-            #     .values(  # pylint: disable=no-value-for-parameter
-            #         timestamp=daemon_heartbeat.timestamp,
-            #         daemon_type=daemon_heartbeat.daemon_type.value,
-            #         daemon_id=daemon_heartbeat.daemon_id,
-            #         info=daemon_heartbeat.info,
-            #     )
-            #     .on_conflict_do_update(
-            #         index_elements=[DaemonHeartbeatsTable.c.daemon_type],
-            #         set_={
-            #             "timestamp": daemon_heartbeat.timestamp,
-            #             "daemon_id": daemon_heartbeat.daemon_id,
-            #             "info": daemon_heartbeat.info,
-            #         },
-            #     )
-            # )
+        with self.connect() as conn:
+            conn.execute(
+                db.dialects.mysql.insert(DaemonHeartbeatsTable)
+                .values(
+                    timestamp=utc_datetime_from_timestamp(daemon_heartbeat.timestamp),
+                    daemon_type=daemon_heartbeat.daemon_type,
+                    daemon_id=daemon_heartbeat.daemon_id,
+                    body=serialize_dagster_namedtuple(daemon_heartbeat),
+                )
+                .on_duplicate_key_update(
+                    timestamp=utc_datetime_from_timestamp(daemon_heartbeat.timestamp),
+                    daemon_id=daemon_heartbeat.daemon_id,
+                    body=serialize_dagster_namedtuple(daemon_heartbeat),
+                )
+            )
