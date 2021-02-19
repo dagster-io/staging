@@ -60,6 +60,11 @@
     "description": "Use Great Expectations to check data quality"
   },
   {
+    "name": "filter_pipeline_runs",
+    "title": "Filter Pipeline Runs",
+    "description": "Get a list of the pipeline runs based on their statuses"
+  },
+  {
     "name": "hooks",
     "title": "Hooks",
     "description": "Create a pipeline with hooks"

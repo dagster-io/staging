@@ -1,0 +1,39 @@
+import { ExampleReferenceLink } from 'components/ExampleReference';
+
+# Get a List of Pipeline Runs
+
+<ExampleReferenceLink filePath="examples/filter_pipeline_runs" />
+
+This example demonstrates how to get a list of pipeline runs based on the pipeline run status.
+
+## Filter pipeline runs by statuses
+
+The `get_pipeline_runs` function takes two parameters, instance and status_list.
+You import `DagsterInstance` and pass `DagsterInstance.get()` to the instance parameter to
+grab the current [DagsterInstance](https://docs.dagster.io/overview/instances/dagster-instance#mains).
+For testing purpose, you can use `DagsterInstance.local_temp()`.
+
+Then, use the `get_runs` attribute of the DagsterInstance, import `PipelineRunsFilter` and `PipelineRunStatus`,
+and create a list of the pipeline run statuses you want to get. This example only asks the `get_runs` to filter by the `SUCCESS` status.
+You can also filter by `FAILURE`, `QUEUED`, `STARTED`, etc. Pass the list of the statuses to the `status_list` parameter like below.
+
+Each run you get contains a lot of information for your pipelines besides the pipeline name and
+run id as shown below. You can also get its run config, mode, working directory, repository location, etc.
+
+```python literalinclude caption=get_pipeline_runs.py
+file:/filter_pipeline_runs/filter_pipeline_runs/get_pipeline_runs.py
+startAfter:start_run_marker_0
+endBefore:end_run_marker_0
+```
+
+## Open in a playground
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#EXAMPLE=get_failed_runs/https://github.com/dagster-io/dagster)
+
+## Download
+
+```
+curl https://codeload.github.com/dagster-io/dagster/tar.gz/master | tar -xz --strip=2 dagster-master/examples/filter_pipeline_runs
+cd filter_pipeline_runs
+pip install -e .
+```
