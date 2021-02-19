@@ -1,0 +1,48 @@
+import { ExampleReferenceLink } from 'components/ExampleReference';
+
+# Get a List of Pipeline Runs
+
+<ExampleReferenceLink filePath="examples/filter_pipeline_runs" />
+
+This example demonstrates how to get a list of pipeline runs based on the pipeline run status.
+
+## Filter pipeline runs by statuses
+
+The example uses a `get_pipeline_runs` function which takes a parameter, instance.
+You can import the `DagsterInstance` and pass `DagsterInstance.get()` to the instance parameter.
+`DagsterInstance.get()` will grab the current DagsterInstance which will load based on
+the values in the `dagster.yaml` file in `$DAGSTER_HOME`. The `DagsterInstance` can be configured for different deployment behaviors.
+To learn more about the `DagsterInstance`, please read its [documentation](https://docs.dagster.io/overview/instances/dagster-instance#mains).
+
+Then, you can use the `get_runs` attribute of the DagsterInstance to get the pipeline runs. It will return a list of `PipelineRun` objects.
+You can import [`PipelineRunsFilter`](https://docs.dagster.io/_modules/dagster/core/storage/pipeline_run#PipelineRun) to filter the pipeline runs you want to get. You can filter by `run_ids`, `pipeline_name`, `statuses`,
+`tags` and `snapshot_id`, where `run_ids` and `statuses` are list, `pipeline_name` and `snapshot_id` are string and `tags` is key value pair.
+
+If you have set up a schedule, a partition, a backfill or a sensor for your pipelines, you can also filter the pipeline runs by passing the schedule name
+to the attribute `for_schedule` of the `PipelineRunsFilter`, passing the partition name and the partition set name to the `for_partition` attribute,
+passing the backfill id to the `tags_for_backfill_id` attribute, and passing the sensor name to the `for_sensor` attribute.
+
+This example returns a list of [`PipelineRun`](https://docs.dagster.io/_apidocs/internals#dagster.PipelineRun]) objects,
+filtering by the `PipelineRunStatus.FAILURE`.
+You can also filter the pipeline runs by `SUCCESS`, `QUEUED`, `STARTING`, `STARTED`, `NOT_STARTED`, `CANCELING`, `CANCELED` and `MANAGED`.
+
+Each `PipelineRun` object contains a lot of information, including the `pipeline_name`, `run_id`, `run_config`, `mode`, `solid_selection`,
+`solids_to_execute`, `step_keys_to_execute`, `status`, `tags`, `root_run_id`, `parent_run_id`, `pipeline_snapshot_id`, `execution_plan_snapshot_id` and `external_pipeline_origin`.
+
+```python literalinclude caption=get_pipeline_runs.py
+file:/filter_pipeline_runs/filter_pipeline_runs/get_pipeline_runs.py
+startAfter:start_run_marker_0
+endBefore:end_run_marker_0
+```
+
+## Open in a playground
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#EXAMPLE=get_failed_runs/https://github.com/dagster-io/dagster)
+
+## Download
+
+```
+curl https://codeload.github.com/dagster-io/dagster/tar.gz/master | tar -xz --strip=2 dagster-master/examples/filter_pipeline_runs
+cd filter_pipeline_runs
+pip install -e .
+```
