@@ -90,13 +90,11 @@ export const DaemonHealth = (props: Props) => {
               <Group direction="column" spacing={12}>
                 {errorCount === 1 ? (
                   <div>
-                    Error running daemon type <strong>{daemon.daemonType}</strong>. Try restarting
-                    the daemon after resolving the issue.
+                    Error running <strong>{daemon.daemonType}</strong> daemon.
                   </div>
                 ) : (
                   <div>
-                    {errorCount} errors running daemon type <strong>{daemon.daemonType}</strong>.
-                    Try restarting the daemon after resolving the issues.
+                    {errorCount} errors running <strong>{daemon.daemonType}</strong> daemon.
                   </div>
                 )}
                 <Trace>
