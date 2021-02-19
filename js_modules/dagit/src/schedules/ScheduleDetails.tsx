@@ -157,6 +157,12 @@ export const ScheduleDetails: React.FC<{
       />
       <MetadataTable
         rows={[
+          schedule.description
+            ? {
+                key: 'Description',
+                value: schedule.description,
+              }
+            : null,
           {
             key: 'Latest tick',
             value: latestTick ? (
