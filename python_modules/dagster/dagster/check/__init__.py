@@ -201,6 +201,36 @@ def callable_param(obj: Any, param_name: str) -> Callable:
     return obj
 
 
+def inst_coerce_callable_param(obj: Any, param_name: str, ttype: Type) -> Callable:
+    if callable(obj):
+        return obj
+    obj = inst_param(obj, param_name, ttype)
+    return lambda _: obj
+
+
+def list_coerce_callable_param(obj: Any, param_name: str, of_type: Type) -> Callable:
+    if callable(obj):
+        return obj
+    obj = list_param(obj, param_name, of_type)
+    return lambda _: obj
+
+
+def opt_inst_coerce_callable_param(
+    obj: Any, param_name: str, ttype: Type, default: Any = None
+) -> Callable:
+    if callable(obj):
+        return obj
+    obj = opt_inst_param(obj, param_name, ttype, default)
+    return lambda _: obj
+
+
+def opt_list_coerce_callable_param(obj: Any, param_name: str, of_type: Type) -> Callable:
+    if callable(obj):
+        return obj
+    obj = opt_list_param(obj, param_name, of_type)
+    return lambda _: obj
+
+
 def opt_callable_param(obj: Any, param_name: str, default: Callable = None) -> Optional[Callable]:
     if obj is not None and not callable(obj):
         raise_with_traceback(_not_callable_exception(obj, param_name))

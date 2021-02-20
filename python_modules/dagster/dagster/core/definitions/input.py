@@ -1,8 +1,8 @@
 from collections import namedtuple
-from typing import Optional
+from typing import Callable, List, Optional, Union
 
 from dagster import check
-from dagster.core.definitions.events import AssetPartitions
+from dagster.core.definitions.events import AssetKey, AssetPartitions
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import (
     BuiltinScalarDagsterType,
@@ -74,7 +74,8 @@ class InputDefinition:
         default_value=_NoValueSentinel,
         root_manager_key=None,
         metadata=None,
-        asset_fn=None,
+        asset_key: Union[AssetKey, Callable[["InputContext"], AssetKey]] = None,
+        asset_partitions: Union[AssetKey, Callable[["InputContext"], List[str]]] = None,
     ):
         ""
         self._name = check_valid_name(name)
@@ -95,9 +96,21 @@ class InputDefinition:
 
         self._metadata = check.opt_dict_param(metadata, "metadata", key_type=str)
 
-        if asset_fn:
-            experimental_arg_warning("asset_fn", "OutputDefinition")
-        self.asset_fn = asset_fn
+        if asset_key:
+            experimental_arg_warning("asset_key", "InputDefinition")
+
+        self._defines_asset = asset_key is not None
+        self.asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
+
+        if asset_partitions:
+            experimental_arg_warning("asset_partitions", "InputDefinition")
+            if not asset_key:
+                check.failed(
+                    'Cannot specify "asset_partitions" argument without also specifying "asset_key"'
+                )
+        self.asset_partitions_fn = check.opt_list_coerce_callable_param(
+            asset_partitions, "asset_partitions", str
+        )
 
     @property
     def name(self):
@@ -129,13 +142,17 @@ class InputDefinition:
         return self._metadata
 
     @property
-    def has_asset_fn(self) -> bool:
-        return self.asset_fn is not None
+    def defines_asset(self):
+        return self._defines_asset
 
-    def get_assets(self, context: "InputContext") -> Optional[AssetPartitions]:
-        if self.has_asset_fn:
-            return self.asset_fn(context)
-        return None
+    def get_asset_key_and_partitions(self, context) -> Optional[AssetPartitions]:
+        asset_key = self.asset_key_fn(context)
+        if not asset_key:
+            return None
+        return AssetPartitions(
+            asset_key=asset_key,
+            partitions=self.asset_partitions_fn(context),
+        )
 
     def mapping_to(self, solid_name, input_name, fan_in_index=None):
         """Create an input mapping to an input of a child solid.
