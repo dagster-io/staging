@@ -23,6 +23,13 @@ def n_asset_keys(path, n):
     return AssetPartitions(AssetKey(path), [str(i) for i in range(n)])
 
 
+def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
+    event_data = materialization.event_specific_data
+    assert event_data.materialization.asset_key == asset_key
+    assert event_data.materialization.metadata_entries == (metadata_entries or [])
+    assert event_data.parent_assets == (parent_assets or [])
+
+
 def test_output_definition_transitive_lineage():
 
     entry1 = EventMetadataEntry.int(123, "nrows")
@@ -61,15 +68,14 @@ def test_output_definition_transitive_lineage():
     ]
     assert len(materializations) == 2
 
-    event_data1 = materializations[0].event_specific_data
-    assert event_data1.materialization.asset_key == AssetKey(["table1"])
-    assert event_data1.materialization.metadata_entries == [entry1]
-    assert event_data1.parent_assets == []
+    check_materialization(materializations[0], AssetKey(["table1"]), metadata_entries=[entry1])
 
-    event_data2 = materializations[1].event_specific_data
-    assert event_data2.materialization.asset_key == AssetKey(["table3"])
-    assert event_data2.materialization.metadata_entries == [entry2]
-    assert event_data2.parent_assets == [AssetPartitions(AssetKey(["table1"]))]
+    check_materialization(
+        materializations[1],
+        AssetKey(["table3"]),
+        parent_assets=[AssetPartitions(AssetKey(["table1"]))],
+        metadata_entries=[entry2],
+    )
 
 
 def test_io_manager_diamond_lineage():
@@ -120,20 +126,18 @@ def test_io_manager_diamond_lineage():
     ]
     assert len(materializations) == 3
 
-    event_data1 = materializations[0].event_specific_data
-    assert event_data1.materialization.asset_key == AssetKey(["solid_produce", "outputA"])
-    assert event_data1.parent_assets == []
-
-    event_data2 = materializations[1].event_specific_data
-    assert event_data2.materialization.asset_key == AssetKey(["solid_produce", "outputB"])
-    assert event_data2.parent_assets == []
-
-    event_data3 = materializations[2].event_specific_data
-    assert event_data3.materialization.asset_key == AssetKey(["solid_combine", "outputC"])
-    assert event_data3.parent_assets == [
-        AssetPartitions(AssetKey(["solid_produce", "outputA"])),
-        AssetPartitions(AssetKey(["solid_produce", "outputB"])),
-    ]
+    check_materialization(materializations[0], AssetKey(["solid_produce", "outputA"]))
+    check_materialization(materializations[1], AssetKey(["solid_produce", "outputB"]))
+    check_materialization(
+        materializations[2],
+        AssetKey(
+            ["solid_combine", "outputC"],
+        ),
+        parent_assets=[
+            AssetPartitions(AssetKey(["solid_produce", "outputA"])),
+            AssetPartitions(AssetKey(["solid_produce", "outputB"])),
+        ],
+    )
 
 
 def test_multiple_definition_fails():
@@ -200,7 +204,7 @@ def test_input_definition_multiple_partition_lineage():
     @solid(
         input_defs=[
             # here, only take 1 of the asset keys specified by the output
-            InputDefinition(name="_input1", asset_fn=lambda _: n_asset_keys("table1", 1))
+            InputDefinition(name="_input1", asset_key=AssetKey("table1"), asset_partitions=["0"])
         ],
         output_defs=[OutputDefinition(name="output2", asset_key=lambda _: AssetKey("table2"))],
     )
@@ -223,12 +227,97 @@ def test_input_definition_multiple_partition_lineage():
     assert len(materializations) == 4
 
     for i in range(3):
-        event_data = materializations[i].event_specific_data
-        assert event_data.materialization.asset_key == AssetKey(["table1"])
-        assert event_data.materialization.metadata_entries == [entry1, partition_entries[i]]
-        assert event_data.parent_assets == []
+        check_materialization(
+            materializations[i],
+            AssetKey(["table1"]),
+            metadata_entries=[entry1, partition_entries[i]],
+        )
 
-    event_data2 = materializations[-1].event_specific_data
-    assert event_data2.materialization.asset_key == AssetKey(["table2"])
-    assert event_data2.materialization.metadata_entries == [entry2]
-    assert event_data2.parent_assets == [n_asset_keys("table1", 1)]
+    check_materialization(
+        materializations[-1],
+        AssetKey(["table2"]),
+        parent_assets=[n_asset_keys("table1", 1)],
+        metadata_entries=[entry2],
+    )
+
+
+def test_mixed_asset_definition_lineage():
+    class MyIOManager(IOManager):
+        def handle_output(self, context, obj):
+            # store asset
+            return
+
+        def load_input(self, context):
+            return None
+
+        def get_output_asset_key(self, context):
+            return AssetKey(["io_manager_table", context.step_key])
+
+    @io_manager
+    def my_io_manager(_):
+        return MyIOManager()
+
+    @solid(output_defs=[OutputDefinition(io_manager_key="asset_io_manager")])
+    def io_manager_solid(_):
+        return 1
+
+    @solid(
+        output_defs=[OutputDefinition(asset_key=AssetKey(["output_def_table", "output_def_solid"]))]
+    )
+    def output_def_solid(_):
+        return 1
+
+    @solid(
+        output_defs=[
+            OutputDefinition(name="a"),
+            OutputDefinition(name="b"),
+        ]
+    )
+    def passthrough_solid(_, a, b):
+        yield Output(a, "a")
+        yield Output(b, "b")
+
+    @solid(
+        output_defs=[
+            OutputDefinition(name="a", asset_key=AssetKey(["output_def_table", "combine_solid"])),
+            OutputDefinition(name="b", io_manager_key="asset_io_manager"),
+        ]
+    )
+    def combine_solid(_, _a, _b):
+        yield Output(None, "a")
+        yield Output(None, "b")
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"asset_io_manager": my_io_manager})])
+    def my_pipeline():
+        a = io_manager_solid()
+        b = output_def_solid()
+        # TODO: This makes the test fail because we get duplicate AssetKey information
+        # probably worthwhile to think about how to deal with this case.
+        a, b = passthrough_solid(a, b)
+        combine_solid(a, b)
+
+    result = execute_pipeline(my_pipeline)
+    events = result.step_event_list
+    materializations = [
+        event for event in events if event.event_type_value == "STEP_MATERIALIZATION"
+    ]
+    assert len(materializations) == 4
+
+    check_materialization(materializations[0], AssetKey(["io_manager_table", "io_manager_solid"]))
+    check_materialization(materializations[1], AssetKey(["output_def_table", "output_def_solid"]))
+    check_materialization(
+        materializations[2],
+        AssetKey(["output_def_table", "combine_solid"]),
+        parent_assets=[
+            AssetPartitions(AssetKey(["io_manager_table", "io_manager_solid"])),
+            AssetPartitions(AssetKey(["output_def_table", "output_def_solid"])),
+        ],
+    )
+    check_materialization(
+        materializations[3],
+        AssetKey(["io_manager_table", "combine_solid"]),
+        parent_assets=[
+            AssetPartitions(AssetKey(["io_manager_table", "io_manager_solid"])),
+            AssetPartitions(AssetKey(["output_def_table", "output_def_solid"])),
+        ],
+    )

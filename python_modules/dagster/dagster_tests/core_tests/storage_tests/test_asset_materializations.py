@@ -1,5 +1,7 @@
+import pytest
 from dagster import (
     AssetKey,
+    InputDefinition,
     ModeDefinition,
     Output,
     OutputDefinition,
@@ -8,6 +10,7 @@ from dagster import (
     pipeline,
     solid,
 )
+from dagster.check import CheckError
 from dagster.core.definitions.events import (
     AssetPartitions,
     EventMetadataEntry,
@@ -169,3 +172,14 @@ def test_io_manager_single_partition_materialization():
     assert event_data2.materialization.asset_key == AssetKey(["solid2"])
     assert set(event_data2.materialization.metadata_entries) == set([entry1, entry2])
     assert event_data2.parent_assets == [AssetPartitions(AssetKey(["solid1"]))]
+
+
+def test_def_only_asset_partitions_fails():
+
+    with pytest.raises(CheckError):
+
+        OutputDefinition(asset_partitions=["1"])
+
+    with pytest.raises(CheckError):
+
+        InputDefinition("name", asset_partitions=["1"])

@@ -96,27 +96,57 @@ class IOManager(InputManager, OutputManager):
             obj (Any): The object, returned by the solid, to be stored.
         """
 
-    def get_output_asset_key(self, _context: "OutputContext") -> Optional[AssetKey]:
+    def get_output_asset_key(self, _context) -> Optional[AssetKey]:
+        """User-defined method that associates outputs handled by this IOManager with a particular
+        AssetKey.
+
+        Args:
+            context (OutputContext): The context of the step output that produces this object.
+        """
         return None
 
-    def get_output_asset_partitions(self, _context: "OutputContext") -> List[str]:
+    def get_output_asset_partitions(self, _context) -> List[str]:
+        """User-defined method that associates outputs handled by this IOManager with a set of
+        partitions of an AssetKey.
+
+        Args:
+            context (OutputContext): The context of the step output that produces this object.
+        """
         return []
 
-    def get_input_asset_key(self, context: "InputContext") -> Optional[AssetKey]:
+    def get_input_asset_key(self, context) -> Optional[AssetKey]:
+        """User-defined method that associates inputs loaded by this IOManager with a particular
+        AssetKey.
+
+        Args:
+            context (InputContext): The input context, which describes the input that's being loaded
+                and the upstream output that's being loaded from.
+        """
         return self.get_output_asset_key(context.upstream_output)
 
-    def get_input_asset_partitions(self, context: "InputContext") -> List[str]:
+    def get_input_asset_partitions(self, context) -> List[str]:
+        """User-defined method that associates inputs loaded by this IOManager with a set of
+        partitions of an AssetKey.
+
+        Args:
+            context (InputContext): The input context, which describes the input that's being loaded
+                and the upstream output that's being loaded from.
+        """
         return self.get_output_asset_partitions(context.upstream_output)
 
-    def _get_output_assets(self, context: "OutputContext") -> Optional[AssetPartitions]:
-        asset_key = self.get_output_asset_key(context)
+    def experimental_internal_get_output_asset_key_and_partitions(
+        self, context
+    ) -> Optional[AssetPartitions]:
+        asset_key = self.get_output_asset_key(context)  # pylint: disable=E1128
         if not asset_key:
             return None
         return AssetPartitions(
             asset_key=asset_key, partitions=self.get_output_asset_partitions(context)
         )
 
-    def _get_input_assets(self, context: "InputContext") -> Optional[AssetPartitions]:
+    def experimental_internal_get_input_asset_key_and_partitions(
+        self, context
+    ) -> Optional[AssetPartitions]:
         asset_key = self.get_input_asset_key(context)
         if not asset_key:
             return None

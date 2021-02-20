@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import Optional
 
 from dagster import check
-from dagster.core.definitions.events import AssetPartitions
+from dagster.core.definitions.events import AssetKey, AssetPartitions
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import (
     BuiltinScalarDagsterType,
@@ -64,6 +64,12 @@ class InputDefinition:
             :py:class:`RootInputManager` used for loading this input when it is not connected to an
             upstream output.
         metadata (Optional[Dict[str, Any]]): (Experimental) A dict of metadata for the input.
+        asset_key (Optional[Union[AssetKey, InputContext -> AssetKey]]): (Experimental) An AssetKey
+            (or function that produces an AssetKey from the InputContext) which should be associated
+            with this InputDefinition. Used for tracking lineage information through Dagster.
+        asset_partitions(Optional[Union[List[str], InputContext -> List[str]]]): (Experimental) A
+            list of partitions of the given asset_key (or a function that produces this list of
+            partitions from the InputContext) which should be associated with this InputDefinition.
     """
 
     def __init__(
@@ -74,9 +80,9 @@ class InputDefinition:
         default_value=_NoValueSentinel,
         root_manager_key=None,
         metadata=None,
-        asset_fn=None,
+        asset_key=None,
+        asset_partitions=None,
     ):
-        ""
         self._name = check_valid_name(name)
 
         self._dagster_type = check.inst(resolve_dagster_type(dagster_type), DagsterType)
@@ -95,9 +101,21 @@ class InputDefinition:
 
         self._metadata = check.opt_dict_param(metadata, "metadata", key_type=str)
 
-        if asset_fn:
-            experimental_arg_warning("asset_fn", "OutputDefinition")
-        self.asset_fn = asset_fn
+        if asset_key:
+            experimental_arg_warning("asset_key", "InputDefinition")
+
+        self._defines_asset = asset_key is not None
+        self.asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
+
+        if asset_partitions:
+            experimental_arg_warning("asset_partitions", "InputDefinition")
+            if not asset_key:
+                check.failed(
+                    'Cannot specify "asset_partitions" argument without also specifying "asset_key"'
+                )
+        self.asset_partitions_fn = check.opt_list_coerce_callable_param(
+            asset_partitions, "asset_partitions", str
+        )
 
     @property
     def name(self):
@@ -129,13 +147,17 @@ class InputDefinition:
         return self._metadata
 
     @property
-    def has_asset_fn(self) -> bool:
-        return self.asset_fn is not None
+    def defines_asset(self):
+        return self._defines_asset
 
-    def get_assets(self, context: "InputContext") -> Optional[AssetPartitions]:
-        if self.has_asset_fn:
-            return self.asset_fn(context)
-        return None
+    def get_asset_key_and_partitions(self, context) -> Optional[AssetPartitions]:
+        asset_key = self.asset_key_fn(context)
+        if not asset_key:
+            return None
+        return AssetPartitions(
+            asset_key=asset_key,
+            partitions=self.asset_partitions_fn(context),
+        )
 
     def mapping_to(self, solid_name, input_name, fan_in_index=None):
         """Create an input mapping to an input of a child solid.

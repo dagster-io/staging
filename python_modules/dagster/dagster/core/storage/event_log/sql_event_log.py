@@ -139,7 +139,10 @@ class SqlEventLogStorage(EventLogStorage):
 
         events = {}
         try:
-            for (record_id, json_str,) in results:
+            for (
+                record_id,
+                json_str,
+            ) in results:
                 events[record_id] = check.inst_param(
                     deserialize_json_to_dagster_namedtuple(json_str), "event", EventRecord
                 )
@@ -248,7 +251,8 @@ class SqlEventLogStorage(EventLogStorage):
             by_step_query = by_step_query.where(SqlEventLogStorageTable.c.step_key.in_(step_keys))
 
         by_step_query = by_step_query.group_by(
-            SqlEventLogStorageTable.c.step_key, SqlEventLogStorageTable.c.dagster_event_type,
+            SqlEventLogStorageTable.c.step_key,
+            SqlEventLogStorageTable.c.dagster_event_type,
         )
 
         with self.run_connection(run_id) as conn:
@@ -376,8 +380,10 @@ class SqlEventLogStorage(EventLogStorage):
     def delete_events_for_run(self, conn, run_id):
         check.str_param(run_id, "run_id")
 
-        delete_statement = SqlEventLogStorageTable.delete().where(  # pylint: disable=no-value-for-parameter
-            SqlEventLogStorageTable.c.run_id == run_id
+        delete_statement = (
+            SqlEventLogStorageTable.delete().where(  # pylint: disable=no-value-for-parameter
+                SqlEventLogStorageTable.c.run_id == run_id
+            )
         )
         removed_asset_key_query = (
             db.select([SqlEventLogStorageTable.c.asset_key])
@@ -475,8 +481,11 @@ class SqlEventLogStorage(EventLogStorage):
         """This method marks an event_log data migration as complete, to indicate that a summary
         data migration is complete.
         """
-        query = SecondaryIndexMigrationTable.insert().values(  # pylint: disable=no-value-for-parameter
-            name=name, migration_completed=datetime.now(),
+        query = (
+            SecondaryIndexMigrationTable.insert().values(  # pylint: disable=no-value-for-parameter
+                name=name,
+                migration_completed=datetime.now(),
+            )
         )
         with self.index_connection() as conn:
             try:
@@ -688,7 +697,9 @@ class SqlEventLogStorage(EventLogStorage):
                     SqlEventLogStorageTable.c.asset_key == asset_key.to_string(legacy=True),
                 )
             )
-            .group_by(SqlEventLogStorageTable.c.run_id,)
+            .group_by(
+                SqlEventLogStorageTable.c.run_id,
+            )
             .order_by(db.func.max(SqlEventLogStorageTable.c.timestamp).desc())
         )
 
