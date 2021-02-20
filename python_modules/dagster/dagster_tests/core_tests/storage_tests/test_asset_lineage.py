@@ -200,7 +200,7 @@ def test_input_definition_multiple_partition_lineage():
     @solid(
         input_defs=[
             # here, only take 1 of the asset keys specified by the output
-            InputDefinition(name="_input1", asset_fn=lambda _: n_asset_keys("table1", 1))
+            InputDefinition(name="_input1", asset_key=AssetKey("table1"), asset_partitions=["0"])
         ],
         output_defs=[OutputDefinition(name="output2", asset_key=lambda _: AssetKey("table2"))],
     )

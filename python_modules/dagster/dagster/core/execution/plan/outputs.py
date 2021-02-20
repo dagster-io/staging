@@ -1,7 +1,12 @@
-from typing import Any, Callable, NamedTuple, Optional, Union
+from typing import Callable, List, NamedTuple, Optional, Union
 
 from dagster import check
-from dagster.core.definitions import AssetKey, AssetMaterialization, Materialization, SolidHandle
+from dagster.core.definitions import (
+    AssetMaterialization,
+    EventMetadataEntry,
+    Materialization,
+    SolidHandle,
+)
 from dagster.serdes import whitelist_for_serdes
 
 from .handle import UnresolvedStepHandle
@@ -38,7 +43,7 @@ class StepOutput(
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             is_required=check.bool_param(is_required, "is_required"),
-            asset_fn=check.opt_inst_param(asset_fn, "asset_fn", Callable),
+            asset_fn=check.opt_callable_param(asset_fn, "asset_fn"),
             should_materialize=check.opt_bool_param(should_materialize, "should_materialize"),
         )
 
@@ -51,6 +56,7 @@ class StepOutputData(
             ("step_output_handle", "StepOutputHandle"),
             ("type_check_data", Optional[TypeCheckData]),
             ("version", Optional[str]),
+            ("metadata_entries", Optional[List[EventMetadataEntry]]),
         ],
     )
 ):
@@ -61,6 +67,7 @@ class StepOutputData(
         step_output_handle: "StepOutputHandle",
         type_check_data: Optional[TypeCheckData] = None,
         version: Optional[str] = None,
+        metadata_entries: Optional[List[EventMetadataEntry]] = None,
         # graveyard
         # pylint: disable=unused-argument
         intermediate_materialization: Optional[Union[AssetMaterialization, Materialization]] = None,
@@ -72,7 +79,9 @@ class StepOutputData(
             ),
             type_check_data=check.opt_inst_param(type_check_data, "type_check_data", TypeCheckData),
             version=check.opt_str_param(version, "version"),
-            # potentially put metadata entries here
+            metadata_entries=check.opt_list_param(
+                metadata_entries, "metadata_entries", EventMetadataEntry
+            ),
         )
 
     @property

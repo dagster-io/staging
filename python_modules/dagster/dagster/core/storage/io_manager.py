@@ -108,8 +108,10 @@ class IOManager(InputManager, OutputManager):
     def get_input_asset_partitions(self, context: "InputContext") -> List[str]:
         return self.get_output_asset_partitions(context.upstream_output)
 
-    def _get_output_assets(self, context: "OutputContext") -> Optional[AssetPartitions]:
-        asset_key = self.get_output_asset_key(context)
+    def experimental_internal_get_output_assets(
+        self, context: "OutputContext"
+    ) -> Optional[AssetPartitions]:
+        asset_key = self.get_output_asset_key(context)  # pylint: disable=E1128
         if not asset_key:
             return None
         return AssetPartitions(

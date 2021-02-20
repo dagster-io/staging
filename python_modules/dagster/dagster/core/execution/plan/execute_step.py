@@ -257,6 +257,9 @@ def _type_check_output(
                 metadata_entries=type_check.metadata_entries if type_check else [],
             ),
             version=version,
+            metadata_entries=[
+                entry for entry in output.metadata_entries if isinstance(entry, EventMetadataEntry)
+            ],
         ),
     )
 
@@ -407,7 +410,7 @@ def _asset_partitions_for_output(
 ) -> Optional[AssetPartitions]:
 
     definition_asset = output_def.get_assets(output_context)
-    manager_asset = output_manager._get_output_assets(output_context)
+    manager_asset = output_manager.experimental_internal_get_output_assets(output_context)
 
     if definition_asset and manager_asset:
         raise DagsterInvariantViolationError(
@@ -524,7 +527,7 @@ def _store_output(
         if isinstance(output_manager, IntermediateStorageAdapter)
         else None,
         metadata_entries=[
-            entry for entry in output.metadata_entries if isinstance(entry, EventMetadataEntry)
+            entry for entry in manager_metadata_entries if isinstance(entry, EventMetadataEntry)
         ],
     )
 

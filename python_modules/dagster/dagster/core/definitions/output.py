@@ -43,8 +43,8 @@ class OutputDefinition:
         is_required=None,
         io_manager_key=None,
         metadata=None,
-        asset_key: Optional[Union[AssetKey, Callable[["OutputContext"], AssetKey]]] = None,
-        asset_partitions: Optional[Union[AssetKey, Callable[["OutputContext"], List[str]]]] = None,
+        asset_key: Union[AssetKey, Callable[["OutputContext"], AssetKey]] = None,
+        asset_partitions: Union[AssetKey, Callable[["OutputContext"], List[str]]] = None,
     ):
         self._name = check_valid_name(check.opt_str_param(name, "name", DEFAULT_OUTPUT))
         self._dagster_type = resolve_dagster_type(dagster_type)
@@ -56,27 +56,21 @@ class OutputDefinition:
         if metadata:
             experimental_arg_warning("metadata", "OutputDefinition")
         self._metadata = metadata
+
         if asset_key:
             experimental_arg_warning("asset_key", "OutputDefinition")
-        _asset_key = check.opt_inst_param(asset_key, "asset_key", (AssetKey, Callable))
-        if callable(_asset_key):
-            self.asset_key_fn = _asset_key
-        else:
-            self.asset_key_fn = lambda _: _asset_key
+
+        self._defines_asset = asset_key is not None
+        self.asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
+
         if asset_partitions:
             experimental_arg_warning("asset_partitions", "OutputDefinition")
             if not asset_key:
                 # TODO: error
                 pass
-        _asset_partitions = check.opt_inst_param(
-            asset_partitions,
-            "asset_partitions",
-            (List, Callable),
+        self.asset_partitions_fn = check.opt_list_coerce_callable_param(
+            asset_partitions, "asset_partitions", str
         )
-        if callable(_asset_partitions):
-            self.asset_partitions_fn = _asset_partitions
-        else:
-            self.asset_partitions_fn = lambda _: _asset_partitions
 
     @property
     def name(self):
@@ -110,12 +104,16 @@ class OutputDefinition:
     def is_dynamic(self):
         return False
 
+    @property
+    def defines_asset(self):
+        return self._defines_asset
+
     def get_assets(self, context: "OutputContext") -> Optional[AssetPartitions]:
         asset_key = self.asset_key_fn(context)
         if not asset_key:
             return None
         return AssetPartitions(
-            asset_key=self.asset_key_fn(context),
+            asset_key=asset_key,
             partitions=self.asset_partitions_fn(context),
         )
 
