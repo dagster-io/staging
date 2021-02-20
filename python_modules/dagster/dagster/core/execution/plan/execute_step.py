@@ -241,6 +241,9 @@ def _type_check_output(
                 metadata_entries=type_check.metadata_entries if type_check else [],
             ),
             version=version,
+            metadata_entries=[
+                entry for entry in output.metadata_entries if isinstance(entry, EventMetadataEntry)
+            ],
         ),
     )
 
@@ -281,7 +284,7 @@ def core_dagster_event_sequence_for_step(
         if dagster_type.kind == DagsterTypeKind.NOTHING:
             continue
 
-        input_assets.extend(step_input.source.get_assets(step_context))
+        input_assets.extend(step_input.source.get_asset_keys_and_partitions(step_context))
 
         for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
             if isinstance(event_or_input_value, DagsterEvent):
@@ -296,6 +299,7 @@ def core_dagster_event_sequence_for_step(
         ):
             yield evt
 
+    input_assets = _dedup_asset_partitions(input_assets)
     with time_execution_scope() as timer_result:
         user_event_sequence = check.generator(
             _user_event_sequence_for_step_compute_fn(step_context, inputs)
@@ -395,8 +399,10 @@ def _asset_partitions_for_output(
     output_manager: IOManager,
 ) -> Optional[AssetPartitions]:
 
-    definition_asset = output_def.get_assets(output_context)
-    manager_asset = output_manager._get_output_assets(output_context)
+    definition_asset = output_def.get_asset_key_and_partitions(output_context)
+    manager_asset = output_manager.experimental_internal_get_output_asset_key_and_partitions(
+        output_context
+    )
 
     if definition_asset and manager_asset:
         raise DagsterInvariantViolationError(
@@ -421,6 +427,23 @@ def _flatten_asset_partitions(asset_partitions: Optional[AssetPartitions]):
     return [(asset_partitions.asset_key, p) for p in asset_partitions.partitions]
 
 
+def _dedup_asset_partitions(asset_partitions: List[AssetPartitions]) -> List[AssetPartitions]:
+    # TODO: we should also anticipate this logic getting more complicated if we add extra
+    # information onto the AssetPartitions object, such as how it was generated
+    key_partition_mapping: Dict[AssetKey, Set[str]] = defaultdict(set)
+
+    for ap in asset_partitions:
+        # TODO: what does it mean when an AssetKey is at one point associated with some partitions,
+        # and at another point associated with none?
+        if not ap.partitions:
+            key_partition_mapping[ap.asset_key] |= set()
+        for p in ap.partitions:
+            key_partition_mapping[ap.asset_key].add(p)
+    return [
+        AssetPartitions(asset_key=k, partitions=list(ps)) for k, ps in key_partition_mapping.items()
+    ]
+
+
 def _store_output(
     step_context: SystemStepExecutionContext,
     step_output_handle: StepOutputHandle,
@@ -434,7 +457,7 @@ def _store_output(
 
     asset_partitions = _asset_partitions_for_output(output_context, output_def, output_manager)
     flat_assets = _flatten_asset_partitions(asset_partitions)
-    metadata_mapping = {p: [] for key, p in flat_assets}
+    metadata_mapping: Dict[str, List[str]] = {p: [] for key, p in flat_assets}
 
     with user_code_error_boundary(
         DagsterExecutionHandleOutputError,
@@ -446,27 +469,28 @@ def _store_output(
         step_key=step_context.step.key,
         output_name=output_context.name,
     ):
-        materializations = []
-        manager_metadata_entries = []
-        res = output_manager.handle_output(output_context, output.value)
-        if res is not None:
-            for elt in ensure_gen(output_manager.handle_output(output_context, output.value)):
-                if isinstance(elt, AssetMaterialization):
-                    materializations.append(elt)
-                elif isinstance(elt, (EventMetadataEntry, PartitionSpecificMetadataEntry)):
-                    manager_metadata_entries.append(elt)
-                else:
-                    raise DagsterInvariantViolationError(
-                        (
-                            "IO manager on output {output_name} has returned "
-                            "value {value} of type {python_type}. The return type can only be "
-                            "one of AssetMaterialization, EventMetadataEntry, PartitionSpecificMetadataEntry."
-                        ).format(
-                            output_name=step_output_handle.output_name,
-                            value=repr(elt),
-                            python_type=type(elt).__name__,
-                        )
+        handle_output_res = output_manager.handle_output(output_context, output.value)
+
+    manager_materializations = []
+    manager_metadata_entries = []
+    if handle_output_res is not None:
+        for elt in ensure_gen(handle_output_res):
+            if isinstance(elt, AssetMaterialization):
+                manager_materializations.append(elt)
+            elif isinstance(elt, (EventMetadataEntry, PartitionSpecificMetadataEntry)):
+                manager_metadata_entries.append(elt)
+            else:
+                raise DagsterInvariantViolationError(
+                    (
+                        "IO manager on output {output_name} has returned "
+                        "value {value} of type {python_type}. The return type can only be "
+                        "one of AssetMaterialization, EventMetadataEntry, PartitionSpecificMetadataEntry."
+                    ).format(
+                        output_name=step_output_handle.output_name,
+                        value=repr(elt),
+                        python_type=type(elt).__name__,
                     )
+                )
 
     for entry in output.metadata_entries + manager_metadata_entries:
         # if you target a given entry at a partition, only apply it to the requested partition
@@ -501,7 +525,7 @@ def _store_output(
         )
 
     # for now, do not factor this in to metadata stuff
-    for materialization in materializations:
+    for materialization in manager_materializations:
         yield DagsterEvent.step_materialization(step_context, materialization, input_assets)
 
     yield DagsterEvent.handled_output(
@@ -512,7 +536,7 @@ def _store_output(
         if isinstance(output_manager, IntermediateStorageAdapter)
         else None,
         metadata_entries=[
-            entry for entry in output.metadata_entries if isinstance(entry, EventMetadataEntry)
+            entry for entry in manager_metadata_entries if isinstance(entry, EventMetadataEntry)
         ],
     )
 

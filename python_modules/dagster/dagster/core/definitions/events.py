@@ -137,6 +137,11 @@ class AssetPartitions(namedtuple("_AssetPartitions", "asset_key partitions")):
         partitions = check.opt_list_param(partitions, "partitions", str)
         return super(AssetPartitions, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
 
+    def __eq__(self, other):
+        if not isinstance(other, AssetPartitions):
+            return False
+        return self.asset_key == other.asset_key and set(self.partitions) == set(other.partitions)
+
 
 @whitelist_for_serdes
 class EventMetadataEntry(namedtuple("_EventMetadataEntry", "label description entry_data")):

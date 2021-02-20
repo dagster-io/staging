@@ -11,7 +11,6 @@ from dagster import (
     pipeline,
     solid,
 )
-from dagster.core.definitions.events import AssetPartitions, PartitionSpecificMetadataEntry
 
 
 def db_connection():
@@ -28,9 +27,8 @@ def db_connection():
         OutputDefinition(
             name="table_name",
             dagster_type=String,
-            asset_fn=lambda context: [
-                AssetPartitions(AssetKey("table"), partitions=[context.solid_config["partition"]])
-            ],
+            asset_key=lambda context: AssetKey(context.solid_config["table_name"]),
+            asset_partitions=lambda context: [context.solid_config["partition"]],
         ),
         OutputDefinition(name="some_float", dagster_type=Float),
     ],
@@ -66,10 +64,7 @@ def solid1(context):
             EventMetadataEntry.int(nrows, "number of rows"),
             EventMetadataEntry.int(1234, "max value"),
             EventMetadataEntry.int(0, "min value"),
-            PartitionSpecificMetadataEntry(
-                context.solid_config["partition"],
-                EventMetadataEntry.text("something interesting", "something interesting"),
-            ),
+            EventMetadataEntry.text("something interesting", "something interesting"),
         ],
     )
     my_float = 3.141592653589793238462

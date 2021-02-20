@@ -62,9 +62,9 @@ class RewrittenPOFIOManager(IOManager):
         with open(filepath, self.read_mode) as read_obj:
             return pickle.load(read_obj)
 
-    def get_output_asset_keys(self, context):
+    def get_output_asset_key(self, context):
         # I'm not sure I like the default AssetKey path here
-        return [AssetKey([context.pipeline_name, context.step_key, context.name])]
+        return AssetKey([context.pipeline_name, context.step_key, context.name])
 
 
 @io_manager
