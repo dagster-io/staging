@@ -95,7 +95,7 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
         check.inst_param(run, "run", PipelineRun)
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
 
-        docker_image = external_pipeline.get_python_origin().repository_origin.container_image
+        docker_image = run.pipeline_python_origin.repository_origin.container_image
 
         if not docker_image:
             docker_image = self._image
@@ -115,7 +115,7 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
 
         input_json = serialize_dagster_namedtuple(
             ExecuteRunArgs(
-                pipeline_origin=external_pipeline.get_python_origin(),
+                pipeline_origin=run.pipeline_python_origin,
                 pipeline_run_id=run.run_id,
                 instance_ref=instance.get_ref(),
             )

@@ -170,7 +170,7 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
 
         job_image_from_executor_config = exc_config.get("job_image")
 
-        pipeline_origin = external_pipeline.get_python_origin()
+        pipeline_origin = run.pipeline_python_origin
         repository_origin = pipeline_origin.repository_origin
 
         job_image = repository_origin.container_image

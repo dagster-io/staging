@@ -5,11 +5,12 @@ from dagster.utils.external import external_pipeline_from_run
 from .utils import setup_instance, start_daemon
 
 
-def create_run(instance, pipeline_handle, **kwargs):  # pylint: disable=redefined-outer-name
+def create_run(instance, external_pipeline, **kwargs):  # pylint: disable=redefined-outer-name
     pipeline_args = merge_dicts(
         {
             "pipeline_name": "foo_pipeline",
-            "external_pipeline_origin": pipeline_handle.get_external_origin(),
+            "external_pipeline_origin": external_pipeline.get_external_origin(),
+            "pipeline_python_origin": external_pipeline.get_python_origin(),
         },
         kwargs,
     )
@@ -24,7 +25,7 @@ def assert_events_in_order(logs, expected_events):
     assert filtered_logged_events == expected_events
 
 
-def test_queued_runs(tmpdir, foo_pipeline_handle):
+def test_queued_runs(tmpdir, foo_external_pipeline):
     dagster_home_path = tmpdir.strpath
     with setup_instance(
         dagster_home_path,
@@ -36,7 +37,7 @@ def test_queued_runs(tmpdir, foo_pipeline_handle):
     """,
     ) as instance:
         with start_daemon():
-            run = create_run(instance, foo_pipeline_handle)
+            run = create_run(instance, foo_external_pipeline)
             with external_pipeline_from_run(run) as external_pipeline:
                 instance.submit_run(run.run_id, external_pipeline)
 

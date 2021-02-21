@@ -3,10 +3,7 @@ from contextlib import contextmanager
 
 import pytest
 from dagster import file_relative_path
-from dagster.core.host_representation import (
-    ManagedGrpcPythonEnvRepositoryLocationOrigin,
-    PipelineHandle,
-)
+from dagster.core.host_representation import ManagedGrpcPythonEnvRepositoryLocationOrigin
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 
 
@@ -23,12 +20,12 @@ def get_example_repository_location_handle():
 
 
 @contextmanager
-def get_example_repo_handle():
+def get_example_external_repository():
     with get_example_repository_location_handle() as location_handle:
-        yield location_handle.create_location().get_repository("example_repo").handle
+        yield location_handle.create_location().get_repository("example_repo")
 
 
 @pytest.fixture
-def foo_pipeline_handle():
-    with get_example_repo_handle() as repo_handle:
-        yield PipelineHandle("foo_pipeline", repo_handle)
+def foo_external_pipeline():
+    with get_example_external_repository() as external_repository:
+        yield external_repository.get_full_external_pipeline("foo_pipeline")

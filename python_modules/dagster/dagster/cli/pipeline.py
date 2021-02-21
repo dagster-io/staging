@@ -525,6 +525,7 @@ def _create_external_pipeline_run(
         execution_plan_snapshot=execution_plan_snapshot,
         parent_pipeline_snapshot=external_pipeline_subset.parent_pipeline_snapshot,
         external_pipeline_origin=external_pipeline_subset.get_external_origin(),
+        pipeline_python_origin=external_pipeline_subset.get_python_origin(),
     )
 
 

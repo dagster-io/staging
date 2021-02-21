@@ -138,6 +138,7 @@ def create_run_for_test(
     execution_plan_snapshot=None,
     parent_pipeline_snapshot=None,
     external_pipeline_origin=None,
+    pipeline_python_origin=None,
 ):
     return instance.create_run(
         pipeline_name,
@@ -154,6 +155,7 @@ def create_run_for_test(
         execution_plan_snapshot,
         parent_pipeline_snapshot,
         external_pipeline_origin=external_pipeline_origin,
+        pipeline_python_origin=pipeline_python_origin,
     )
 
 

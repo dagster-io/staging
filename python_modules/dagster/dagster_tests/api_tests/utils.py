@@ -36,9 +36,15 @@ def get_bar_repo_grpc_repository_location_handle():
 
 
 @contextmanager
-def get_bar_repo_handle():
+def get_bar_external_repository():
     with get_bar_repo_repository_location_handle() as location_handle:
-        yield location_handle.create_location().get_repository("bar_repo").handle
+        yield location_handle.create_location().get_repository("bar_repo")
+
+
+@contextmanager
+def get_bar_repo_handle():
+    with get_bar_external_repository() as external_repo:
+        yield external_repo.handle
 
 
 @contextmanager
@@ -51,6 +57,12 @@ def get_bar_grpc_repo_handle():
 def get_foo_pipeline_handle():
     with get_bar_repo_handle() as repo_handle:
         yield PipelineHandle("foo", repo_handle)
+
+
+@contextmanager
+def get_foo_external_pipeline():
+    with get_bar_external_repository() as external_repo:
+        yield external_repo.get_full_external_pipeline("foo")
 
 
 @contextmanager

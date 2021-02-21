@@ -3,6 +3,7 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check
+from dagster.core.origin import PipelinePythonOrigin
 from dagster.core.storage.tags import PARENT_RUN_ID_TAG, ROOT_RUN_ID_TAG
 from dagster.core.utils import make_new_run_id
 from dagster.serdes import DefaultNamedTupleSerializer, whitelist_for_serdes
@@ -113,6 +114,7 @@ def pipeline_run_from_storage(
     solid_subset=None,
     reexecution_config=None,  # pylint: disable=unused-argument
     external_pipeline_origin=None,
+    pipeline_python_origin=None,
     **kwargs,
 ):
 
@@ -193,6 +195,7 @@ def pipeline_run_from_storage(
         pipeline_snapshot_id=pipeline_snapshot_id,
         execution_plan_snapshot_id=execution_plan_snapshot_id,
         external_pipeline_origin=external_pipeline_origin,
+        pipeline_python_origin=pipeline_python_origin,
     )
 
 
@@ -203,7 +206,7 @@ class PipelineRun(
         (
             "pipeline_name run_id run_config mode solid_selection solids_to_execute "
             "step_keys_to_execute status tags root_run_id parent_run_id "
-            "pipeline_snapshot_id execution_plan_snapshot_id external_pipeline_origin"
+            "pipeline_snapshot_id execution_plan_snapshot_id external_pipeline_origin pipeline_python_origin"
         ),
     )
 ):
@@ -227,6 +230,7 @@ class PipelineRun(
         pipeline_snapshot_id=None,
         execution_plan_snapshot_id=None,
         external_pipeline_origin=None,
+        pipeline_python_origin=None,
     ):
         check.invariant(
             (root_run_id is not None and parent_run_id is not None)
@@ -254,6 +258,12 @@ class PipelineRun(
                 ExternalPipelineOrigin,
                 "external_pipeline_origin is required for queued runs",
             )
+            check.inst_param(
+                pipeline_python_origin,
+                "pipeline_python_origin",
+                PipelinePythonOrigin,
+                "pipeline_python_origin is required for queued runs",
+            )
 
         return super(PipelineRun, cls).__new__(
             cls,
@@ -276,6 +286,11 @@ class PipelineRun(
             ),
             external_pipeline_origin=check.opt_inst_param(
                 external_pipeline_origin, "external_pipeline_origin", ExternalPipelineOrigin
+            ),
+            pipeline_python_origin=check.opt_inst_param(
+                pipeline_python_origin,
+                "pipeline_python_origin",
+                PipelinePythonOrigin,
             ),
         )
 

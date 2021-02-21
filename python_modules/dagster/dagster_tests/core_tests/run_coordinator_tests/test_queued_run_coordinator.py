@@ -8,7 +8,7 @@ from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.test_utils import create_run_for_test, instance_for_test
 from dagster.utils import merge_dicts
 from dagster.utils.external import external_pipeline_from_run
-from dagster_tests.api_tests.utils import get_foo_pipeline_handle
+from dagster_tests.api_tests.utils import get_foo_external_pipeline
 
 
 @pytest.fixture()
@@ -34,11 +34,12 @@ def call_submit_run(coodinator, run):  # pylint: disable=redefined-outer-name
 
 @contextlib.contextmanager
 def create_run(instance, **kwargs):  # pylint: disable=redefined-outer-name
-    with get_foo_pipeline_handle() as pipeline_handle:
+    with get_foo_external_pipeline() as external_pipeline:
         pipeline_args = merge_dicts(
             {
                 "pipeline_name": "foo",
-                "external_pipeline_origin": pipeline_handle.get_external_origin(),
+                "external_pipeline_origin": external_pipeline.get_external_origin(),
+                "pipeline_python_origin": external_pipeline.get_python_origin(),
             },
             kwargs,
         )

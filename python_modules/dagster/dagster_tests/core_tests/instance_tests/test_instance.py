@@ -16,7 +16,7 @@ from dagster.core.test_utils import (
     instance_for_test,
     instance_for_test_tempdir,
 )
-from dagster_tests.api_tests.utils import get_foo_pipeline_handle
+from dagster_tests.api_tests.utils import get_foo_external_pipeline
 
 
 def test_get_run_by_id():
@@ -107,13 +107,14 @@ def test_submit_run():
             }
         }
     ) as instance:
-        with get_foo_pipeline_handle() as pipeline_handle:
+        with get_foo_external_pipeline() as external_pipeline:
 
             run = create_run_for_test(
                 instance=instance,
-                pipeline_name=pipeline_handle.pipeline_name,
+                pipeline_name=external_pipeline.name,
                 run_id="foo-bar",
-                external_pipeline_origin=pipeline_handle.get_external_origin(),
+                external_pipeline_origin=external_pipeline.get_external_origin(),
+                pipeline_python_origin=external_pipeline.get_python_origin(),
             )
 
             instance.submit_run(run.run_id, None)
