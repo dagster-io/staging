@@ -1,9 +1,7 @@
 from dagster import check
-from dagster.core.execution.context.init import InitResourceContext
 from dagster.core.execution.context.system import get_output_context
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.step import is_executable_step
-from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.utils.backcompat import experimental
 
 from .plan.inputs import join_and_hash
@@ -12,6 +10,7 @@ from .plan.inputs import join_and_hash
 def resolve_config_version(config_value):
     """Resolve a configuration value into a hashed version.
 
+    If a None value is passed in, we return the result of an empty join_and_hash.
     If a single value is passed in, it is converted to a string, hashed, and returned as the
     version. If a dictionary of config values is passed in, each value is resolved to a version,
     concatenated with its key, joined, and hashed into a single version.
@@ -20,6 +19,8 @@ def resolve_config_version(config_value):
         config_value (Union[Any, dict]): Either a single config value or a dictionary of config
             values.
     """
+    if config_value is None:
+        return join_and_hash()
     if not isinstance(config_value, dict):
         return join_and_hash(str(config_value))
     else:
@@ -55,10 +56,10 @@ def resolve_resource_versions(environment_config, pipeline_definition):
 
     resource_versions = {}
 
-    for resource_key, config in environment_config.resources.items():
+    for resource_key, resource_config in environment_config.resources.items():
         resource_def_version = mode_definition.resource_defs[resource_key].version
         resource_versions[resource_key] = join_and_hash(
-            resolve_config_version(config), resource_def_version
+            resolve_config_version(resource_config.config), resource_def_version
         )
 
     return resource_versions
@@ -149,17 +150,14 @@ def resolve_step_output_versions_helper(execution_plan):
 
 
 @experimental
-def resolve_memoized_execution_plan(execution_plan):
+def resolve_memoized_execution_plan(execution_plan, run_config):
     """
     Returns:
         ExecutionPlan: Execution plan configured to only run unmemoized steps.
     """
-
-    pipeline_def = execution_plan.pipeline.get_definition()
+    from .pre_execution_resources_init import init_resources
 
     environment_config = execution_plan.environment_config
-    pipeline_def = execution_plan.pipeline.get_definition()
-    mode_def = pipeline_def.get_mode_definition(environment_config.mode)
 
     step_keys_to_execute = set()
 
@@ -168,29 +166,24 @@ def resolve_memoized_execution_plan(execution_plan):
             step_output_handle = StepOutputHandle(step.key, output_name)
 
             io_manager_key = execution_plan.get_manager_key(step_output_handle)
-            # TODO: https://github.com/dagster-io/dagster/issues/3302
-            # The following code block is HIGHLY experimental. It initializes an IO manager
-            # outside of the resource initialization context, and will ignore any exit hooks defined
-            # for the IO manager, and will not work if the IO manager requires resource keys
-            # for initialization.
-            resource_config = (
-                environment_config.resources[io_manager_key]["config"]
-                if "config" in environment_config.resources[io_manager_key]
-                else {}
-            )
-            resource_def = mode_def.resource_defs[io_manager_key]
-            resource_context = InitResourceContext(
-                resource_config,
-                resource_def,
-                pipeline_run=PipelineRun(
-                    pipeline_name=pipeline_def.name, run_id="", mode=environment_config.mode
-                ),
-            )
-            io_manager = resource_def.resource_fn(resource_context)
-            context = get_output_context(
-                execution_plan, environment_config, step_output_handle, None
-            )
-            if not io_manager.has_output(context):
-                step_keys_to_execute.add(step_output_handle.step_key)
+            recorder = []
+            pipeline_def = execution_plan.pipeline.get_definition()
+            mode = execution_plan.environment_config.mode
+            mode_def = pipeline_def.get_mode_definition(mode)
+
+            # TODO: just include in provided resource_defs the resource_defs that the io manager
+            # is dependent upon.
+            with init_resources(
+                resource_defs=mode_def.resource_defs,
+                run_config=run_config.get("resources", {}),
+                recorder=recorder,
+            ) as scoped_resources:
+
+                io_manager = scoped_resources.resource_instance_dict[io_manager_key]
+                context = get_output_context(
+                    execution_plan, environment_config, step_output_handle, None
+                )
+                if not io_manager.has_output(context):
+                    step_keys_to_execute.add(step_output_handle.step_key)
 
     return execution_plan.build_subset_plan(list(step_keys_to_execute))
