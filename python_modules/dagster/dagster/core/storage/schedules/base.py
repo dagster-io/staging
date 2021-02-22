@@ -92,9 +92,7 @@ class ScheduleStorage(abc.ABC):
         """
 
     @abc.abstractmethod
-    def purge_job_ticks(
-        self, job_origin_id: str, tick_status: JobTickStatus, before: datetime.datetime
-    ):
+    def purge_job_ticks(self, job_origin_id: str, tick_status: JobTickStatus, before: float):
         """Wipe ticks for a job for a certain status and timestamp.
 
         Args:

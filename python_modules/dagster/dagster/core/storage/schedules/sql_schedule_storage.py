@@ -211,9 +211,9 @@ class SqlScheduleStorage(ScheduleStorage):
     def purge_job_ticks(self, job_origin_id, tick_status, before):
         check.str_param(job_origin_id, "job_origin_id")
         check.inst_param(tick_status, "tick_status", JobTickStatus)
-        check.inst_param(before, "before", datetime)
+        check.float_param(before, "before")
 
-        utc_before = utc_datetime_from_timestamp(before.timestamp())
+        utc_before = utc_datetime_from_timestamp(before)
 
         with self.connect() as conn:
             conn.execute(
