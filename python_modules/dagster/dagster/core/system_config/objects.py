@@ -147,7 +147,9 @@ class EnvironmentConfig(
             config_value, mode_def.executor_defs, "execution", ExecutorDefinition, "executor"
         )
 
-        config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
+        resource_defs = pipeline_def.get_mode_definition(mode).resource_defs
+        resource_configs = config_value.get("resources", {})
+        config_mapped_resource_configs = config_map_resources(resource_defs, resource_configs)
         config_mapped_logger_configs = config_map_loggers(pipeline_def, config_value, mode)
 
         solid_config_dict = composite_descent(
@@ -198,15 +200,13 @@ def run_config_storage_field_backcompat(run_config):
     return deep_merge_dicts(run_config, intermediate_storage_dict)
 
 
-def config_map_resources(pipeline_def, config_value, mode):
+def config_map_resources(resource_defs, resource_configs):
     """This function executes the config mappings for resources with respect to ConfigurableDefinition.
     It iterates over resource_defs and looks up the corresponding config because resources need to
     be mapped regardless of whether they receive config from run_config."""
 
-    mode_def = pipeline_def.get_mode_definition(mode)
-    resource_configs = config_value.get("resources", {})
     config_mapped_resource_configs = {}
-    for resource_key, resource_def in mode_def.resource_defs.items():
+    for resource_key, resource_def in resource_defs.items():
         resource_config = resource_configs.get(resource_key, {})
         resource_config_evr = resource_def.apply_config_mapping(resource_config)
         if not resource_config_evr.success:
