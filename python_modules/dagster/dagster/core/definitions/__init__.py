@@ -53,12 +53,12 @@ from .executor import (
 )
 from .graph import GraphDefinition
 from .hook import HookDefinition
-from .input import InputDefinition, InputMapping
+from .input import InputDefinition, InputMapping, nothing_input
 from .intermediate_storage import IntermediateStorageDefinition, intermediate_storage
 from .job import JobContext, JobDefinition, JobType, RunRequest, SkipReason
 from .logger import LoggerDefinition, logger
 from .mode import ModeDefinition
-from .output import OutputDefinition, OutputMapping
+from .output import OutputDefinition, OutputMapping, nothing_output
 from .partition import Partition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .pipeline_base import IPipeline

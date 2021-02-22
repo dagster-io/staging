@@ -11,7 +11,9 @@ The way we tell Dagster that one solid should execute after another solid is by 
 
 However, sometimes it doesn't make sense to use Dagster's inputs/outputs to model the dependency. For example, if one solid creates a particular table in a database and another solid consumes that table, then the data is flowing through the database, not through inputs and outputs defined in Dagster.
 
-In this situation, we can use the <PyObject module="dagster" object="Nothing" /> [Dagster type](/overview/types) to model the dependency between the two solids. We are passing "nothing" via Dagster between the two solids. By hooking up a "nothing" output of the first solid to a "nothing" input of the second solid, Dagster understands that the second should execute after the first.
+In this situation, we can use "nothing" inputs and outputs.  Nothing inputs and outputs are a special kind of input and output that expect no data to be returned or consumed.  By hooking up a "nothing" output of the first solid to a "nothing" input of the second solid, Dagster understands that the second should execute after the first.  Unlike with typical inputs and outputs...
+* The first solid does not return or yield a value corresponding to the output.
+* The second solids does not include an argument for the input in its decorated function.
 
 ```python literalinclude caption=repo.py
 file:/nothing/repo.py

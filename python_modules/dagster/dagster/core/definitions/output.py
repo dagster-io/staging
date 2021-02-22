@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional
 
 from dagster import check
 from dagster.core.types.dagster_type import resolve_dagster_type
@@ -153,3 +154,18 @@ class OutputMapping(namedtuple("_OutputMapping", "definition maps_from")):
             check.inst_param(definition, "definition", OutputDefinition),
             check.inst_param(maps_from, "maps_from", OutputPointer),
         )
+
+
+def nothing_output(
+    name: Optional[str] = None, description: Optional[str] = None
+) -> OutputDefinition:
+    """Makes an OutputDefiniton that expects no data.
+
+    Unlike other OutputDefinitions nothing outputs have a couple special properties:
+    * The solid is not expected to return or yield a value for a nothing output.
+    * `handle_output` of :py:class:`IOManager` is not invoked for nothing outputs.
+    """
+    return OutputDefinition(
+        name=check.opt_str_param(name, "name", default="nothing_output"),
+        description=check.opt_str_param(description, "description"),
+    )

@@ -57,6 +57,8 @@ from dagster.core.definitions import (
     logger,
     monthly_schedule,
     multiprocess_executor,
+    nothing_input,
+    nothing_output,
     pipeline,
     reconstructable,
     repository,
@@ -197,6 +199,8 @@ __all__ = [
     "SolidInvocation",
     "TextMetadataEntryData",
     "UrlMetadataEntryData",
+    "nothing_input",
+    "nothing_output",
     # Decorators
     "composite_solid",
     "executor",

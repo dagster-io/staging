@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
@@ -54,7 +55,7 @@ class InputDefinition:
         name (str): Name of the input.
         dagster_type (Optional[Any]):  The type of this input. Users should provide one of the
             :ref:`built-in types <builtin>`, a dagster type explicitly constructed with
-            :py:func:`as_dagster_type`, :py:func:`@usable_as_dagster_type <dagster_type`, or
+            :py:class:`DagsterType`, :py:func:`@usable_as_dagster_type <usable_as_dagster_type>`, or
             :py:func:`PythonObjectDagsterType`, or a Python type. Defaults to :py:class:`Any`.
         description (Optional[str]): Human-readable description of the input.
         default_value (Optional[Any]): The default value to use if no input is provided.
@@ -189,3 +190,18 @@ class InputMapping(namedtuple("_InputMapping", "definition maps_to")):
     @property
     def maps_to_fan_in(self):
         return isinstance(self.maps_to, FanInInputPointer)
+
+
+def nothing_input(name: Optional[str] = None, description: Optional[str] = None) -> InputDefinition:
+    """Makes an InputDefinition that expects no data.
+
+    Unlike other InputDefinitions, nothing inputs
+    have a couple special properties:
+    * The input does not correspond to an argument in the function decorated by the
+      :py:func:`@solid <solid>` decorator.
+    * `load_input` of :py:class:`IOManager` is not invoked for the input.
+    """
+    return InputDefinition(
+        name=check.opt_str_param(name, "name", default="nothing_input"),
+        description=check.opt_str_param(description, "description"),
+    )

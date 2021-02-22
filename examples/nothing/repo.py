@@ -1,4 +1,4 @@
-from dagster import InputDefinition, Nothing, pipeline, repository, solid
+from dagster import nothing_input, nothing_output, pipeline, repository, solid
 
 
 def get_database_connection():
@@ -10,12 +10,12 @@ def get_database_connection():
 
 
 # start_repo_marker_0
-@solid
-def create_table_1(_) -> Nothing:
+@solid(output_defs=[nothing_output()])
+def create_table_1(_):
     get_database_connection().execute("create table_1 as select * from some_source_table")
 
 
-@solid(input_defs=[InputDefinition("start", Nothing)])
+@solid(input_defs=[nothing_input()])
 def create_table_2(_):
     get_database_connection().execute("create table_2 as select * from table_1")
 
