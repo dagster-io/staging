@@ -71,19 +71,22 @@ class Manager:
         instance,
         resource_instances_to_override,
     ):
+        resource_defs = execution_plan.pipeline_def.get_mode_definition(environment_config.mode)
+        run_config = environment_config.resources
         """
         Drop-in replacement for
         `dagster.core.execution.resources_init.resource_initialization_manager`.  It uses a
         `DagstermillResourceEventGenerationManager` and explicitly calls `teardown` on it
         """
         generator = resource_initialization_event_generator(
-            execution_plan,
-            environment_config,
-            pipeline_run,
-            log_manager,
-            resource_keys_to_init,
-            instance,
-            resource_instances_to_override,
+            resource_defs=resource_defs,
+            run_config_for_resources=run_config,
+            log_manager=log_manager,
+            execution_plan=execution_plan,
+            pipeline_run=pipeline_run,
+            resource_keys_to_init=resource_keys_to_init,
+            instance=instance,
+            resource_instances_to_override=resource_instances_to_override,
         )
         self.resource_manager = DagstermillResourceEventGenerationManager(
             generator, ScopedResourcesBuilder
