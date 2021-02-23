@@ -22,6 +22,7 @@ from dagster.utils.backcompat import experimental_arg_warning, experimental_fn_w
 
 from .graph import GraphDefinition
 from .mode import DEFAULT_MODE_NAME
+from .pipeline import PipelineDefinition
 from .run_request import JobType, RunRequest, SkipReason
 from .target import DirectTarget, RepoRelativeTarget
 from .utils import check_valid_name
@@ -178,7 +179,7 @@ class ScheduleDefinition:
         execution_timezone: Optional[str] = None,
         execution_fn: Optional[Callable[[ScheduleExecutionContext], Any]] = None,
         description: Optional[str] = None,
-        job: Optional[GraphDefinition] = None,
+        job: Optional[Union[GraphDefinition, PipelineDefinition]] = None,
     ):
 
         if not croniter.is_valid(cron_schedule):

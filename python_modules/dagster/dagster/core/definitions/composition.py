@@ -82,17 +82,11 @@ def is_in_composition() -> bool:
 
 def assert_in_composition(node_def: NodeDefinition, name: str) -> None:
     if len(_composition_stack) < 1:
-        if isinstance(node_def, PipelineDefinition):
-            raise DagsterInvariantViolationError(
-                f"Attempted to call pipeline '{name}' directly. Pipelines should be invoked by "
-                "using an execution API function (e.g. `execute_pipeline`)."
-            )
-        else:
-            raise DagsterInvariantViolationError(
-                f"Attempted to call composite solid '{name}' outside of a composition function. "
-                "Invoking composite solids is only valid in a function decorated with "
-                "@pipeline or @composite_solid."
-            )
+        raise DagsterInvariantViolationError(
+            f"Attempted to call composite solid '{name}' outside of a composition function. "
+            "Invoking composite solids is only valid in a function decorated with "
+            "@pipeline or @composite_solid."
+        )
 
 
 class InProgressCompositionContext:
