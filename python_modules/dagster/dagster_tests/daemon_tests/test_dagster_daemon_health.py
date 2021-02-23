@@ -20,6 +20,7 @@ def test_healthy():
                 "module": "dagster.core.run_coordinator.queued_run_coordinator",
                 "class": "QueuedRunCoordinator",
             },
+            "sensor_settings": {"interval_seconds": 3},
         }
     ) as instance:
         init_time = pendulum.now("UTC")
@@ -61,6 +62,7 @@ def test_healthy_with_different_daemons():
                         "module": "dagster.core.run_coordinator.queued_run_coordinator",
                         "class": "QueuedRunCoordinator",
                     },
+                    "sensor_settings": {"interval_seconds": 3},
                 }
             ) as other_instance:
                 now = pendulum.now("UTC")
@@ -76,7 +78,7 @@ def test_thread_die_daemon(monkeypatch):
 
         iteration_ran = {"ran": False}
 
-        def run_iteration_error(_, _instance):
+        def run_iteration_error(_, _instance, _daemon_shutdown_event):
             iteration_ran["ran"] = True
             raise KeyboardInterrupt
             yield  # pylint: disable=unreachable
@@ -111,10 +113,14 @@ def test_thread_die_daemon(monkeypatch):
 
 
 def test_error_daemon(monkeypatch):
-    with instance_for_test(overrides={}) as instance:
+    with instance_for_test(
+        overrides={
+            "sensor_settings": {"interval_seconds": 3},
+        }
+    ) as instance:
         from dagster.daemon.daemon import SensorDaemon
 
-        def run_iteration_error(_, _instance):
+        def run_iteration_error(_, _instance, _daemon_shutdown_event):
             raise DagsterInvariantViolationError("foobar")
             yield  # pylint: disable=unreachable
 
@@ -150,10 +156,14 @@ def test_error_daemon(monkeypatch):
 
 
 def test_multiple_error_daemon(monkeypatch):
-    with instance_for_test(overrides={}) as instance:
+    with instance_for_test(
+        overrides={
+            "sensor_settings": {"interval_seconds": 3},
+        }
+    ) as instance:
         from dagster.daemon.daemon import SensorDaemon
 
-        def run_iteration_error(_, _instance):
+        def run_iteration_error(_, _instance, _daemon_shutdown_event):
             # ?message stack cls_name cause"
             yield SerializableErrorInfo("foobar", None, None, None)
             yield SerializableErrorInfo("bizbuz", None, None, None)
@@ -250,7 +260,7 @@ def test_warn_multiple_daemons(capsys):
                     if "Taking over from another SENSOR daemon process" in captured.out:
                         break
 
-                    if (now - init_time).total_seconds() > 120:
+                    if (now - init_time).total_seconds() > 60:
                         raise Exception("timed out waiting for heartbeats")
 
                     time.sleep(5)

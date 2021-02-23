@@ -8,7 +8,7 @@ from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
 from dagster.daemon.backfill import execute_backfill_iteration
 from dagster.daemon.types import DaemonHeartbeat
 from dagster.scheduler import execute_scheduler_iteration
-from dagster.scheduler.sensor import execute_sensor_iteration
+from dagster.scheduler.sensor import execute_sensor_iteration_loop
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
 from dagster.utils.log import default_format_string
 
@@ -33,6 +33,10 @@ def get_default_daemon_logger(daemon_name):
 
     handler.setFormatter(formatter)
     return logger
+
+
+class CompletedIteration(object):
+    pass
 
 
 class DagsterDaemon:
@@ -63,11 +67,11 @@ class DagsterDaemon:
                     >= self.interval_seconds
                 ):
                     self._last_iteration_time = curr_time
-                    self._run_iteration(instance, curr_time, daemon_uuid)
+                    self._run_iteration(instance, curr_time, daemon_uuid, daemon_shutdown_event)
 
                 daemon_shutdown_event.wait(0.5)
 
-    def _run_iteration(self, instance, curr_time, daemon_uuid):
+    def _run_iteration(self, instance, curr_time, daemon_uuid, daemon_shutdown_event):
         # Build a list of any exceptions encountered during the iteration.
         # Once the iteration completes, this is copied to last_iteration_exceptions
         # which is used in the heartbeats. This guarantees that heartbeats contain the full
@@ -75,13 +79,17 @@ class DagsterDaemon:
         self._current_iteration_exceptions = []
         first_iteration = not self._last_heartbeat_time
 
-        daemon_generator = self.run_iteration(instance)
+        daemon_generator = self.run_iteration(instance, daemon_shutdown_event)
 
         while True:
             try:
-                error_info = check.opt_inst(next(daemon_generator), SerializableErrorInfo)
-                if error_info:
-                    self._current_iteration_exceptions.append(error_info)
+                result = check.opt_inst(
+                    next(daemon_generator), tuple([SerializableErrorInfo, CompletedIteration])
+                )
+                if isinstance(result, CompletedIteration):
+                    first_iteration = False
+                elif result:
+                    self._current_iteration_exceptions.append(result)
             except StopIteration:
                 self._last_iteration_exceptions = self._current_iteration_exceptions
                 break
@@ -140,7 +148,7 @@ class DagsterDaemon:
         )
 
     @abstractmethod
-    def run_iteration(self, instance):
+    def run_iteration(self, instance, daemon_shutdown_event):
         """
         Execute the daemon. In order to avoid blocking the controller thread for extended periods,
         daemons can yield control during this method. Yields can be either NoneType or a
@@ -174,7 +182,7 @@ class SchedulerDaemon(DagsterDaemon):
     def daemon_type(cls):
         return "SCHEDULER"
 
-    def run_iteration(self, instance):
+    def run_iteration(self, instance, daemon_shutdown_event):
         return execute_scheduler_iteration(instance, self._logger, self._max_catchup_runs)
 
 
@@ -192,8 +200,8 @@ class SensorDaemon(DagsterDaemon):
     def daemon_type(cls):
         return "SENSOR"
 
-    def run_iteration(self, instance):
-        return execute_sensor_iteration(instance, self._logger)
+    def run_iteration(self, instance, daemon_shutdown_event):
+        return execute_sensor_iteration_loop(instance, self._logger, daemon_shutdown_event)
 
 
 class BackfillDaemon(DagsterDaemon):
@@ -207,5 +215,5 @@ class BackfillDaemon(DagsterDaemon):
     def daemon_type(cls):
         return "BACKFILL"
 
-    def run_iteration(self, instance):
+    def run_iteration(self, instance, daemon_shutdown_event):
         return execute_backfill_iteration(instance, self._logger)
