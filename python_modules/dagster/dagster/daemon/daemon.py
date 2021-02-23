@@ -8,7 +8,7 @@ from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
 from dagster.daemon.backfill import execute_backfill_iteration
 from dagster.daemon.types import DaemonHeartbeat
 from dagster.scheduler import execute_scheduler_iteration
-from dagster.scheduler.sensor import execute_sensor_iteration
+from dagster.scheduler.sensor import execute_sensor_iteration_loop
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
 from dagster.utils.log import default_format_string
 
@@ -193,7 +193,7 @@ class SensorDaemon(DagsterDaemon):
         return "SENSOR"
 
     def run_iteration(self, instance):
-        return execute_sensor_iteration(instance, self._logger)
+        return execute_sensor_iteration_loop(instance, self._logger, self.interval_seconds)
 
 
 class BackfillDaemon(DagsterDaemon):
