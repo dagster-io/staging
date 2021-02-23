@@ -73,12 +73,12 @@ class GraphDefinition(NodeDefinition):
     def __init__(
         self,
         name,
-        description,
         node_defs,
-        dependencies,
-        input_mappings,
-        output_mappings,
-        config_mapping,
+        description=None,
+        dependencies=None,
+        input_mappings=None,
+        output_mappings=None,
+        config_mapping=None,
         **kwargs,
     ):
         self._node_defs = _check_node_defs_arg(name, node_defs)
@@ -222,6 +222,14 @@ class GraphDefinition(NodeDefinition):
     def all_dagster_types(self):
         return self._dagster_type_dict.values()
 
+    def has_dagster_type(self, name):
+        check.str_param(name, "name")
+        return name in self._dagster_type_dict
+
+    def dagster_type_named(self, name):
+        check.str_param(name, "name")
+        return self._dagster_type_dict[name]
+
     def get_input_mapping(self, input_name):
         check.str_param(input_name, "input_name")
         for mapping in self._input_mappings:
@@ -329,6 +337,9 @@ class GraphDefinition(NodeDefinition):
 
     def copy_for_configured(self, name, description, config_schema, config_or_config_fn):
         check.not_implemented("@graph does not yet implement configured")
+
+    def node_names(self):
+        return list(self._solid_dict.keys())
 
 
 def _validate_in_mappings(input_mappings, solid_dict, dependency_structure, name, class_name):
