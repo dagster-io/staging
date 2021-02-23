@@ -1,0 +1,49 @@
+import PyObject from 'components/PyObject';
+import { DynamicMetaTags } from 'components/MetaTags';
+
+<DynamicMetaTags
+  title="Deploying on Kubernetes | How to Migrate | Dagster"
+  description="A guide to migrate your Dagster instance on Kubernetes."
+/>
+
+# How to Migrate
+
+## Overview
+
+When upgrading your Dagster version, it may be required to also migrate your Dagster instance
+so that you can take advantage of new features and bug fixes in the system. Here, we walk you
+through the migration process in a Kubernetes environment. We assume that you have deployed the
+Kubernetes resources using our Helm chart.
+
+## Migration Process
+
+1. Make sure you backup the data in your PostgreSQL database!
+2. Scale down the Dagit and Daemon deployments - we don't want any ongoing pipeline runs to be
+writing to the database as the migration is happening.
+
+    # Get the names of the Dagster Helm's Dagit and Daemon deployments
+    export HELM_DAGSTER_DAGIT_DEPLOYMENT_NAME=<DAGSTER_DAGIT_DEPLOYMENT_NAME>
+    export HELM_DAGSTER_DAEMON_DEPLOYMENT_NAME=<DAGSTER_DAEMON_DEPLOYMENT_NAME>
+
+    kubectl scale deploy $HELM_DAGSTER_DAGIT_DEPLOYMENT_NAME --replicas=0
+    kubectl scale deploy $HELM_DAGSTER_DAEMON_DEPLOYMENT_NAME --replicas=0
+
+3. Run a Kubernetes Job with the `dagster instance migrate` command. Note that this will turn off
+any running schedules.
+
+    # Get the existing Dagster Helm release name
+    export HELM_DAGSTER_RELEASE_NAME=<DAGSTER_RELEASE_NAME>
+
+    helm template $HELM_DAGSTER_RELEASE_NAME dagster/dagster \
+        --show-only templates/job-instance-migrate.yaml \
+        --values values.yaml \
+        | kubectl apply -f -
+
+4. Scale the Dagit and Daemon deployments back up.
+
+    ```
+    kubectl scale deploy $HELM_DAGSTER_DAGIT_DEPLOYMENT_NAME --replicas=1
+    kubectl scale deploy $HELM_DAGSTER_DAEMON_DEPLOYMENT_NAME --replicas=1
+    ```
+
+5. Re-enable your desired schedules in Dagit.
