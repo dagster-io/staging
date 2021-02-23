@@ -476,7 +476,18 @@
       },
       {
         "name": "Deploying on Kubernetes",
-        "path": "/deploying/kubernetes"
+        "path": "/deploying/kubernetes/getting-started",
+        "childPath": true,
+        "children": [
+          {
+            "name": "Getting Started",
+            "path": "/deploying/kubernetes/getting-started"
+          },
+          {
+            "name": "How to Migrate",
+            "path": "/deploying/kubernetes/how-to-migrate"
+          }
+        ]
       },
       {
         "name": "Using AWS for storage",
