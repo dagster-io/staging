@@ -1,3 +1,5 @@
+from typing import Dict, List, Tuple
+
 from dagster import (
     EventMetadataEntry,
     Failure,
@@ -113,6 +115,13 @@ def str_to_num(context, string):
     return int(string)
 
 
+@solid
+def test(
+    _,
+) -> List[Tuple[List[Dict[str, str]], int]]:
+    return []
+
+
 @pipeline(
     description=(
         "Demo pipeline that enables configurable types of errors thrown during pipeline execution, "
@@ -135,6 +144,7 @@ def error_monster():
     start = emit_num.alias("start")()
     middle = num_to_str.alias("middle")(num=start)
     str_to_num.alias("end")(string=middle)
+    test()
 
 
 if __name__ == "__main__":
