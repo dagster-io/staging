@@ -14,9 +14,9 @@ from dagster.core.storage.runs import SqliteRunStorage
 from .memoized_dev_loop_pipeline import asset_pipeline
 
 
-def get_step_keys_to_execute(pipeline, run_config, mode):
+def get_step_keys_to_execute(pipeline, run_config, mode, instance):
     memoized_execution_plan = resolve_memoized_execution_plan(
-        create_execution_plan(pipeline, run_config=run_config, mode=mode)
+        create_execution_plan(pipeline, run_config=run_config, mode=mode), instance
     )
     return memoized_execution_plan.step_keys_to_execute
 
@@ -52,11 +52,11 @@ def test_dev_loop_changing_versions():
             instance=instance,
         )
         assert result.success
-        assert not get_step_keys_to_execute(asset_pipeline, run_config, "only_mode")
+        assert not get_step_keys_to_execute(asset_pipeline, run_config, "only_mode", instance)
 
         run_config["solids"]["take_string_1_asset"]["config"]["input_str"] = "banana"
 
-        assert get_step_keys_to_execute(asset_pipeline, run_config, "only_mode") == [
+        assert get_step_keys_to_execute(asset_pipeline, run_config, "only_mode", instance) == [
             "take_string_1_asset"
         ]
         result = execute_pipeline(
@@ -67,4 +67,4 @@ def test_dev_loop_changing_versions():
             instance=instance,
         )
         assert result.success
-        assert not get_step_keys_to_execute(asset_pipeline, run_config, "only_mode")
+        assert not get_step_keys_to_execute(asset_pipeline, run_config, "only_mode", instance)
