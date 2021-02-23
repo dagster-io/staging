@@ -14,7 +14,7 @@ from dagster.core.definitions import (
     TypeCheck,
 )
 from dagster.core.definitions.events import (
-    AssetPartitions,
+    AssetRelation,
     DynamicOutput,
     EventMetadataEntry,
     PartitionSpecificMetadataEntry,
@@ -291,7 +291,7 @@ def core_dagster_event_sequence_for_step(
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
-    input_assets = []
+    input_relations = []
 
     for step_input in step_context.step.step_inputs:
         input_def = step_input.source.get_input_def(step_context.pipeline_def)
@@ -300,7 +300,7 @@ def core_dagster_event_sequence_for_step(
         if dagster_type.kind == DagsterTypeKind.NOTHING:
             continue
 
-        input_assets.extend(step_input.source.get_asset_keys_and_partitions(step_context))
+        input_relations.extend(step_input.source.get_asset_relations(step_context))
 
         for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
             if isinstance(event_or_input_value, DagsterEvent):
@@ -315,7 +315,7 @@ def core_dagster_event_sequence_for_step(
         ):
             yield evt
 
-    input_assets = _dedup_asset_partitions(input_assets)
+    input_relations = _dedup_asset_relations(input_relations)
     with time_execution_scope() as timer_result:
         user_event_sequence = check.generator(
             _user_event_sequence_for_step_compute_fn(step_context, inputs)
@@ -328,12 +328,12 @@ def core_dagster_event_sequence_for_step(
         ):
 
             if isinstance(user_event, (Output, DynamicOutput)):
-                for evt in _type_check_and_store_output(step_context, user_event, input_assets):
+                for evt in _type_check_and_store_output(step_context, user_event, input_relations):
                     yield evt
             # for now, I'm ignoring AssetMaterializations yielded manually, but we might want
             # to do something with these in the above path eventually
             elif isinstance(user_event, (AssetMaterialization, Materialization)):
-                yield DagsterEvent.step_materialization(step_context, user_event, input_assets)
+                yield DagsterEvent.step_materialization(step_context, user_event, input_relations)
             elif isinstance(user_event, ExpectationResult):
                 yield DagsterEvent.step_expectation_result(step_context, user_event)
             else:
@@ -351,12 +351,12 @@ def core_dagster_event_sequence_for_step(
 def _type_check_and_store_output(
     step_context: SystemStepExecutionContext,
     output: Union[DynamicOutput, Output],
-    input_assets: List[AssetPartitions],
+    input_relations: List[AssetRelation],
 ) -> Iterator[DagsterEvent]:
 
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
     check.inst_param(output, "output", (Output, DynamicOutput))
-    check.list_param(input_assets, "input_assets", AssetPartitions)
+    check.list_param(input_relations, "input_relations", AssetRelation)
 
     mapping_key = output.mapping_key if isinstance(output, DynamicOutput) else None
 
@@ -373,7 +373,7 @@ def _type_check_and_store_output(
     for output_event in _type_check_output(step_context, step_output_handle, output, version):
         yield output_event
 
-    for evt in _store_output(step_context, step_output_handle, output, input_assets):
+    for evt in _store_output(step_context, step_output_handle, output, input_relations):
         yield evt
 
     for evt in _create_type_materializations(step_context, output.output_name, output.value):
@@ -384,7 +384,7 @@ def _materializations_to_events(
     step_context: SystemStepExecutionContext,
     step_output_handle: StepOutputHandle,
     materializations: Iterator[AssetMaterialization],
-    input_assets: List[AssetPartitions] = None,
+    input_relations: List[AssetRelation] = None,
 ) -> Iterator[DagsterEvent]:
     if materializations is not None:
         for materialization in ensure_gen(materializations):
@@ -401,57 +401,62 @@ def _materializations_to_events(
                     )
                 )
 
-            yield DagsterEvent.step_materialization(step_context, materialization, input_assets)
+            yield DagsterEvent.step_materialization(step_context, materialization, input_relations)
 
 
-def _asset_partitions_for_output(
+def _asset_relation_for_output(
     output_context: OutputContext,
     output_def: OutputDefinition,
     output_manager: IOManager,
-) -> Optional[AssetPartitions]:
+) -> Optional[AssetRelation]:
 
-    definition_asset = output_def.get_asset_key_and_partitions(output_context)
-    manager_asset = output_manager.experimental_internal_get_output_asset_key_and_partitions(
+    definition_asset_relation = output_def.get_asset_relation(output_context)
+    manager_asset_relation = output_manager.experimental_internal_get_output_asset_relation(
         output_context
     )
 
-    if definition_asset and manager_asset:
+    if definition_asset_relation and manager_asset_relation:
         raise DagsterInvariantViolationError(
             (
                 'Both the OutputDefinition and the IOManager of output "{output_name}" on solid "{solid_name}" '
-                "associate it with AssetPartitions. Either remove the asset_fn on the OutputDefinition "
-                "or use an IOManager that does not specify AssetPartitions in its get_output_asset() "
+                "associate it with an asset. Either remove the asset_key on the OutputDefinition "
+                "or use an IOManager that does not specify an AssetKey in its get_output_asset_key() "
                 "function."
             ).format(output_name=output_def.name, solid_name=output_context.solid_def.name)
         )
 
-    asset_partitions = definition_asset or manager_asset
+    asset_relation = definition_asset_relation or manager_asset_relation
 
-    return asset_partitions
+    return asset_relation
 
 
-def _flatten_asset_partitions(asset_partitions: Optional[AssetPartitions]):
-    if asset_partitions is None:
+def _flatten_asset_relation(asset_relation: Optional[AssetRelation]):
+    if asset_relation is None:
         return []
-    if not asset_partitions.partitions:
-        return [(asset_partitions.asset_key, None)]
-    return [(asset_partitions.asset_key, p) for p in asset_partitions.partitions]
+    if not asset_relation.partitions:
+        return [(asset_relation.asset_key, None)]
+    return [(asset_relation.asset_key, p) for p in asset_relation.partitions]
 
 
-def _dedup_asset_partitions(asset_partitions: List[AssetPartitions]) -> List[AssetPartitions]:
+def _dedup_asset_relations(asset_relations: List[AssetRelation]) -> List[AssetRelation]:
+    """Method to remove duplicate specifications of the same Asset/Partition pair from the lineage
+    information. Duplicates can occur naturally when calculating transitive dependencies from solids
+    with multiple Outputs, which in turn have multiple Inputs (because each Output of the solid will
+    inherit all dependencies from all of the solid Inputs).
+    """
     # TODO: we should also anticipate this logic getting more complicated if we add extra
-    # information onto the AssetPartitions object, such as how it was generated
+    # information onto the AssetRelation object, such as how it was generated
     key_partition_mapping: Dict[AssetKey, Set[str]] = defaultdict(set)
 
-    for ap in asset_partitions:
+    for rel in asset_relations:
         # TODO: what does it mean when an AssetKey is at one point associated with some partitions,
         # and at another point associated with none?
-        if not ap.partitions:
-            key_partition_mapping[ap.asset_key] |= set()
-        for p in ap.partitions:
-            key_partition_mapping[ap.asset_key].add(p)
+        if not rel.partitions:
+            key_partition_mapping[rel.asset_key] |= set()
+        for p in rel.partitions:
+            key_partition_mapping[rel.asset_key].add(p)
     return [
-        AssetPartitions(asset_key=k, partitions=list(ps)) for k, ps in key_partition_mapping.items()
+        AssetRelation(asset_key=k, partitions=list(ps)) for k, ps in key_partition_mapping.items()
     ]
 
 
@@ -459,16 +464,16 @@ def _store_output(
     step_context: SystemStepExecutionContext,
     step_output_handle: StepOutputHandle,
     output: Union[Output, DynamicOutput],
-    input_assets: List[AssetPartitions],
+    input_relations: List[AssetRelation],
 ) -> Iterator[DagsterEvent]:
 
     output_def = step_context.solid_def.output_def_named(step_output_handle.output_name)
     output_manager = step_context.get_io_manager(step_output_handle)
     output_context = step_context.get_output_context(step_output_handle)
 
-    asset_partitions = _asset_partitions_for_output(output_context, output_def, output_manager)
-    flat_assets = _flatten_asset_partitions(asset_partitions)
-    metadata_mapping: Dict[str, List[str]] = {p: [] for key, p in flat_assets}
+    asset_relation = _asset_relation_for_output(output_context, output_def, output_manager)
+    flat_relations = _flatten_asset_relation(asset_relation)
+    metadata_mapping: Dict[str, List[str]] = {p: [] for key, p in flat_relations}
 
     with user_code_error_boundary(
         DagsterExecutionHandleOutputError,
@@ -525,7 +530,7 @@ def _store_output(
             for partition in metadata_mapping.keys():
                 metadata_mapping[partition].append(entry)
 
-    for asset_key, partition in flat_assets:
+    for asset_key, partition in flat_relations:
         yield DagsterEvent.step_materialization(
             step_context,
             AssetMaterialization(
@@ -533,12 +538,12 @@ def _store_output(
                 partition=partition,
                 metadata_entries=metadata_mapping[partition],
             ),
-            input_assets,
+            parent_asset_relations=input_relations,
         )
 
     # for now, do not factor this in to metadata stuff
     for materialization in manager_materializations:
-        yield DagsterEvent.step_materialization(step_context, materialization, input_assets)
+        yield DagsterEvent.step_materialization(step_context, materialization, input_relations)
 
     yield DagsterEvent.handled_output(
         step_context,
