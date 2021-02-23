@@ -162,7 +162,7 @@ def submit_backfill_runs(instance, repo_location, backfill_job, partition_names=
             # scheduled
             instance.submit_run(pipeline_run.run_id, external_pipeline)
             submitted.append(pipeline_run.run_id)
-    return submitted
+        yield pipeline_run.run_id
 
 
 def create_backfill_run(
