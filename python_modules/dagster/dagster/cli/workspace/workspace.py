@@ -1,8 +1,18 @@
+import os
 import sys
 import warnings
 from collections import OrderedDict, namedtuple
 
 from dagster import check
+from dagster.core.code_pointer import CodePointer
+from dagster.core.definitions.reconstructable import (
+    ReconstructablePipeline,
+    ReconstructableRepository,
+    load_def_in_module,
+    load_def_in_package,
+    load_def_in_python_file,
+)
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import RepositoryLocationOrigin
 from dagster.utils.error import serializable_error_info_from_exc_info
 
@@ -136,3 +146,96 @@ class Workspace:
     def __exit__(self, exception_type, exception_value, traceback):
         for handle in self.repository_location_handles:
             handle.cleanup()
+
+    @staticmethod
+    def reconstructable_from_workspace(
+        workspace_path: str, pipeline_name: str
+    ) -> ReconstructablePipeline:
+        from .load import location_origins_from_yaml_paths
+
+        if not os.path.exists(workspace_path):
+            raise DagsterInvariantViolationError(
+                f"Provided path '{workspace_path}' does not exist."
+            )
+        for location_origin in location_origins_from_yaml_paths([workspace_path]):
+            pointer = get_code_pointer_for_origin(location_origin.loadable_target_origin)
+            repo = ReconstructableRepository(pointer)
+            if pipeline_name in repo.get_definition().pipeline_names:
+                return repo.get_reconstructable_pipeline(pipeline_name)
+        raise DagsterInvariantViolationError(f"No pipeline found in workspace `{workspace_path}`.")
+
+
+def get_loadable_targets(loadable_target_origin):
+    from .autodiscovery import (
+        LoadableTarget,
+        loadable_targets_from_python_file,
+        loadable_targets_from_python_module,
+        loadable_targets_from_python_package,
+    )
+
+    if loadable_target_origin.python_file:
+        return (
+            [
+                LoadableTarget(
+                    loadable_target_origin.attribute,
+                    load_def_in_python_file(
+                        loadable_target_origin.python_file,
+                        loadable_target_origin.attribute,
+                        loadable_target_origin.working_directory,
+                    ),
+                )
+            ]
+            if loadable_target_origin.attribute
+            else loadable_targets_from_python_file(
+                loadable_target_origin.python_file, loadable_target_origin.working_directory
+            )
+        )
+    elif loadable_target_origin.module_name:
+        return (
+            [
+                LoadableTarget(
+                    loadable_target_origin.attribute,
+                    load_def_in_module(
+                        loadable_target_origin.module_name, loadable_target_origin.attribute
+                    ),
+                )
+            ]
+            if loadable_target_origin.attribute
+            else loadable_targets_from_python_module(loadable_target_origin.module_name)
+        )
+    elif loadable_target_origin.package_name:
+        return (
+            [
+                LoadableTarget(
+                    loadable_target_origin.attribute,
+                    load_def_in_package(
+                        loadable_target_origin.package_name, loadable_target_origin.attribute
+                    ),
+                )
+            ]
+            if loadable_target_origin.attribute
+            else loadable_targets_from_python_package(loadable_target_origin.package_name)
+        )
+    else:
+        check.failed("invalid")
+
+
+def get_code_pointer_for_origin(loadable_target_origin):
+    loadable_targets = get_loadable_targets(loadable_target_origin)
+    for loadable_target in loadable_targets:
+        if loadable_target_origin.python_file:
+            return CodePointer.from_python_file(
+                loadable_target_origin.python_file,
+                loadable_target.attribute,
+                loadable_target_origin.working_directory,
+            )
+        elif loadable_target_origin.package_name:
+            return CodePointer.from_python_package(
+                loadable_target_origin.package_name,
+                loadable_target.attribute,
+            )
+        else:
+            return CodePointer.from_module(
+                loadable_target_origin.module_name,
+                loadable_target.attribute,
+            )
