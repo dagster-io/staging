@@ -3,9 +3,11 @@ from functools import update_wrapper
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from dagster import check
-from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.sensor import RunRequest, SensorDefinition, SkipReason
 from dagster.core.errors import DagsterInvariantViolationError
+
+from ..graph import GraphDefinition
+from ..pipeline import PipelineDefinition
 
 if TYPE_CHECKING:
     from dagster.core.definitions.sensor import SensorExecutionContext
@@ -18,7 +20,7 @@ def sensor(
     mode: Optional[str] = None,
     minimum_interval_seconds: Optional[int] = None,
     description: Optional[str] = None,
-    job: Optional[PipelineDefinition] = None,
+    job: Optional[Union[PipelineDefinition, GraphDefinition]] = None,
 ) -> Callable[
     [Callable[["SensorExecutionContext"], Union[SkipReason, RunRequest]]], SensorDefinition
 ]:
