@@ -5,6 +5,7 @@ from dagster import check
 from dagster.core.definitions.policy import RetryPolicy
 from dagster.utils.backcompat import experimental_arg_warning
 
+from ..graph import GraphDefinition
 from ..hook import HookDefinition
 from ..input import InputDefinition
 from ..mode import ModeDefinition
@@ -72,18 +73,21 @@ class _Pipeline:
         )
 
         pipeline_def = PipelineDefinition(
-            name=self.name,
-            dependencies=dependencies,
-            solid_defs=solid_defs,
             mode_defs=self.mode_definitions,
             preset_defs=self.preset_definitions,
-            description=self.description,
-            tags=self.tags,
+            graph_def=GraphDefinition(
+                name=self.name,
+                dependencies=dependencies,
+                node_defs=solid_defs,
+                description=self.description,
+                tags=self.tags,
+                input_mappings=input_mappings,
+                output_mappings=output_mappings,
+                config_mapping=config_mapping,
+                positional_inputs=positional_inputs,
+            ),
+            # these should likely move to graph
             hook_defs=self.hook_defs,
-            input_mappings=input_mappings,
-            output_mappings=output_mappings,
-            config_mapping=config_mapping,
-            positional_inputs=positional_inputs,
             solid_retry_policy=self.solid_retry_policy,
         )
         update_wrapper(pipeline_def, fn)
