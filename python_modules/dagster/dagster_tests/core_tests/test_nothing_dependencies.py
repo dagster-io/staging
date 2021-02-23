@@ -310,3 +310,17 @@ def test_execution_plan():
     assert "consume_nothing" in levels[1][0].key
 
     assert execute_pipeline(pipe).success
+
+
+def test_nothing_infer():
+    with pytest.raises(DagsterInvalidDefinitionError, match="can not be nothing"):
+
+        @solid(input_defs=[InputDefinition("_previous_steps_complete", Nothing)])
+        def _bad(_, _previous_steps_complete):
+            pass
+
+    with pytest.raises(DagsterInvalidDefinitionError, match="can not be nothing"):
+
+        @solid
+        def _bad(_, _previous_steps_complete: Nothing):
+            pass
