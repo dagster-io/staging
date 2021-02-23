@@ -290,7 +290,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
 
     @property
     def solid(self) -> "Solid":
-        return self.pipeline_def.get_solid(self._step.solid_handle)
+        return self.pipeline_def.graph.get_solid(self._step.solid_handle)
 
     @property
     def resources(self) -> NamedTuple:

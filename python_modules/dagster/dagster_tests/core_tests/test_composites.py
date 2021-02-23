@@ -24,6 +24,8 @@ from dagster import (
     solid,
     usable_as_dagster_type,
 )
+from dagster.core.definitions.decorators.graph import graph
+from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.test_utils import nesting_composite_pipeline
 from dagster.core.utility_solids import (
     create_root_solid,
@@ -50,14 +52,14 @@ def test_pipeline_in_pipeline():
 
     @pipeline
     def outer():
-        inner()
+        inner.graph()
 
     assert execute_pipeline(outer).success
 
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_composite_basic_execution(composition_decorator):
     a_source = define_stub_solid("A_source", [input_set("A_input")])
@@ -113,7 +115,7 @@ def test_composite_basic_execution(composition_decorator):
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_composite_config(composition_decorator):
     called = {}
@@ -145,7 +147,7 @@ def test_composite_config(composition_decorator):
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_composite_config_input(composition_decorator):
     called = {}
@@ -185,7 +187,7 @@ def test_composite_config_input(composition_decorator):
     "composition_class",
     [
         pytest.param(CompositeSolidDefinition, id="composite_solid"),
-        pytest.param(PipelineDefinition, id="pipeline"),
+        pytest.param(GraphDefinition, id="graph"),
     ],
 )
 def test_mapped_composite_config_input(composition_class):
@@ -205,8 +207,8 @@ def test_mapped_composite_config_input(composition_class):
     assert not inner.has_config_mapping
 
     outer = composition_class(
-        name="outer",
-        solid_defs=[inner],
+        "outer",
+        [inner],
         input_mappings=[InputDefinition("outer_one").mapping_to("inner", "inner_one")],
     )
 
@@ -223,7 +225,7 @@ def test_mapped_composite_config_input(composition_class):
     "composition_class",
     [
         pytest.param(CompositeSolidDefinition, id="composite_solid"),
-        pytest.param(PipelineDefinition, id="pipeline"),
+        pytest.param(GraphDefinition, id="graph"),
     ],
 )
 def test_composite_io_mapping(composition_class):
@@ -234,21 +236,21 @@ def test_composite_io_mapping(composition_class):
     node_c = create_solid_with_deps("C", node_b)
 
     comp_a_inner = composition_class(
-        name="comp_a_inner",
-        solid_defs=[a_source, node_a],
+        "comp_a_inner",
+        [a_source, node_a],
         dependencies={"A": {"A_input": DependencyDefinition("A_source")}},
         output_mappings=[OutputDefinition().mapping_from("A")],
     )
 
     comp_a_outer = composition_class(
-        name="comp_a_outer",
-        solid_defs=[comp_a_inner],
+        "comp_a_outer",
+        [comp_a_inner],
         output_mappings=[OutputDefinition().mapping_from("comp_a_inner")],
     )
 
     comp_bc_inner = composition_class(
-        name="comp_bc_inner",
-        solid_defs=[node_b, node_c],
+        "comp_bc_inner",
+        [node_b, node_c],
         dependencies={"C": {"B": DependencyDefinition("B")}},
         input_mappings=[
             InputDefinition(name="inner_B_in").mapping_to(solid_name="B", input_name="A")
@@ -256,8 +258,8 @@ def test_composite_io_mapping(composition_class):
     )
 
     comp_bc_outer = composition_class(
-        name="comp_bc_outer",
-        solid_defs=[comp_bc_inner],
+        "comp_bc_outer",
+        [comp_bc_inner],
         dependencies={},
         input_mappings=[
             InputDefinition(name="outer_B_in").mapping_to(
@@ -278,22 +280,20 @@ def test_composite_io_mapping(composition_class):
     "composition_class",
     [
         pytest.param(CompositeSolidDefinition, id="composite_solid"),
-        pytest.param(PipelineDefinition, id="pipeline"),
+        pytest.param(GraphDefinition, id="graph"),
     ],
 )
 def test_io_error_is_decent(composition_class):
     with pytest.raises(DagsterInvalidDefinitionError, match="mapping_to"):
-        composition_class(
-            name="comp_a_outer", solid_defs=[], input_mappings=[InputDefinition("should_be_mapped")]
-        )
+        composition_class("comp_a_outer", [], input_mappings=[InputDefinition("should_be_mapped")])
 
     with pytest.raises(DagsterInvalidDefinitionError, match="mapping_from"):
-        composition_class(name="comp_a_outer", solid_defs=[], output_mappings=[OutputDefinition()])
+        composition_class("comp_a_outer", [], output_mappings=[OutputDefinition()])
 
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_types_descent(composition_decorator):
     @usable_as_dagster_type
@@ -321,7 +321,7 @@ def test_types_descent(composition_decorator):
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_deep_mapping(composition_decorator):
     @lambda_solid(output_def=OutputDefinition(String))
@@ -354,7 +354,7 @@ def test_deep_mapping(composition_decorator):
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_mapping_parallel_composite(composition_decorator):
     @lambda_solid(output_def=OutputDefinition(int))
@@ -413,7 +413,7 @@ def test_mapping_parallel_composite(composition_decorator):
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_composite_config_driven_materialization(composition_decorator):
     @lambda_solid
@@ -446,7 +446,7 @@ def test_composite_config_driven_materialization(composition_decorator):
     "composition_class",
     [
         pytest.param(CompositeSolidDefinition, id="composite_solid"),
-        pytest.param(PipelineDefinition, id="pipeline"),
+        pytest.param(GraphDefinition, id="graph"),
     ],
 )
 def test_mapping_errors(composition_class):
@@ -458,15 +458,15 @@ def test_mapping_errors(composition_class):
         DagsterInvalidDefinitionError, match="references solid 'inner' which it does not contain"
     ):
         composition_class(
-            name="bad",
-            solid_defs=[echo],
+            "bad",
+            [echo],
             input_mappings=[InputDefinition("mismatch").mapping_to("inner", "foo")],
         )
 
     with pytest.raises(DagsterInvalidDefinitionError, match="no input named 'bar'"):
         composition_class(
-            name="bad",
-            solid_defs=[echo],
+            "bad",
+            [echo],
             input_mappings=[InputDefinition("mismatch").mapping_to("echo", "bar")],
         )
 
@@ -475,8 +475,8 @@ def test_mapping_errors(composition_class):
         match="InputMapping source and destination must have the same type",
     ):
         composition_class(
-            name="bad",
-            solid_defs=[echo],
+            "bad",
+            [echo],
             input_mappings=[InputDefinition("mismatch", str).mapping_to("echo", "foo")],
         )
 
@@ -485,8 +485,8 @@ def test_mapping_errors(composition_class):
         match="mappings with same definition name but different definitions",
     ):
         composition_class(
-            name="bad",
-            solid_defs=[echo],
+            "bad",
+            [echo],
             input_mappings=[
                 InputDefinition("mismatch").mapping_to("echo", "foo"),
                 InputDefinition("mismatch").mapping_to("echo_2", "foo"),
@@ -497,15 +497,15 @@ def test_mapping_errors(composition_class):
         DagsterInvalidDefinitionError, match="references solid 'inner' which it does not contain"
     ):
         composition_class(
-            name="bad",
-            solid_defs=[echo],
+            "bad",
+            [echo],
             output_mappings=[OutputDefinition().mapping_from("inner", "result")],
         )
 
     with pytest.raises(DagsterInvalidDefinitionError, match="no output named 'return'"):
         composition_class(
-            name="bad",
-            solid_defs=[echo],
+            "bad",
+            [echo],
             output_mappings=[OutputDefinition().mapping_from("echo", "return")],
         )
 
@@ -514,15 +514,15 @@ def test_mapping_errors(composition_class):
         match="OutputMapping source and destination must have the same type",
     ):
         composition_class(
-            name="bad",
-            solid_defs=[echo],
+            "bad",
+            [echo],
             output_mappings=[OutputDefinition(str).mapping_from("echo", "result")],
         )
 
 
 @pytest.mark.parametrize(
     "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
+    [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
 )
 def test_composite_skippable_output_result(composition_decorator):
     @lambda_solid(output_def=OutputDefinition(int))
@@ -596,22 +596,19 @@ def test_input_mapping_fan_in():
     assert result.output_for_solid("example_computation") == 2.0
 
 
-@pytest.mark.parametrize(
-    "composition_decorator",
-    [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
-)
-def test_convertable_config_schema(composition_decorator):
+# @pytest.mark.parametrize(
+#     "composition_decorator",
+#     [pytest.param(composite_solid, id="composite_solid"), pytest.param(graph, id="graph")],
+# )
+# def test_convertable_config_schema(composition_decorator):
+def test_convertable_config_schema():
     @solid(config_schema=int)
     def add_one(context) -> int:
         return context.solid_config + 1
 
-    @composition_decorator(
+    @composite_solid(
         config_schema=int,
         config_fn=lambda cfg: {"add_one": {"config": 3}},
-        # need to do this because pipeline still requires explicit output
-        # defintion with return value
-        # TODO ensure issue is filed
-        output_defs=[OutputDefinition(int)],
     )
     def comp() -> int:
         return add_one()

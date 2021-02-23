@@ -74,7 +74,8 @@ def make_compute_fn():
 def _do_construct(solids, dependencies):
     pipeline_def = PipelineDefinition(name="test", solid_defs=solids, dependencies=dependencies)
     solids = {
-        s.name: Solid(name=s.name, definition=s, graph_definition=pipeline_def) for s in solids
+        s.name: Solid(name=s.name, definition=s, graph_definition=pipeline_def.graph)
+        for s in solids
     }
     dependency_structure = DependencyStructure.from_definitions(solids, dependencies)
     return _create_adjacency_lists(list(solids.values()), dependency_structure)
@@ -155,7 +156,7 @@ def create_diamond_pipeline():
 
 
 def test_diamond_toposort():
-    assert [s.name for s in create_diamond_pipeline().solids_in_topological_order] == [
+    assert [s.name for s in create_diamond_pipeline().graph.solids_in_topological_order] == [
         "A_source",
         "A",
         "B",
@@ -531,7 +532,7 @@ def test_pipeline_disjoint_subset():
     disjoint_pipeline = define_three_part_pipeline().get_pipeline_subset_def(
         {"add_one", "add_three"}
     )
-    assert len(disjoint_pipeline.solids) == 2
+    assert len(disjoint_pipeline.graph.solids) == 2
 
 
 def test_pipeline_execution_explicit_disjoint_subset():

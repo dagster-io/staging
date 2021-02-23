@@ -541,6 +541,7 @@ def test_collision_invocations():
             single_input_solid()
             single_input_solid()
 
+    print([str(r) for r in record])
     assert len(record) == 0
 
 

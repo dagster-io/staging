@@ -37,12 +37,12 @@ class DescentStack(namedtuple("_DescentStack", "pipeline_def handle")):
 
     @property
     def current_container(self):
-        return self.current_solid.definition if self.handle else self.pipeline_def
+        return self.current_solid.definition if self.handle else self.pipeline_def.graph
 
     @property
     def current_solid(self):
         check.invariant(self.handle)
-        return self.pipeline_def.get_solid(self.handle)
+        return self.pipeline_def.graph.get_solid(self.handle)
 
     @property
     def current_handle_str(self):

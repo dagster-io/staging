@@ -119,7 +119,7 @@ def construct_type_storage_plugin_registry(pipeline_def, intermediate_storage_de
     )
 
     type_plugins = []
-    for type_obj in pipeline_def.all_dagster_types():
+    for type_obj in pipeline_def.graph.all_dagster_types():
         for auto_plugin in type_obj.auto_plugins:
             if auto_plugin.compatible_with_storage_def(intermediate_storage_def):
                 type_plugins.append((type_obj, auto_plugin))

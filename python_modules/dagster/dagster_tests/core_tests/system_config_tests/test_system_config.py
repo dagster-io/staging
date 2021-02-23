@@ -34,7 +34,7 @@ def create_creation_data(pipeline_def):
     return EnvironmentClassCreationData(
         pipeline_def.name,
         pipeline_def.solids,
-        pipeline_def.dependency_structure,
+        pipeline_def.graph.dependency_structure,
         pipeline_def.mode_definition,
         logger_defs=default_loggers(),
         ignored_solids=[],
@@ -273,7 +273,7 @@ def test_solid_config_error():
     solid_dict_type = define_solid_dictionary_cls(
         solids=pipeline_def.solids,
         ignored_solids=None,
-        dependency_structure=pipeline_def.dependency_structure,
+        dependency_structure=pipeline_def.graph.dependency_structure,
         parent_handle=None,
         resource_defs={},
     )

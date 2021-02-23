@@ -80,21 +80,24 @@ def test_solid_def():
     )
 
     assert (
-        len(pipeline_def.dependency_structure.input_to_upstream_outputs_for_solid("solid_one")) == 1
+        len(
+            pipeline_def.graph.dependency_structure.input_to_upstream_outputs_for_solid("solid_one")
+        )
+        == 1
     )
 
     assert (
         len(
-            pipeline_def.dependency_structure.output_to_downstream_inputs_for_solid(
+            pipeline_def.graph.dependency_structure.output_to_downstream_inputs_for_solid(
                 "produce_string"
             )
         )
         == 1
     )
 
-    assert len(pipeline_def.dependency_structure.input_handles()) == 1
+    assert len(pipeline_def.graph.dependency_structure.input_handles()) == 1
 
-    assert len(pipeline_def.dependency_structure.items()) == 1
+    assert len(pipeline_def.graph.dependency_structure.items()) == 1
 
 
 def test_solid_def_bad_input_name():

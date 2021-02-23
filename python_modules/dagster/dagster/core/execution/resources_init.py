@@ -299,7 +299,7 @@ def get_required_resource_keys_for_step(execution_step, execution_plan, intermed
         resource_keys = resource_keys.union(intermediate_storage_def.required_resource_keys)
 
     # add all the solid compute resource keys
-    solid_def = execution_plan.pipeline_def.get_solid(execution_step.solid_handle).definition
+    solid_def = execution_plan.pipeline_def.graph.get_solid(execution_step.solid_handle).definition
     resource_keys = resource_keys.union(solid_def.required_resource_keys)
 
     # add input type, input loader, and input asset store resource keys

@@ -144,7 +144,7 @@ class _PlanBuilder:
         pipeline_def = self.pipeline.get_definition()
         # Recursively build the execution plan starting at the root pipeline
         self._build_from_sorted_solids(
-            pipeline_def.solids_in_topological_order, pipeline_def.dependency_structure
+            pipeline_def.graph.solids_in_topological_order, pipeline_def.graph.dependency_structure
         )
 
         full_plan = ExecutionPlan(

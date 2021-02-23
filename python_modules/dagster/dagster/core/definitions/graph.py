@@ -73,12 +73,12 @@ class GraphDefinition(NodeDefinition):
     def __init__(
         self,
         name,
-        description,
         node_defs,
-        dependencies,
-        input_mappings,
-        output_mappings,
-        config_mapping,
+        description=None,
+        dependencies=None,
+        input_mappings=None,
+        output_mappings=None,
+        config_mapping=None,
         **kwargs,
     ):
         self._node_defs = _check_node_defs_arg(name, node_defs)

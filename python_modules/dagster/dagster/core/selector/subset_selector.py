@@ -35,9 +35,9 @@ def generate_dep_graph(pipeline_def):
             ```
     """
     dependency_structure = check.inst_param(
-        pipeline_def.dependency_structure, "dependency_structure", DependencyStructure
+        pipeline_def.graph.dependency_structure, "dependency_structure", DependencyStructure
     )
-    item_names = [i.name for i in pipeline_def.solids]
+    item_names = [i.name for i in pipeline_def.graph.solids]
 
     # defaultdict isn't appropriate because we also want to include items without dependencies
     graph = {"upstream": {}, "downstream": {}}

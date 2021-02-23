@@ -96,14 +96,14 @@ def build_pipeline_with_input_stubs(pipeline_def, inputs):
     check.dict_param(inputs, "inputs", key_type=str, value_type=dict)
 
     deps = defaultdict(dict)
-    for solid_name, dep_dict in pipeline_def.dependencies.items():
+    for solid_name, dep_dict in pipeline_def.graph.dependencies.items():
         for input_name, dep in dep_dict.items():
             deps[solid_name][input_name] = dep
 
     stub_solid_defs = []
 
     for solid_name, input_dict in inputs.items():
-        if not pipeline_def.has_solid_named(solid_name):
+        if not pipeline_def.graph.has_solid_named(solid_name):
             raise DagsterInvariantViolationError(
                 (
                     "You are injecting an input value for solid {solid_name} "
@@ -111,7 +111,7 @@ def build_pipeline_with_input_stubs(pipeline_def, inputs):
                 ).format(solid_name=solid_name, pipeline_name=pipeline_def.name)
             )
 
-        solid = pipeline_def.solid_named(solid_name)
+        solid = pipeline_def.graph.solid_named(solid_name)
         for input_name, input_value in input_dict.items():
             stub_solid_def = define_stub_solid(
                 "__stub_{solid_name}_{input_name}".format(

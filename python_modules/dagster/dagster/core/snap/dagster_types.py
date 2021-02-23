@@ -9,7 +9,7 @@ from dagster.serdes import whitelist_for_serdes
 def build_dagster_type_namespace_snapshot(pipeline_def):
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
     return DagsterTypeNamespaceSnapshot(
-        {dt.key: build_dagster_type_snap(dt) for dt in pipeline_def.all_dagster_types()}
+        {dt.key: build_dagster_type_snap(dt) for dt in pipeline_def.graph.all_dagster_types()}
     )
 
 
