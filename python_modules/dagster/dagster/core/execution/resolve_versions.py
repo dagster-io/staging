@@ -149,10 +149,11 @@ def resolve_step_output_versions_helper(execution_plan):
 
 
 @experimental
-def resolve_memoized_execution_plan(execution_plan):
+def resolve_memoized_execution_plan(execution_plan, instance):
     """
     Returns:
         ExecutionPlan: Execution plan configured to only run unmemoized steps.
+        DagsterInstance: Instance where configured to run the unmemoized steps.
     """
 
     pipeline_def = execution_plan.pipeline.get_definition()
@@ -185,6 +186,7 @@ def resolve_memoized_execution_plan(execution_plan):
                 pipeline_run=PipelineRun(
                     pipeline_name=pipeline_def.name, run_id="", mode=environment_config.mode
                 ),
+                instance=instance,
             )
             io_manager = resource_def.resource_fn(resource_context)
             context = get_output_context(

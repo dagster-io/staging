@@ -212,7 +212,9 @@ def test_resolve_memoized_execution_plan_no_stored_results():
     versioned_pipeline = versioned_pipeline_factory(VersionedInMemoryIOManager())
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
 
-    memoized_execution_plan = resolve_memoized_execution_plan(speculative_execution_plan)
+    memoized_execution_plan = resolve_memoized_execution_plan(
+        speculative_execution_plan, DagsterInstance.ephemeral()
+    )
 
     assert set(memoized_execution_plan.step_keys_to_execute) == {
         "versioned_solid_no_input",
@@ -232,7 +234,9 @@ def test_resolve_memoized_execution_plan_yes_stored_results():
         (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
     ] = 4
 
-    memoized_execution_plan = resolve_memoized_execution_plan(speculative_execution_plan)
+    memoized_execution_plan = resolve_memoized_execution_plan(
+        speculative_execution_plan, DagsterInstance.ephemeral()
+    )
 
     assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input"]
 
