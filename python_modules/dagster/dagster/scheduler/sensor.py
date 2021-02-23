@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+from contextlib import ExitStack
 
 import pendulum
 from dagster import check
@@ -24,6 +25,8 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 
 RECORDED_TICK_STATES = [JobTickStatus.SUCCESS, JobTickStatus.FAILURE]
 FULFILLED_TICK_STATES = [JobTickStatus.SKIPPED, JobTickStatus.SUCCESS]
+
+MIN_INTERVAL_LOOP_TIME = 5
 
 
 class DagsterSensorDaemonError(DagsterError):
@@ -113,7 +116,40 @@ def _check_for_debug_crash(debug_crash_flags, key):
     raise Exception("Process didn't terminate after sending crash signal")
 
 
-def execute_sensor_iteration(instance, logger, debug_crash_flags=None):
+def execute_sensor_iteration_loop(instance, logger, interval):
+    """
+    Helper function that performs sensor evaluations on a tighter loop, while reusing grpc locations
+    within a given daemon interval.  We now have multiple layers of evaluation loops.  The sensor
+    daemon runs every 30 seconds, creating new grpc connections for each distinct location.  Within
+    each daemon interval, we kick off a sensor evalation loop every 5 seconds.  We rely on each
+    sensor definition's min_interval to check that sensor evaluations are spaced appropriately.
+    """
+    start_time = pendulum.now()
+    should_execute_iteration = True
+    loop_count = 0
+
+    from dagster.daemon.daemon import CompletedIteration
+
+    with RepositoryLocationHandleManager() as handle_manager:
+        while should_execute_iteration:
+            loop_count += 1
+            loop_start = pendulum.now()
+            yield from execute_sensor_iteration(instance, logger, handle_manager=handle_manager)
+            loop_duration = pendulum.now().timestamp() - loop_start.timestamp()
+            sleep_time = max(0, MIN_INTERVAL_LOOP_TIME - loop_duration)
+
+            yield CompletedIteration()
+
+            time.sleep(sleep_time)
+
+            now = pendulum.now()
+            average_loop_time = (now.timestamp() - start_time.timestamp()) / loop_count
+            should_execute_iteration = now.add(seconds=average_loop_time) < start_time.add(
+                seconds=interval
+            )
+
+
+def execute_sensor_iteration(instance, logger, debug_crash_flags=None, handle_manager=None):
     check.inst_param(instance, "instance", DagsterInstance)
     sensor_jobs = [
         s
@@ -129,7 +165,11 @@ def execute_sensor_iteration(instance, logger, debug_crash_flags=None):
         )
     )
 
-    with RepositoryLocationHandleManager() as handle_manager:
+    with ExitStack() as stack:
+        if not handle_manager:
+            # this should handle calls in unittest, where locations are not reused
+            handle_manager = stack.enter_context(RepositoryLocationHandleManager())
+
         for job_state in sensor_jobs:
             sensor_debug_crash_flags = (
                 debug_crash_flags.get(job_state.job_name) if debug_crash_flags else None

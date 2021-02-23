@@ -20,7 +20,7 @@ from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.daemon import get_default_daemon_logger
-from dagster.scheduler.sensor import execute_sensor_iteration
+from dagster.scheduler.sensor import execute_sensor_iteration, execute_sensor_iteration_loop
 from dagster.seven import create_pendulum_time, to_timezone
 
 
@@ -568,3 +568,63 @@ def test_custom_interval_sensor(external_repo_context):
 
             expected_datetime = create_pendulum_time(year=2019, month=2, day=28, hour=0, minute=1)
             validate_tick(ticks[0], external_sensor, expected_datetime, JobTickStatus.SKIPPED)
+
+
+@pytest.mark.parametrize("external_repo_context", repos())
+def test_custom_interval_sensor_with_offset(external_repo_context, monkeypatch):
+    freeze_datetime = to_timezone(
+        create_pendulum_time(year=2019, month=2, day=28, tz="UTC"), "US/Central"
+    )
+
+    sleeps = []
+
+    def fake_sleep(s):
+        sleeps.append(s)
+        pendulum.set_test_now(pendulum.now().add(seconds=s))
+
+    monkeypatch.setattr(time, "sleep", fake_sleep)
+
+    with instance_with_sensors(external_repo_context) as (instance, external_repo):
+        with pendulum.test(freeze_datetime):
+
+            # 60 second custom interval
+            external_sensor = external_repo.get_external_sensor("custom_interval_sensor")
+
+            instance.add_job_state(
+                JobState(external_sensor.get_external_origin(), JobType.SENSOR, JobStatus.RUNNING)
+            )
+
+            # create a tick
+            list(execute_sensor_iteration(instance, get_default_daemon_logger("SensorDaemon")))
+            ticks = instance.get_job_ticks(external_sensor.get_external_origin_id())
+            assert len(ticks) == 1
+
+            # calling for another iteration should not generate another tick because time has not
+            # advanced
+            list(execute_sensor_iteration(instance, get_default_daemon_logger("SensorDaemon")))
+            ticks = instance.get_job_ticks(external_sensor.get_external_origin_id())
+            assert len(ticks) == 1
+
+            # call the sensor_iteration_loop, which should loop, and call the monkeypatched sleep
+            # to advance 30 seconds
+            list(
+                execute_sensor_iteration_loop(
+                    instance, get_default_daemon_logger("SensorDaemon"), interval=30
+                )
+            )
+
+            assert pendulum.now() == freeze_datetime.add(seconds=25)
+            assert sum(sleeps) == 25
+
+            # fast forward to guarantee that a tick will be created in the next 30 second loop
+            pendulum.set_test_now(freeze_datetime.add(seconds=40))
+            sleeps = []
+            list(
+                execute_sensor_iteration_loop(
+                    instance, get_default_daemon_logger("SensorDaemon"), interval=30
+                )
+            )
+
+            assert sum(sleeps) == 25
+            ticks = instance.get_job_ticks(external_sensor.get_external_origin_id())
+            assert len(ticks) == 2

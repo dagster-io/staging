@@ -20,6 +20,7 @@ def test_healthy():
                 "module": "dagster.core.run_coordinator.queued_run_coordinator",
                 "class": "QueuedRunCoordinator",
             },
+            "sensor_settings": {"interval_seconds": 3},
         }
     ) as instance:
         init_time = pendulum.now("UTC")
@@ -61,6 +62,7 @@ def test_healthy_with_different_daemons():
                         "module": "dagster.core.run_coordinator.queued_run_coordinator",
                         "class": "QueuedRunCoordinator",
                     },
+                    "sensor_settings": {"interval_seconds": 3},
                 }
             ) as other_instance:
                 now = pendulum.now("UTC")
@@ -111,7 +113,11 @@ def test_thread_die_daemon(monkeypatch):
 
 
 def test_error_daemon(monkeypatch):
-    with instance_for_test(overrides={}) as instance:
+    with instance_for_test(
+        overrides={
+            "sensor_settings": {"interval_seconds": 3},
+        }
+    ) as instance:
         from dagster.daemon.daemon import SensorDaemon
 
         def run_iteration_error(_, _instance):
@@ -150,7 +156,11 @@ def test_error_daemon(monkeypatch):
 
 
 def test_multiple_error_daemon(monkeypatch):
-    with instance_for_test(overrides={}) as instance:
+    with instance_for_test(
+        overrides={
+            "sensor_settings": {"interval_seconds": 3},
+        }
+    ) as instance:
         from dagster.daemon.daemon import SensorDaemon
 
         def run_iteration_error(_, _instance):
