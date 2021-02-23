@@ -234,7 +234,16 @@ class GraphDefinition(NodeDefinition):
     def all_dagster_types(self) -> Iterable[DagsterType]:
         return self._dagster_type_dict.values()
 
+    def has_dagster_type(self, name):
+        check.str_param(name, "name")
+        return name in self._dagster_type_dict
+
+    def dagster_type_named(self, name):
+        check.str_param(name, "name")
+        return self._dagster_type_dict[name]
+
     def get_input_mapping(self, input_name: str) -> InputMapping:
+
         check.str_param(input_name, "input_name")
         for mapping in self._input_mappings:
             if mapping.definition.name == input_name:
@@ -335,6 +344,9 @@ class GraphDefinition(NodeDefinition):
         config_or_config_fn: Any,
     ):
         check.not_implemented("@graph does not yet implement configured")
+
+    def node_names(self):
+        return list(self._solid_dict.keys())
 
 
 def _validate_in_mappings(

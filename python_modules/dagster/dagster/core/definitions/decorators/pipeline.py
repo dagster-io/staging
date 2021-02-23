@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Union
 from dagster import check
 from dagster.utils.backcompat import experimental_arg_warning
 
+from ..graph import GraphDefinition
 from ..hook import HookDefinition
 from ..input import InputDefinition
 from ..mode import ModeDefinition
@@ -67,18 +68,22 @@ class _Pipeline:
         )
 
         pipeline_def = PipelineDefinition(
-            name=self.name,
-            dependencies=dependencies,
-            solid_defs=solid_defs,
+            solid_defs=[],  # maybe take graph def here ?
             mode_defs=self.mode_definitions,
             preset_defs=self.preset_definitions,
-            description=self.description,
-            tags=self.tags,
+            graph_def=GraphDefinition(
+                name=self.name,
+                dependencies=dependencies,
+                node_defs=solid_defs,
+                description=self.description,
+                tags=self.tags,
+                input_mappings=input_mappings,
+                output_mappings=output_mappings,
+                config_mapping=config_mapping,
+                positional_inputs=positional_inputs,
+            ),
+            # should hooks go on graphs? I think so
             hook_defs=self.hook_defs,
-            input_mappings=input_mappings,
-            output_mappings=output_mappings,
-            config_mapping=config_mapping,
-            positional_inputs=positional_inputs,
         )
         update_wrapper(pipeline_def, fn)
         return pipeline_def
