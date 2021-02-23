@@ -166,7 +166,7 @@ userDeployments:
   enabled: true
   # List of unique deployments
   deployments:
-    - name: "k8s-example-user-code-1"
+    - name: "k8s-example-user-code"
       image:
         repository: "dagster/user-code-example"
         tag: latest
