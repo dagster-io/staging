@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import Optional
 
 from dagster import check
-from dagster.core.definitions.events import AssetKey, AssetPartitions
+from dagster.core.definitions.events import AssetKey, AssetRelation
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import (
     BuiltinScalarDagsterType,
@@ -104,7 +104,7 @@ class InputDefinition:
         if asset_key:
             experimental_arg_warning("asset_key", "InputDefinition")
 
-        self._defines_asset = asset_key is not None
+        self._defines_asset_relation = asset_key is not None
         self.asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
 
         if asset_partitions:
@@ -147,14 +147,14 @@ class InputDefinition:
         return self._metadata
 
     @property
-    def defines_asset(self):
-        return self._defines_asset
+    def defines_asset_relation(self):
+        return self._defines_asset_relation
 
-    def get_asset_key_and_partitions(self, context) -> Optional[AssetPartitions]:
+    def get_asset_relation(self, context) -> Optional[AssetRelation]:
         asset_key = self.asset_key_fn(context)
         if not asset_key:
             return None
-        return AssetPartitions(
+        return AssetRelation(
             asset_key=asset_key,
             partitions=self.asset_partitions_fn(context),
         )

@@ -13,7 +13,7 @@ from dagster.core.definitions import (
     Materialization,
     SolidHandle,
 )
-from dagster.core.definitions.events import AssetPartitions, ObjectStoreOperationType
+from dagster.core.definitions.events import AssetRelation, ObjectStoreOperationType
 from dagster.core.execution.context.system import (
     HookContext,
     SystemExecutionContext,
@@ -606,15 +606,15 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def step_materialization(step_context, materialization, parent_assets=None):
+    def step_materialization(step_context, materialization, parent_asset_relations=None):
         check.inst_param(
             materialization, "materialization", (AssetMaterialization, Materialization)
         )
-        check.opt_list_param(parent_assets, "parent_assets", AssetPartitions)
+        check.opt_list_param(parent_asset_relations, "parent_asset_relations", AssetRelation)
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_MATERIALIZATION,
             step_context=step_context,
-            event_specific_data=StepMaterializationData(materialization, parent_assets),
+            event_specific_data=StepMaterializationData(materialization, parent_asset_relations),
             message=materialization.description
             if materialization.description
             else "Materialized value{label_clause}.".format(
@@ -1027,13 +1027,15 @@ def get_step_output_event(events, step_key, output_name="result"):
 
 @whitelist_for_serdes
 class StepMaterializationData(
-    namedtuple("_StepMaterializationData", "materialization parent_assets")
+    namedtuple("_StepMaterializationData", "materialization parent_asset_relations")
 ):
-    def __new__(cls, materialization, parent_assets=None):
+    def __new__(cls, materialization, parent_asset_relations=None):
         return super(StepMaterializationData, cls).__new__(
             cls,
             materialization=materialization,
-            parent_assets=check.opt_list_param(parent_assets, "parent_assets"),
+            parent_asset_relations=check.opt_list_param(
+                parent_asset_relations, "parent_asset_relations", AssetRelation
+            ),
         )
 
 
@@ -1159,7 +1161,7 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
 class HandledOutputData(
     namedtuple("_HandledOutputData", "output_name manager_key metadata_entries")
 ):
-    def __new__(cls, output_name, manager_key, metadata_entries):
+    def __new__(cls, output_name, manager_key, metadata_entries=None):
         return super(HandledOutputData, cls).__new__(
             cls,
             output_name=check.str_param(output_name, "output_name"),

@@ -10,7 +10,7 @@ from dagster.core.definitions import (
     RetryRequested,
     SolidHandle,
 )
-from dagster.core.definitions.events import AssetPartitions
+from dagster.core.definitions.events import AssetRelation
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
     DagsterTypeLoadingError,
@@ -109,9 +109,9 @@ class StepInputSource(ABC):
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
-    def get_asset_keys_and_partitions(
+    def get_asset_relations(
         self, _step_context: "SystemStepExecutionContext"
-    ) -> List[AssetPartitions]:
+    ) -> List[AssetRelation]:
         return []
 
     @abstractmethod
@@ -270,9 +270,9 @@ class FromStepOutput(
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
-    def get_asset_keys_and_partitions(
+    def get_asset_relations(
         self, step_context: "SystemStepExecutionContext"
-    ) -> List[AssetPartitions]:
+    ) -> List[AssetRelation]:
         source_handle = self.step_output_handle
         input_manager = step_context.get_io_manager(source_handle)
         load_context = self.get_load_context(step_context)
@@ -280,22 +280,20 @@ class FromStepOutput(
         # check input_def
         # TODO: maybe check that this is a subset of OutputDef's assets?
         input_def = self.get_input_def(step_context.pipeline_def)
-        if input_def.defines_asset:
-            asset = input_def.get_asset_key_and_partitions(load_context)
-            return [asset] if asset else []
+        if input_def.defines_asset_relation:
+            relation = input_def.get_asset_relation(load_context)
+            return [relation] if relation else []
 
         # check io manager
-        io_asset = input_manager.experimental_internal_get_input_asset_key_and_partitions(
-            load_context
-        )
-        if io_asset is not None:
-            return [io_asset]
+        io_relation = input_manager.experimental_internal_get_input_asset_relation(load_context)
+        if io_relation is not None:
+            return [io_relation]
 
         # check output_def
         upstream_output = step_context.execution_plan.get_step_output(self.step_output_handle)
-        if upstream_output.asset_fn is not None:
-            asset = upstream_output.asset_fn(load_context.upstream_output)
-            return [asset] if asset else []
+        if upstream_output.asset_relation_fn is not None:
+            relation = upstream_output.asset_relation_fn(load_context.upstream_output)
+            return [relation] if relation else []
 
         # if nothing definied within scope of this input/output, recurse
         upstream_step = step_context.execution_plan.get_step_by_key(
@@ -303,9 +301,9 @@ class FromStepOutput(
         )
         # check all outputs of upstream solids
         return [
-            asset
+            relation
             for input in upstream_step.step_inputs
-            for asset in input.source.get_asset_keys_and_partitions(step_context)
+            for relation in input.source.get_asset_relations(step_context)
         ]
 
 
@@ -476,13 +474,13 @@ class FromMultipleSources(
             ]
         )
 
-    def get_asset_keys_and_partitions(
+    def get_asset_relations(
         self, step_context: "SystemStepExecutionContext"
-    ) -> List[AssetPartitions]:
+    ) -> List[AssetRelation]:
         return [
-            asset
+            relation
             for source in self.sources
-            for asset in source.get_asset_keys_and_partitions(step_context)
+            for relation in source.get_asset_relations(step_context)
         ]
 
 

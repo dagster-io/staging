@@ -11,7 +11,7 @@ from dagster import (
     solid,
 )
 from dagster.core.definitions.events import (
-    AssetPartitions,
+    AssetRelation,
     EventMetadataEntry,
     PartitionSpecificMetadataEntry,
 )
@@ -20,14 +20,14 @@ from dagster.core.storage.io_manager import IOManager
 
 
 def n_asset_keys(path, n):
-    return AssetPartitions(AssetKey(path), [str(i) for i in range(n)])
+    return AssetRelation(AssetKey(path), [str(i) for i in range(n)])
 
 
 def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
     assert event_data.materialization.metadata_entries == (metadata_entries or [])
-    assert event_data.parent_assets == (parent_assets or [])
+    assert event_data.parent_asset_relations == (parent_assets or [])
 
 
 def test_output_definition_transitive_lineage():
@@ -73,7 +73,7 @@ def test_output_definition_transitive_lineage():
     check_materialization(
         materializations[1],
         AssetKey(["table3"]),
-        parent_assets=[AssetPartitions(AssetKey(["table1"]))],
+        parent_assets=[AssetRelation(AssetKey(["table1"]))],
         metadata_entries=[entry2],
     )
 
@@ -134,8 +134,8 @@ def test_io_manager_diamond_lineage():
             ["solid_combine", "outputC"],
         ),
         parent_assets=[
-            AssetPartitions(AssetKey(["solid_produce", "outputA"])),
-            AssetPartitions(AssetKey(["solid_produce", "outputB"])),
+            AssetRelation(AssetKey(["solid_produce", "outputA"])),
+            AssetRelation(AssetKey(["solid_produce", "outputB"])),
         ],
     )
 
@@ -309,15 +309,15 @@ def test_mixed_asset_definition_lineage():
         materializations[2],
         AssetKey(["output_def_table", "combine_solid"]),
         parent_assets=[
-            AssetPartitions(AssetKey(["io_manager_table", "io_manager_solid"])),
-            AssetPartitions(AssetKey(["output_def_table", "output_def_solid"])),
+            AssetRelation(AssetKey(["io_manager_table", "io_manager_solid"])),
+            AssetRelation(AssetKey(["output_def_table", "output_def_solid"])),
         ],
     )
     check_materialization(
         materializations[3],
         AssetKey(["io_manager_table", "combine_solid"]),
         parent_assets=[
-            AssetPartitions(AssetKey(["io_manager_table", "io_manager_solid"])),
-            AssetPartitions(AssetKey(["output_def_table", "output_def_solid"])),
+            AssetRelation(AssetKey(["io_manager_table", "io_manager_solid"])),
+            AssetRelation(AssetKey(["output_def_table", "output_def_solid"])),
         ],
     )
