@@ -21,13 +21,13 @@ from dagster.core.storage.io_manager import IOManager
 
 
 def n_asset_keys(path, n):
-    return AssetRelation(AssetKey(path), [str(i) for i in range(n)])
+    return AssetRelation(AssetKey(path), set([str(i) for i in range(n)]))
 
 
 def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
-    assert set(event_data.materialization.metadata_entries) == set(metadata_entries or [])
+    assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
     assert event_data.parent_asset_relations == (parent_assets or [])
 
 
@@ -78,7 +78,7 @@ def test_output_definition_multiple_partition_materialization():
     @solid(
         output_defs=[
             OutputDefinition(
-                name="output1", asset_key=AssetKey("table1"), asset_partitions=["0", "1", "2"]
+                name="output1", asset_key=AssetKey("table1"), asset_partitions=set(["0", "1", "2"])
             )
         ]
     )
@@ -114,12 +114,17 @@ def test_output_definition_multiple_partition_materialization():
     ]
     assert len(materializations) == 4
 
+    seen_partitions = set()
     for i in range(3):
+        partition = materializations[i].partition
+        seen_partitions.add(partition)
         check_materialization(
             materializations[i],
             AssetKey(["table1"]),
-            metadata_entries=[entry1, partition_entries[i]],
+            metadata_entries=[entry1, partition_entries[int(partition)]],
         )
+
+    assert len(seen_partitions) == 3
 
     check_materialization(
         materializations[-1],
@@ -182,7 +187,9 @@ def test_io_manager_single_partition_materialization():
 
 
 def test_partition_specific_fails_on_na_partitions():
-    @solid(output_defs=[OutputDefinition(asset_key=AssetKey("key"), asset_partitions=["1", "2"])])
+    @solid(
+        output_defs=[OutputDefinition(asset_key=AssetKey("key"), asset_partitions=set(["1", "2"]))]
+    )
     def fail_solid(_):
         yield Output(
             None,
@@ -201,8 +208,8 @@ def test_def_only_asset_partitions_fails():
 
     with pytest.raises(CheckError):
 
-        OutputDefinition(asset_partitions=["1"])
+        OutputDefinition(asset_partitions=set(["1"]))
 
     with pytest.raises(CheckError):
 
-        InputDefinition("name", asset_partitions=["1"])
+        InputDefinition("name", asset_partitions=set(["1"]))

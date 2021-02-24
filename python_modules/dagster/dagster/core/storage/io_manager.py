@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from functools import update_wrapper
-from typing import List, Optional
+from typing import Optional, Set
 
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
@@ -105,14 +105,14 @@ class IOManager(InputManager, OutputManager):
         """
         return None
 
-    def get_output_asset_partitions(self, _context) -> List[str]:
+    def get_output_asset_partitions(self, _context) -> Set[str]:
         """User-defined method that associates outputs handled by this IOManager with a set of
         partitions of an AssetKey.
 
         Args:
             context (OutputContext): The context of the step output that produces this object.
         """
-        return []
+        return set()
 
     def get_input_asset_key(self, context) -> Optional[AssetKey]:
         """User-defined method that associates inputs loaded by this IOManager with a particular
@@ -124,7 +124,7 @@ class IOManager(InputManager, OutputManager):
         """
         return self.get_output_asset_key(context.upstream_output)
 
-    def get_input_asset_partitions(self, context) -> List[str]:
+    def get_input_asset_partitions(self, context) -> Set[str]:
         """User-defined method that associates inputs loaded by this IOManager with a set of
         partitions of an AssetKey.
 

@@ -135,13 +135,8 @@ class AssetKey(namedtuple("_AssetKey", "path")):
 class AssetRelation(namedtuple("_AssetRelation", "asset_key partitions")):
     def __new__(cls, asset_key, partitions=None):
         asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
-        partitions = check.opt_list_param(partitions, "partitions", str)
+        partitions = check.opt_set_param(partitions, "partitions", str)
         return super(AssetRelation, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
-
-    def __eq__(self, other):
-        if not isinstance(other, AssetRelation):
-            return False
-        return self.asset_key == other.asset_key and set(self.partitions) == set(other.partitions)
 
 
 @whitelist_for_serdes

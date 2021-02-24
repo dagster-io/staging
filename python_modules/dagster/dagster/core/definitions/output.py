@@ -36,8 +36,8 @@ class OutputDefinition:
         asset_key (Optional[Union[AssetKey, OutputContext -> AssetKey]]): (Experimental) An AssetKey
             (or function that produces an AssetKey from the OutputContext) which should be associated
             with this OutputDefinition. Used for tracking lineage information through Dagster.
-        asset_partitions(Optional[Union[List[str], OutputContext -> List[str]]]): (Experimental) A
-            list of partitions of the given asset_key (or a function that produces this list of
+        asset_partitions(Optional[Union[List[str], OutputContext -> Set[str]]]): (Experimental) A
+            set of partitions of the given asset_key (or a function that produces this list of
             partitions from the OutputContext) which should be associated with this OutputDefinition.
     """
 
@@ -75,7 +75,7 @@ class OutputDefinition:
                 check.failed(
                     'Cannot specify "asset_partitions" argument without also specifying "asset_key"'
                 )
-        self.asset_partitions_fn = check.opt_list_coerce_callable_param(
+        self.asset_partitions_fn = check.opt_set_coerce_callable_param(
             asset_partitions, "asset_partitions", str
         )
 

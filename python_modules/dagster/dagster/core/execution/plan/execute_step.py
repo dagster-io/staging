@@ -444,9 +444,7 @@ def _dedup_asset_relations(asset_relations: List[AssetRelation]) -> List[AssetRe
             key_partition_mapping[relation.asset_key] |= set()
         for p in relation.partitions:
             key_partition_mapping[relation.asset_key].add(p)
-    return [
-        AssetRelation(asset_key=k, partitions=list(ps)) for k, ps in key_partition_mapping.items()
-    ]
+    return [AssetRelation(asset_key=k, partitions=ps) for k, ps in key_partition_mapping.items()]
 
 
 def _get_output_asset_materializations(
