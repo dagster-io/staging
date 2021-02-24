@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
@@ -114,13 +115,16 @@ class OutputDefinition:
     def defines_asset_relation(self):
         return self._defines_asset_relation
 
-    @property
-    def get_asset_key(self):
-        return self._asset_key_fn
+    def get_asset_key(self, context) -> Optional[AssetKey]:
+        """Get the AssetKey associated with this OutputDefinition for the given OutputContext (if any)
 
-    @property
-    def get_asset_partitions(self):
-        return self._asset_partitions_fn
+        Args:
+            context (OutputContext): TODO
+        """
+        return self._asset_key_fn(context)
+
+    def get_asset_partitions(self, context):
+        return self._asset_partitions_fn(context)
 
     def mapping_from(self, solid_name, output_name=None):
         """Create an output mapping from an output of a child solid.
