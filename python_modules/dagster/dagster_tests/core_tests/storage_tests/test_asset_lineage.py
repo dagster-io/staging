@@ -20,13 +20,13 @@ from dagster.core.storage.io_manager import IOManager
 
 
 def n_asset_keys(path, n):
-    return AssetRelation(AssetKey(path), [str(i) for i in range(n)])
+    return AssetRelation(AssetKey(path), set([str(i) for i in range(n)]))
 
 
 def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
-    assert event_data.materialization.metadata_entries == (metadata_entries or [])
+    assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
     assert event_data.parent_asset_relations == (parent_assets or [])
 
 
@@ -184,7 +184,7 @@ def test_input_definition_multiple_partition_lineage():
             OutputDefinition(
                 name="output1",
                 asset_key=AssetKey("table1"),
-                asset_partitions=[str(i) for i in range(3)],
+                asset_partitions=set([str(i) for i in range(3)]),
             )
         ],
     )
@@ -204,7 +204,9 @@ def test_input_definition_multiple_partition_lineage():
     @solid(
         input_defs=[
             # here, only take 1 of the asset keys specified by the output
-            InputDefinition(name="_input1", asset_key=AssetKey("table1"), asset_partitions=["0"])
+            InputDefinition(
+                name="_input1", asset_key=AssetKey("table1"), asset_partitions=set(["0"])
+            )
         ],
         output_defs=[OutputDefinition(name="output2", asset_key=lambda _: AssetKey("table2"))],
     )
@@ -226,12 +228,17 @@ def test_input_definition_multiple_partition_lineage():
     ]
     assert len(materializations) == 4
 
+    seen_partitions = set()
     for i in range(3):
+        partition = materializations[i].partition
+        seen_partitions.add(partition)
         check_materialization(
             materializations[i],
             AssetKey(["table1"]),
-            metadata_entries=[entry1, partition_entries[i]],
+            metadata_entries=[entry1, partition_entries[int(partition)]],
         )
+
+    assert len(seen_partitions) == 3
 
     check_materialization(
         materializations[-1],

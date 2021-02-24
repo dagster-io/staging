@@ -67,8 +67,8 @@ class InputDefinition:
         asset_key (Optional[Union[AssetKey, InputContext -> AssetKey]]): (Experimental) An AssetKey
             (or function that produces an AssetKey from the InputContext) which should be associated
             with this InputDefinition. Used for tracking lineage information through Dagster.
-        asset_partitions(Optional[Union[List[str], InputContext -> List[str]]]): (Experimental) A
-            list of partitions of the given asset_key (or a function that produces this list of
+        asset_partitions(Optional[Union[List[str], InputContext -> Set[str]]]): (Experimental) A
+            set of partitions of the given asset_key (or a function that produces this list of
             partitions from the InputContext) which should be associated with this InputDefinition.
     """
 
@@ -113,7 +113,7 @@ class InputDefinition:
                 check.failed(
                     'Cannot specify "asset_partitions" argument without also specifying "asset_key"'
                 )
-        self.asset_partitions_fn = check.opt_list_coerce_callable_param(
+        self.asset_partitions_fn = check.opt_set_coerce_callable_param(
             asset_partitions, "asset_partitions", str
         )
 
