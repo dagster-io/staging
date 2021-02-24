@@ -204,6 +204,38 @@ def test_partition_specific_fails_on_na_partitions():
         execute_pipeline(my_pipeline)
 
 
+def test_partition_specific_fails_on_zero_partitions():
+    @solid(output_defs=[OutputDefinition(asset_key=AssetKey("key"))])
+    def fail_solid(_):
+        yield Output(
+            None,
+            metadata_entries=[PartitionSpecificMetadataEntry("3", EventMetadataEntry.int(1, "x"))],
+        )
+
+    @pipeline
+    def my_pipeline():
+        fail_solid()
+
+    with pytest.raises(DagsterInvariantViolationError):
+        execute_pipeline(my_pipeline)
+
+
+def test_fail_fast_with_nonesense_metadata():
+    @solid(output_defs=[OutputDefinition(asset_key=AssetKey("key"))])
+    def fail_solid(_):
+        yield Output(
+            None,
+            metadata_entries=["some_string_I_think_is_metadata"],
+        )
+
+    @pipeline
+    def my_pipeline():
+        fail_solid()
+
+    with pytest.raises(CheckError):
+        execute_pipeline(my_pipeline)
+
+
 def test_def_only_asset_partitions_fails():
 
     with pytest.raises(CheckError):
