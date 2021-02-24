@@ -215,6 +215,13 @@ def list_coerce_callable_param(obj: Any, param_name: str, of_type: Type) -> Call
     return lambda _: obj
 
 
+def set_coerce_callable_param(obj: Any, param_name: str, of_type: Type) -> Callable:
+    if callable(obj):
+        return obj
+    obj = set_param(obj, param_name, of_type)
+    return lambda _: obj
+
+
 def opt_inst_coerce_callable_param(
     obj: Any, param_name: str, ttype: Type, default: Any = None
 ) -> Callable:
@@ -228,6 +235,13 @@ def opt_list_coerce_callable_param(obj: Any, param_name: str, of_type: Type) -> 
     if callable(obj):
         return obj
     obj = opt_list_param(obj, param_name, of_type)
+    return lambda _: obj
+
+
+def opt_set_coerce_callable_param(obj: Any, param_name: str, of_type: Type) -> Callable:
+    if callable(obj):
+        return obj
+    obj = opt_set_param(obj, param_name, of_type)
     return lambda _: obj
 
 
