@@ -67,7 +67,7 @@ class InputDefinition:
         asset_key (Optional[Union[AssetKey, InputContext -> AssetKey]]): (Experimental) An AssetKey
             (or function that produces an AssetKey from the InputContext) which should be associated
             with this InputDefinition. Used for tracking lineage information through Dagster.
-        asset_partitions(Optional[Union[List[str], InputContext -> Set[str]]]): (Experimental) A
+        asset_partitions(Optional[Union[Set[str], InputContext -> Set[str]]]): (Experimental) A
             set of partitions of the given asset_key (or a function that produces this list of
             partitions from the InputContext) which should be associated with this InputDefinition.
     """

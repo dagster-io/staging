@@ -387,8 +387,9 @@ def _asset_key_and_partitions_for_output(
                     "function."
                 ).format(output_name=output_def.name, solid_name=output_context.solid_def.name)
             )
-        return output_def.get_asset_key(output_context), output_def.get_asset_partitions(
-            output_context
+        return (
+            output_def.get_asset_key(output_context),
+            output_def.get_asset_partitions(output_context) or set(),
         )
     elif manager_asset_key:
         return manager_asset_key, output_manager.get_output_asset_partitions(output_context)
