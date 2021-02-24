@@ -369,30 +369,6 @@ def _type_check_and_store_output(
         yield evt
 
 
-def _materializations_to_events(
-    step_context: SystemStepExecutionContext,
-    step_output_handle: StepOutputHandle,
-    materializations: Iterator[AssetMaterialization],
-    input_relations: List[AssetRelation] = None,
-) -> Iterator[DagsterEvent]:
-    if materializations is not None:
-        for materialization in ensure_gen(materializations):
-            if not isinstance(materialization, AssetMaterialization):
-                raise DagsterInvariantViolationError(
-                    (
-                        'IO manager on output "{output_name}" has returned '
-                        'value "{value}" of type "{python_type}". The return type can only be '
-                        "AssetMaterialization."
-                    ).format(
-                        output_name=step_output_handle.output_name,
-                        value=repr(materialization),
-                        python_type=type(materialization).__name__,
-                    )
-                )
-
-            yield DagsterEvent.step_materialization(step_context, materialization, input_relations)
-
-
 def _asset_key_and_partitions_for_output(
     output_context: OutputContext,
     output_def: OutputDefinition,
