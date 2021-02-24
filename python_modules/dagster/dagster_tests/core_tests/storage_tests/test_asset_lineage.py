@@ -17,6 +17,7 @@ from dagster.core.definitions.events import (
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.storage.io_manager import IOManager
+from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
 
 def n_asset_keys(path, n):
@@ -328,3 +329,57 @@ def test_mixed_asset_definition_lineage():
             AssetRelation(AssetKey(["output_def_table", "output_def_solid"])),
         ],
     )
+
+
+def test_dynamic_output_definition_single_partition_materialization():
+
+    entry1 = EventMetadataEntry.int(123, "nrows")
+    entry2 = EventMetadataEntry.float(3.21, "some value")
+
+    @solid(output_defs=[OutputDefinition(name="output1", asset_key=AssetKey("table1"))])
+    def solid1(_):
+        return Output(None, "output1", metadata_entries=[entry1])
+
+    @solid(
+        output_defs=[
+            DynamicOutputDefinition(
+                name="output2", asset_key=lambda context: AssetKey(context.mapping_key)
+            )
+        ]
+    )
+    def solid2(_, _input1):
+        for i in range(4):
+            yield DynamicOutput(
+                7,
+                mapping_key=str(i),
+                output_name="output2",
+                metadata_entries=[entry2],
+            )
+
+    @solid
+    def do_nothing(_, _input1):
+        pass
+
+    @pipeline
+    def my_pipeline():
+        solid2(solid1()).map(do_nothing)
+
+    result = execute_pipeline(my_pipeline)
+    events = result.step_event_list
+    materializations = [
+        event for event in events if event.event_type_value == "STEP_MATERIALIZATION"
+    ]
+    assert len(materializations) == 5
+
+    check_materialization(materializations[0], AssetKey(["table1"]), metadata_entries=[entry1])
+    seen_paths = set()
+    for i in range(1, 5):
+        path = materializations[i].asset_key.path
+        seen_paths.add(tuple(path))
+        check_materialization(
+            materializations[i],
+            AssetKey(path),
+            metadata_entries=[entry2],
+            parent_assets=[AssetRelation(AssetKey(["table1"]))],
+        )
+    assert len(seen_paths) == 4
