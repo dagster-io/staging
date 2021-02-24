@@ -56,6 +56,10 @@ class ScheduleStorage(abc.ABC):
             job_origin_id (str): The id of the ExternalJob target to delete
         """
 
+    def can_delete(self):
+        """ Some storages cannot delete jobs or ticks."""
+        return True
+
     @abc.abstractmethod
     def get_job_ticks(
         self, job_origin_id: str, before: float = None, after: float = None, limit: int = None

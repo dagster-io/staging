@@ -185,6 +185,9 @@ class TestScheduleStorage:
     def test_delete_schedule_state(self, storage):
         assert storage
 
+        if not storage.can_delete():
+            pytest.skip("Storage cannot delete")
+
         schedule = self.build_schedule("my_schedule", "* * * * *")
         storage.add_job_state(schedule)
         storage.delete_job_state(schedule.job_origin_id)
@@ -194,6 +197,9 @@ class TestScheduleStorage:
 
     def test_delete_schedule_not_found(self, storage):
         assert storage
+
+        if not storage.can_delete():
+            pytest.skip("Storage cannot delete")
 
         schedule = self.build_schedule("my_schedule", "* * * * *")
 
@@ -411,6 +417,10 @@ class TestScheduleStorage:
 
     def test_delete_job_state(self, storage):
         assert storage
+
+        if not storage.can_delete():
+            pytest.skip("Storage cannot delete")
+
         job = self.build_sensor("my_sensor")
         storage.add_job_state(job)
         storage.delete_job_state(job.job_origin_id)
@@ -420,6 +430,9 @@ class TestScheduleStorage:
 
     def test_delete_job_not_found(self, storage):
         assert storage
+
+        if not storage.can_delete():
+            pytest.skip("Storage cannot delete")
 
         job = self.build_sensor("my_sensor")
 
@@ -578,6 +591,10 @@ class TestScheduleStorage:
         assert len(ticks) == 2
 
     def test_migrate_schedulers(self, storage):
+
+        if not storage.can_delete():
+            pytest.skip("Storage cannot delete")
+
         schedule = self.build_schedule("my_schedule", "* * * * *")
         storage.add_job_state(schedule)
 

@@ -106,6 +106,9 @@ class TestRunStorage:
         assert fetched_run.pipeline_name == "some_pipeline"
 
     def test_clear(self, storage):
+        if not storage.can_delete_runs():
+            pytest.skip("storage cannot delete")
+
         assert storage
         run_id = make_new_run_id()
         storage.add_run(TestRunStorage.build_run(run_id=run_id, pipeline_name="some_pipeline"))
@@ -584,6 +587,9 @@ class TestRunStorage:
         assert cursor_four_limit_one[0].run_id == two
 
     def test_delete(self, storage):
+        if not storage.can_delete_runs():
+            pytest.skip("storage cannot delete runs")
+
         assert storage
         run_id = make_new_run_id()
         storage.add_run(TestRunStorage.build_run(run_id=run_id, pipeline_name="some_pipeline"))
@@ -592,6 +598,9 @@ class TestRunStorage:
         assert list(storage.get_runs()) == []
 
     def test_delete_with_tags(self, storage):
+        if not storage.can_delete_runs():
+            pytest.skip("storage cannot delete runs")
+
         assert storage
         run_id = make_new_run_id()
         storage.add_run(
@@ -608,6 +617,9 @@ class TestRunStorage:
         assert run_id not in [key for key, value in storage.get_run_tags()]
 
     def test_wipe_tags(self, storage):
+        if not storage.can_delete_runs():
+            pytest.skip("storage cannot delete")
+
         run_id = "some_run_id"
         run = PipelineRun(run_id=run_id, pipeline_name="a_pipeline", tags={"foo": "bar"})
 
@@ -642,9 +654,10 @@ class TestRunStorage:
         assert storage.has_pipeline_snapshot(pipeline_snapshot_id)
         assert not storage.has_pipeline_snapshot("nope")
 
-        storage.wipe()
+        if storage.can_delete_runs():
+            storage.wipe()
 
-        assert not storage.has_pipeline_snapshot(pipeline_snapshot_id)
+            assert not storage.has_pipeline_snapshot(pipeline_snapshot_id)
 
     def test_single_write_read_with_snapshot(self, storage):
         run_with_snapshot_id = "lkasjdflkjasdf"
@@ -672,10 +685,11 @@ class TestRunStorage:
 
         assert storage.get_run_by_id(run_with_snapshot_id) == run_with_snapshot
 
-        storage.wipe()
+        if storage.can_delete_runs():
+            storage.wipe()
 
-        assert not storage.has_pipeline_snapshot(pipeline_snapshot_id)
-        assert not storage.has_run(run_with_snapshot_id)
+            assert not storage.has_pipeline_snapshot(pipeline_snapshot_id)
+            assert not storage.has_run(run_with_snapshot_id)
 
     def test_single_write_with_missing_snapshot(self, storage):
 
@@ -708,9 +722,11 @@ class TestRunStorage:
         assert storage.has_execution_plan_snapshot(snapshot_id)
         assert not storage.has_execution_plan_snapshot("nope")
 
-        storage.wipe()
+        if storage.can_delete_runs():
 
-        assert not storage.has_execution_plan_snapshot(snapshot_id)
+            storage.wipe()
+
+            assert not storage.has_execution_plan_snapshot(snapshot_id)
 
     def test_fetch_run_filter(self, storage):
         assert storage

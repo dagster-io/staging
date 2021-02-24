@@ -244,6 +244,12 @@ class RunStorage(ABC):
     def delete_run(self, run_id: str):
         """Remove a run from storage"""
 
+    def can_delete_runs(self):
+        """Some storage implementations can only get, create or update runs and delegate to a
+        separate storage for wiping/deleting them.
+        """
+        return True
+
     @abstractmethod
     def build_missing_indexes(
         self, print_fn: Callable = lambda _: None, force_rebuild_all: bool = False
