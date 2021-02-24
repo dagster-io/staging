@@ -149,13 +149,11 @@ class InputDefinition:
     def defines_asset_relation(self):
         return self._defines_asset_relation
 
-    @property
-    def get_asset_key(self):
-        return self._asset_key_fn
+    def get_asset_key(self, context):
+        return self._asset_key_fn(context)
 
-    @property
-    def get_asset_partitions(self):
-        return self._asset_partitions_fn
+    def get_asset_partitions(self, context):
+        return self._asset_partitions_fn(context)
 
     def mapping_to(self, solid_name, input_name, fan_in_index=None):
         """Create an input mapping to an input of a child solid.
