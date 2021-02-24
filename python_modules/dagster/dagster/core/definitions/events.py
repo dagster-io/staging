@@ -545,7 +545,11 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             value,
             check_valid_name(check.str_param(mapping_key, "mapping_key")),
             check.str_param(output_name, "output_name"),
-            check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
+            check.opt_list_param(
+                metadata_entries,
+                "metadata_entries",
+                (EventMetadataEntry, PartitionSpecificMetadataEntry),
+            ),
         )
 
 

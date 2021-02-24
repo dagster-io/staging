@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional, Set
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
@@ -149,10 +150,24 @@ class InputDefinition:
     def defines_asset_relation(self):
         return self._defines_asset_relation
 
-    def get_asset_key(self, context):
+    def get_asset_key(self, context) -> Optional[AssetKey]:
+        """Get the AssetKey associated with this InputDefinition for the given
+        :py:class:`InputContext` (if any).
+
+        Args:
+            context (InputContext): The OutputContext that this OutputDefinition is being evaluated
+            in
+        """
         return self._asset_key_fn(context)
 
-    def get_asset_partitions(self, context):
+    def get_asset_partitions(self, context) -> Optional[Set[str]]:
+        """Get the set of partitions associated with this InputDefinition for the given
+        :py:class:`InputContext` (if any).
+
+        Args:
+            context (InputContext): The OutputContext that this OutputDefinition is being evaluated
+            in
+        """
         return self._asset_partitions_fn(context)
 
     def mapping_to(self, solid_name, input_name, fan_in_index=None):
