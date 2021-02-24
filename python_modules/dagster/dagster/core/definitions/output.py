@@ -1,8 +1,7 @@
 from collections import namedtuple
-from typing import Optional
 
 from dagster import check
-from dagster.core.definitions.events import AssetKey, AssetRelation
+from dagster.core.definitions.events import AssetKey
 from dagster.core.types.dagster_type import resolve_dagster_type
 from dagster.utils.backcompat import experimental_arg_warning
 
@@ -67,7 +66,7 @@ class OutputDefinition:
             experimental_arg_warning("asset_key", "OutputDefinition")
 
         self._defines_asset_relation = asset_key is not None
-        self.asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
+        self._asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
 
         if asset_partitions:
             experimental_arg_warning("asset_partitions", "OutputDefinition")
@@ -75,7 +74,7 @@ class OutputDefinition:
                 check.failed(
                     'Cannot specify "asset_partitions" argument without also specifying "asset_key"'
                 )
-        self.asset_partitions_fn = check.opt_set_coerce_callable_param(
+        self._asset_partitions_fn = check.opt_set_coerce_callable_param(
             asset_partitions, "asset_partitions", str
         )
 
@@ -115,14 +114,13 @@ class OutputDefinition:
     def defines_asset_relation(self):
         return self._defines_asset_relation
 
-    def get_asset_relation(self, context) -> Optional[AssetRelation]:
-        asset_key = self.asset_key_fn(context)
-        if not asset_key:
-            return None
-        return AssetRelation(
-            asset_key=asset_key,
-            partitions=self.asset_partitions_fn(context),
-        )
+    @property
+    def get_asset_key(self):
+        return self._asset_key_fn
+
+    @property
+    def get_asset_partitions(self):
+        return self._asset_partitions_fn
 
     def mapping_from(self, solid_name, output_name=None):
         """Create an output mapping from an output of a child solid.

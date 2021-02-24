@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, Iterator, List, Optional, Set, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from dagster import check
 from dagster.core.definitions import (
@@ -393,38 +393,31 @@ def _materializations_to_events(
             yield DagsterEvent.step_materialization(step_context, materialization, input_relations)
 
 
-def _asset_relation_for_output(
+def _asset_key_and_partitions_for_output(
     output_context: OutputContext,
     output_def: OutputDefinition,
     output_manager: IOManager,
-) -> Optional[AssetRelation]:
+) -> Tuple[Optional[AssetKey], Set[str]]:
 
-    definition_asset_relation = output_def.get_asset_relation(output_context)
-    manager_asset_relation = output_manager.experimental_internal_get_output_asset_relation(
-        output_context
-    )
+    manager_asset_key = output_manager.get_output_asset_key(output_context)
 
-    if definition_asset_relation and manager_asset_relation:
-        raise DagsterInvariantViolationError(
-            (
-                'Both the OutputDefinition and the IOManager of output "{output_name}" on solid "{solid_name}" '
-                "associate it with an asset. Either remove the asset_key on the OutputDefinition "
-                "or use an IOManager that does not specify an AssetKey in its get_output_asset_key() "
-                "function."
-            ).format(output_name=output_def.name, solid_name=output_context.solid_def.name)
+    if output_def.defines_asset_relation:
+        if manager_asset_key is not None:
+            raise DagsterInvariantViolationError(
+                (
+                    'Both the OutputDefinition and the IOManager of output "{output_name}" on solid "{solid_name}" '
+                    "associate it with an asset. Either remove the asset_key on the OutputDefinition "
+                    "or use an IOManager that does not specify an AssetKey in its get_output_asset_key() "
+                    "function."
+                ).format(output_name=output_def.name, solid_name=output_context.solid_def.name)
+            )
+        return output_def.get_asset_key(output_context), output_def.get_asset_partitions(
+            output_context
         )
+    elif manager_asset_key:
+        return manager_asset_key, output_manager.get_output_asset_partitions(output_context)
 
-    asset_relation = definition_asset_relation or manager_asset_relation
-
-    return asset_relation
-
-
-def _flatten_asset_relation(asset_relation: Optional[AssetRelation]):
-    if asset_relation is None:
-        return []
-    if not asset_relation.partitions:
-        return [(asset_relation.asset_key, None)]
-    return [(asset_relation.asset_key, p) for p in asset_relation.partitions]
+    return None, set()
 
 
 def _dedup_asset_relations(asset_relations: List[AssetRelation]) -> List[AssetRelation]:
@@ -448,35 +441,45 @@ def _dedup_asset_relations(asset_relations: List[AssetRelation]) -> List[AssetRe
 
 
 def _get_output_asset_materializations(
-    asset_relation: AssetRelation,
+    asset_key: AssetKey,
+    asset_partitions: Set[str],
     output: Union[Output, DynamicOutput],
     output_def: OutputDefinition,
     io_manager_metadata_entries: List[Union[EventMetadataEntry, PartitionSpecificMetadataEntry]],
 ) -> Iterator[AssetMaterialization]:
 
-    flat_relations = _flatten_asset_relation(asset_relation)
-    metadata_mapping: Dict[str, List[str]] = {p: [] for key, p in flat_relations}
+    all_metadata = output.metadata_entries + io_manager_metadata_entries
 
-    for entry in output.metadata_entries + io_manager_metadata_entries:
-        # if you target a given entry at a partition, only apply it to the requested partition
-        # otherwise, apply it to all partitions
-        if isinstance(entry, PartitionSpecificMetadataEntry):
-            if entry.partition not in metadata_mapping:
+    if asset_partitions:
+        metadata_mapping: Dict[str, List[str]] = {partition: [] for partition in asset_partitions}
+        for entry in all_metadata:
+            # if you target a given entry at a partition, only apply it to the requested partition
+            # otherwise, apply it to all partitions
+            if isinstance(entry, PartitionSpecificMetadataEntry):
+                if entry.partition not in asset_partitions:
+                    raise DagsterInvariantViolationError(
+                        f"Output {output_def.name} associated a metadata entry ({entry}) with the partition "
+                        f"`{entry.partition}`, which is not one of the declared partition mappings ({asset_partitions})."
+                    )
+                metadata_mapping[entry.partition].append(entry.entry)
+            else:
+                for partition in metadata_mapping.keys():
+                    metadata_mapping[partition].append(entry)
+
+        for partition in asset_partitions:
+            yield AssetMaterialization(
+                asset_key=asset_key,
+                partition=partition,
+                metadata_entries=metadata_mapping[partition],
+            )
+    else:
+        for entry in all_metadata:
+            if isinstance(entry, PartitionSpecificMetadataEntry):
                 raise DagsterInvariantViolationError(
-                    f"Output {output_def.name} associated a metadata entry ({entry}) with the partition "
-                    f"`{entry.partition}`, which is not one of the declared partition mappings ({asset_relation.partitions})."
+                    f"Output {output_def.name} got a PartitionSpecificMetadataEntry ({entry}), but "
+                    "is not associated with any specific partitions."
                 )
-            metadata_mapping[entry.partition].append(entry.entry)
-        else:
-            for partition in metadata_mapping.keys():
-                metadata_mapping[partition].append(entry)
-
-    for asset_key, partition in flat_relations:
-        yield AssetMaterialization(
-            asset_key=asset_key,
-            partition=partition,
-            metadata_entries=metadata_mapping[partition],
-        )
+        yield AssetMaterialization(asset_key=asset_key, metadata_entries=all_metadata)
 
 
 def _store_output(
@@ -521,10 +524,13 @@ def _store_output(
     for materialization in manager_materializations:
         yield DagsterEvent.step_materialization(step_context, materialization, input_relations)
 
-    asset_relation = _asset_relation_for_output(output_context, output_def, output_manager)
-    if asset_relation:
+    asset_key, partitions = _asset_key_and_partitions_for_output(
+        output_context, output_def, output_manager
+    )
+    if asset_key:
         for materialization in _get_output_asset_materializations(
-            asset_relation,
+            asset_key,
+            partitions,
             output,
             output_def,
             manager_metadata_entries,

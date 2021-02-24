@@ -7,7 +7,7 @@ from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.definition_config_schema import (
     convert_user_facing_definition_config_schema,
 )
-from dagster.core.definitions.events import AssetKey, AssetRelation
+from dagster.core.definitions.events import AssetKey
 from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.storage.input_manager import InputManager
 from dagster.core.storage.output_manager import IOutputManagerDefinition, OutputManager
@@ -133,22 +133,6 @@ class IOManager(InputManager, OutputManager):
                 and the upstream output that's being loaded from.
         """
         return self.get_output_asset_partitions(context.upstream_output)
-
-    def experimental_internal_get_output_asset_relation(self, context) -> Optional[AssetRelation]:
-        asset_key = self.get_output_asset_key(context)  # pylint: disable=E1128
-        if not asset_key:
-            return None
-        return AssetRelation(
-            asset_key=asset_key, partitions=self.get_output_asset_partitions(context)
-        )
-
-    def experimental_internal_get_input_asset_relation(self, context) -> Optional[AssetRelation]:
-        asset_key = self.get_input_asset_key(context)
-        if not asset_key:
-            return None
-        return AssetRelation(
-            asset_key=asset_key, partitions=self.get_input_asset_partitions(context)
-        )
 
 
 def io_manager(

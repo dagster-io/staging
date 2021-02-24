@@ -109,6 +109,17 @@ class StepInputSource(ABC):
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
+    def _get_asset_relation_from_fns(
+        self, context, asset_key_fn, asset_partitions_fn
+    ) -> Optional[AssetRelation]:
+        asset_key = asset_key_fn(context)
+        if not asset_key:
+            return None
+        return AssetRelation(
+            asset_key=asset_key,
+            partitions=asset_partitions_fn(context),
+        )
+
     def get_asset_relations(
         self, _step_context: "SystemStepExecutionContext"
     ) -> List[AssetRelation]:
@@ -281,18 +292,28 @@ class FromStepOutput(
         # TODO: maybe check that this is a subset of OutputDef's assets?
         input_def = self.get_input_def(step_context.pipeline_def)
         if input_def.defines_asset_relation:
-            relation = input_def.get_asset_relation(load_context)
+            relation = self._get_asset_relation_from_fns(
+                load_context, input_def.get_asset_key, input_def.get_asset_partitions
+            )
             return [relation] if relation else []
 
         # check io manager
-        io_relation = input_manager.experimental_internal_get_input_asset_relation(load_context)
+        io_relation = self._get_asset_relation_from_fns(
+            load_context,
+            input_manager.get_input_asset_key,
+            input_manager.get_input_asset_partitions,
+        )
         if io_relation is not None:
             return [io_relation]
 
         # check output_def
         upstream_output = step_context.execution_plan.get_step_output(self.step_output_handle)
-        if upstream_output.asset_relation_fn is not None:
-            relation = upstream_output.asset_relation_fn(load_context.upstream_output)
+        if upstream_output.defines_asset_relation:
+            relation = self._get_asset_relation_from_fns(
+                load_context.upstream_output,
+                upstream_output.get_asset_key,
+                upstream_output.get_asset_partitions,
+            )
             return [relation] if relation else []
 
         # if nothing definied within scope of this input/output, recurse
