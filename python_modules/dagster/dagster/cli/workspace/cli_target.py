@@ -138,7 +138,7 @@ class EmptyWorkspaceTarget(namedtuple("EmptyWorkspaceTarget", ""), WorkspaceLoad
         return []
 
 
-def created_workspace_load_target(kwargs):
+def created_workspace_load_target(kwargs, location_name=None):
     check.dict_param(kwargs, "kwargs")
     if are_all_keys_empty(kwargs, WORKSPACE_CLI_ARGS):
         if kwargs.get("empty_workspace"):
@@ -175,7 +175,7 @@ def created_workspace_load_target(kwargs):
             python_file=kwargs.get("python_file"),
             attribute=kwargs.get("attribute"),
             working_directory=working_directory,
-            location_name=None,
+            location_name=location_name,
         )
     if kwargs.get("module_name"):
         _check_cli_arguments_none(
@@ -190,7 +190,7 @@ def created_workspace_load_target(kwargs):
         return ModuleTarget(
             module_name=kwargs.get("module_name"),
             attribute=kwargs.get("attribute"),
-            location_name=None,
+            location_name=location_name,
         )
     if kwargs.get("package_name"):
         _check_cli_arguments_none(
@@ -204,7 +204,7 @@ def created_workspace_load_target(kwargs):
         return PackageTarget(
             package_name=kwargs.get("package_name"),
             attribute=kwargs.get("attribute"),
-            location_name=None,
+            location_name=location_name,
         )
     if kwargs.get("grpc_port"):
         _check_cli_arguments_none(
@@ -218,7 +218,7 @@ def created_workspace_load_target(kwargs):
             port=kwargs.get("grpc_port"),
             socket=None,
             host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
-            location_name=None,
+            location_name=location_name,
         )
     elif kwargs.get("grpc_socket"):
         _check_cli_arguments_none(
@@ -231,7 +231,7 @@ def created_workspace_load_target(kwargs):
             port=None,
             socket=kwargs.get("grpc_socket"),
             host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
-            location_name=None,
+            location_name=location_name,
         )
     else:
         _cli_load_invariant(False)
