@@ -315,12 +315,13 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
     check.str_param(docker_image, "docker_image")
     check.bool_param(should_cleanup, "should_cleanup")
 
-    repository, tag = docker_image.split(":")
+    image, tag = docker_image.split(":")
+    registry, repository = image.split("/")
     pull_policy = image_pull_policy()
     helm_config = {
         "userDeployments": {"enabled": False},
         "dagit": {
-            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "image": {"registry": registry, "repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
             "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
             "envSecrets": [{"name": TEST_SECRET_NAME}],
@@ -352,7 +353,7 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
             "type": "CeleryK8sRunLauncher",
             "config": {
                 "celeryK8sRunLauncher": {
-                    "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                    "image": {"registry": registry, "repository": repository, "tag": tag, "pullPolicy": pull_policy},
                     "workerQueues": [
                         {"name": "dagster", "replicaCount": 2},
                         {
@@ -403,12 +404,13 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
     check.str_param(docker_image, "docker_image")
     check.bool_param(should_cleanup, "should_cleanup")
 
-    repository, tag = docker_image.split(":")
+    image, tag = docker_image.split(":")
+    registry, repository = image.split("/")
     pull_policy = image_pull_policy()
     helm_config = {
         "userDeployments": {"enabled": False},
         "dagit": {
-            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "image": {"registry": registry, "repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
             "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
             "envSecrets": [{"name": TEST_SECRET_NAME}],
@@ -462,7 +464,8 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
     check.str_param(docker_image, "docker_image")
     check.bool_param(should_cleanup, "should_cleanup")
 
-    repository, tag = docker_image.split(":")
+    image, tag = docker_image.split(":")
+    registry, repository = image.split("/")
     pull_policy = image_pull_policy()
     helm_config = {
         "userDeployments": {
@@ -470,7 +473,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
             "deployments": [
                 {
                     "name": "user-code-deployment-1",
-                    "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                    "image": {"registry": registry, "repository": repository, "tag": tag, "pullPolicy": pull_policy},
                     "dagsterApiGrpcArgs": [
                         "-m",
                         "dagster_test.test_project.test_pipelines.repo",
@@ -483,7 +486,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
             ],
         },
         "dagit": {
-            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "image": {"registry": registry, "repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
             "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
             "envSecrets": [{"name": TEST_SECRET_NAME}],
@@ -514,7 +517,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
             "type": "CeleryK8sRunLauncher",
             "config": {
                 "celeryK8sRunLauncher": {
-                    "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                    "image": {"registry": registry, "repository": repository, "tag": tag, "pullPolicy": pull_policy},
                     "workerQueues": [
                         {"name": "dagster", "replicaCount": 2},
                         {"name": "extra-queue-1", "replicaCount": 1},
@@ -565,7 +568,8 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
     check.str_param(docker_image, "docker_image")
     check.bool_param(should_cleanup, "should_cleanup")
 
-    repository, tag = docker_image.split(":")
+    image, tag = docker_image.split(":")
+    registry, repository = image.split("/")
     pull_policy = image_pull_policy()
     helm_config = {
         "userDeployments": {
