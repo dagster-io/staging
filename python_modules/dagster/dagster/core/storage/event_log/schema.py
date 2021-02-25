@@ -34,9 +34,20 @@ AssetKeyTable = db.Table(
     db.Column("create_timestamp", db.DateTime, server_default=get_current_timestamp()),
 )
 
+AssetTagsTable = db.Table(
+    "asset_tags",
+    SqlEventLogStorageMetadata,
+    db.Column("id", db.Integer, primary_key=True, autoincrement=True),
+    db.Column("asset_key", db.Text, db.ForeignKey("asset_keys.asset_key", ondelete="CASCADE")),
+    db.Column("key", db.Text),
+    db.Column("value", db.Text),
+    db.Column("source", db.Text),
+)
+
 db.Index("idx_run_id", SqlEventLogStorageTable.c.run_id)
 db.Index("idx_step_key", SqlEventLogStorageTable.c.step_key)
 db.Index("idx_asset_key", SqlEventLogStorageTable.c.asset_key)
 db.Index(
     "idx_asset_partition", SqlEventLogStorageTable.c.asset_key, SqlEventLogStorageTable.c.partition
 )
+db.Index("idx_asset_tags", AssetTagsTable.c.key, AssetTagsTable.c.value)
