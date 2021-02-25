@@ -10,6 +10,8 @@ from .utils import current_time_str, execute_docker_push, execute_docker_tag
 CLI_HELP = """This CLI is used for building the various Dagster images we use in test
 """
 
+AWS_ECR_PREFIX = "public.ecr.aws/f8w6w7v8/"
+
 
 @click.group(help=CLI_HELP)
 def cli():
@@ -117,6 +119,46 @@ def push_dockerhub(name, dagster_version):
 
     # Also push latest tag
     latest_tag = "dagster/{}:latest".format(name)
+    execute_docker_tag(local_image, latest_tag)
+    execute_docker_push(latest_tag)
+
+
+@cli.command()
+@click.option("--name", required=True, help="Name of image to push")
+@click.option(
+    "--dagster-version",
+    required=True,
+    help="Version of image to push, must match current dagster version",
+)
+def push_ecr(name, dagster_version):
+    """Used for pushing k8s images to our public ECR.
+
+    You must be authed for ECR. Run:
+
+        aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/f8w6w7v8
+    """
+
+    check.invariant(
+        dagster_version == current_dagster_version,
+        desc=(
+            f"Current dagster version ({current_dagster_version}) does not match provided arg "
+            f"({dagster_version})"
+        ),
+    )
+
+    image = DagsterDockerImage(name)
+
+    python_version = next(iter(image.python_versions))
+
+    local_image = image.local_image(python_version)
+
+    # Tag image as Dagster version (plan to release this image w/ Dagster releases)
+    image_with_dagster_version_tag = f"{AWS_ECR_PREFIX}{name}:{current_dagster_version}"
+    execute_docker_tag(local_image, image_with_dagster_version_tag)
+    execute_docker_push(image_with_dagster_version_tag)
+
+    # Also push latest tag
+    latest_tag = f"{AWS_ECR_PREFIX}{name}:latest"
     execute_docker_tag(local_image, latest_tag)
     execute_docker_push(latest_tag)
 
