@@ -145,7 +145,7 @@ def execute_sensor_iteration_loop(instance, logger, daemon_shutdown_event, until
             yield from execute_sensor_iteration(instance, logger, handle_manager)
             loop_duration = pendulum.now("UTC").timestamp() - start_time
             sleep_time = max(0, MIN_INTERVAL_LOOP_TIME - loop_duration)
-            yield CompletedIteration(pendulum.now("UTC").add(seconds=sleep_time))
+            yield CompletedIteration()
             time.sleep(sleep_time)
             start_time = pendulum.now("UTC").timestamp()
 

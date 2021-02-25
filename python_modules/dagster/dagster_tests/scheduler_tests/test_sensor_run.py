@@ -629,4 +629,6 @@ def test_custom_interval_sensor_with_offset(external_repo_context, monkeypatch):
             )
 
             assert pendulum.now() == freeze_datetime.add(seconds=65)
+            ticks = instance.get_job_ticks(external_sensor.get_external_origin_id())
+            assert len(ticks) == 2
             assert sum(sleeps) == 65

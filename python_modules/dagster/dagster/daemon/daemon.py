@@ -37,14 +37,7 @@ def get_default_daemon_logger(daemon_name):
 
 
 class CompletedIteration(object):
-    def __init__(self, next_iteration_time):
-        self._next_iteration_time = check.inst_param(
-            next_iteration_time, "next_iteration_time", datetime
-        )
-
-    @property
-    def next_iteration_time(self):
-        return self._next_iteration_time
+    pass
 
 
 class DagsterDaemon:
@@ -77,17 +70,16 @@ class DagsterDaemon:
                     >= self.interval_seconds
                 ):
                     self._last_iteration_time = curr_time
-                    self._run_iteration(instance, curr_time, daemon_uuid, daemon_shutdown_event)
+                    self._run_iteration(instance, daemon_uuid, daemon_shutdown_event)
 
                 daemon_shutdown_event.wait(0.5)
 
-    def _run_iteration(self, instance, curr_time, daemon_uuid, daemon_shutdown_event):
+    def _run_iteration(self, instance, daemon_uuid, daemon_shutdown_event):
         # Build a list of any exceptions encountered during the iteration.
         # Once the iteration completes, this is copied to last_iteration_exceptions
         # which is used in the heartbeats. This guarantees that heartbeats contain the full
         # list of errors raised.
         self._current_iteration_exceptions = []
-        next_iteration_time = None
         daemon_generator = self.run_iteration(instance, daemon_shutdown_event)
 
         while True:
@@ -96,7 +88,7 @@ class DagsterDaemon:
                     next(daemon_generator), tuple([SerializableErrorInfo, CompletedIteration])
                 )
                 if isinstance(result, CompletedIteration):
-                    next_iteration_time = result.next_iteration_time
+                    self._last_iteration_exceptions = self._current_iteration_exceptions
                 elif result:
                     self._current_iteration_exceptions.append(result)
             except StopIteration:
@@ -109,16 +101,14 @@ class DagsterDaemon:
                 self._last_iteration_exceptions = self._current_iteration_exceptions
                 break
             finally:
-                self._check_add_heartbeat(instance, curr_time, daemon_uuid)
-                if next_iteration_time:
-                    curr_time = next_iteration_time
-                    next_iteration_time = None
+                self._check_add_heartbeat(instance, daemon_uuid)
 
-    def _check_add_heartbeat(self, instance, curr_time, daemon_uuid):
+    def _check_add_heartbeat(self, instance, daemon_uuid):
         # Always log a heartbeat after the first time an iteration returns an error to make sure we
         # don't incorrectly say the daemon is healthy
         first_time_logging_error = self._last_iteration_exceptions and not self._first_error_logged
 
+        curr_time = pendulum.now("UTC")
         if not first_time_logging_error and (
             self._last_heartbeat_time
             and (curr_time - self._last_heartbeat_time).total_seconds()
