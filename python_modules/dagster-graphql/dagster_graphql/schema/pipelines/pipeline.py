@@ -18,7 +18,7 @@ from ...implementation.fetch_runs import get_run_by_id, get_runs, get_stats, get
 from ...implementation.fetch_schedules import get_schedules_for_pipeline
 from ...implementation.fetch_sensors import get_sensors_for_pipeline
 from ...implementation.utils import UserFacingGraphQLError, capture_error
-from ..asset_key import GrapheneAssetKey
+from ..asset_key import GrapheneAssetKey, GrapheneAssetRelation
 from ..dagster_types import GrapheneDagsterType, GrapheneDagsterTypeOrError, to_dagster_type
 from ..errors import (
     GrapheneDagsterTypeNotFoundError,
@@ -62,8 +62,18 @@ class GrapheneAssetMaterialization(graphene.ObjectType):
         )
 
     def resolve_materializationEvent(self, _graphene_info):
+        parent_asset_relations = (
+            self._event.dagster_event.step_materialization_data.parent_asset_relations or []
+        )
         return GrapheneStepMaterializationEvent(
             materialization=self._event.dagster_event.step_materialization_data.materialization,
+            parentAssetRelations=[
+                GrapheneAssetRelation(
+                    assetKey=GrapheneAssetKey(path=relation.asset_key.path),
+                    partitions=relation.partitions,
+                )
+                for relation in parent_asset_relations
+            ],
             **construct_basic_params(self._event),
         )
 

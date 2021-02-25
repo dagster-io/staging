@@ -92,6 +92,8 @@ def _to_metadata_entries(metadata_entries):
 def from_dagster_event_record(event_record, pipeline_name):
     from ..schema.errors import GraphenePythonError
     from ..schema.logs.events import (
+        GrapheneAssetKey,
+        GrapheneAssetRelation,
         GrapheneEngineEvent,
         GrapheneExecutionStepFailureEvent,
         GrapheneExecutionStepInputEvent,
@@ -152,11 +154,25 @@ def from_dagster_event_record(event_record, pipeline_name):
         return GrapheneExecutionStepOutputEvent(
             output_name=output_data.output_name,
             type_check=output_data.type_check_data,
+            metadataEntries=_to_metadata_entries(output_data.metadata_entries),
             **basic_params,
         )
     elif dagster_event.event_type == DagsterEventType.STEP_MATERIALIZATION:
         materialization = dagster_event.step_materialization_data.materialization
-        return GrapheneStepMaterializationEvent(materialization=materialization, **basic_params)
+        parent_asset_relations = (
+            dagster_event.step_materialization_data.parent_asset_relations or []
+        )
+        return GrapheneStepMaterializationEvent(
+            materialization=materialization,
+            parentAssetRelations=[
+                GrapheneAssetRelation(
+                    assetKey=GrapheneAssetKey(path=relation.asset_key.path),
+                    partitions=relation.partitions,
+                )
+                for relation in parent_asset_relations
+            ],
+            **basic_params,
+        )
     elif dagster_event.event_type == DagsterEventType.STEP_EXPECTATION_RESULT:
         expectation_result = dagster_event.event_specific_data.expectation_result
         return GrapheneStepExpectationResultEvent(
@@ -202,6 +218,9 @@ def from_dagster_event_record(event_record, pipeline_name):
         return GrapheneHandledOutputEvent(
             output_name=dagster_event.event_specific_data.output_name,
             manager_key=dagster_event.event_specific_data.manager_key,
+            metadataEntries=_to_metadata_entries(
+                dagster_event.event_specific_data.metadata_entries
+            ),
             **basic_params,
         )
     elif dagster_event.event_type == DagsterEventType.LOADED_INPUT:

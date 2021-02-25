@@ -147,6 +147,9 @@ export const LOGS_ROW_STRUCTURED_FRAGMENT = gql`
           ...MetadataEntryFragment
         }
       }
+      metadataEntries {
+        ...MetadataEntryFragment
+      }
     }
     ... on StepExpectationResultEvent {
       expectationResult {
@@ -169,6 +172,9 @@ export const LOGS_ROW_STRUCTURED_FRAGMENT = gql`
     ... on HandledOutputEvent {
       outputName
       managerKey
+      metadataEntries {
+        ...MetadataEntryFragment
+      }
     }
     ... on LoadedInputEvent {
       inputName

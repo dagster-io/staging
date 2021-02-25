@@ -27,8 +27,8 @@ def db_connection():
         OutputDefinition(
             name="table_name",
             dagster_type=String,
-            asset_key=lambda context: AssetKey(context.solid_config["table_name"]),
-            asset_partitions=lambda context: [context.solid_config["partition"]],
+            asset_key=AssetKey("my_name"),
+            asset_partitions=set(["2020-01-01"]),
         ),
         OutputDefinition(name="some_float", dagster_type=Float),
     ],

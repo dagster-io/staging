@@ -4,7 +4,7 @@ from dagster.core.events import DagsterEventType
 from dagster.core.execution.stats import RunStepKeyStatsSnapshot
 
 from ...implementation.fetch_runs import get_step_stats
-from ..asset_key import GrapheneAssetKey
+from ..asset_key import GrapheneAssetKey, GrapheneAssetRelation
 from ..errors import GraphenePythonError
 from ..runs import GrapheneStepEventStatus
 from ..util import non_null_list
@@ -311,7 +311,7 @@ class GrapheneExecutionStepInputEvent(graphene.ObjectType):
 
 class GrapheneExecutionStepOutputEvent(graphene.ObjectType):
     class Meta:
-        interfaces = (GrapheneMessageEvent, GrapheneStepEvent)
+        interfaces = (GrapheneMessageEvent, GrapheneStepEvent, GrapheneDisplayableEvent)
         name = "ExecutionStepOutputEvent"
 
     output_name = graphene.NonNull(graphene.String)
@@ -360,6 +360,7 @@ class GrapheneStepMaterializationEvent(graphene.ObjectType):
 
     materialization = graphene.NonNull(GrapheneMaterialization)
     stepStats = graphene.NonNull(lambda: GraphenePipelineRunStepStats)
+    parentAssetRelations = non_null_list(GrapheneAssetRelation)
 
     def resolve_stepStats(self, graphene_info):
         run_id = self.runId  # pylint: disable=no-member
@@ -370,7 +371,7 @@ class GrapheneStepMaterializationEvent(graphene.ObjectType):
 
 class GrapheneHandledOutputEvent(graphene.ObjectType):
     class Meta:
-        interfaces = (GrapheneMessageEvent, GrapheneStepEvent)
+        interfaces = (GrapheneMessageEvent, GrapheneStepEvent, GrapheneDisplayableEvent)
         name = "HandledOutputEvent"
 
     output_name = graphene.NonNull(graphene.String)

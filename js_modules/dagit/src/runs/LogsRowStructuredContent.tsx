@@ -103,7 +103,10 @@ export const LogsRowStructuredContent: React.FunctionComponent<IStructuredConten
           eventType={eventType}
           eventIntent={node.typeCheck.success ? 'success' : 'warning'}
         >
-          <MetadataEntries entries={node.typeCheck.metadataEntries} />
+          <>
+            <MetadataEntries entries={node.typeCheck.metadataEntries} />
+            <MetadataEntries entries={node.metadataEntries} />
+          </>
         </DefaultContent>
       );
     case 'StepExpectationResultEvent':
@@ -127,7 +130,11 @@ export const LogsRowStructuredContent: React.FunctionComponent<IStructuredConten
         </DefaultContent>
       );
     case 'HandledOutputEvent':
-      return <DefaultContent message={node.message} eventType={eventType} />;
+      return (
+        <DefaultContent message={node.message} eventType={eventType}>
+          <MetadataEntries entries={node.metadataEntries} />
+        </DefaultContent>
+      );
     case 'LoadedInputEvent':
       return <DefaultContent message={node.message} eventType={eventType} />;
     case 'HookCompletedEvent':

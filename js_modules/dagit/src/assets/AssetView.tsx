@@ -83,6 +83,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
 
   const latest = asset.assetMaterializations[0];
   const latestEvent = latest && latest.materializationEvent;
+  const latestParentAssetRelations = latestEvent && latestEvent.parentAssetRelations;
 
   return (
     <>
@@ -112,6 +113,35 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
               ) : (
                 'No materialization events'
               ),
+            },
+            {
+              key: 'Parent asset relations',
+              value:
+                latestParentAssetRelations.length > 0 ? (
+                  latestParentAssetRelations.map((relation) => (
+                    <>
+                      {relation.partitions.length > 0 ? (
+                        <>
+                          Partition(s){' '}
+                          {relation.partitions.map((partition) => '"' + partition + '"').join(', ')}{' '}
+                          of &nbsp;
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                      <Link
+                        to={`/instance/assets/${relation.assetKey.path
+                          .map(encodeURIComponent)
+                          .join('/')}`}
+                      >
+                        {relation.assetKey.path.join(' > ')}
+                      </Link>
+                      <br></br>
+                    </>
+                  ))
+                ) : (
+                  <>None</>
+                ),
             },
             ...latestEvent?.materialization.metadataEntries.map((entry) => ({
               key: entry.label,
@@ -219,6 +249,12 @@ const ASSET_QUERY = gql`
               metadataEntries {
                 ...MetadataEntryFragment
               }
+            }
+            parentAssetRelations {
+              assetKey {
+                path
+              }
+              partitions
             }
           }
         }
