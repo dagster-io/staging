@@ -158,3 +158,22 @@ def create_bulk_actions_table():
 
         op.create_index("idx_bulk_actions_key", "bulk_actions", ["key"], unique=True)
         op.create_index("idx_bulk_actions_status", "bulk_actions", ["status"], unique=False)
+
+
+def create_asset_tags_table():
+    if not has_table("event_logs"):
+        return
+
+    if not has_table("asset_tags"):
+        op.create_table(
+            "asset_tags",
+            db.Column("id", db.Integer, primary_key=True, autoincrement=True),
+            db.Column(
+                "asset_key", db.Text, db.ForeignKey("asset_keys.asset_key", ondelete="CASCADE")
+            ),
+            db.Column("key", db.Text),
+            db.Column("value", db.Text),
+            db.Column("source", db.Text),
+        )
+        op.create_index("idx_asset_tags", "asset_tags", ["key", "value"], unique=False)
+        op.create_index("idx_asset_tags_asset_key", "asset_tags", ["asset_key"], unique=False)

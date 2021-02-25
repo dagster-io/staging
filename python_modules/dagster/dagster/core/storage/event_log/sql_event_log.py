@@ -16,7 +16,12 @@ from dagster.utils import datetime_as_float, utc_datetime_from_timestamp
 from ..pipeline_run import PipelineRunStatsSnapshot
 from .base import EventLogStorage, extract_asset_events_cursor
 from .migration import REINDEX_DATA_MIGRATIONS, SECONDARY_INDEX_ASSET_KEY
-from .schema import AssetKeyTable, SecondaryIndexMigrationTable, SqlEventLogStorageTable
+from .schema import (
+    AssetKeyTable,
+    AssetTagsTable,
+    SecondaryIndexMigrationTable,
+    SqlEventLogStorageTable,
+)
 
 
 class SqlEventLogStorage(EventLogStorage):
@@ -556,10 +561,25 @@ class SqlEventLogStorage(EventLogStorage):
 
         return len(results) > 0
 
-    def get_all_asset_keys(self, prefix_path=None):
+    def get_asset_keys(self, tags=None, prefix_path=None):
+        check.opt_dict_param(tags, "tags", key_type=str, value_type=str)
         lazy_migrate = False
 
-        if not prefix_path:
+        if tags:
+            query = db.select([AssetTagsTable.c.asset_key]).where(
+                db.or_(
+                    *(
+                        db.and_(AssetTagsTable.c.key == key, AssetTagsTable.c.value == tags[key])
+                        for key, value in tags.items()
+                    )
+                )
+            )
+
+            if prefix_path:
+                query = query.where(
+                    AssetTagsTable.c.asset_key.startswith(AssetKey.get_db_prefix(prefix_path))
+                )
+        elif not prefix_path:
             if self.has_secondary_index(SECONDARY_INDEX_ASSET_KEY):
                 query = db.select([AssetKeyTable.c.asset_key])
             else:
@@ -732,6 +752,59 @@ class SqlEventLogStorage(EventLogStorage):
             event_specific_data=updated_event_specific_data
         )
         return event_record._replace(dagster_event=updated_dagster_event)
+
+    def all_asset_tags(self):
+        query = db.select(
+            [AssetTagsTable.c.asset_key, AssetTagsTable.c.key, AssetTagsTable.c.value]
+        )
+        tags_by_asset_key = defaultdict(dict)
+        with self.index_connection() as conn:
+            rows = conn.execute(query).fetchall()
+            for asset_key, tag_key, tag_value in rows:
+                tags_by_asset_key[AssetKey.from_db_string(asset_key)][tag_key] = tag_value
+
+        return tags_by_asset_key
+
+    def get_asset_tags(self, asset_key):
+        check.inst_param(asset_key, "asset_key", AssetKey)
+        query = db.select([AssetTagsTable.c.key, AssetTagsTable.c.value]).where(
+            AssetTagsTable.c.asset_key == asset_key.to_string()
+        )
+        with self.index_connection() as conn:
+            rows = conn.execute(query).fetchall()
+            return {row[0]: row[1] for row in rows}
+
+    def set_asset_tags(self, asset_key, tags):
+        check.inst_param(asset_key, "asset_key", AssetKey)
+        check.dict_param(tags, "tags", key_type=str, value_type=str)
+
+        existing = self.get_asset_tags(asset_key)
+        existing_keys = set(existing.keys())
+        tag_keys = set(tags.keys())
+        to_remove = existing_keys.difference(tag_keys)
+        to_add = tag_keys.difference(existing_keys)
+        to_update = tag_keys.intersection(existing_keys)
+
+        with self.index_connection() as conn:
+            if to_remove:
+                conn.execute(
+                    AssetTagsTable.delete()  # pylint: disable=no-value-for-parameter
+                    .where(AssetTagsTable.c.asset_key == asset_key.to_string())
+                    .where(AssetTagsTable.c.key.in_(to_remove))
+                )
+            if to_add:
+                conn.execute(
+                    AssetTagsTable.insert(),  # pylint: disable=no-value-for-parameter
+                    [dict(asset_key=asset_key.to_string(), key=k, value=tags[k]) for k in to_add],
+                )
+            if to_update:
+                for k in to_update:
+                    conn.execute(
+                        AssetTagsTable.update()  # pylint: disable=no-value-for-parameter
+                        .where(AssetTagsTable.c.asset_key == asset_key.to_string())
+                        .where(AssetTagsTable.c.key == k)
+                        .values(value=tags[k])
+                    )
 
     def wipe_asset(self, asset_key):
         check.inst_param(asset_key, "asset_key", AssetKey)
