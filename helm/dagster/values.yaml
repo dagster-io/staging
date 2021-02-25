@@ -755,6 +755,14 @@ dagsterDaemon:
     timeoutSeconds: 3
 
 ####################################################################################################
+# busybox: Configuration for the busybox image used to check connections
+####################################################################################################
+busybox:
+  image:
+    repository: "busybox"
+    tag: "1.28"
+
+####################################################################################################
 # Extra Manifests: (Optional) Create additional k8s resources within this chart
 ####################################################################################################
 extraManifests:
