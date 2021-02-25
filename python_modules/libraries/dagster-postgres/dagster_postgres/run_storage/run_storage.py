@@ -57,7 +57,9 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
         # doesn't exist (since we used to not stamp postgres storage when it was first created)
         if "runs" not in table_names:
             with self.connect() as conn:
-                alembic_config = get_alembic_config(__file__)
+                alembic_config = get_alembic_config(
+                    __file__, config_path="alembic.ini", script_path="../alembic/"
+                )
                 retry_pg_creation_fn(lambda: RunStorageSqlMetadata.create_all(conn))
 
                 # This revision may be shared by any other dagster storage classes using the same DB
@@ -108,7 +110,9 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
         )
 
     def upgrade(self):
-        alembic_config = get_alembic_config(__file__)
+        alembic_config = get_alembic_config(
+            __file__, config_path="alembic.ini", script_path="../alembic/"
+        )
         with self.connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
 
