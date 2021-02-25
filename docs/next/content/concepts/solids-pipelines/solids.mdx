@@ -44,10 +44,13 @@ Solids are meant to be **individually testable** and **reusable**. Dagster provi
 
 To define a solid, use the <PyObject object="solid" decorator /> decorator. The decorated function is called the `compute_fn` and must have `context` as the first argument. The context provides access to important properties and objects, such as [solid configuration](#TODO) and [resources](#TODO)
 
-```python file=/overview/solids_pipelines/solid_definition.py startafter=start_solid_definition_marker_0 endbefore=end_solid_definition_marker_0
+```python file=/concepts/solids_pipelines/solids.py startafter=start_solid_marker endbefore=end_solid_marker
+from dagster import solid
+
+
 @solid
 def my_solid(context):
-    return 1
+    return "hello"
 ```
 
 ### Inputs and Outputs
@@ -66,7 +69,9 @@ Inputs are passed as arguments to a solid's `compute_fn`. They are specified usi
 
 A solid only executes once all of its inputs have been resolved. This means for every input, the upstream outputs it depends on have been successfully created, or the input was stubbed.
 
-```python
+```python file=/concepts/solids_pipelines/solids.py startafter=start_input_definition_marker endbefore=end_input_definition_marker
+from dagster import InputDefinition
+
 # The name is required, but both dagster_type and description are optional.
 # - The dagster type will be checked at runtime
 # - The description useful for documentation and is displayed in Dagit
@@ -77,24 +82,14 @@ InputDefinition(name="xyz", dagster_type=int, description="Some description")
 
 We define input definitions on the <PyObject object="solid" decorator /> decorator. The argument names of the `compute_fn` must match the <PyObject object="InputDefinition" displayText="InputDefinitions" /> names.
 
-```python
-# Inputs abc and xyz must appear in the same order on the compute fn
-@solid(
-    input_defs=[
-        InputDefinition(name="abc", dagster_type=str, description="Some description"),
-        InputDefinition(name="xyz", dagster_type=int, description="Some description")
-    ]
-)
-def my_input_example_solid(context, abc, xyz):
-    pass
+```python file=/concepts/solids_pipelines/solids.py startafter=start_input_example_solid_marker endbefore=end_input_example_solid_marker
+No match for startAfter value "start_input_example_solid_marker"
 ```
 
 For simple cases, you can use Python typehints instead of specifying InputDefinitions. However, this will prevent you from being able to set a default value or description for your input.
 
-```python
-@solid
-def my_typehints_solid(context, abc: str, xyz: int):
-    pass
+```python file=/concepts/solids_pipelines/solids.py startafter=start_typehints_marker endbefore=end_typehints_marker
+No match for startAfter value "start_typehints_marker"
 ```
 
 ### Outputs
@@ -103,7 +98,10 @@ Outputs are yielded from a solid's `compute_fn`. When you have one output, you c
 
 Similar to <PyObject object="InputDefinition" displayText="InputDefinitions" />, we define <PyObject object="OutputDefinition" pluralize /> on the <PyObject object="solid" decorator /> decorator.
 
-```python file=/legacy/how_tos/solids.py startafter=my_input_output_example_solid_start endbefore=my_input_output_example_solid_end
+```python file=/concepts/solids_pipelines/solids.py startafter=start_input_output_solid_marker endbefore=end_input_output_solid_marker
+from dagster import OutputDefinition, Output
+
+
 @solid(
     input_defs=[
         InputDefinition(name="a", dagster_type=int),
@@ -129,12 +127,14 @@ Solids are used within a <PyObject object="pipeline" displayText="@pipeline" />.
 
 Here we have a solid with multiple inputs. Notice how the order of the inputs match the order of the arguments on the compute function.
 
-```python
+```python file=/concepts/solids_pipelines/solids.py startafter=start_with_multiple_inputs_marker endbefore=end_with_multiple_inputs_marker
 @solid(
-     InputDefinition(name="value_a", dagster_type=int),
-     InputDefinition(name="value_b", dagster_type=int),
+    input_defs=[
+        InputDefinition(name="value_a", dagster_type=int),
+        InputDefinition(name="value_b", dagster_type=int),
+    ]
 )
-def addder(_context, value_a, value_b):
+def addder(context, value_a, value_b):
     context.log.info(str(value_a + value_b))
 ```
 
@@ -142,27 +142,25 @@ def addder(_context, value_a, value_b):
 
 When you have a single output, you don't need to yield the output using the <PyObject object="Output"/> class. This is because there is no ambiguity about which output is being emmited.
 
-```python
-@solid(
-    output_defs=[OutputDefinition("name", dagster_type=str)]
-)
-def addder(_context):
-  return "Dagster"
+```python file=/concepts/solids_pipelines/solids.py startafter=start_with_single_output_marker endbefore=end_with_single_output_marker
+@solid(output_defs=[OutputDefinition(name="my_name", dagster_type=str)])
+def single_output_solid(_context):
+    return "Dagster"
 ```
 
 ### With multiple outputs
 
 Here we have a solid that emits multiple outputs. Notice how we have to use `yield` here instead of return since we more than one output. It is also imporant to wrap the output in the `Output` class, in order to help differentiate different outputs.
 
-```python
+```python file=/concepts/solids_pipelines/solids.py startafter=start_with_multiple_outputs_marker endbefore=end_with_multiple_outputs_marker
 @solid(
     output_defs=[
-        OutputDefinition("name", dagster_type=str),
-        OutputDefinition("age", dagster_type=str)
+        OutputDefinition(name="my_name", dagster_type=str),
+        OutputDefinition(name="age", dagster_type=str),
     ]
 )
-def addder(_context, value_a, value_b):
-    yield Output("dagster", output_name="name")
+def multiple_outputs_solid(_context):
+    yield Output("dagster", output_name="my_name")
     yield Output("dagster", output_name="age")
 ```
 
@@ -170,23 +168,23 @@ def addder(_context, value_a, value_b):
 
 Inputs and outputs are _optionally_ typed. It is okay to leave out the type of an input or output if needed.
 
-```python
+```python file=/concepts/solids_pipelines/solids.py startafter=start_with_untyped_marker endbefore=end_with_untyped_marker
 @solid(
     input_defs=[
         InputDefinition(name="value_a"),
         InputDefinition(name="value_b"),
     ]
 )
-def addder(_context, value_a, value_b):
-    context.log.info(str(value_a + value_b)))
+def untyped_inputs_solid(context, value_a, value_b):
+    context.log.info(str(value_a + value_b))
 ```
 
 In fact, if you are only using the "name" argument for inputs, you can drop the input definitions entirely.
 
-```python
+```python file=/concepts/solids_pipelines/solids.py startafter=start_with_untyped_no_input_defs_marker endbefore=end_with_untyped_no_input_defs_marker
 @solid
-def addder(_context, value_a, value_b):
-    context.log.info(str(value_a + value_b)))
+def no_input_defs_solid(context, value_a, value_b):
+    context.log.info(str(value_a + value_b))
 ```
 
 ## Patterns
@@ -197,9 +195,15 @@ You may find the need to create utilities that help generate solids. In most cas
 
 To create a solid factory, you define a function that returns a <PyObject object="SolidDefinition"/> , either directly or by decorating a function with the solid dectorator.
 
-```python
+```python file=/concepts/solids_pipelines/solids.py startafter=start_solid_factory_pattern_marker endbefore=end_solid_factory_pattern_marker
+from dagster import Nothing
+
+
 def x_solid(
-    arg, name="default_name", input_defs=None, **kwargs,
+    arg,
+    name="default_name",
+    input_defs=None,
+    **kwargs,
 ):
     """
     Args:

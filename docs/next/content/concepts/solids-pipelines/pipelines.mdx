@@ -28,7 +28,10 @@ To define a pipeline, use the <PyObject object="pipeline" decorator /> decorator
 
 Within the body of the function that is decorated, we use function calls to indicate the dependency structure of the solids making up the pipeline.
 
-```python file=/overview/solids_pipelines/pipeline_definition.py startafter=start_pipeline_definition_marker_0 endbefore=end_pipeline_definition_marker_0
+```python file=/concepts/solids_pipelines/pipelines.py startafter=start_pipeline_example_marker endbefore=end_pipeline_example_marker
+from dagster import solid, pipeline, InputDefinition
+
+
 @solid
 def return_one(context):
     return 1
@@ -52,18 +55,23 @@ def one_plus_one_pipeline():
 
 The simplest example is the linear pipeline. We return one output from the root solid, and pass along data through single inputs and outputs.
 
-```python
+```python file=/concepts/solids_pipelines/linear_pipeline.py startafter=start_marker endbefore=end_marker
+from dagster import solid, pipeline, InputDefinition
+
+
 @solid
 def return_one(context):
     return 1
+
 
 @solid(input_defs=[InputDefinition("number", int)])
 def add_one(context, number):
     return number + 1
 
+
 @pipeline
-def linear_pipeline():
-   add_one(add_one(return_one())
+def one_plus_one_pipeline():
+    add_one(return_one())
 ```
 
 ### Multiple Inputs and Outputs
@@ -72,13 +80,18 @@ def linear_pipeline():
 
 Outputs can be passed to multiple downstream solids. In this example, the output from the first solid is passed to two different solids. The outputs of those solids are combined and passed to the final solid.
 
-```python
+```python file=/concepts/solids_pipelines/multiple_io_pipeline.py startafter=start_marker endbefore=end_marker
+from dagster import solid, pipeline, InputDefinition, OutputDefinition, Output
+
+
 def return_one(context):
     return 1
+
 
 @solid(input_defs=[InputDefinition("number", int)])
 def add_one(context, number):
     return number + 1
+
 
 @solid(
     input_defs=[
@@ -92,19 +105,24 @@ def add_one(context, number):
 def adder(context, a, b):
     yield Output(a + b, output_name="sum")
 
+
 @pipeline
 def linear_pipeline():
-   value = return_one()
-   a = add_one()
-   b = add_one()
-   adder(a, b)
+    value = return_one()
+    a = add_one(value)
+    b = add_one(value)
+    adder(a, b)
 ```
 
 ### Conditional Branching
 
 <img src="/images/concepts/pipelines/branch.png" />
 
-```python
+```python file=/concepts/solids_pipelines/branching_pipeline.py startafter=start_marker endbefore=end_marker
+import random
+from dagster import solid, pipeline, InputDefinition, OutputDefinition, Output
+
+
 @solid(
     output_defs=[
         OutputDefinition(int, "branch_1", is_required=False),
@@ -154,14 +172,17 @@ However, sometimes it doesn't make sense to use Dagster's inputs/outputs to mode
 
 In this situation, we can use the Nothing Dagster type to model the dependency between the two solids. We are passing "nothing" via Dagster between the two solids. By hooking up a "nothing" output of the first solid to a "nothing" input of the second solid, Dagster understands that the second should execute after the first.
 
-```python
+```python file=/concepts/solids_pipelines/order_based_dependency_pipeline.py startafter=start_marker endbefore=end_marker
+from dagster import solid, pipeline, InputDefinition, Nothing
+
+
 @solid
-def create_table_1(_) -> Nothing:
+def create_table_1(_context) -> Nothing:
     get_database_connection().execute("create table_1 as select * from some_source_table")
 
 
 @solid(input_defs=[InputDefinition("start", Nothing)])
-def create_table_2(_):
+def create_table_2(_context):
     get_database_connection().execute("create table_2 as select * from table_1")
 
 
@@ -178,7 +199,9 @@ You may run into a situation where you need to programatically construct the dep
 
 To construct a PipelineDefinition, you need to pass the constructor a pipeline name, list of solid definitions, and a dictionary defining the dependency structure. The dependency structure declares the dependencies of each solid’s inputs on the outputs of other solids in the pipeline. Keys of the top level dict are either the string names of solids in the pipeline or, in the case of aliased solids, SolidInvocations. Values of the top level dict are themselves dicts, which map input names belonging to the solid or aliased solid to DependencyDefinitions.
 
-```python file=/overview/solids_pipelines/pipeline_definition.py startafter=start_pipeline_definition_marker_1 endbefore=end_pipeline_definition_marker_1
+```python file=/concepts/solids_pipelines/pipelines.py startafter=start_pipeline_definition_marker endbefore=end_pipeline_definition_marker
+from dagster import PipelineDefinition, DependencyDefinition
+
 one_plus_one_pipeline_def = PipelineDefinition(
     name="one_plus_one_pipeline",
     solid_defs=[return_one, add_one],
