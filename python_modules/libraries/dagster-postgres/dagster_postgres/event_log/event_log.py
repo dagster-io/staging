@@ -73,7 +73,9 @@ class PostgresEventLogStorage(SqlEventLogStorage, ConfigurableClass):
 
         if "event_logs" not in table_names:
             with self._connect() as conn:
-                alembic_config = get_alembic_config(__file__)
+                alembic_config = get_alembic_config(
+                    __file__, config_path="../alembic/alembic.ini", script_path="../alembic/"
+                )
                 retry_pg_creation_fn(lambda: SqlEventLogStorageMetadata.create_all(conn))
 
                 # This revision may be shared by any other dagster storage classes using the same DB
@@ -92,7 +94,9 @@ class PostgresEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         )
 
     def upgrade(self):
-        alembic_config = get_alembic_config(__file__)
+        alembic_config = get_alembic_config(
+            __file__, config_path="../alembic/alembic.ini", script_path="../alembic/"
+        )
         with self._connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
 

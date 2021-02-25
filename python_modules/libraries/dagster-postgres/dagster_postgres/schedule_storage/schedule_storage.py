@@ -52,7 +52,9 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         missing_main_table = "schedules" not in table_names and "jobs" not in table_names
         if missing_main_table:
             with self.connect() as conn:
-                alembic_config = get_alembic_config(__file__)
+                alembic_config = get_alembic_config(
+                    __file__, config_path="../alembic/alembic.ini", script_path="../alembic/"
+                )
                 retry_pg_creation_fn(lambda: ScheduleStorageSqlMetadata.create_all(conn))
 
                 # This revision may be shared by any other dagster storage classes using the same DB
@@ -96,6 +98,8 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         return create_pg_connection(self._engine, __file__, "schedule")
 
     def upgrade(self):
-        alembic_config = get_alembic_config(__file__)
+        alembic_config = get_alembic_config(
+            __file__, config_path="../alembic/alembic.ini", script_path="../alembic/"
+        )
         with self.connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
