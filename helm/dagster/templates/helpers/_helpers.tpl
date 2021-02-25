@@ -26,7 +26,7 @@ If release name contains chart name it will be used as a full name.
 
 # Image utils
 {{- define "image.name" }}
-{{- .repository -}}:{{- .tag -}}
+{{- .registry -}}/{{- .repository -}}:{{- .tag -}}
 {{- end }}
 
 {{- define "dagster.dagit.dagitCommand" -}}
@@ -153,6 +153,6 @@ DAGSTER_K8S_PG_PASSWORD_SECRET: "{{ template "dagster.fullname" .}}-postgresql-s
 DAGSTER_K8S_INSTANCE_CONFIG_MAP: "{{ template "dagster.fullname" .}}-instance"
 DAGSTER_K8S_PIPELINE_RUN_NAMESPACE: "{{ .Release.Namespace }}"
 DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP: "{{ template "dagster.fullname" . }}-pipeline-env"
-DAGSTER_K8S_PIPELINE_RUN_IMAGE: "{{- .Values.pipelineRun.image.repository -}}:{{- .Values.pipelineRun.image.tag -}}"
+DAGSTER_K8S_PIPELINE_RUN_IMAGE: "{{ include "image.name" .Values.pipelineRun.image | quote }}"
 DAGSTER_K8S_PIPELINE_RUN_IMAGE_PULL_POLICY: "{{ .Values.pipelineRun.image.pullPolicy }}"
 {{- end -}}
