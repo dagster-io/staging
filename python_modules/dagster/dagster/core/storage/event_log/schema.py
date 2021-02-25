@@ -31,6 +31,7 @@ AssetKeyTable = db.Table(
     SqlEventLogStorageMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
     db.Column("asset_key", db.Text, unique=True),
+    db.Column("last_materialization", db.Text),
     db.Column("create_timestamp", db.DateTime, server_default=get_current_timestamp()),
 )
 
