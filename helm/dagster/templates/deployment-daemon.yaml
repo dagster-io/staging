@@ -37,7 +37,7 @@ spec:
         {{- toYaml .Values.dagsterDaemon.podSecurityContext | nindent 8 }}
       initContainers:
         - name: check-db-ready
-          image: "{{- $.Values.postgresql.image.repository -}}:{{- $.Values.postgresql.image.tag -}}"
+          image: "{{- $.Values.postgresql.image.registry -}}/{{- $.Values.postgresql.image.repository -}}:{{- $.Values.postgresql.image.tag -}}"
           imagePullPolicy: "{{- $.Values.postgresql.image.pullPolicy -}}"
           command: ['sh', '-c',
             'until pg_isready -h {{ include "dagster.postgresql.host" $ }} -p {{ $.Values.postgresql.service.port }}; do echo waiting for database; sleep 2; done;',
@@ -49,7 +49,7 @@ spec:
           securityContext:
             {{- toYaml .Values.dagsterDaemon.securityContext | nindent 12 }}
           imagePullPolicy: {{ .Values.dagsterDaemon.image.pullPolicy }}
-          image: "{{ .Values.dagsterDaemon.image.repository }}:{{ .Values.dagsterDaemon.image.tag }}"
+          image: "{{- $.Values.dagsterDaemon.image.registry -}}/{{ .Values.dagsterDaemon.image.repository }}:{{ .Values.dagsterDaemon.image.tag }}"
           command: ["dagster-daemon"]
           args: ["run"]
           env:

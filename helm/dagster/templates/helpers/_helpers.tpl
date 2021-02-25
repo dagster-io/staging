@@ -153,6 +153,6 @@ DAGSTER_K8S_PG_PASSWORD_SECRET: "{{ template "dagster.fullname" .}}-postgresql-s
 DAGSTER_K8S_INSTANCE_CONFIG_MAP: "{{ template "dagster.fullname" .}}-instance"
 DAGSTER_K8S_PIPELINE_RUN_NAMESPACE: "{{ .Release.Namespace }}"
 DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP: "{{ template "dagster.fullname" . }}-pipeline-env"
-DAGSTER_K8S_PIPELINE_RUN_IMAGE: "{{- .Values.pipelineRun.image.repository -}}:{{- .Values.pipelineRun.image.tag -}}"
+DAGSTER_K8S_PIPELINE_RUN_IMAGE: "{{- .Values.pipelineRun.image.registry -}}/{{- .Values.pipelineRun.image.repository -}}:{{- .Values.pipelineRun.image.tag -}}"
 DAGSTER_K8S_PIPELINE_RUN_IMAGE_PULL_POLICY: "{{ .Values.pipelineRun.image.pullPolicy }}"
 {{- end -}}
