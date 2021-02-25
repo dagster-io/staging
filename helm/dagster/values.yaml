@@ -21,6 +21,7 @@ dagit:
   replicaCount: 1
   # REQUIRED: Dagit image repository and tag to deploy
   image:
+    registry: index.docker.io
     repository: "dagster/dagster-celery-k8s"
     tag: "latest"
     pullPolicy: Always
@@ -168,6 +169,7 @@ userDeployments:
   deployments:
     - name: "k8s-example-user-code-1"
       image:
+        registry: index.docker.io
         repository: "dagster/user-code-example"
         tag: latest
         # Change with caution! If you're using a fixed tag for pipeline run images, changing the
@@ -261,6 +263,7 @@ userDeployments:
 ####################################################################################################
 pipelineRun:
   image:
+    registry: index.docker.io
     repository: "dagster/user-code-example"
     tag: "latest"
     pullPolicy: Always
@@ -294,6 +297,7 @@ scheduler:
       # (to call `dagster api launch_scheduled_execution`) and instance yaml
       # but does not need access to user code.
       image:
+        registry: index.docker.io
         repository: "dagster/dagster-celery-k8s"
         tag: "latest"
         pullPolicy: Always
@@ -339,6 +343,7 @@ runLauncher:
       ## This image should only be specified when user code deployments are disabled. Otherwise,
       ## it will be ignored.
       # image:
+      #   registry: ""
       #   repository: ""
       #   tag: ""
       #   pullPolicy: Always
@@ -375,6 +380,7 @@ runLauncher:
     celeryK8sRunLauncher:
       # The Celery workers can be deployed with a fixed image (no user code included)
       image:
+        registry: index.docker.io
         repository: "dagster/dagster-celery-k8s"
         tag: "latest"
         pullPolicy: Always
@@ -492,6 +498,7 @@ postgresql:
 
   # Used by init container to check that db is running. (Even if enabled:false)
   image:
+    registry: index.docker.io
     repository: "postgres"
     tag: "9.6.16"
     pullPolicy: IfNotPresent
@@ -557,6 +564,7 @@ flower:
   enabled: false
 
   image:
+    registry: index.docker.io
     repository: "mher/flower"
     tag: "0.9.5"
     pullPolicy: Always
@@ -683,6 +691,7 @@ dagsterDaemon:
   enabled: true
 
   image:
+    registry: index.docker.io
     repository: "dagster/dagster-celery-k8s"
     tag: "latest"
     pullPolicy: Always
@@ -753,6 +762,15 @@ dagsterDaemon:
     periodSeconds: 10
     failureThreshold: 12
     timeoutSeconds: 3
+
+####################################################################################################
+# busybox: Configuration for the busybox image used to check connections
+####################################################################################################
+busybox:
+  image:
+    registry: index.docker.io
+    repository: "busybox"
+    tag: "1.28"
 
 ####################################################################################################
 # Extra Manifests: (Optional) Create additional k8s resources within this chart

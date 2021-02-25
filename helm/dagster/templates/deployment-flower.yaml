@@ -36,7 +36,7 @@ spec:
       {{- toYaml .Values.flower.podSecurityContext | nindent 8 }}
       initContainers:
         - name: check-db-ready
-          image: "{{- $.Values.postgresql.image.repository -}}:{{- $.Values.postgresql.image.tag -}}"
+          image: {{ include "image.name" $.Values.postgresql.image | quote }}
           imagePullPolicy: "{{- $.Values.postgresql.image.pullPolicy -}}"
           command: ['sh', '-c',
             'until pg_isready -h {{ include "dagster.postgresql.host" . }} -p {{ .Values.postgresql.service.port }}; do echo waiting for database; sleep 2; done;',
@@ -48,7 +48,7 @@ spec:
           securityContext:
           {{- toYaml .Values.flower.securityContext | nindent 12 }}
           imagePullPolicy: {{ .Values.flower.image.pullPolicy }}
-          image: {{ include "image.name" .Values.flower.image | quote }}
+          image: {{ include "image.name" $.Values.flower.image | quote }}
           args: ["flower"]
           envFrom:
             - configMapRef:
