@@ -37,7 +37,13 @@ export class Structured extends React.Component<StructuredProps, StructuredState
     if (node.__typename === 'ExecutionStepFailureEvent') {
       showCustomAlert({
         title: 'Error',
-        body: <PythonErrorInfo error={node.error} failureMetadata={node.failureMetadata} />,
+        body: (
+          <PythonErrorInfo
+            error={node.error}
+            failureMetadata={node.failureMetadata}
+            errorSource={node.errorSource}
+          />
+        ),
       });
     } else if (node.__typename === 'HookErroredEvent') {
       showCustomAlert({
@@ -120,6 +126,7 @@ export const LOGS_ROW_STRUCTURED_FRAGMENT = gql`
       error {
         ...PythonErrorFragment
       }
+      errorSource
       failureMetadata {
         metadataEntries {
           ...MetadataEntryFragment

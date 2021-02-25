@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import {PythonErrorFragment} from 'src/app/types/PythonErrorFragment';
 import {MetadataEntries} from 'src/runs/MetadataEntry';
 import {MetadataEntryFragment} from 'src/runs/types/MetadataEntryFragment';
+import {ErrorSource} from 'src/types/globalTypes';
 import {FontFamily} from 'src/ui/styles';
 
 interface IPythonErrorInfoProps {
@@ -14,6 +15,7 @@ interface IPythonErrorInfoProps {
   contextMsg?: string;
   error: {message: string} | PythonErrorFragment;
   failureMetadata?: {metadataEntries: MetadataEntryFragment[]} | null;
+  errorSource?: ErrorSource | null;
 }
 
 export const PythonErrorInfo: React.FC<IPythonErrorInfoProps> = (props) => {
