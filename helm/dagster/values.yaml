@@ -533,10 +533,11 @@ rabbitmq:
 ####################################################################################################
 redis:
   # To use redis instead of rabbitmq, set `enabled` to true.
-  enabled: false
+  enabled: true
 
-  # To use an external redis, set `external` to `true`. To manage redis via helm, set `external` to `false`.
-  external: true
+  # To manage redis via helm, set `internal` to `true`. To use an external redis, set `internal` to `false`.
+  # Note: If internal is true, then redis will be created regardless of enabled flag.
+  internal: false
 
   # Redis host URL
   host: ""
