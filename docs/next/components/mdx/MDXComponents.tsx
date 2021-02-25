@@ -5,7 +5,8 @@
 // For example, if you need to update `PyObject`, rename the existing component to `PyObjectLegacy`
 // and update all existing usage of it
 
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
+import { useRouter } from "next/router";
 
 import Link from "../Link";
 
@@ -217,8 +218,19 @@ const Warning = ({ children }) => {
 
 const CodeReferenceLink = (props: { filePath: string }) => {
   const filePath = props.filePath;
-  const version = "master";
-  // TODO: versioned github link
+  // Find current version
+  const router = useRouter();
+  const [version, setVersion] = useState("master");
+
+  useEffect(() => {
+    if (router.isReady) {
+      // FIXME: do not use regex
+      if (router.query.page[0].match(/\d+\.\d+\.\d+/)) {
+        setVersion(router.query.page[0]);
+      }
+    }
+  }, [router]);
+
   return (
     <div className="bg-blue-50 rounded flex item-center p-4">
       <div>
