@@ -71,6 +71,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
     """
 
     def __init__(self, origin):
+        from dagster.api.snapshot_repository import sync_get_streaming_external_repositories_grpc
         from dagster.grpc.client import DagsterGrpcClient
         from dagster.grpc.server_watcher import create_grpc_watch_thread
 
@@ -121,6 +122,13 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
             )
 
             self.container_image = self._reload_current_image()
+
+            external_repositories_list = sync_get_streaming_external_repositories_grpc(
+                self.client,
+                self,
+            )
+
+            self.external_repositories = {repo.name: repo for repo in external_repositories_list}
         except:
             self.cleanup()
             raise
@@ -187,6 +195,7 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
     """
 
     def __init__(self, origin):
+        from dagster.api.snapshot_repository import sync_get_streaming_external_repositories_grpc
         from dagster.grpc.client import client_heartbeat_thread
         from dagster.grpc.server import GrpcServerProcess
 
@@ -223,13 +232,21 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
             self.heartbeat_thread.start()
 
             list_repositories_response = sync_list_repositories_grpc(self.client)
+
+            self.repository_code_pointer_dict = (
+                list_repositories_response.repository_code_pointer_dict
+            )
+            self.container_image = self.client.get_current_image().current_image
+
+            external_repositories_list = sync_get_streaming_external_repositories_grpc(
+                self.client,
+                self,
+            )
+
+            self.external_repositories = {repo.name: repo for repo in external_repositories_list}
         except:
             self.cleanup()
             raise
-
-        self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
-
-        self.container_image = self.client.get_current_image().current_image
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
