@@ -91,3 +91,16 @@ file:/docs_snippets/docs_snippets/overview/schedules_partitions/sensor_definitio
 startAfter:start_sensor_marker_1
 endBefore:end_sensor_marker_1
 ```
+
+### Testing sensors
+
+<PyObject module="dagster" object="evaluate_sensor" /> allows for evaluation of the sensor body, resolving
+to a list of <PyObject module="dagster" object="RunRequest" /> or <PyObject
+  module="dagster"
+  object="SkipReason"
+/>
+s.
+
+<p />
+
+There is also a CLI command `dagster sensor preview` that evaluates a sensor in a specific repository.

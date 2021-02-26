@@ -30,3 +30,8 @@ Sensors
 
 .. autoclass:: SensorDefinition
 .. autoclass:: SensorExecutionContext
+
+Evaluation
+==========
+
+.. autofunction:: evaluate_sensor
