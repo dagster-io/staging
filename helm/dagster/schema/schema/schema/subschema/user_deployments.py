@@ -26,4 +26,4 @@ class UserDeployment(BaseModel):
 
 class UserDeployments(BaseModel):
     enabled: bool
-    deployments: List[UserDeployment]
+    deployments: Optional[List[UserDeployment]]
