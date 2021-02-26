@@ -157,6 +157,7 @@ from dagster.utils.partitions import (
 )
 from dagster.utils.test import (
     check_dagster_type,
+    evaluate_sensor,
     execute_solid,
     execute_solid_within_pipeline,
     execute_solids_within_pipeline,
@@ -275,6 +276,7 @@ __all__ = [
     # Utilities
     "build_intermediate_storage_from_object_store",
     "check_dagster_type",
+    "evaluate_sensor",
     "execute_solid",
     "execute_solids_within_pipeline",
     "file_relative_path",

@@ -195,28 +195,28 @@ You can monitor and operate sensors in Dagit. There are multiple views that help
 To view the sensors page, click the "All sensors" in the left-hand navigation pane. Here you can turn sensors on and off using the toggle.
 
 <Image
-alt="All Sensors"
-src="/images/concepts/partitions-schedules-sensors/sensors/all-sensors.png"
-width={1982}
-height={1400}
+  alt="All Sensors"
+  src="/images/concepts/partitions-schedules-sensors/sensors/all-sensors.png"
+  width={1982}
+  height={1400}
 />
 
 If you click on any sensor, you can monitor all sensor evaluations and runs created:
 
 <Image
-alt="Sensor A"
-src="/images/concepts/partitions-schedules-sensors/sensors/sensor-A.png"
-width={1982}
-height={1400}
+  alt="Sensor A"
+  src="/images/concepts/partitions-schedules-sensors/sensors/sensor-A.png"
+  width={1982}
+  height={1400}
 />
 
 If your sensor throws an error or yields a skip reason, the sensor timeline view will display more information about the errors and skips:
 
 <Image
-alt="My Directory Sensor"
-src="/images/concepts/partitions-schedules-sensors/sensors/my-directory-sensor.png"
-width={1938}
-height={1356}
+  alt="My Directory Sensor"
+  src="/images/concepts/partitions-schedules-sensors/sensors/my-directory-sensor.png"
+  width={1938}
+  height={1356}
 />
 
 ## Examples
@@ -305,3 +305,37 @@ def my_s3_sensor(context):
     for s3_key in new_s3_keys:
         yield RunRequest(run_key=s3_key, run_config={})
 ```
+
+### Testing sensors on the command-line
+
+The `dagster` command-line tool contains a number of options to manage sensors. You can view the set of known sensors, turn them on and off, and preview the set of runs that will be requested in the next evaluation of the sensor.
+
+You can view the full set of sensor command-line options by running `dagster sensor --help`.
+
+### Custom evaluation intervals
+
+By default, sensors are configured to run roughly every 30 seconds, but they can be configured to
+run at a different interval by setting the `minimum_interval_seconds` parameter on the sensor
+decorator. The minimum interval specified on the sensor definition guarantees that the sensor will
+not be evaluated more frequently than that interval.
+
+For example, here are two sensors that are defined with two different intervals:
+
+```python literalinclude caption=sensor.py
+file:/docs_snippets/docs_snippets/overview/schedules_partitions/sensor_definition.py
+startAfter:start_sensor_marker_1
+endBefore:end_sensor_marker_1
+```
+
+### Testing sensors
+
+<PyObject module="dagster" object="evaluate_sensor" /> allows for evaluation of the sensor body, resolving
+to a list of <PyObject module="dagster" object="RunRequest" /> or <PyObject
+  module="dagster"
+  object="SkipReason"
+/>
+s.
+
+<p />
+
+There is also a CLI command `dagster sensor preview` that evaluates a sensor in a specific repository.
