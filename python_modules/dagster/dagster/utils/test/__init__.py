@@ -4,15 +4,21 @@ import tempfile
 import uuid
 from collections import defaultdict
 from contextlib import contextmanager
+from typing import List, Union
 
 # top-level include is dangerous in terms of incurring circular deps
 from dagster import (
+    DagsterInstance,
     DagsterInvariantViolationError,
     DependencyDefinition,
     Failure,
     ModeDefinition,
     PipelineDefinition,
     RepositoryDefinition,
+    RunRequest,
+    SensorDefinition,
+    SensorExecutionContext,
+    SkipReason,
     SolidInvocation,
     TypeCheck,
     check,
@@ -324,6 +330,23 @@ def execute_solid(
         raise_on_error=raise_on_error,
     )
     return result.result_for_handle(solid_def.name)
+
+
+def evaluate_sensor(
+    sensor_definition: SensorDefinition,
+    instance: DagsterInstance = None,
+    last_completion_time: float = None,
+    last_run_key: str = None,
+) -> List[Union[RunRequest, SkipReason]]:
+    check.inst_param(sensor_definition, "sensor_definition", SensorDefinition)
+    check.opt_inst_param(instance, "instance", DagsterInstance)
+    last_completion_time = check.opt_float_param(last_completion_time, "last_completion_time")
+    last_run_key = check.opt_str_param(last_run_key, "last_run_key")
+    if not instance:
+        instance = DagsterInstance.get()
+
+    context = SensorExecutionContext(instance, last_completion_time, last_run_key)
+    return sensor_definition.get_execution_data(context)
 
 
 def check_dagster_type(dagster_type, value):
