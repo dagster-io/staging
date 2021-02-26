@@ -191,6 +191,7 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
             "install",
             "--namespace",
             namespace,
+            "--debug",
             "-f",
             "-",
             "dagster",
@@ -200,7 +201,12 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
         print("Running Helm Install: \n", " ".join(helm_cmd), "\nWith config:\n", helm_config_yaml)
 
         p = subprocess.Popen(
-            helm_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            helm_cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            encoding="utf-8",
+            text=True,
         )
         stdout, stderr = p.communicate(helm_config_yaml.encode("utf-8"))
         print("Helm install completed with stdout: ", stdout)
