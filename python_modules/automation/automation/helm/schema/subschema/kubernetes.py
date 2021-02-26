@@ -31,6 +31,7 @@ class PullPolicy(str, Enum):
 
 
 class Image(BaseModel):
+    registry: str
     repository: str
     tag: str
     pullPolicy: PullPolicy
