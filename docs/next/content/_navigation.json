@@ -208,16 +208,12 @@
         "title": "Repositories & Workspaces",
         "children": [
           {
-            "title": "Overview",
-            "path": "/overview/repositories-workspaces/repositories"
-          },
-          {
             "title": "Repositories",
-            "path": "/overview/repositories-workspaces/repositories"
+            "path": "/concepts/repositories-workspaces/repositories"
           },
           {
             "title": "Workspaces",
-            "path": "/overview/repositories-workspaces/workspaces"
+            "path": "/concepts/repositories-workspaces/workspaces"
           }
         ]
       },

@@ -1,0 +1,4 @@
+load_from:
+  - python_file:
+      relative_path: file_with_many_repositories.py
+      attribute: hello_world_repository
