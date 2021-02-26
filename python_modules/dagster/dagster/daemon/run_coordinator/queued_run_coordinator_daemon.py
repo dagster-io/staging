@@ -1,4 +1,5 @@
 import logging
+import sys
 import time
 from collections import defaultdict
 
@@ -14,6 +15,7 @@ from dagster.core.storage.pipeline_run import (
 from dagster.core.storage.tags import PRIORITY_TAG
 from dagster.daemon.daemon import DagsterDaemon
 from dagster.utils.backcompat import experimental
+from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.external import external_pipeline_from_location_handle
 
 
@@ -146,11 +148,22 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
                 if tag_concurrency_limits_counter.is_run_blocked(run):
                     continue
 
-                self._dequeue_run(instance, run, location_manager)
-                tag_concurrency_limits_counter.update_counters_with_launched_run(run)
-                num_dequeued_runs += 1
+                error_info = None
 
-                yield
+                try:
+                    self._dequeue_run(instance, run, location_manager)
+                except Exception:  # pylint: disable=broad-except
+                    error_info = serializable_error_info_from_exc_info(sys.exc_info())
+                    self._logger.error(
+                        "Caught an error for run {} : {}. Skipping, but leaving on the run queue".format(
+                            run.run_id, error_info.to_string()
+                        )
+                    )
+                else:
+                    tag_concurrency_limits_counter.update_counters_with_launched_run(run)
+                    num_dequeued_runs += 1
+
+                yield error_info
 
         self._logger.info("Launched {} runs.".format(num_dequeued_runs))
 
