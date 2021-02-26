@@ -4,7 +4,6 @@ import pendulum
 from dagster import DagsterInvariantViolationError
 from dagster.core.test_utils import instance_for_test
 from dagster.daemon.controller import (
-    DagsterDaemonController,
     all_daemons_healthy,
     all_daemons_live,
     daemon_controller_from_instance,
