@@ -37,6 +37,11 @@ def define_dagster_checker():
                 "pendulum-in-tz",
                 "Use dagster.seven.to_timezone instead of calling in_tz on a pendulum datetime",
             ),
+            "W0006": (
+                "multiple conjunctive (`and`) conditions in a retry loop check (e.g. `while X and Y and attempts > 0`)",
+                "multiple-conjunctive-conditions-in-retry-loop",
+                "try an disjunctive (`or`) check instead (e.g. `while (X or Y) and attempts > 0`)",
+            ),
         }
         options = ()
 
@@ -101,6 +106,20 @@ def define_dagster_checker():
                 and (node.func.attrname == "in_tz")
             ):
                 self.add_message("pendulum-in-tz", node=node)
+
+        def visit_while(self, node):
+            if (
+                node.test
+                and isinstance(node.test, astroid.nodes.BoolOp)
+                and node.test.op == "and"
+                and node.test.values
+                and len(node.test.values) > 2
+                and (
+                    node.test.values[-1].as_string() == "attempts > 0"
+                    or node.test.values[-1].as_string() == "0 < attempts"
+                )
+            ):
+                self.add_message("multiple-conjunctive-conditions-in-retry-loop", node=node)
 
     return DagsterChecker
 
