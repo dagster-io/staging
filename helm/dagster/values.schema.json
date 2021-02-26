@@ -97,7 +97,7 @@
             "properties": {},
             "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
         },
-        "automation__helm__schema__subschema__kubernetes__Service": {
+        "schema__schema__subschema__kubernetes__Service": {
             "title": "Service",
             "type": "object",
             "properties": {
@@ -191,7 +191,7 @@
                     "$ref": "#/definitions/Image"
                 },
                 "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__kubernetes__Service"
+                    "$ref": "#/definitions/schema__schema__subschema__kubernetes__Service"
                 },
                 "env": {
                     "title": "Env",
@@ -356,11 +356,10 @@
                 }
             },
             "required": [
-                "enabled",
-                "deployments"
+                "enabled"
             ]
         },
-        "automation__helm__schema__subschema__postgresql__Service": {
+        "schema__schema__subschema__postgresql__Service": {
             "title": "Service",
             "type": "object",
             "properties": {
@@ -401,7 +400,7 @@
                     "type": "string"
                 },
                 "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__postgresql__Service"
+                    "$ref": "#/definitions/schema__schema__subschema__postgresql__Service"
                 }
             },
             "required": [
@@ -432,7 +431,7 @@
                 "password"
             ]
         },
-        "automation__helm__schema__subschema__rabbitmq__Service": {
+        "schema__schema__subschema__rabbitmq__Service": {
             "title": "Service",
             "type": "object",
             "properties": {
@@ -468,7 +467,7 @@
                     "$ref": "#/definitions/RabbitMQConfiguration"
                 },
                 "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__rabbitmq__Service"
+                    "$ref": "#/definitions/schema__schema__subschema__rabbitmq__Service"
                 },
                 "volumePermissions": {
                     "$ref": "#/definitions/VolumePermissions"
@@ -523,7 +522,7 @@
                     "type": "boolean"
                 },
                 "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__kubernetes__Service"
+                    "$ref": "#/definitions/schema__schema__subschema__kubernetes__Service"
                 },
                 "nodeSelector": {
                     "$ref": "#/definitions/NodeSelector"
