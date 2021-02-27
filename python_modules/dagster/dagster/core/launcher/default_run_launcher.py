@@ -8,6 +8,7 @@ from dagster.core.host_representation import ExternalPipeline
 from dagster.core.host_representation.handle import (
     GrpcServerRepositoryLocationHandle,
     ManagedGrpcPythonEnvRepositoryLocationHandle,
+    SharedGrpcRepositoryLocationHandle,
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -26,6 +27,7 @@ from .base import RunLauncher
 GRPC_REPOSITORY_LOCATION_HANDLE_TYPES = (
     GrpcServerRepositoryLocationHandle,
     ManagedGrpcPythonEnvRepositoryLocationHandle,
+    SharedGrpcRepositoryLocationHandle,
 )
 
 
@@ -213,3 +215,5 @@ class DefaultRunLauncher(RunLauncher, ConfigurableClass):
                     "being used as a contextmanager.",
                 )
                 repository_location_handle.grpc_server_process.wait()
+
+                # Need an answer like this for runs launched from a SharedGrpcRepositoryLocationHandle
