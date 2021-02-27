@@ -8,6 +8,7 @@ from dagster.core.host_representation import ExternalPipeline
 from dagster.core.host_representation.handle import (
     GrpcServerRepositoryLocationHandle,
     ManagedGrpcPythonEnvRepositoryLocationHandle,
+    SharedGrpcRepositoryLocationHandle,
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -26,6 +27,7 @@ from .base import RunLauncher
 GRPC_REPOSITORY_LOCATION_HANDLE_TYPES = (
     GrpcServerRepositoryLocationHandle,
     ManagedGrpcPythonEnvRepositoryLocationHandle,
+    SharedGrpcRepositoryLocationHandle,
 )
 
 
