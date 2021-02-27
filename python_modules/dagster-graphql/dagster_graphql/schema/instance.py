@@ -6,6 +6,8 @@ from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
 from dagster.core.launcher.base import RunLauncher
 from dagster.daemon.controller import get_daemon_status
 from dagster.daemon.types import DaemonStatus
+from dagster_graphql.implementation.external import fetch_repository_locations
+from dagster_graphql.schema.external import GrapheneRepositoryLocationLoadFailure
 
 from .errors import GraphenePythonError
 from .util import non_null_list
@@ -81,6 +83,38 @@ class GrapheneDaemonHealth(graphene.ObjectType):
         ]
 
 
+class GrapheneInstanceHealth(graphene.ObjectType):
+    healthy = graphene.NonNull(graphene.Boolean)
+    unhealthyDaemons = non_null_list(GrapheneDaemonStatus)
+    repositoryLocationFailures = non_null_list(GrapheneRepositoryLocationLoadFailure)
+
+    class Meta:
+        name = "InstanceHealth"
+
+    def __init__(self, instance, graphene_info):
+        check.inst_param(instance, "instance", DagsterInstance)
+
+        daemon_statuses = [
+            GrapheneDaemonStatus(get_daemon_status(instance, daemon_type))
+            for daemon_type in instance.get_required_daemon_types()
+        ]
+        unhealthy_daemons = [status for status in daemon_statuses if not status.healthy]
+
+        repository_locations = fetch_repository_locations(graphene_info).nodes
+        repository_location_failures = [
+            location
+            for location in repository_locations
+            if isinstance(location, GrapheneRepositoryLocationLoadFailure)
+        ]
+        print(repository_location_failures)
+
+        super().__init__(
+            healthy=(not unhealthy_daemons and not repository_location_failures),
+            unhealthyDaemons=unhealthy_daemons,
+            repositoryLocationFailures=repository_location_failures,
+        )
+
+
 class GrapheneInstance(graphene.ObjectType):
     info = graphene.NonNull(graphene.String)
     runLauncher = graphene.Field(GrapheneRunLauncher)
@@ -89,6 +123,7 @@ class GrapheneInstance(graphene.ObjectType):
     daemonHealth = graphene.NonNull(GrapheneDaemonHealth)
     sensorDaemonInterval = graphene.NonNull(graphene.Int)
     daemonBackfillEnabled = graphene.NonNull(graphene.Boolean)
+    instanceHealth = graphene.NonNull(GrapheneInstanceHealth)
 
     class Meta:
         name = "Instance"
@@ -125,3 +160,6 @@ class GrapheneInstance(graphene.ObjectType):
     def resolve_daemonBackfillEnabled(self, _graphene_info):
         backfill_settings = self._instance.get_settings("backfill") or {}
         return backfill_settings.get("daemon_enabled", False)
+
+    def resolve_instanceHealth(self, graphene_info):
+        return GrapheneInstanceHealth(instance=self._instance, graphene_info=graphene_info)

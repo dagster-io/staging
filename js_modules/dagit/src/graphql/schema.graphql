@@ -919,6 +919,7 @@ type Instance {
   daemonHealth: DaemonHealth!
   sensorDaemonInterval: Int!
   daemonBackfillEnabled: Boolean!
+  instanceHealth: InstanceHealth!
 }
 
 type RunLauncher {
@@ -937,6 +938,10 @@ type DaemonStatus {
   healthy: Boolean
   lastHeartbeatTime: Float
   lastHeartbeatErrors: [PythonError!]!
+}
+
+type InstanceHealth {
+  healthy: Boolean!
 }
 
 union AssetsOrError = AssetConnection | PythonError
