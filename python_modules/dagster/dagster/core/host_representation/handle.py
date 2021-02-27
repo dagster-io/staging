@@ -201,7 +201,7 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
 
         self.grpc_server_process = GrpcServerProcess(
             loadable_target_origin=loadable_target_origin,
-            max_workers=2,
+            max_workers=None,
             heartbeat=True,
             lazy_load_user_code=True,
         )
