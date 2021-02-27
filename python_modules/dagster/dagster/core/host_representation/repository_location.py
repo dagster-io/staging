@@ -22,6 +22,7 @@ from dagster.core.host_representation import (
     ManagedGrpcPythonEnvRepositoryLocationHandle,
     PipelineHandle,
     RepositoryHandle,
+    SharedGrpcRepositoryLocationHandle,
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.snap.execution_plan_snapshot import (
@@ -298,8 +299,14 @@ class InProcessRepositoryLocation(RepositoryLocation):
 class GrpcServerRepositoryLocation(RepositoryLocation):
     def __init__(self, repository_location_handle):
         check.param_invariant(
-            isinstance(repository_location_handle, GrpcServerRepositoryLocationHandle)
-            or isinstance(repository_location_handle, ManagedGrpcPythonEnvRepositoryLocationHandle),
+            isinstance(
+                repository_location_handle,
+                (
+                    GrpcServerRepositoryLocationHandle,
+                    ManagedGrpcPythonEnvRepositoryLocationHandle,
+                    SharedGrpcRepositoryLocationHandle,
+                ),
+            ),
             "repository_location_handle",
         )
 

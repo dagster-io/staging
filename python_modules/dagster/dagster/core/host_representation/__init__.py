@@ -40,6 +40,7 @@ from .handle import (
     PipelineHandle,
     RepositoryHandle,
     RepositoryLocationHandle,
+    SharedGrpcRepositoryLocationHandle,
 )
 from .handle_manager import RepositoryLocationHandleManager
 from .historical import HistoricalPipeline

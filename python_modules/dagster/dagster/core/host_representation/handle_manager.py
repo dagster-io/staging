@@ -1,6 +1,6 @@
 from dagster import check
 
-from .origin import RepositoryLocationOrigin
+from .origin import ManagedGrpcPythonEnvRepositoryLocationOrigin, RepositoryLocationOrigin
 
 
 class RepositoryLocationHandleManager:
@@ -8,8 +8,14 @@ class RepositoryLocationHandleManager:
     Holds repository location handles for reuse
     """
 
-    def __init__(self):
+    def __init__(self, grpc_server_registry):
+        from dagster.core.host_representation.grpc_server_registry import GrpcServerRegistry
+
         self._location_handles = {}
+
+        self._grpc_server_registry = check.inst_param(
+            grpc_server_registry, "grpc_server_registry", GrpcServerRegistry
+        )
 
     def __enter__(self):
         return self
@@ -21,7 +27,12 @@ class RepositoryLocationHandleManager:
         origin_id = repository_location_origin.get_id()
 
         if origin_id not in self._location_handles:
-            self._location_handles[origin_id] = repository_location_origin.create_handle()
+            if isinstance(repository_location_origin, ManagedGrpcPythonEnvRepositoryLocationOrigin):
+                handle = self._grpc_server_registry.get_grpc_handle(repository_location_origin)
+            else:
+                handle = repository_location_origin.create_handle()
+
+            self._location_handles[origin_id] = handle
 
         return self._location_handles[origin_id]
 

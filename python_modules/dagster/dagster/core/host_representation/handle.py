@@ -296,6 +296,98 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
         return GrpcServerRepositoryLocation(self)
 
 
+# A handle shared between one or more threads, based around a GrpcServerProcess
+# created by a GrpcServerRegistry
+class SharedGrpcRepositoryLocationHandle(RepositoryLocationHandle):
+    def __init__(self, origin, port, socket):
+        from dagster.grpc.client import client_heartbeat_thread, DagsterGrpcClient
+
+        self._origin = check.inst_param(
+            origin, "origin", ManagedGrpcPythonEnvRepositoryLocationOrigin
+        )
+
+        self._port = check.opt_int_param(port, "port")
+        self._socket = check.opt_str_param(socket, "socket")
+
+        self.client = DagsterGrpcClient(port=self._port, socket=self._socket, host="localhost")
+        self.heartbeat_shutdown_event = threading.Event()
+
+        self.heartbeat_thread = threading.Thread(
+            target=client_heartbeat_thread,
+            args=(
+                self.client,
+                self.heartbeat_shutdown_event,
+            ),
+            name="grpc-client-heartbeat",
+        )
+        self.heartbeat_thread.daemon = True
+        self.heartbeat_thread.start()
+
+        list_repositories_response = sync_list_repositories_grpc(self.client)
+
+        self._executable_path = list_repositories_response.executable_path
+
+        self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
+
+        self.container_image = self.client.get_current_image().current_image
+
+    def get_repository_python_origin(self, repository_name):
+        return _get_repository_python_origin(
+            self.executable_path,
+            self.repository_code_pointer_dict,
+            repository_name,
+            self.container_image,
+        )
+
+    @property
+    def origin(self):
+        return self._origin
+
+    @property
+    def executable_path(self):
+        return self._executable_path
+
+    @property
+    def location_name(self):
+        return self.origin.location_name
+
+    @property
+    def repository_names(self):
+        return set(self.repository_code_pointer_dict.keys())
+
+    @property
+    def host(self):
+        return "localhost"
+
+    @property
+    def port(self):
+        return self._port
+
+    @property
+    def socket(self):
+        return self._socket
+
+    def cleanup(self):
+        if self.heartbeat_shutdown_event:
+            self.heartbeat_shutdown_event.set()
+            self.heartbeat_shutdown_event = None
+
+        if self.heartbeat_thread:
+            self.heartbeat_thread.join()
+            self.heartbeat_thread = None
+
+    @property
+    def is_cleaned_up(self):
+        return not self.heartbeat_shutdown_event
+
+    def create_location(self):
+        from dagster.core.host_representation.repository_location import (
+            GrpcServerRepositoryLocation,
+        )
+
+        return GrpcServerRepositoryLocation(self)
+
+
 class InProcessRepositoryLocationHandle(RepositoryLocationHandle):
     def __init__(self, origin):
         self._origin = check.inst_param(origin, "origin", InProcessRepositoryLocationOrigin)
