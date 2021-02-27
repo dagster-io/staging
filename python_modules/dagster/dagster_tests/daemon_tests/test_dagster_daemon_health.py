@@ -4,7 +4,6 @@ import pendulum
 from dagster import DagsterInvariantViolationError
 from dagster.core.test_utils import instance_for_test
 from dagster.daemon.controller import (
-    DagsterDaemonController,
     all_daemons_healthy,
     all_daemons_live,
     daemon_controller_from_instance,
@@ -77,7 +76,7 @@ def test_thread_die_daemon(monkeypatch):
 
         iteration_ran = {"ran": False}
 
-        def run_iteration_error(_, _instance, _daemon_shutdown_event):
+        def run_iteration_error(_, _instance, _daemon_shutdown_event, _grpc_server_registry):
             iteration_ran["ran"] = True
             raise KeyboardInterrupt
             yield  # pylint: disable=unreachable
@@ -115,7 +114,7 @@ def test_error_daemon(monkeypatch):
     with instance_for_test() as instance:
         from dagster.daemon.daemon import SensorDaemon
 
-        def run_iteration_error(_, _instance, _daemon_shutdown_event):
+        def run_iteration_error(_, _instance, _daemon_shutdown_event, _grpc_server_registry):
             raise DagsterInvariantViolationError("foobar")
             yield  # pylint: disable=unreachable
 
@@ -154,7 +153,7 @@ def test_multiple_error_daemon(monkeypatch):
     with instance_for_test() as instance:
         from dagster.daemon.daemon import SensorDaemon
 
-        def run_iteration_error(_, _instance, _daemon_shutdown_event):
+        def run_iteration_error(_, _instance, _daemon_shutdown_event_, _grpc_server_registry):
             # ?message stack cls_name cause"
             yield SerializableErrorInfo("foobar", None, None, None)
             yield SerializableErrorInfo("bizbuz", None, None, None)
