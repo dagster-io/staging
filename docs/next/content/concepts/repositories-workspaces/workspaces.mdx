@@ -96,7 +96,7 @@ from that directory with no arguments.
 
 Having a yaml file `workspace.yaml` is convenient: it prevents you from having to type the same
 `-f`or`-m`flag repeatedly. You can also load the workspace via `-w`. See detailed references
-in [`dagit`](/_apidocs/cli#dagit).
+in [`dagit`](/\_apidocs/cli#dagit).
 
 ## Examples
 
@@ -109,7 +109,7 @@ name or the name of a function that returns a <PyObject object="RepositoryDefini
 ```yaml file=/concepts/repositories_workspaces/workspace_one_repository.yaml
 load_from:
   - python_file:
-      relative_path: file_with_many_repositories.py
+      relative_path: hello_world_repository.py
       attribute: hello_world_repository
 ```
 
@@ -126,7 +126,7 @@ the `working_directory` key. For example:
 load_from:
   - python_file:
       relative_path: hello_world_repository.py
-      working_directory: /var/my_working_directory/
+      working_directory: my_working_directory/
 ```
 
 ### Loading Python package

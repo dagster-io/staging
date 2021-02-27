@@ -223,11 +223,7 @@
         "children": [
           {
             "title": "Loggers",
-            "path": "/overview/logging/logging"
-          },
-          {
-            "title": "Customize Logging",
-            "path": "/overview/logging/customize-logging"
+            "path": "/concepts/logging/logging"
           }
         ]
       },

@@ -29,3 +29,4 @@ def test_my_lazy_repository():
     assert my_lazy_repository
     assert len(my_lazy_repository.get_all_pipelines()) == 2
     assert len(my_lazy_repository.schedule_defs) == 1
+    assert len(my_lazy_repository.sensor_defs) == 1

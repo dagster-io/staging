@@ -17,14 +17,10 @@ as the Dagster CLI or Dagit, can target to load the definitions.
 
 ## Relevant APIs
 
-| Name                                                                    | Description                                                                                                                                                                                                                                                       |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| <PyObject object="repository" decorator />                              | The decorator used to define repositories. The decorator returns a <PyObject object="RepositoryDefinition" />                                                                                                                                                     |
-| <PyObject module="dagster" object="pipeline" displayText="@pipeline" /> | The decorator used to define a pipeline. The decorator returns a <PyObject object="PipelineDefinition" />. See [Pipelines](/concepts/solids-pipelines/solids-pipelines/) to learn more.                                                                           |
-| <PyObject object="daily_schedule" decorator />                          | The decorator that defines a schedule that executes every day at a fixed time. The decorator returns a <PyObject object="ScheduleDefinition" />. See [Schedules](/concepts/partitions-schedules/schedules) to learn more about ways to define different schedules |
-| <PyObject object="sensor" decorator />                                  | The decorator used to define sensors. The decorator returns a <PyObject object="SensorDefinition" />. See [Sensors](/concepts/partitions-schedules/sensors) to learn more.                                                                                        |
-| <PyObject object="PartitionSetDefinition" />                            | The class used to define a partition set. See [Partitions](/concepts/partitions-schedules/partitions) to learn more about ways to define partition sets.                                                                                                          |
-| <PyObject object="RepositoryDefinition" />                              | Base class for repositories. You almost never want to use initialize this class directly. Instead, you should use the <PyObject object="repository" decorator /> which returns a <PyObject object="RepositoryDefinition"  />                                      |
+| Name                                       | Description                                                                                                                                                                                                                  |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <PyObject object="repository" decorator /> | The decorator used to define repositories. The decorator returns a <PyObject object="RepositoryDefinition" />                                                                                                                |
+| <PyObject object="RepositoryDefinition" /> | Base class for repositories. You almost never want to use initialize this class directly. Instead, you should use the <PyObject object="repository" decorator /> which returns a <PyObject object="RepositoryDefinition"  /> |
 
 ## Overview
 
@@ -99,7 +95,7 @@ Now you can see all pipelines, schedules and sensors in this repository are on t
 <img src="/images/concepts/repo-dagit.png" />
 
 You can also use `-m` to specify module where the repository lives. See detailed references
-in [`dagit`](/_apidocs/cli#dagit).
+in [`dagit`](/\_apidocs/cli#dagit).
 
 Loading repositories via the `-f` or `-m` options is actually just a convenience function. The
 underlying abstraction is the Workspace, which determines all of the available repositories
