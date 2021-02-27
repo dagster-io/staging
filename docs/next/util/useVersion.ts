@@ -1,4 +1,4 @@
-const ALL_VERSIONS = ["0.9.19", "0.9.20", "0.9.21", "master"];
+const ALL_VERSIONS = ["0.9.19", "0.9.20", "0.9.21", "0.10.0", "master"];
 const defaultVersion = "master";
 
 import React, { useEffect, useState } from "react";

@@ -5,7 +5,7 @@ import Sidebar from "../components/Sidebar";
 import { Transition } from "@headlessui/react";
 import cx from "classnames";
 import { useLocalStorage } from "react-use";
-import { useRouter } from "next/router";
+import { useVersion } from "../util/useVersion";
 
 export const FeedbackModal = ({
   isOpen,
@@ -14,7 +14,7 @@ export const FeedbackModal = ({
   isOpen: boolean;
   closeFeedback: () => void;
 }) => {
-  const { asPath, locale: version } = useRouter();
+  const { asPath, version } = useVersion();
   const [currentPage, setCurrentPage] = useState<string>(asPath);
 
   return (

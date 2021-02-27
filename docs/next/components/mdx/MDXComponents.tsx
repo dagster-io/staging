@@ -8,6 +8,7 @@
 import React, { useContext } from "react";
 
 import Link from "../Link";
+import { useVersion } from "../../util/useVersion";
 
 export const SearchIndexContext = React.createContext(null);
 
@@ -217,7 +218,7 @@ const Warning = ({ children }) => {
 
 const CodeReferenceLink = (props: { filePath: string }) => {
   const filePath = props.filePath;
-  const version = "master";
+  const { version } = useVersion();
   // TODO: versioned github link
   return (
     <div className="bg-blue-50 rounded flex item-center p-4">
