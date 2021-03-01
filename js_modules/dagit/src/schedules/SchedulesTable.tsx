@@ -99,7 +99,7 @@ export const SchedulesTable: React.FC<{
               </Tooltip>
             </Group>
           </th>
-          <th>Execution Params</th>
+          <th />
         </tr>
       </thead>
       <tbody>
@@ -236,6 +236,7 @@ const ScheduleRow: React.FC<{
               <Link to={workspacePathFromAddress(repoAddress, `/pipelines/${pipelineName}/`)}>
                 {pipelineName}
               </Link>
+              <span style={{color: Colors.GRAY3}}>{` : ${mode}`}</span>
             </span>
           </Group>
         </Group>
@@ -273,38 +274,35 @@ const ScheduleRow: React.FC<{
         <SchedulePartitionStatus schedule={schedule} repoAddress={repoAddress} />
       </td>
       <td>
-        <Group direction="row" spacing={2} alignItems="center">
-          <div>{`Mode: ${mode}`}</div>
-          {schedule.partitionSet ? (
-            <Popover
-              content={
-                <Menu>
-                  <MenuItem
-                    text="View Partition History..."
-                    icon="multi-select"
-                    target="_blank"
-                    href={workspacePathFromAddress(
-                      repoAddress,
-                      `/pipelines/${pipelineName}/partitions`,
-                    )}
-                  />
-                  <MenuItem
-                    text="Launch Partition Backfill..."
-                    icon="add"
-                    target="_blank"
-                    href={workspacePathFromAddress(
-                      repoAddress,
-                      `/pipelines/${pipelineName}/partitions`,
-                    )}
-                  />
-                </Menu>
-              }
-              position="bottom"
-            >
-              <Button small minimal icon="chevron-down" style={{marginLeft: '4px'}} />
-            </Popover>
-          ) : null}
-        </Group>
+        {schedule.partitionSet ? (
+          <Popover
+            content={
+              <Menu>
+                <MenuItem
+                  text="View Partition History..."
+                  icon="multi-select"
+                  target="_blank"
+                  href={workspacePathFromAddress(
+                    repoAddress,
+                    `/pipelines/${pipelineName}/partitions`,
+                  )}
+                />
+                <MenuItem
+                  text="Launch Partition Backfill..."
+                  icon="add"
+                  target="_blank"
+                  href={workspacePathFromAddress(
+                    repoAddress,
+                    `/pipelines/${pipelineName}/partitions`,
+                  )}
+                />
+              </Menu>
+            }
+            position="bottom"
+          >
+            <Button small minimal icon="chevron-down" style={{marginLeft: '4px'}} />
+          </Popover>
+        ) : null}
       </td>
     </tr>
   );

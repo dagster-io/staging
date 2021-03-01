@@ -98,7 +98,7 @@ export const SchedulesNextTicks: React.FC<{
           <th style={{width: '200px'}}>Timestamp</th>
           <th style={{width: '30%'}}>Schedule</th>
           <th>Pipeline</th>
-          <th>Execution Params</th>
+          <th style={{textAlign: 'right'}}>Metadata</th>
         </tr>
       </thead>
       <tbody>
@@ -118,8 +118,9 @@ export const SchedulesNextTicks: React.FC<{
               >
                 {schedule.pipelineName}
               </Link>
+              <span style={{color: Colors.GRAY3}}>{` : ${schedule.mode}`}</span>
             </td>
-            <td>
+            <td style={{textAlign: 'right'}}>
               <NextTickMenu
                 repoAddress={repoAddress}
                 schedule={schedule}
@@ -171,18 +172,17 @@ const NextTickMenu: React.FC<{
     <Spinner purpose="body-text" />
   );
   return (
-    <Group direction="row" spacing={2} alignItems="center">
-      <div>{`Mode: ${schedule.mode}`}</div>
+    <>
       <Popover
         content={<Menu>{menuItems}</Menu>}
-        position="bottom"
+        position="bottom-right"
         onOpening={() => {
           if (!called) {
             loadTickConfig();
           }
         }}
       >
-        <Button small minimal icon="chevron-down" style={{marginLeft: '4px'}} />
+        <Button small minimal icon="chevron-down" style={{position: 'relative', top: '-4px'}} />
       </Popover>
       <NextTickDialog
         repoAddress={repoAddress}
@@ -192,7 +192,7 @@ const NextTickMenu: React.FC<{
         tickTimestamp={tickTimestamp}
         evaluationResult={evaluationResult}
       />
-    </Group>
+    </>
   );
 });
 

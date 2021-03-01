@@ -1,5 +1,5 @@
 import {gql} from '@apollo/client';
-import {Checkbox, NonIdealState} from '@blueprintjs/core';
+import {Checkbox, Colors, NonIdealState} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components';
@@ -148,7 +148,6 @@ export const RunTable = (props: RunTableProps) => {
           <th>Run ID</th>
           <th>Pipeline</th>
           <th style={{width: 110, minWidth: 110}}>Snapshot ID</th>
-          <th style={{width: 85}}>Mode</th>
           <th style={{width: 160}}>Timing</th>
           {props.additionalColumnHeaders}
           <th style={{width: 52}} />
@@ -226,7 +225,9 @@ const RunRow: React.FC<{
       </td>
       <td>
         <Group direction="column" spacing={4}>
-          <div>{run.pipelineName}</div>
+          <div>
+            {run.pipelineName} <span style={{color: Colors.GRAY3}}>{`: ${run.mode}`}</span>
+          </div>
           <RunTags tags={run.tags} onSetFilter={onSetFilter} />
         </Group>
       </td>
@@ -235,11 +236,6 @@ const RunRow: React.FC<{
           snapshotId={run.pipelineSnapshotId || ''}
           pipelineName={run.pipelineName}
         />
-      </td>
-      <td>
-        <div>
-          <div>{run.mode}</div>
-        </div>
       </td>
       <td>
         <RunTime run={run} />
