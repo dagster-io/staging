@@ -1,6 +1,19 @@
 from abc import ABC, abstractmethod
 from collections import defaultdict, namedtuple
-from typing import TYPE_CHECKING, Any, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Union
+from enum import Enum
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
@@ -445,7 +458,7 @@ def _create_handle_dict(
     for solid_name, input_dict in dep_dict.items():
         from_solid = solid_dict[solid_name]
         for input_name, dep_def in input_dict.items():
-            if dep_def.is_multi():
+            if dep_def.type() == DependencyType.FAN_IN:
                 handles = []
                 for inner_dep in dep_def.get_dependencies_and_mappings():
                     if isinstance(inner_dep, DependencyDefinition):
@@ -461,10 +474,21 @@ def _create_handle_dict(
 
                 handle_dict[from_solid.input_handle(input_name)] = handles
 
-            else:
+            elif dep_def.type() == DependencyType.DIRECT:
                 handle_dict[from_solid.input_handle(input_name)] = solid_dict[
                     dep_def.solid
                 ].output_handle(dep_def.output)
+
+            elif dep_def.type() == DependencyType.DYNAMIC_FAN_IN:
+                # maybe worth changing the whole InputToOutputHandleDict set-up
+
+                # array of one item
+                handle_dict[from_solid.input_handle(input_name)] = [
+                    solid_dict[dep_def.solid_name].output_handle(dep_def.output_name)
+                ]
+
+            else:
+                check.failed(f"Unknown dependency type {dep_def.type()}")
 
     return handle_dict
 
@@ -498,17 +522,17 @@ class DependencyStructure:
                     if not isinstance(handle, SolidOutputHandle):
                         continue
 
-                    if handle.is_dynamic:
-                        raise DagsterInvalidDefinitionError(
-                            "Currently, items in a fan-in dependency cannot be downstream of dynamic outputs. "
-                            f'Problematic dependency on dynamic output "{handle.describe()}".'
-                        )
-                    if self._solid_dynamic_index.get(handle.solid_name):
-                        raise DagsterInvalidDefinitionError(
-                            "Currently, items in a fan-in dependency cannot be downstream of dynamic outputs. "
-                            f'Problematic dependency on output "{handle.describe()}", downstream of '
-                            f'"{self._solid_dynamic_index[handle.solid_name].describe()}".'
-                        )
+                    # if handle.is_dynamic:
+                    #     raise DagsterInvalidDefinitionError(
+                    #         "Currently, items in a fan-in dependency cannot be downstream of dynamic outputs. "
+                    #         f'Problematic dependency on dynamic output "{handle.describe()}".'
+                    #     )
+                    # if self._solid_dynamic_index.get(handle.solid_name):
+                    #     raise DagsterInvalidDefinitionError(
+                    #         "Currently, items in a fan-in dependency cannot be downstream of dynamic outputs. "
+                    #         f'Problematic dependency on output "{handle.describe()}", downstream of '
+                    #         f'"{self._solid_dynamic_index[handle.solid_name].describe()}".'
+                    #     )
 
                     output_handle_list.append(handle)
 
@@ -651,13 +675,23 @@ class DependencyStructure:
         return debug
 
 
+class DependencyType(Enum):
+    DIRECT = "DIRECT"
+    FAN_IN = "FAN_IN"
+    DYNAMIC_FAN_IN = "DYNAMIC_FAN_IN"
+
+
 class IDependencyDefinition(ABC):  # pylint: disable=no-init
     @abstractmethod
-    def get_solid_dependencies(self) -> List["IDependencyDefinition"]:
+    def get_solid_dependencies(self) -> List["DependencyDefinition"]:
         pass
 
     @abstractmethod
-    def is_multi(self) -> bool:
+    def is_fan_in(self) -> bool:
+        pass
+
+    @abstractmethod
+    def type(self) -> DependencyType:
         pass
 
 
@@ -707,11 +741,14 @@ class DependencyDefinition(
             check.opt_str_param(description, "description"),
         )
 
-    def get_solid_dependencies(self) -> List[IDependencyDefinition]:
+    def get_solid_dependencies(self) -> List["DependencyDefinition"]:
         return [self]
 
-    def is_multi(self) -> bool:
+    def is_fan_in(self) -> bool:
         return False
+
+    def type(self):
+        return DependencyType.DIRECT
 
 
 class MultiDependencyDefinition(
@@ -780,11 +817,28 @@ class MultiDependencyDefinition(
 
         return super(MultiDependencyDefinition, cls).__new__(cls, deps)
 
-    def get_solid_dependencies(self) -> List[IDependencyDefinition]:
+    def get_solid_dependencies(self) -> List[DependencyDefinition]:
         return [dep for dep in self.dependencies if isinstance(dep, DependencyDefinition)]
 
-    def is_multi(self) -> bool:
+    def is_fan_in(self) -> bool:
         return True
 
     def get_dependencies_and_mappings(self) -> List:
         return self.dependencies
+
+    def type(self):
+        return DependencyType.FAN_IN
+
+
+class DynamicCollectDependencyDefinition(
+    NamedTuple("_DynamicCollectDependencyDefinition", [("solid_name", str), ("output_name", str)]),
+    IDependencyDefinition,
+):
+    def get_solid_dependencies(self) -> List[DependencyDefinition]:
+        return [DependencyDefinition(self.solid_name, self.output_name)]
+
+    def is_fan_in(self) -> bool:
+        return True
+
+    def type(self):
+        return DependencyType.DYNAMIC_FAN_IN

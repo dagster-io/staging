@@ -134,3 +134,19 @@ def test_composite_wrapping():
     result = execute_pipeline(deep)
     assert result.success
     assert result.result_for_solid("outer").output_value() == {"0": 0, "1": 1, "2": 2}
+
+
+def test_collect():
+    @solid
+    def total(_, numbers):
+        return sum(numbers)
+
+    @pipeline
+    def collect_pipeline():
+        numbers = emit()
+        output = numbers.map(lambda num: multiply_by_two(multiply_inputs(num, emit_ten())))
+        total(output.collect())
+
+    result = execute_pipeline(collect_pipeline)
+    assert result.success
+    assert result.result_for_solid("total").output_value() == 60

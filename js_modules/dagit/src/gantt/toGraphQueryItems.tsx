@@ -1,4 +1,5 @@
 import {gql} from '@apollo/client';
+import {upperFirst} from 'lodash';
 
 import {IGanttNode} from 'src/gantt/Constants';
 import {invocationsOfPlannedDynamicStep, replacePlannedIndex} from 'src/gantt/DynamicStepSupport';
@@ -20,9 +21,9 @@ export const toGraphQueryItems = (
 ) => {
   const nodeTable: {[key: string]: IGanttNode} = {};
   const keyExpansionMap: {[key: string]: string[]} = {};
-
+  console.log('runtime keys', runtimeStepKeys);
   for (const step of plan.steps) {
-    if (step.kind === StepKind.UNRESOLVED) {
+    if (step.kind === StepKind.UNRESOLVED || step.kind == StepKind.PENDING) {
       const runtime = invocationsOfPlannedDynamicStep(step.key, runtimeStepKeys);
       keyExpansionMap[step.key] = runtime;
       for (const k of runtime) {
@@ -42,32 +43,50 @@ export const toGraphQueryItems = (
   }
 
   for (const step of plan.steps) {
+    console.log('step', step);
     for (const input of step.inputs) {
+      console.log('input', input);
       const keys = keyExpansionMap[step.key] ? keyExpansionMap[step.key] : [step.key];
+      console.log('keys', keys);
+
       for (const key of keys) {
         nodeTable[key].inputs.push({
           dependsOn: input.dependsOn.map((d) => ({
             solid: {
-              name: d.kind === StepKind.UNRESOLVED ? replacePlannedIndex(d.key, key) : d.key,
+              name:
+                d.kind === StepKind.UNRESOLVED && step.kind !== StepKind.PENDING
+                  ? replacePlannedIndex(d.key, key)
+                  : d.key,
             },
           })),
         });
 
         for (const upstream of input.dependsOn) {
-          const upstreamKey =
-            upstream.kind === StepKind.UNRESOLVED
-              ? replacePlannedIndex(upstream.key, key)
-              : upstream.key;
-          let output = nodeTable[upstreamKey].outputs[0];
-          if (!output) {
-            output = {
-              dependedBy: [],
-            };
-            nodeTable[upstreamKey].outputs.push(output);
+          let upstreamKeys = [];
+          if (step.kind === StepKind.UNRESOLVED) {
+            upstreamKeys = [
+              upstream.kind === StepKind.UNRESOLVED
+                ? replacePlannedIndex(upstream.key, key)
+                : upstream.key,
+            ];
+          } else if (step.kind == StepKind.PENDING) {
+            upstreamKeys = keyExpansionMap[upstream.key];
+          } else {
+            upstreamKeys = [upstream.key];
           }
-          output.dependedBy.push({
-            solid: {name: key},
-          });
+
+          for (const upstreamKey of upstreamKeys) {
+            let output = nodeTable[upstreamKey].outputs[0];
+            if (!output) {
+              output = {
+                dependedBy: [],
+              };
+              nodeTable[upstreamKey].outputs.push(output);
+            }
+            output.dependedBy.push({
+              solid: {name: key},
+            });
+          }
         }
       }
     }

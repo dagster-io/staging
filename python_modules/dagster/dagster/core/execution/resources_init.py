@@ -9,7 +9,7 @@ from dagster.core.errors import (
     user_code_error_boundary,
 )
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.plan.inputs import StepInput, UnresolvedStepInput
+from dagster.core.execution.plan.inputs import PendingStepInput, StepInput, UnresolvedStepInput
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
@@ -314,7 +314,7 @@ def get_required_resource_keys_for_step(execution_step, execution_plan, intermed
 
         if isinstance(step_input, StepInput):
             source_handles = step_input.get_step_output_handle_dependencies()
-        elif isinstance(step_input, UnresolvedStepInput):
+        elif isinstance(step_input, (UnresolvedStepInput, PendingStepInput)):
             # Placeholder handles will allow lookup of the unresolved execution steps
             # for what resources will be needed once the steps resolve
             source_handles = step_input.get_step_output_handle_deps_with_placeholders()
