@@ -124,6 +124,7 @@ export enum StepEventStatus {
 
 export enum StepKind {
   COMPUTE = "COMPUTE",
+  PENDING = "PENDING",
   UNRESOLVED = "UNRESOLVED",
 }
 

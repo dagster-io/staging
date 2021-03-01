@@ -7,7 +7,12 @@ from dagster.utils import frozentags
 
 from .config import ConfigMapping
 from .decorators.solid import validate_solid_fn
-from .dependency import DependencyDefinition, MultiDependencyDefinition, SolidInvocation
+from .dependency import (
+    DependencyDefinition,
+    DynamicCollectDependencyDefinition,
+    MultiDependencyDefinition,
+    SolidInvocation,
+)
 from .hook import HookDefinition
 from .inference import (
     has_explicit_return_type,
@@ -183,6 +188,10 @@ class CompleteCompositionContext(
                             check.invariant("Unexpected fanned in node received")
 
                     deps[input_name] = MultiDependencyDefinition(entries)
+                elif isinstance(node, DynamicFanIn):
+                    deps[input_name] = DynamicCollectDependencyDefinition(
+                        node.solid_name, node.output_name
+                    )
                 else:
                     check.failed("Unexpected input binding - got {node}".format(node=node))
 
@@ -308,7 +317,7 @@ class PendingNodeInvocation:
 
     def _process_argument_node(self, solid_name, output_node, input_name, input_bindings, arg_desc):
 
-        if isinstance(output_node, (InvokedSolidOutputHandle, InputMappingNode)):
+        if isinstance(output_node, (InvokedSolidOutputHandle, InputMappingNode, DynamicFanIn)):
             input_bindings[input_name] = output_node
 
         elif isinstance(output_node, list):
@@ -468,6 +477,12 @@ class InvokedSolidOutputHandle:
         )
 
 
+class DynamicFanIn:
+    def __init__(self, solid_name, output_name):
+        self.solid_name = solid_name
+        self.output_name = output_name
+
+
 class InvokedSolidDynamicOutputWrapper:
     """
     The return value for a dynamic output when invoking a solid in a composition function.
@@ -481,6 +496,7 @@ class InvokedSolidDynamicOutputWrapper:
     def map(self, fn):
         check.is_callable(fn)
         result = fn(InvokedSolidOutputHandle(self.solid_name, self.output_name))
+
         if isinstance(result, InvokedSolidOutputHandle):
             return InvokedSolidDynamicOutputWrapper(result.solid_name, result.output_name)
         elif isinstance(result, tuple) and all(
@@ -500,6 +516,9 @@ class InvokedSolidDynamicOutputWrapper:
             check.failed(
                 f"Could not handle output from map function invoked on {self.solid_name}:{self.output_name}, received {result}"
             )
+
+    def collect(self):
+        return DynamicFanIn(self.solid_name, self.output_name)
 
     def unwrap_for_composite_mapping(self):
         return InvokedSolidOutputHandle(self.solid_name, self.output_name)
