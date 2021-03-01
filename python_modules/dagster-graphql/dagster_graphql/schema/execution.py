@@ -1,5 +1,6 @@
 import graphene
 from dagster import check
+from dagster.core.execution.plan.step import StepKind
 from dagster.core.host_representation import ExternalExecutionPlan
 from dagster.core.snap import (
     ExecutionStepInputSnap,
@@ -79,7 +80,8 @@ class GrapheneExecutionStepInput(graphene.ObjectType):
 
 class GrapheneStepKind(graphene.Enum):
     COMPUTE = "COMPUTE"
-    UNRESOLVED = "UNRESOLVED"
+    UNRESOLVED_MAPPED = "UNRESOLVED_MAPPED"
+    UNRESOLVED_COLLECT = "UNRESOLVED_COLLECT"
 
     class Meta:
         name = "StepKind"
@@ -88,8 +90,10 @@ class GrapheneStepKind(graphene.Enum):
     def description(self):
         if self == GrapheneStepKind.COMPUTE:
             return "This is a user-defined computation step"
-        if self == GrapheneStepKind.UNRESOLVED:
-            return "This is a computation step that has not yet been resolved"
+        if self == GrapheneStepKind.UNRESOLVED_MAPPED:
+            return "This is a mapped step that has not yet been resolved"
+        if self == GrapheneStepKind.UNRESOLVED_COLLECT:
+            return "This is a collect step that is not yet resolved"
         else:
             return None
 
@@ -147,6 +151,8 @@ class GrapheneExecutionStep(graphene.ObjectType):
         return self._step_snap.solid_handle_id
 
     def resolve_kind(self, _graphene_info):
+        if self._step_snap.kind == StepKind.UNRESOLVED:
+            return StepKind.UNRESOLVED_MAPPED
         return self._step_snap.kind
 
 
