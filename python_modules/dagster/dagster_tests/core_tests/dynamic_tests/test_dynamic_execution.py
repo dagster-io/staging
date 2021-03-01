@@ -146,3 +146,19 @@ def test_full_reexecute():
             dynamic_pipeline, parent_run_id=result_1.run_id, instance=instance
         )
         assert result_2.success
+
+
+def test_collect():
+    @solid
+    def total(_, numbers):
+        return sum(numbers)
+
+    @pipeline
+    def collect_pipeline():
+        numbers = emit()
+        output = numbers.map(lambda num: multiply_by_two(multiply_inputs(num, emit_ten())))
+        total(output.collect())
+
+    result = execute_pipeline(collect_pipeline)
+    assert result.success
+    assert result.result_for_solid("total").output_value() == 60

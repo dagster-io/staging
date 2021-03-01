@@ -407,6 +407,7 @@ type ExecutionStepOutput {
 enum StepKind {
   COMPUTE
   UNRESOLVED
+  PENDING
 }
 
 type Asset {
