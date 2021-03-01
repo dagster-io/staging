@@ -80,6 +80,7 @@ class GrapheneExecutionStepInput(graphene.ObjectType):
 class GrapheneStepKind(graphene.Enum):
     COMPUTE = "COMPUTE"
     UNRESOLVED = "UNRESOLVED"
+    PENDING = "PENDING"
 
     class Meta:
         name = "StepKind"
@@ -90,6 +91,10 @@ class GrapheneStepKind(graphene.Enum):
             return "This is a user-defined computation step"
         if self == GrapheneStepKind.UNRESOLVED:
             return "This is a computation step that has not yet been resolved"
+        if self == GrapheneStepKind.PENDING:
+            return (
+                "This is a computation step that is known but its inputs are not fully determined"
+            )
         else:
             return None
 
