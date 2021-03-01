@@ -1,12 +1,16 @@
+import pytest
 from dagster import (
     InputDefinition,
+    ModeDefinition,
     OutputDefinition,
     composite_solid,
     execute_pipeline,
+    fs_io_manager,
     pipeline,
     reconstructable,
     solid,
 )
+from dagster.core.errors import DagsterExecutionStepNotFoundError
 from dagster.core.execution.api import reexecute_pipeline
 from dagster.core.test_utils import instance_for_test
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
@@ -40,17 +44,30 @@ def emit(_):
         yield DynamicOutput(value=i, mapping_key=str(i))
 
 
-@pipeline
+@solid
+def sum_numbers(_, nums):
+    return sum(nums)
+
+
+@solid(output_defs=[DynamicOutputDefinition()])
+def dynamic_echo(_, nums):
+    for x in nums:
+        yield DynamicOutput(value=x, mapping_key=str(x))
+
+
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
 def dynamic_pipeline():
     numbers = emit()
-    numbers.map(lambda num: multiply_by_two(multiply_inputs(num, emit_ten())))
+    dynamic = numbers.map(lambda num: multiply_by_two(multiply_inputs(num, emit_ten())))
+    multiply_by_two.alias("double_total")(sum_numbers(dynamic.collect()))
 
 
-def test_map():
-    result = execute_pipeline(dynamic_pipeline)
-    assert result.success
-    assert result.result_for_solid("multiply_inputs").output_value() == {"0": 0, "1": 10, "2": 20}
-    assert result.result_for_solid("multiply_by_two").output_value() == {"0": 0, "1": 20, "2": 40}
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+def fan_repeat():
+    one = emit().map(multiply_by_two)
+    two = dynamic_echo(one.collect()).map(multiply_by_two)
+    three = dynamic_echo(two.collect()).map(multiply_by_two)
+    sum_numbers(three.collect())
 
 
 def test_map_basic():
@@ -71,6 +88,8 @@ def test_map_basic():
             "1": 20,
             "2": 40,
         }
+        assert result.result_for_solid("sum_numbers").output_value() == 60
+        assert result.result_for_solid("double_total").output_value() == 120
 
 
 def test_map_multi():
@@ -78,7 +97,6 @@ def test_map_multi():
         result = execute_pipeline(
             reconstructable(dynamic_pipeline),
             run_config={
-                "storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
             },
             instance=instance,
@@ -98,6 +116,8 @@ def test_map_multi():
             "1": 20,
             "2": 40,
         }
+        assert result.result_for_solid("sum_numbers").output_value() == 60
+        assert result.result_for_solid("double_total").output_value() == 120
 
 
 def test_composite_wrapping():
@@ -146,3 +166,56 @@ def test_full_reexecute():
             dynamic_pipeline, parent_run_id=result_1.run_id, instance=instance
         )
         assert result_2.success
+
+
+def test_partial_reexecute():
+    with instance_for_test() as instance:
+        result_1 = execute_pipeline(dynamic_pipeline, instance=instance)
+        assert result_1.success
+
+        result_2 = reexecute_pipeline(
+            dynamic_pipeline,
+            parent_run_id=result_1.run_id,
+            instance=instance,
+            step_selection=["sum_numbers*"],
+        )
+        assert result_2.success
+
+        result_3 = reexecute_pipeline(
+            dynamic_pipeline,
+            parent_run_id=result_1.run_id,
+            instance=instance,
+            step_selection=["multiply_by_two[1]*"],
+        )
+        assert result_3.success
+
+
+def test_fan_out_in_out_in():
+    with instance_for_test() as instance:
+        result = execute_pipeline(
+            reconstructable(fan_repeat),
+            run_config={
+                "execution": {"multiprocess": {}},
+            },
+            instance=instance,
+        )
+        assert result.success
+        assert (
+            result.result_for_solid("sum_numbers").output_value() == 24
+        )  # (0, 1, 2) x 2 x 2 x 2 = (0, 8, 16)
+
+
+def test_bad_step_selection():
+    with instance_for_test() as instance:
+        result_1 = execute_pipeline(dynamic_pipeline, instance=instance)
+        assert result_1.success
+
+        # this exact error could be improved, but it should fail if you try to select
+        # both the dynamic outputting step key and something resolved by it in the previous run
+        with pytest.raises(DagsterExecutionStepNotFoundError):
+            reexecute_pipeline(
+                dynamic_pipeline,
+                parent_run_id=result_1.run_id,
+                instance=instance,
+                step_selection=["emit", "multiply_by_two[1]"],
+            )
