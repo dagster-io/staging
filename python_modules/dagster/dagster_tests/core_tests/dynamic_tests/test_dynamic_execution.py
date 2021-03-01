@@ -40,10 +40,16 @@ def emit(_):
         yield DynamicOutput(value=i, mapping_key=str(i))
 
 
+@solid
+def sum_numbers(_, nums):
+    return sum(nums)
+
+
 @pipeline
 def dynamic_pipeline():
     numbers = emit()
-    numbers.map(lambda num: multiply_by_two(multiply_inputs(num, emit_ten())))
+    dynamic = numbers.map(lambda num: multiply_by_two(multiply_inputs(num, emit_ten())))
+    sum_numbers(dynamic.collect())
 
 
 def test_map():
@@ -51,6 +57,7 @@ def test_map():
     assert result.success
     assert result.result_for_solid("multiply_inputs").output_value() == {"0": 0, "1": 10, "2": 20}
     assert result.result_for_solid("multiply_by_two").output_value() == {"0": 0, "1": 20, "2": 40}
+    assert result.result_for_solid("sum_numbers").output_value() == 60
 
 
 def test_map_basic():
@@ -71,6 +78,7 @@ def test_map_basic():
             "1": 20,
             "2": 40,
         }
+        assert result.result_for_solid("sum_numbers").output_value() == 60
 
 
 def test_map_multi():
@@ -98,6 +106,7 @@ def test_map_multi():
             "1": 20,
             "2": 40,
         }
+        assert result.result_for_solid("sum_numbers").output_value() == 60
 
 
 def test_composite_wrapping():
