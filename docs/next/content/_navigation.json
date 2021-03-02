@@ -195,12 +195,8 @@
         "title": "Assets",
         "children": [
           {
-            "title": "Asset Materializations",
-            "path": "/overview/configuration/run-config"
-          },
-          {
             "title": "Asset Catalog",
-            "path": "/overview/configuration/configured"
+            "path": "/concepts/assets/asset-catalog"
           }
         ]
       },
