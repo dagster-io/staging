@@ -231,10 +231,6 @@
         "title": "Partitions, Schedules, & Sensors",
         "children": [
           {
-            "title": "Partitions",
-            "path": "/concepts/partitions-schedules-sensors/partitions"
-          },
-          {
             "title": "Schedules",
             "path": "/concepts/partitions-schedules-sensors/schedules"
           },
@@ -243,8 +239,12 @@
             "path": "/concepts/partitions-schedules-sensors/sensors"
           },
           {
-            "title": "Backfill",
-            "path": "/concepts/partitions-schedules-sensors/backfill"
+            "title": "Partitions",
+            "path": "/concepts/partitions-schedules-sensors/partitions"
+          },
+          {
+            "title": "Backfills",
+            "path": "/concepts/partitions-schedules-sensors/backfills"
           }
         ]
       },
