@@ -319,24 +319,8 @@
         "title": "Dagster Deployments",
         "children": [
           {
-            "title": "Overview",
-            "path": "/deployment/overview"
-          },
-          {
             "title": "Dagster Instance",
             "path": "/deployment/dagster-instance"
-          },
-          {
-            "title": "User Code Isolation",
-            "path": "/deployment/user-code-isolation"
-          },
-          {
-            "title": "Building User Code Images",
-            "path": "/deployment/building-user-code-images"
-          },
-          {
-            "title": "Executors & Run Launchers",
-            "path": "/deployment/executors-run-launchers"
           },
           {
             "title": "Dagster Daemon",
@@ -346,104 +330,48 @@
       },
 
       {
-        "title": "Deploy on GCP",
+        "title": "Deployment Guides",
         "children": [
           {
-            "title": "GCP Deployment Overview",
+            "title": "Running Dagster as a Service",
+            "path": "/deployment/custom-infra/local"
+          },
+          {
+            "title": "Deploying Dagster to Docker",
+            "path": "/deployment/custom-infra/docker"
+          },
+          {
+            "title": "Deploying Dagster to Kubernetes",
+            "path": "/deployment/kubernetes/overview"
+          },
+          {
+            "title": "Deploying Dagster to AWS",
+            "path": "/deployment/aws/overview"
+          },
+          {
+            "title": "Deploying Dagster to GCP",
             "path": "/deployment/gcp/overview"
           }
         ]
       },
       {
-        "title": "Deploy on AWS",
+        "title": "Executor & Run Launchers",
         "children": [
           {
-            "title": "AWS Deployment Overview",
-            "path": "/deployment/aws/overview"
-          },
-          {
-            "title": "EC2 Deployment Guide",
-            "path": "/deployment/guides/overview"
-          },
-          {
-            "title": "ECS Deployment Guide",
-            "path": "/deployment/guides/overview"
-          },
-          {
-            "title": "EKS Deployment Guide",
-            "path": "/deployment/guides/overview"
-          }
-        ]
-      },
-      {
-        "title": "Deploy on Kubernetes",
-        "children": [
-          {
-            "title": "Overview",
-            "path": "/deployment/kubernetes/overview"
-          },
-          {
-            "title": "K8s Executor & Launcher",
-            "path": "/deployment/guides/overview"
-          },
-          {
-            "title": "EKS Deployment Guide",
-            "path": "/deployment/guides/overview"
-          },
-          {
-            "title": "GKE Deployment Guide",
-            "path": "/deployment/guides/overview"
-          },
-          {
-            "title": "Other Cluster Deployment",
-            "path": "/deployment/guides/overview"
-          }
-        ]
-      },
-      {
-        "title": "Deploy on Docker",
-        "children": [
-          {
-            "title": "Overview",
-            "path": "/deployment/custom-infra/docker"
-          }
-        ]
-      },
-      {
-        "title": "Deploy on Custom Infra",
-        "children": [
-          {
-            "title": "Execute on Celery",
+            "title": "Executing on Celery",
             "path": "/deployment/custom-infra/celery"
           },
           {
-            "title": "Execute on Dask",
+            "title": "Executing on Dask",
             "path": "/deployment/custom-infra/dask"
           },
           {
-            "title": "Execute on Airflow",
+            "title": "Executing on Airflow",
             "path": "/deployment/custom-infra/airflow"
           },
           {
-            "title": "Writing a Custom Run Launcher",
+            "title": "Customizing Run Launcher",
             "path": "/deployment/custom-infra/custom-run-launcher"
-          },
-          {
-            "title": "Run Dagster Locally",
-            "path": "/deployment/custom-infra/local"
-          }
-        ]
-      },
-      {
-        "title": "Deploy on PAAS",
-        "children": [
-          {
-            "title": "Heroku Deployment Guide",
-            "path": "/deployment/guides/overview"
-          },
-          {
-            "title": "Render Deployment Guide",
-            "path": "/deployment/guides/overview"
           }
         ]
       }
