@@ -111,7 +111,12 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         self.server_id = None
 
         try:
-            self.client = DagsterGrpcClient(port=self._port, socket=self._socket, host=self._host)
+            self.client = DagsterGrpcClient(
+                port=self._port,
+                socket=self._socket,
+                host=self._host,
+                use_ssl=(self.origin.use_ssl if self.origin.use_ssl else False),
+            )
             list_repositories_response = sync_list_repositories_grpc(self.client)
 
             self.server_id = server_id if server_id else sync_get_server_id(self.client)
@@ -214,6 +219,10 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
     @property
     def host(self):
         return self._host
+
+    @property
+    def use_ssl(self):
+        return self.origin.use_ssl
 
     @property
     def location_name(self):
@@ -334,6 +343,10 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
     @property
     def socket(self):
         return self.grpc_server_process.socket
+
+    @property
+    def use_ssl(self):
+        return False
 
     def cleanup(self):
         if self.heartbeat_shutdown_event:
