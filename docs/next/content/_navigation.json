@@ -17,7 +17,7 @@
           },
           {
             "title": "Create a New Project",
-            "path": "/getting-started/init"
+            "path": "/getting-started/create-new-project"
           },
           {
             "title": "Telemetry",
@@ -244,7 +244,6 @@
           }
         ]
       },
-
       {
         "title": "Run Launchers & Executors",
         "children": [
@@ -258,7 +257,6 @@
           }
         ]
       },
-
       {
         "title": "Dagster Instance",
         "children": [
@@ -266,17 +264,14 @@
             "title": "Storages (Run/Event/Schedule)",
             "path": "/overview/run-launchers-executors/run-launcher"
           },
-
           {
             "title": "Dagster Daemon",
             "path": "/overview/run-launchers-executors/run-launcher"
           },
-
           {
             "title": "Scheduler",
             "path": "/overview/run-launchers-executors/run-launcher"
           },
-
           {
             "title": "Run Coordinator",
             "path": "/overview/run-launchers-executors/run-launcher"
@@ -347,7 +342,6 @@
       }
     ]
   },
-
   {
     "title": "Deployment",
     "icon": "Cloud",
