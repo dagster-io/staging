@@ -1,7 +1,7 @@
 from tempfile import TemporaryDirectory
 
 from dagster import execute_pipeline
-from docs_snippets.concepts.io_managers.io_manager_per_output import my_pipeline
+from docs_snippets.concepts.io_management.io_manager_per_output import my_pipeline
 
 
 def test_io_manager_per_output():

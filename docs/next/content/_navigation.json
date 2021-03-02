@@ -182,12 +182,8 @@
             "path": "/concepts/io-management/io-managers"
           },
           {
-            "title": "Custom IO Managers",
-            "path": "/concepts/io-management/custom-io-managers"
-          },
-          {
-            "title": "Dagster Type Loaders",
-            "path": "/concepts/io-management/dagster-type-loaders"
+            "title": "Unconnected Inputs",
+            "path": "/concepts/io-management/unconnected-inputs"
           }
         ]
       },

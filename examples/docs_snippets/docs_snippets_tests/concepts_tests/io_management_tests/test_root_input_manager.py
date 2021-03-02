@@ -1,5 +1,5 @@
 from dagster import execute_pipeline
-from docs_snippets.concepts.io_managers.root_input_manager import my_pipeline
+from docs_snippets.concepts.io_management.root_input_manager import my_pipeline
 
 
 def test_execute_pipeline():
