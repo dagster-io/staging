@@ -105,27 +105,6 @@ def experimental_fn_warning(name, stacklevel=3):
     )
 
 
-def experimental_class_warning(name, stacklevel=3):
-    """Utility for warning that a class is experimental. Expected to be called from the class's
-    __init__ method.
-
-    Usage:
-
-    .. code-block:: python
-
-        class MyExperimentalClass:
-            def __init__(self, some_arg):
-                experimental_class_warning('MyExperimentalClass')
-                # do other initialization stuff
-    """
-    warnings.warn(
-        '"{name}" is an experimental class. It may break in future versions, even between dot'
-        " releases. {help}".format(name=name, help=EXPERIMENTAL_WARNING_HELP),
-        ExperimentalWarning,
-        stacklevel=stacklevel,
-    )
-
-
 def experimental_arg_warning(arg_name, fn_name, stacklevel=3):
     """Utility for warning that an argument to a function is experimental"""
     warnings.warn(
@@ -150,6 +129,10 @@ def experimental(fn):
             @experimental
             def my_experimental_function(my_arg):
                 do_stuff()
+
+            @experimental
+            class MyExperimentalClass:
+                pass
     """
     check.callable_param(fn, "fn")
 

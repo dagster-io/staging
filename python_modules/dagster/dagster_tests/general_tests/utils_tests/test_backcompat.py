@@ -8,7 +8,6 @@ from dagster.utils.backcompat import (
     canonicalize_backcompat_args,
     experimental,
     experimental_arg_warning,
-    experimental_class_warning,
     experimental_fn_warning,
 )
 from dagster_tests.general_tests.utils_tests.utils import assert_no_warnings
@@ -80,13 +79,13 @@ def test_experimental_fn_warning():
 
 
 def test_experimental_class_warning():
+    @experimental
     class MyExperimentalClass:
-        def __init__(self):
-            experimental_class_warning("MyExperimentalClass")
+        pass
 
     with pytest.warns(
         ExperimentalWarning,
-        match='"MyExperimentalClass" is an experimental class. It may break in future'
+        match='"MyExperimentalClass" is an experimental function. It may break in future'
         " versions, even between dot releases. ",
     ) as warning:
         MyExperimentalClass()
