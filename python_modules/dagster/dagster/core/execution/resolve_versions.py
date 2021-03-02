@@ -58,10 +58,10 @@ def resolve_resource_versions(environment_config, pipeline_definition):
 
     resource_versions = {}
 
-    for resource_key, config in environment_config.resources.items():
+    for resource_key, resource_config in environment_config.resources.items():
         resource_def_version = mode_definition.resource_defs[resource_key].version
         resource_versions[resource_key] = join_and_hash(
-            resolve_config_version(config), resource_def_version
+            resolve_config_version(resource_config.config), resource_def_version
         )
 
     return resource_versions
@@ -183,8 +183,8 @@ def resolve_memoized_execution_plan(execution_plan):
             )
             resource_def = mode_def.resource_defs[io_manager_key]
             resource_context = InitResourceContext(
-                resource_config,
-                resource_def,
+                resource_config=resource_config,
+                resource_def=resource_def,
                 pipeline_run=PipelineRun(
                     pipeline_name=pipeline_def.name, run_id="", mode=environment_config.mode
                 ),
