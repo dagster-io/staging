@@ -44,9 +44,6 @@ DEFAULT_PROCESS_HEARTBEAT_INTERVAL = 120
 class ProcessGrpcServerRegistry(GrpcServerRegistry):
     def __init__(
         self,
-        # Whether to wait on exit for any created processes to finish, primarily useful for test
-        # cleanup
-        wait_for_processes_on_exit=False,
         # How often to reload created processes in a background thread
         cleanup_interval=DEFAULT_PROCESS_CLEANUP_INTERVAL,
         # How long the process can live without a heartbeat. Should be higher than
@@ -59,8 +56,6 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
 
         self._cleanup_interval = check.int_param(cleanup_interval, "cleanup_interval")
         self._heartbeat_interval = check.int_param(heartbeat_interval, "heartbeat_interval")
-
-        self._wait_for_processes_on_exit = wait_for_processes_on_exit
 
         self._lock = threading.Lock()
 
@@ -163,6 +158,5 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
         for process in self._all_processes:
             process.create_ephemeral_client().cleanup_server()
 
-        if self._wait_for_processes_on_exit:
-            for process in self._all_processes:
-                process.wait()
+        for process in self._all_processes:
+            process.wait()

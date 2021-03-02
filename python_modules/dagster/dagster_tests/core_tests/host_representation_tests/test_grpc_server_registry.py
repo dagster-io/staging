@@ -45,9 +45,7 @@ def test_process_server_registry():
         ),
     )
 
-    with ProcessGrpcServerRegistry(
-        wait_for_processes_on_exit=True, cleanup_interval=5, heartbeat_interval=10
-    ) as registry:
+    with ProcessGrpcServerRegistry(cleanup_interval=5, heartbeat_interval=10) as registry:
 
         with RepositoryLocationHandleManager(registry) as handle_manager:
             endpoint_one = registry.get_grpc_endpoint(origin)
@@ -105,7 +103,6 @@ def test_process_server_registry():
                 break
 
     # Once we leave the ProcessGrpcServerRegistry context, all processes should be cleaned up
-    # (if wait_for_processes_on_exit was set)
     assert not _can_connect(origin, endpoint_three)
     assert not _can_connect(origin, endpoint_four)
 
@@ -124,9 +121,7 @@ def test_registry_multithreading():
         ),
     )
 
-    with ProcessGrpcServerRegistry(
-        wait_for_processes_on_exit=True, cleanup_interval=300, heartbeat_interval=600
-    ) as registry:
+    with ProcessGrpcServerRegistry(cleanup_interval=300, heartbeat_interval=600) as registry:
 
         endpoint = registry.get_grpc_endpoint(origin)
 

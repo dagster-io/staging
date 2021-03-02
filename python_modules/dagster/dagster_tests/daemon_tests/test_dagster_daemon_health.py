@@ -27,9 +27,7 @@ def test_healthy():
         assert not all_daemons_healthy(instance, curr_time_seconds=init_time.float_timestamp)
         assert not all_daemons_live(instance, curr_time_seconds=init_time.float_timestamp)
 
-        with daemon_controller_from_instance(
-            instance, wait_for_processes_on_exit=True
-        ) as controller:
+        with daemon_controller_from_instance(instance) as controller:
 
             while True:
                 now = pendulum.now("UTC")
@@ -55,7 +53,7 @@ def test_healthy():
 
 def test_healthy_with_different_daemons():
     with instance_for_test() as instance:
-        with daemon_controller_from_instance(instance, wait_for_processes_on_exit=True):
+        with daemon_controller_from_instance(instance):
 
             with instance_for_test(
                 overrides={
@@ -86,9 +84,7 @@ def test_thread_die_daemon(monkeypatch):
         monkeypatch.setattr(SensorDaemon, "run_iteration", run_iteration_error)
 
         init_time = pendulum.now("UTC")
-        with daemon_controller_from_instance(
-            instance, wait_for_processes_on_exit=True
-        ) as controller:
+        with daemon_controller_from_instance(instance) as controller:
             while True:
                 now = pendulum.now("UTC")
 
@@ -125,9 +121,7 @@ def test_error_daemon(monkeypatch):
         monkeypatch.setattr(SensorDaemon, "run_iteration", run_iteration_error)
 
         init_time = pendulum.now("UTC")
-        with daemon_controller_from_instance(
-            instance, wait_for_processes_on_exit=True
-        ) as controller:
+        with daemon_controller_from_instance(instance) as controller:
             while True:
                 now = pendulum.now("UTC")
 
@@ -168,9 +162,7 @@ def test_multiple_error_daemon(monkeypatch):
 
         init_time = pendulum.now("UTC")
 
-        with daemon_controller_from_instance(
-            instance, wait_for_processes_on_exit=True
-        ) as controller:
+        with daemon_controller_from_instance(instance) as controller:
             while True:
 
                 now = pendulum.now("UTC")
@@ -202,7 +194,7 @@ def test_warn_multiple_daemons(capsys):
     with instance_for_test() as instance:
         init_time = pendulum.now("UTC")
 
-        with daemon_controller_from_instance(instance, wait_for_processes_on_exit=True):
+        with daemon_controller_from_instance(instance):
             while True:
                 now = pendulum.now("UTC")
 
@@ -224,7 +216,7 @@ def test_warn_multiple_daemons(capsys):
         last_heartbeat_time = status.last_heartbeat.timestamp
 
         # No warning when a second controller starts up again
-        with daemon_controller_from_instance(instance, wait_for_processes_on_exit=True):
+        with daemon_controller_from_instance(instance):
             while True:
                 now = pendulum.now("UTC")
 
@@ -246,7 +238,7 @@ def test_warn_multiple_daemons(capsys):
             last_heartbeat_time = status.last_heartbeat.timestamp
 
             # Starting up a controller while one is running produces the warning though
-            with daemon_controller_from_instance(instance, wait_for_processes_on_exit=True):
+            with daemon_controller_from_instance(instance):
                 # Wait for heartbeats while two controllers are running at once and there will
                 # be a warning
                 init_time = pendulum.now("UTC")
