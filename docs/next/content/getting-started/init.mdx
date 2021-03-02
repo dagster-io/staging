@@ -5,4 +5,100 @@ description: ...
 
 # Create a New Project
 
-`dagster new-repo`
+In the previous [Hello World section](/getting-start/hello-world), you learned how to create a
+pipeline in a Python script and run it with Dagster. This section will show you how to a create
+a new Dagster project and organize your files as you build larger and larger pipelines.
+
+If you're completely new to Dagster, we recommend that you visit our [Tutorial](/tutorial) to learn
+all the basic concepts of Dagster and how to be an effective data engineer.
+
+## Generating a Repository Skeleton
+
+In Dagster, pipelines are grouped together into
+[repositories](/overview/repositories-workspaces/repositories). A _Dagster repository_ and a
+_Git repository_ are two different concepts. Visit the
+[Repositories Overview](/overview/repositories-workspaces/repositories) for more details on Dagster
+repositories.
+
+If you're just starting a new Dagster project, the CLI command `dagster new-repo` will generate a
+repository skeleton with boilerplate code for development and testing. If you have `dagster`
+installed in your Python environment, then you can run the following shell command to generate
+a Dagster repository called `REPO_NAME`:
+
+```bash
+dagster new-repo REPO_NAME
+cd REPO_NAME
+```
+
+The newly generated `REPO_NAME` directory is in fact a fully functioning [Python package](https://docs.python.org/3/tutorial/modules.html#packages)
+and can be installed with `pip`.
+
+Here's a breakdown of the files and directories that are generated:
+
+| File/Directory | Description |
+|-|-|
+| `REPO_NAME/` | A Python module that contains code for your new Dagster repository |
+| `REPO_NAME_tests/` | A Python module that contains tests for `REPO_NAME` |
+| `workspace.yaml` | A file that specifies the location of the user code for Dagit and the Dagster CLI. Visit the [Workspaces Overview](overview/repositories-workspaces/workspaces) for more details. |
+| `README.md` | A description and guide for your new code repository |
+| `setup.py` | A build script with Python package dependencies for your new code repository |
+
+This file structure is a good starting point and suitable for most Dagster projects. As you build
+more and more pipelines, you may eventually find your own way of structuring your code that works
+best for you.
+
+## Local Development
+
+1. Install your repository as a Python package. By
+using the `--editable` flag, `pip` will install your repository in
+["editable mode"](https://pip.pypa.io/en/latest/reference/pip_install/?highlight=editable#editable-installs)
+so that as you develop, local code changes will automatically apply.
+
+```bash
+pip install --editable .
+```
+
+2. Start the [Dagit process](/overview/dagit). This will start a Dagit web
+server that, by default, is served on http://localhost:3000.
+
+```bash
+dagit
+```
+
+The Dagit process automatically uses the file `workspace.yaml` to find where your Dagster
+repositories are located. To see how you can customize the Dagit process, run `dagit --help` or
+visit the [Dagit Overview](/overview/dagit) for more details.
+
+3. (Optional) If you want to enable Dagster
+[Schedules](/overview/schedules) or
+[Sensors](/overview/sensors) for your pipelines, start the
+[Dagster Daemon process](/overview/run-launchers-executors/run-launcher)
+**in a different shell or terminal**:
+
+```bash
+dagster-daemon run
+```
+
+Once your Dagster Daemon process is running, you should be able to enable schedules and sensors for
+your Dagster pipelines in your repository.
+
+## Local Testing
+
+Once you have created a new Dagster repository with the CLI command `dagster new-repo`, you can find
+tests in `REPO_NAME_tests`, where `REPO_NAME` is the name of your repository. You can run all of
+your tests with the following command:
+
+```bash
+pytest REPO_NAME_tests
+```
+
+As you create Dagster solids and pipelines, add tests in `REPO_NAME_tests/` to check that your
+code behaves as desired and does not break over time.
+
+For hints on how to write tests for solids and pipelines in Dagster,
+[see our documentation tutorial on Testing](/tutorial/intro-tutorial/testable).
+
+## Deployment
+
+Once your Dagster project is ready, visit the [Deployment Guides](/deployment/overview) to learn
+how to run Dagster in production environments, such as Docker, Kubernetes, AWS EC2, etc.
