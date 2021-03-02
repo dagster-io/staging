@@ -1,15 +1,18 @@
 ---
-title: Deploying to GCP | Dagster
+title: Deploying Dagster to GCP | Dagster
 description:
   To deploy Dagster to GCP, Google Compute Engine (GCE) can host Dagit, Google Cloud SQL can store runs and events,
-  and Google Cloud Service (GCS) can act as intermediate storage.
+  and Google Cloud Service (GCS) can act as an IO manager.
 ---
 
-# Deploying to GCP
+# Deploying Dagster to GCP
 
-## Hosting Dagit on GCE
+To deploy Dagster to GCP, Google Compute Engine (GCE) can host Dagit, Google Cloud SQL can store runs and events,
+and Google Cloud Service (GCS) can act as an IO manager.
 
-To host Dagit on a bare VM or in Docker on GCE, see [Running Dagit as a service](/deploying/local).
+## Hosting Dagit or Dagster Daemon on GCE
+
+To host Dagit or Dagster Daemon on a bare VM or in Docker on GCE, see [Running Dagster as a service](/deployment/guides/service).
 
 ## Using Cloud SQL for run and event log storage
 
@@ -65,7 +68,7 @@ that Dagit be running in the cloud. If you are connecting a local Dagit
 instance to a remote Cloud SQL storage, double check that your local
 node is able to connect to Cloud SQL.
 
-## Using GCS for intermediates storage
+## Using GCS for intermediates storage (WIP)
 
 You'll probably also want to configure a GCS bucket to store
 intermediates. This enables reexecution, review and audit of

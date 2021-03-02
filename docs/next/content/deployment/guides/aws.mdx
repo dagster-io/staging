@@ -1,16 +1,17 @@
 ---
-title: Deploying to AWS | Dagster
+title: Deploying Dagster to AWS | Dagster
 description:
   To deploy Dagster to AWS, EC2 or ECS can host Dagit, RDS can store runs and events,
-  and S3 can act as intermediate storage.
+  and S3 can act as an IO manager.
 ---
 
-# Deploying to AWS
+# Deploying Dagster to AWS
 
-## Hosting Dagit on EC2 or ECS
+To deploy Dagster to AWS, EC2 or ECS can host Dagit, RDS can store runs and events, and S3 can act as an IO manager.
 
-To host Dagit on a bare VM or in Docker on ECS, see [Running Dagit as a
-service](/deploying/local).
+## Hosting Dagit or Dagster Daemon on EC2 or ECS
+
+To host Dagit or Dagster Daemon on a bare VM or in Docker on EC2 or ECS, see [Running Dagster as a service](/deployment/guides/service).
 
 ## Using RDS for run and event log storage
 
@@ -65,7 +66,7 @@ Dagit be running in the cloud. If you are connecting a local Dagit
 instance to a remote RDS storage, double check that your local node is
 able to connect to RDS.
 
-## Using S3 for intermediates storage
+## Using S3 for intermediates storage (WIP)
 
 To enable parallel computation (e.g., with the multiprocessing or
 Dagster celery executors), you will also need to configure persistent

@@ -302,12 +302,54 @@
       }
     ]
   },
-
   {
     "title": "Guides",
     "icon": "Search",
     "path": "/guides",
-    "children": []
+    "children": [
+      {
+        "title": "Best Practice Guides",
+        "children": [
+          {
+            "title": "Setting Up Repositories and Workspaces",
+            "path": "/best-practices/repositories-workspaces"
+          },
+          {
+            "title": "Customizing IO Management",
+            "path": "/best-practices/io-management"
+          }
+        ]
+      },
+      {
+        "title": "Integration Guides",
+        "children": [
+          {
+            "title": "Dagster with dbt",
+            "path": "/integrations/dbt"
+          },
+          {
+            "title": "Dagster with Spark",
+            "path": "/integrations/spark"
+          },
+          {
+            "title": "Dagster with S3",
+            "path": "/integrations/s3"
+          },
+          {
+            "title": "Dagster with GCS",
+            "path": "/integrations/gcs"
+          },
+          {
+            "title": "Dagster with Pandas",
+            "path": "/integrations/pandas"
+          },
+          {
+            "title": "Dagster with Jupyter/Papermill",
+            "path": "/integrations/dagstermill"
+          }
+        ]
+      }
+    ]
   },
 
   {
@@ -328,29 +370,28 @@
           }
         ]
       },
-
       {
         "title": "Deployment Guides",
         "children": [
           {
             "title": "Running Dagster as a Service",
-            "path": "/deployment/custom-infra/local"
+            "path": "/deployment/guides/service"
           },
           {
             "title": "Deploying Dagster to Docker",
-            "path": "/deployment/custom-infra/docker"
+            "path": "/deployment/guides/docker"
           },
           {
             "title": "Deploying Dagster to Kubernetes",
-            "path": "/deployment/kubernetes/overview"
+            "path": "/deployment/guides/kubernetes"
           },
           {
             "title": "Deploying Dagster to AWS",
-            "path": "/deployment/aws/overview"
+            "path": "/deployment/guides/aws"
           },
           {
             "title": "Deploying Dagster to GCP",
-            "path": "/deployment/gcp/overview"
+            "path": "/deployment/guides/gcp"
           }
         ]
       },
