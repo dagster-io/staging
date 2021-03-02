@@ -1071,5 +1071,5 @@ class GrpcServerProcess:
         from dagster.grpc.client import EphemeralDagsterGrpcClient
 
         return EphemeralDagsterGrpcClient(
-            port=self.port, socket=self.socket, server_process=self.server_process
+            port=self.port, socket=self.socket, server_process=self.server_process, use_ssl=False
         )

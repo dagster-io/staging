@@ -226,11 +226,12 @@ def _location_origin_from_grpc_server_config(grpc_server_config, yaml_path):
     check.dict_param(grpc_server_config, "grpc_server_config")
     check.str_param(yaml_path, "yaml_path")
 
-    port, socket, host, location_name = (
+    port, socket, host, location_name, use_ssl = (
         grpc_server_config.get("port"),
         grpc_server_config.get("socket"),
         grpc_server_config.get("host"),
         grpc_server_config.get("location_name"),
+        grpc_server_config.get("use_ssl"),
     )
 
     check.invariant(
@@ -241,10 +242,7 @@ def _location_origin_from_grpc_server_config(grpc_server_config, yaml_path):
         host = "localhost"
 
     return GrpcServerRepositoryLocationOrigin(
-        port=port,
-        socket=socket,
-        host=host,
-        location_name=location_name,
+        port=port, socket=socket, host=host, location_name=location_name, use_ssl=use_ssl
     )
 
 

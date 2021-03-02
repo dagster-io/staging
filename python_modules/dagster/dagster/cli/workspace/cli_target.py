@@ -119,7 +119,7 @@ class PackageTarget(
 
 
 class GrpcServerTarget(
-    namedtuple("GrpcServerTarget", "host port socket location_name"), WorkspaceLoadTarget
+    namedtuple("GrpcServerTarget", "host port socket location_name use_ssl"), WorkspaceLoadTarget
 ):
     def create_origins(self):
         return [
@@ -128,6 +128,7 @@ class GrpcServerTarget(
                 socket=self.socket,
                 host=self.host,
                 location_name=self.location_name,
+                use_ssl=self.use_ssl,
             )
         ]
 
@@ -159,6 +160,7 @@ def created_workspace_load_target(kwargs):
             "grpc_host",
             "grpc_port",
             "grpc_socket",
+            "grpc_use_ssl",
         )
         return WorkspaceFileTarget(paths=list(kwargs["workspace"]))
     if kwargs.get("python_file"):
@@ -169,6 +171,7 @@ def created_workspace_load_target(kwargs):
             "grpc_host",
             "grpc_port",
             "grpc_socket",
+            "grpc_use_ssl",
         )
         working_directory = get_working_directory_from_kwargs(kwargs)
         return PythonFileTarget(
@@ -186,6 +189,7 @@ def created_workspace_load_target(kwargs):
             "grpc_host",
             "grpc_port",
             "grpc_socket",
+            "grpc_use_ssl",
         )
         return ModuleTarget(
             module_name=kwargs.get("module_name"),
@@ -200,6 +204,7 @@ def created_workspace_load_target(kwargs):
             "grpc_host",
             "grpc_port",
             "grpc_socket",
+            "grpc_use_ssl",
         )
         return PackageTarget(
             package_name=kwargs.get("package_name"),
@@ -213,12 +218,14 @@ def created_workspace_load_target(kwargs):
             "working_directory",
             "empty_working_directory",
             "grpc_socket",
+            "grpc_use_ssl",
         )
         return GrpcServerTarget(
             port=kwargs.get("grpc_port"),
             socket=None,
             host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
             location_name=None,
+            use_ssl=kwargs.get("grpc_use_ssl", False),
         )
     elif kwargs.get("grpc_socket"):
         _check_cli_arguments_none(
@@ -232,6 +239,7 @@ def created_workspace_load_target(kwargs):
             socket=kwargs.get("grpc_socket"),
             host=(kwargs.get("grpc_host") if kwargs.get("grpc_host") else "localhost"),
             location_name=None,
+            use_ssl=kwargs.get("grpc_use_ssl", False),
         )
     else:
         _cli_load_invariant(False)
