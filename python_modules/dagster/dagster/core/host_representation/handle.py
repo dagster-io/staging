@@ -18,6 +18,7 @@ from dagster.core.host_representation.origin import (
     GrpcServerRepositoryLocationOrigin,
     InProcessRepositoryLocationOrigin,
     ManagedGrpcPythonEnvRepositoryLocationOrigin,
+    RepositoryLocationOrigin,
 )
 from dagster.core.host_representation.selector import PipelineSelector
 from dagster.core.origin import RepositoryPythonOrigin
@@ -84,11 +85,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         from dagster.grpc.client import DagsterGrpcClient, client_heartbeat_thread
         from dagster.grpc.server_watcher import create_grpc_watch_thread
 
-        self._origin = check.inst_param(
-            origin,
-            "origin",
-            (GrpcServerRepositoryLocationOrigin, ManagedGrpcPythonEnvRepositoryLocationOrigin),
-        )
+        self._origin = check.inst_param(origin, "origin", RepositoryLocationOrigin)
 
         if isinstance(self._origin, GrpcServerRepositoryLocationOrigin):
             self._port = self.origin.port
