@@ -28,7 +28,6 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
         inst_data=None,
     ):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
-        self._instance_ref = None
         self.max_concurrent_runs = check.opt_int_param(
             max_concurrent_runs, "max_concurrent_runs", 10
         )
@@ -75,15 +74,6 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
             tag_concurrency_limits=config_value.get("tag_concurrency_limits"),
             dequeue_interval_seconds=config_value.get("dequeue_interval_seconds"),
         )
-
-    def initialize(self, instance):
-        check.inst_param(instance, "instance", DagsterInstance)
-        # Store a weakref to avoid a circular reference / enable GC
-        self._instance_ref = weakref.ref(instance)
-
-    @property
-    def _instance(self):
-        return self._instance_ref() if self._instance_ref else None
 
     def submit_run(self, pipeline_run, external_pipeline):
         check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
