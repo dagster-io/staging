@@ -288,6 +288,8 @@ class MockedRunLauncher(RunLauncher, ConfigurableClass):
         self._inst_data = inst_data
         self._queue = []
 
+        super().__init__()
+
     def launch_run(self, instance, run, external_pipeline):
         check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(run, "run", PipelineRun)
