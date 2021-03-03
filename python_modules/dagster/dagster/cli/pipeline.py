@@ -438,7 +438,7 @@ def _check_execute_external_pipeline_args(
     )
 
 
-def _create_external_pipeline_run(
+def create_external_pipeline_run(
     instance,
     repo_location,
     external_repo,
@@ -626,7 +626,7 @@ def execute_launch_command(instance, kwargs):
 
         solid_selection = get_solid_selection_from_args(kwargs)
 
-        pipeline_run = _create_external_pipeline_run(
+        pipeline_run = create_external_pipeline_run(
             instance=instance,
             repo_location=repo_location,
             external_repo=external_repo,
