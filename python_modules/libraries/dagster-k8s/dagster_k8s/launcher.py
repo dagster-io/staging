@@ -140,7 +140,8 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
             env_config_maps, "env_config_maps", of_type=str
         )
         self._env_secrets = check.opt_list_param(env_secrets, "env_secrets", of_type=str)
-        self._instance_ref = None
+
+        super().__init__()
 
     @classmethod
     def config_type(cls):
@@ -163,10 +164,6 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
     @property
     def inst_data(self):
         return self._inst_data
-
-    @property
-    def _instance(self):
-        return self._instance_ref() if self._instance_ref else None
 
     def _get_static_job_config(self):
         if self.job_config:
@@ -215,11 +212,6 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
             ),
             env_secrets=check.opt_list_param(self._env_secrets, "env_secrets", of_type=str),
         )
-
-    def initialize(self, instance):
-        check.inst_param(instance, "instance", DagsterInstance)
-        # Store a weakref to avoid a circular reference / enable GC
-        self._instance_ref = weakref.ref(instance)
 
     def launch_run(self, instance, run, external_pipeline):
         check.inst_param(run, "run", PipelineRun)
