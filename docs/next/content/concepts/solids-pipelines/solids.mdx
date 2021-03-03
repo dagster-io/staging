@@ -34,7 +34,7 @@ Solids have several important properties:
 - **Inputs and Outputs**: Solids have defined [inputs and outputs](#inputs-and-outputs), which can be optionally typed. These types are validated at runtime.
 - **Configurable**: Solids can be configured, using a strongly typed [configuration system](#TODO).
 - **Dependencies**: Solids inputs can depend on the outputs from other solids. A solid will not execute until all of its inputs have been resolved successfully. The dependency structure is defined using a [Pipeline](/concepts/solids-pipelines/pipelines).
-- **Event Stream**: Solids can emit a stream of structured events, such as These events can be viewed in [Dagit](#TODO), Dagster's UI tool.
+- **Event Stream**: Solids can emit a stream of structured events, such as These events can be viewed in [Dagit](/concepts/dagit/dagit), Dagster's UI tool.
 
 Solids are meant to be **individually testable** and **reusable**. Dagster provides several APIs that make it easy to create a library of solids that work across test, staging, and production environments that can be re-used across your codebase.
 

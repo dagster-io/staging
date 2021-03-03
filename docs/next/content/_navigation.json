@@ -140,7 +140,7 @@
         "children": [
           {
             "title": "Pipeline Modes",
-            "path": "/overview/solids-pipelines/solids"
+            "path": "/overview/modes/modes"
           }
         ]
       },
@@ -153,7 +153,7 @@
           },
           {
             "title": "Testing Resources",
-            "path": "/overview/reources/testing-resources"
+            "path": "/overview/resources/testing-resources"
           }
         ]
       },
@@ -161,16 +161,16 @@
         "title": "Configuration System",
         "children": [
           {
-            "title": "Config Types",
-            "path": "/overview/configuration/run-config"
-          },
-          {
-            "title": "Configured API",
-            "path": "/overview/configuration/configured"
+            "title": "Config Schema",
+            "path": "/concepts/configuration/config-schema"
           },
           {
             "title": "Presets",
-            "path": "/overview/configuration/configured"
+            "path": "/concepts/configuration/presets"
+          },
+          {
+            "title": "Configured API",
+            "path": "/concepts/configuration/configured"
           }
         ]
       },
@@ -184,6 +184,15 @@
           {
             "title": "Unconnected Inputs",
             "path": "/concepts/io-management/unconnected-inputs"
+          }
+        ]
+      },
+      {
+        "title": "Dagit UI",
+        "children": [
+          {
+            "title": "Dagit UI",
+            "path": "/concepts/dagit/dagit"
           }
         ]
       },
