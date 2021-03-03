@@ -466,7 +466,6 @@ def pipenv_smoke_tests():
         "pipenv install",
     ]
 
-    # See: https://github.com/dagster-io/dagster/issues/2079
     return [
         StepBuilder(f"pipenv smoke tests {TOX_MAP[version]}")
         .run(*smoke_test_steps)
