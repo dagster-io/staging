@@ -139,6 +139,9 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
         )
 
         with RepositoryLocationHandleManager(grpc_server_registry) as location_manager:
+
+            min_time = time.time() - 5
+
             for run in sorted_runs:
                 if num_dequeued_runs >= max_runs_to_launch:
                     break
@@ -149,7 +152,7 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
                 error_info = None
 
                 try:
-                    self._dequeue_run(instance, run, location_manager)
+                    self._dequeue_run(instance, run, location_manager, min_time)
                 except Exception:  # pylint: disable=broad-except
                     error_info = serializable_error_info_from_exc_info(sys.exc_info())
 
@@ -196,12 +199,12 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
         # sorted is stable, so fifo is maintained
         return sorted(runs, key=get_priority, reverse=True)
 
-    def _dequeue_run(self, instance, run, location_manager):
+    def _dequeue_run(self, instance, run, location_manager, min_time):
         repository_location_origin = (
             run.external_pipeline_origin.external_repository_origin.repository_location_origin
         )
 
-        handle = location_manager.get_handle(repository_location_origin)
+        handle = location_manager.get_handle(repository_location_origin, min_time)
 
         external_pipeline = external_pipeline_from_location_handle(
             handle, run.external_pipeline_origin, run.solid_selection

@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-from contextlib import ExitStack
 
 import pendulum
 from dagster import check
@@ -127,28 +126,13 @@ def execute_sensor_iteration_loop(
     """
     from dagster.daemon.daemon import CompletedIteration
 
-    handle_manager = None
-    manager_loaded_time = None
-
-    RELOAD_LOCATION_MANAGER_INTERVAL = 60
-
     start_time = pendulum.now("UTC").timestamp()
-    with ExitStack() as stack:
+    with RepositoryLocationHandleManager(grpc_server_registry) as handle_manager:
         while not daemon_shutdown_event or not daemon_shutdown_event.is_set():
             start_time = pendulum.now("UTC").timestamp()
             if until and start_time >= until:
                 # provide a way of organically ending the loop to support test environment
                 break
-
-            if (
-                not handle_manager
-                or (start_time - manager_loaded_time) > RELOAD_LOCATION_MANAGER_INTERVAL
-            ):
-                stack.close()  # remove the previous context
-                handle_manager = stack.enter_context(
-                    RepositoryLocationHandleManager(grpc_server_registry)
-                )
-                manager_loaded_time = start_time
 
             yield from execute_sensor_iteration(instance, logger, handle_manager)
             loop_duration = pendulum.now("UTC").timestamp() - start_time
@@ -174,6 +158,9 @@ def execute_sensor_iteration(instance, logger, handle_manager, debug_crash_flags
         )
     )
 
+    # Reload the handles every 60 seconds
+    min_time = time.time() - 60
+
     for job_state in sensor_jobs:
         sensor_debug_crash_flags = (
             debug_crash_flags.get(job_state.job_name) if debug_crash_flags else None
@@ -181,7 +168,7 @@ def execute_sensor_iteration(instance, logger, handle_manager, debug_crash_flags
         error_info = None
         try:
             origin = job_state.origin.external_repository_origin.repository_location_origin
-            repo_location_handle = handle_manager.get_handle(origin)
+            repo_location_handle = handle_manager.get_handle(origin, min_time)
             repo_location = repo_location_handle.create_location()
 
             repo_name = job_state.origin.external_repository_origin.repository_name
