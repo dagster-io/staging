@@ -136,7 +136,12 @@ def core_celery_execution_loop(pipeline_context, execution_plan, step_execution_
 
                     # Submit the Celery tasks
                     step_results[step.key] = step_execution_fn(
-                        app, pipeline_context, step, queue, priority
+                        app,
+                        pipeline_context,
+                        active_execution.get_known_state(),
+                        step,
+                        queue,
+                        priority,
                     )
 
                 except Exception:
