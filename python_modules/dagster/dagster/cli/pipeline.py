@@ -438,7 +438,7 @@ def _check_execute_external_pipeline_args(
     )
 
 
-def _create_external_pipeline_run(
+def create_external_pipeline_run(
     instance,
     repo_location,
     external_repo,
@@ -509,22 +509,25 @@ def _create_external_pipeline_run(
     else:
         execution_plan_snapshot = external_execution_plan.execution_plan_snapshot
 
-    return instance.create_run(
-        pipeline_name=pipeline_name,
-        run_id=run_id,
-        run_config=run_config,
-        mode=pipeline_mode,
-        solids_to_execute=external_pipeline_subset.solids_to_execute,
-        step_keys_to_execute=None,
-        solid_selection=solid_selection,
-        status=None,
-        root_run_id=None,
-        parent_run_id=None,
-        tags=tags,
-        pipeline_snapshot=external_pipeline_subset.pipeline_snapshot,
-        execution_plan_snapshot=execution_plan_snapshot,
-        parent_pipeline_snapshot=external_pipeline_subset.parent_pipeline_snapshot,
-        external_pipeline_origin=external_pipeline_subset.get_external_origin(),
+    return (
+        instance.create_run(
+            pipeline_name=pipeline_name,
+            run_id=run_id,
+            run_config=run_config,
+            mode=pipeline_mode,
+            solids_to_execute=external_pipeline_subset.solids_to_execute,
+            step_keys_to_execute=None,
+            solid_selection=solid_selection,
+            status=None,
+            root_run_id=None,
+            parent_run_id=None,
+            tags=tags,
+            pipeline_snapshot=external_pipeline_subset.pipeline_snapshot,
+            execution_plan_snapshot=execution_plan_snapshot,
+            parent_pipeline_snapshot=external_pipeline_subset.parent_pipeline_snapshot,
+            external_pipeline_origin=external_pipeline_subset.get_external_origin(),
+        ),
+        external_execution_plan,
     )
 
 
@@ -626,7 +629,7 @@ def execute_launch_command(instance, kwargs):
 
         solid_selection = get_solid_selection_from_args(kwargs)
 
-        pipeline_run = _create_external_pipeline_run(
+        pipeline_run, _ = create_external_pipeline_run(
             instance=instance,
             repo_location=repo_location,
             external_repo=external_repo,
