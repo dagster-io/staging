@@ -13,7 +13,8 @@ class DefaultRunCoordinator(RunCoordinator, ConfigurableClass):
 
     def __init__(self, inst_data=None):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
-        self._instance_ref = None
+        
+        super().__init__()
 
     @property
     def inst_data(self):
