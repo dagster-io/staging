@@ -105,6 +105,10 @@
             "path": "/concepts/solids-pipelines/solids"
           },
           {
+            "title": "Pipelines",
+            "path": "/concepts/solids-pipelines/pipelines"
+          },
+          {
             "title": "Solid Events",
             "path": "/concepts/solids-pipelines/solid-events"
           },
@@ -113,12 +117,8 @@
             "path": "/concepts/solids-pipelines/solid-hooks"
           },
           {
-            "title": "Pipelines",
-            "path": "/concepts/solids-pipelines/pipelines"
-          },
-          {
             "title": "Testing Solids and Pipelines",
-            "path": "/concepts/solids-pipelines/solid-factories"
+            "path": "/concepts/solids-pipelines/testing"
           }
         ]
       },
@@ -280,15 +280,6 @@
           {
             "title": "Run Launcher",
             "path": "/overview/run-launchers-executors/run-launcher"
-          }
-        ]
-      },
-      {
-        "title": "Template",
-        "children": [
-          {
-            "title": "Concept Template",
-            "path": "/concepts/template/template"
           }
         ]
       }
