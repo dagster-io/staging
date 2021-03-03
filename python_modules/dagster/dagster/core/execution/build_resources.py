@@ -15,7 +15,7 @@ from dagster.core.system_config.objects import ResourceConfig, config_map_resour
 from dagster.loggers import default_system_loggers
 
 
-def _initialize_console_manager(pipeline_run: Optional[PipelineRun]) -> DagsterLogManager:
+def initialize_console_manager(pipeline_run: Optional[PipelineRun]) -> DagsterLogManager:
     # initialize default colored console logger
     loggers = []
     for logger_def, logger_config in default_system_loggers():
@@ -81,7 +81,7 @@ def build_resources(
     resources_manager = resource_initialization_manager(
         resource_defs=resource_defs,
         resource_configs=mapped_resource_config,
-        log_manager=_initialize_console_manager(pipeline_run),
+        log_manager=initialize_console_manager(pipeline_run),
         execution_plan=None,
         pipeline_run=pipeline_run,
         resource_keys_to_init=set(resource_defs.keys()),
