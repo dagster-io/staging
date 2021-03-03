@@ -110,6 +110,27 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
         return "QUEUED_RUN_COORDINATOR"
 
     def run_iteration(self, instance, daemon_shutdown_event):
+        self._run_dequeue_iteration(instance)
+        self._run_cancel_iteration(instance)
+
+    def _run_cancel_iteration(self, instance):
+        runs = instance.get_runs(
+            filters=PipelineRunsFilter(
+                statuses=IN_PROGRESS_RUN_STATUSES + [PipelineRunStatus.QUEUED],
+                tags={"dagster/cancel_request", "requested"},
+            )
+        )
+        for run in runs:
+            if run.status == PipelineRunStatus.QUEUED:
+                instance.report_run_canceling(
+                    run,
+                    message="Canceling run from the queue.",
+                )
+                instance.report_run_canceled(run)
+            else:
+                instance.run_launcher.terminate(run.run_id)
+
+    def _run_dequeue_iteration(self, instance):
         in_progress_runs = self._get_in_progress_runs(instance)
         max_runs_to_launch = self._max_concurrent_runs - len(in_progress_runs)
 
