@@ -73,7 +73,7 @@ def execute_backfill_iteration(instance, grpc_server_registry, logger, debug_cra
             )
 
             try:
-                repo_location_handle = handle_manager.get_handle(origin)
+                repo_location_handle = handle_manager.get_handle(origin, min_time=time.time() - 60)
                 repo_location = repo_location_handle.create_location()
                 has_more = True
                 while has_more:

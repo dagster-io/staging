@@ -32,7 +32,7 @@ class GrpcServerRegistry(AbstractContextManager):
         pass
 
     @abstractmethod
-    def get_grpc_endpoint(self, repository_location_origin):
+    def get_grpc_endpoint(self, repository_location_origin, min_time=None):
         pass
 
 
@@ -79,7 +79,7 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
     def supports_origin(self, repository_location_origin):
         return isinstance(repository_location_origin, ManagedGrpcPythonEnvRepositoryLocationOrigin)
 
-    def get_grpc_endpoint(self, repository_location_origin):
+    def get_grpc_endpoint(self, repository_location_origin, min_time=None):
         check.inst_param(
             repository_location_origin,
             "repository_location_origin",
@@ -89,6 +89,14 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
         origin_id = repository_location_origin.get_id()
 
         with self._lock:
+            if min_time and origin_id in self._active_grpc_processes_or_errors:
+                process, creation_timestamp, server_id = self._active_grpc_processes_or_errors[
+                    origin_id
+                ]
+
+                if creation_timestamp < min_time:
+                    del self._active_grpc_processes_or_errors[origin_id]
+
             if not origin_id in self._active_grpc_processes_or_errors:
                 try:
                     new_server_id = str(uuid.uuid4())
