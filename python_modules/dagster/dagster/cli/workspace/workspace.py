@@ -1,10 +1,75 @@
+import inspect
+import os
 import sys
 import warnings
 from collections import OrderedDict, namedtuple
+from contextlib import contextmanager
+from typing import Optional
 
 from dagster import check
+from dagster.core.definitions.reconstructable import repository_def_from_target_def
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import RepositoryLocationOrigin
+from dagster.grpc.utils import get_loadable_targets
 from dagster.utils.error import serializable_error_info_from_exc_info
+
+
+def _find_workspace_in_path(path):
+    workspace_path = os.path.join(path, "workspace.yaml")
+    if os.path.exists(workspace_path):
+        return workspace_path
+    else:
+        parent = os.path.dirname(path)
+        if parent == path:
+            return None  # reached root of filesystem
+        return _find_workspace_in_path(parent)
+
+
+def _get_pipeline_def_from_location(repo_location, repo_name, pipeline_name):
+    found_repos = []
+    loadable_target_origin = repo_location.location_handle.loadable_target_origin
+    loadable_targets = get_loadable_targets(
+        loadable_target_origin.python_file,
+        loadable_target_origin.module_name,
+        loadable_target_origin.package_name,
+        loadable_target_origin.working_directory,
+        loadable_target_origin.attribute,
+    )
+    for target in loadable_targets:
+        repo_def = repository_def_from_target_def(target.target_definition)
+        found_repos.append(repo_def.name)
+        if repo_def.name == repo_name and pipeline_name in repo_def.pipeline_names:
+            return repo_def.get_pipeline(pipeline_name)
+    raise DagsterInvariantViolationError(
+        f"Could not find repository named {repo_name} and pipeline named {pipeline_name} in "
+        f"location. Repositories found: {found_repos}"
+    )
+
+
+def _find_closest_workspace(path: str) -> Optional[str]:
+    searching_for = "workspace.yaml"
+    last_root = path
+    current_root = path
+    found_path = None
+    while found_path is None and current_root:
+        pruned = False
+        for root, dirs, files in os.walk(current_root):
+            if not pruned:
+                try:
+                    # Remove the part of the tree we already searched
+                    del dirs[dirs.index(os.path.basename(last_root))]
+                    pruned = True
+                except ValueError:
+                    pass
+            if searching_for in files:
+                # found the file, stop
+                found_path = os.path.join(root, searching_for)
+                break
+        # Otherwise, pop up a level, search again
+        last_root = current_root
+        current_root = os.path.dirname(last_root)
+
+    return found_path
 
 
 class WorkspaceSnapshot(
@@ -146,3 +211,41 @@ class Workspace:
 
     def __exit__(self, exception_type, exception_value, traceback):
         self._cleanup()
+
+    @staticmethod
+    def get():
+        """Search up the directory tree from callsite for workspace.yaml"""
+        from .cli_target import WorkspaceFileTarget
+
+        # get previous frame in stack (loc where this fxn was called)
+        frame = inspect.stack()[1]
+        callsite_file = frame[0].f_code.co_filename
+        workspace_path = _find_workspace_in_path(os.path.dirname(callsite_file))
+        return Workspace(workspace_load_target=WorkspaceFileTarget(paths=[workspace_path]))
+
+    @contextmanager
+    def find_external_target(self, target: str):
+        all_pipeline_names = []
+        for origin in self._location_origin_dict.values():
+            with self.create_handle_from_origin(origin) as handle:
+                repo_location = handle.create_location()
+                for repo_name, external_repository in repo_location.get_repositories().items():
+                    external_pipelines = {
+                        ep.name: ep for ep in external_repository.get_all_external_pipelines()
+                    }
+                    all_pipeline_names += list(external_pipelines.keys())
+                    if target in external_pipelines:
+                        pipeline_def = _get_pipeline_def_from_location(
+                            repo_location, repo_name, target
+                        )
+                        yield (
+                            pipeline_def,
+                            external_pipelines[target],
+                            external_repository,
+                            repo_location,
+                        )
+                        return
+        all_pipelines_as_str = ", ".join(all_pipeline_names)
+        raise DagsterInvariantViolationError(
+            f"Could not find {target} in workspace. Pipelines found: {all_pipelines_as_str}"
+        )
