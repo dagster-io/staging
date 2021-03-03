@@ -354,11 +354,8 @@ class DagsterInstance:
     def from_ref(instance_ref, skip_validation_checks=False):
         check.inst_param(instance_ref, "instance_ref", InstanceRef)
 
-        klass = (
-            instance_ref.custom_instance_class
-            if instance_ref.custom_instance_class
-            else DagsterInstance
-        )
+        klass = instance_ref.custom_instance_class or DagsterInstance
+        kwargs = instance_ref.custom_instance_class_config
 
         return klass(
             instance_type=InstanceType.PERSISTENT,
@@ -373,6 +370,7 @@ class DagsterInstance:
             settings=instance_ref.settings,
             skip_validation_checks=skip_validation_checks,
             ref=instance_ref,
+            **kwargs,
         )
 
     # flags
