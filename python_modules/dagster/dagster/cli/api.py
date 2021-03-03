@@ -19,7 +19,7 @@ from dagster.core.errors import DagsterSubprocessError
 from dagster.core.events import EngineEventData
 from dagster.core.execution.api import create_execution_plan, execute_plan_iterator
 from dagster.core.execution.plan.plan import should_skip_step
-from dagster.core.execution.retries import Retries
+from dagster.core.execution.retries import RetryMode, RetryState
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.external_data import ExternalScheduleExecutionErrorData
 from dagster.core.host_representation.selector import PipelineSelector
@@ -28,6 +28,7 @@ from dagster.core.scheduler import (
     ScheduledExecutionFailed,
     ScheduledExecutionSkipped,
     ScheduledExecutionSuccess,
+    execution,
 )
 from dagster.core.scheduler.job import JobTickData, JobTickStatus, JobType
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -138,16 +139,16 @@ def get_step_stats_by_key(instance, pipeline_run, step_keys_to_execute):
     return step_stats_by_key
 
 
-def verify_step(instance, pipeline_run, retries, step_keys_to_execute):
+def verify_step(instance, pipeline_run, retry_state, step_keys_to_execute):
     step_stats_by_key = get_step_stats_by_key(instance, pipeline_run, step_keys_to_execute)
 
     for step_key in step_keys_to_execute:
         step_stat_for_key = step_stats_by_key.get(step_key)
-        current_attempt = retries.get_attempt_count(step_key) + 1
+        current_attempt = retry_state.get_attempt_count(step_key) + 1
 
         # When using the k8s executor, it is possible to get into an edge case when deleting
         # a step pod. K8s will restart the pod immediately even though we don't want it to.
-        # Pod can be deleted manually or due to or node failures (for example, when runnong on
+        # Pod can be deleted manually or due to or node failures (for example, when running on
         # a spot instance that is evicted).
         #
         # If we encounter one of the error cases below, we exit with a success exit code
@@ -231,12 +232,7 @@ def execute_step_command(input_json):
             )
 
             recon_pipeline = recon_pipeline_from_origin(args.pipeline_origin)
-            retries = Retries.from_config(args.retries_dict)
-
-            if args.should_verify_step:
-                success = verify_step(instance, pipeline_run, retries, args.step_keys_to_execute)
-                if not success:
-                    return
+            retry_mode = RetryMode.from_config(args.retry_mode)
 
             execution_plan = create_execution_plan(
                 recon_pipeline.subset_for_execution_from_existing_pipeline(
@@ -245,7 +241,20 @@ def execute_step_command(input_json):
                 run_config=pipeline_run.run_config,
                 step_keys_to_execute=args.step_keys_to_execute,
                 mode=pipeline_run.mode,
+                # resume_from=...
             )
+            # retry_state = execution_plan.something()
+            retry_state = RetryState()
+
+            if args.should_verify_step:
+                success = verify_step(
+                    instance,
+                    pipeline_run,
+                    retry_state,
+                    args.step_keys_to_execute,
+                )
+                if not success:
+                    return
 
             buff = []
 
@@ -259,7 +268,7 @@ def execute_step_command(input_json):
                 pipeline_run,
                 instance,
                 run_config=pipeline_run.run_config,
-                retries=retries,
+                retry_mode=retry_mode,
             ):
                 buff.append(serialize_dagster_namedtuple(event))
 

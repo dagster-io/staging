@@ -37,7 +37,7 @@ from dagster.core.execution.resolve_versions import (
     resolve_step_output_versions_helper,
     resolve_step_versions_helper,
 )
-from dagster.core.execution.retries import Retries
+from dagster.core.execution.retries import RetryMode, RetryState
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.mem_io_manager import mem_io_manager
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -85,6 +85,7 @@ class _PlanBuilder:
         environment_config: EnvironmentConfig,
         mode: Optional[str],
         step_keys_to_execute: Optional[List[str]],
+        known_state,
     ):
         self.pipeline = check.inst_param(pipeline, "pipeline", IPipeline)
         self.environment_config = check.inst_param(
@@ -102,6 +103,7 @@ class _PlanBuilder:
         self.step_output_map: Dict[
             SolidOutputHandle, Union[StepOutputHandle, UnresolvedStepOutputHandle]
         ] = dict()
+        self.known_state = known_state
         self._seen_handles: Set[StepHandleUnion] = set()
 
     @property
@@ -152,6 +154,7 @@ class _PlanBuilder:
             {step.handle: step for step in self._steps.values()},
             [step.handle for step in self._steps.values()],
             self.environment_config,
+            self.known_state,
         )
 
         if self.step_keys_to_execute is not None:
@@ -393,6 +396,12 @@ def get_step_input_source(
     )
 
 
+class StateSnapshot:
+    def __init__(self):
+        self.resolved_mappings = {}
+        self.previous_retry_attempts = {}
+
+
 class ExecutionPlan(
     NamedTuple(
         "_ExecutionPlan",
@@ -403,6 +412,7 @@ class ExecutionPlan(
             ("resolvable_map", Dict[str, List[UnresolvedStepHandle]]),
             ("step_handles_to_execute", List[StepHandleUnion]),
             ("environment_config", EnvironmentConfig),
+            ("known_state", dict),
         ],
     )
 ):
@@ -412,6 +422,7 @@ class ExecutionPlan(
         step_dict,
         step_handles_to_execute,
         environment_config,
+        known_state=None,
     ):
         check.list_param(
             step_handles_to_execute,
@@ -463,6 +474,7 @@ class ExecutionPlan(
             environment_config=check.inst_param(
                 environment_config, "environment_config", EnvironmentConfig
             ),
+            known_state=check.opt_dict_param(known_state, "known_state"),
         )
 
     @property
@@ -632,6 +644,7 @@ class ExecutionPlan(
             self.step_dict,
             step_handles_to_execute,
             self.environment_config,
+            self.known_state,
         )
 
     def resolve_step_versions(self) -> Dict[str, Optional[str]]:
@@ -642,12 +655,17 @@ class ExecutionPlan(
 
     def start(
         self,
-        retries: Retries,
+        retry_mode: RetryMode,
         sort_key_fn: Optional[Callable[[ExecutionStep], float]] = None,
     ) -> "ActiveExecution":
         from .active import ActiveExecution
 
-        return ActiveExecution(self, retries, sort_key_fn)
+        return ActiveExecution(
+            self,
+            retry_mode,
+            RetryState(self.known_state.get("retry_state", {}).get("previous_retry_attempts")),
+            sort_key_fn,
+        )
 
     def step_handle_for_single_step_plans(
         self,
@@ -673,6 +691,7 @@ class ExecutionPlan(
         environment_config: EnvironmentConfig,
         mode: Optional[str] = None,
         step_keys_to_execute: Optional[List[str]] = None,
+        known_state=None,
     ) -> "ExecutionPlan":
         """Here we build a new ExecutionPlan from a pipeline definition and the environment config.
 
@@ -692,6 +711,7 @@ class ExecutionPlan(
             environment_config,
             mode=mode,
             step_keys_to_execute=step_keys_to_execute,
+            known_state=known_state,
         )
 
         # Finally, we build and return the execution plan

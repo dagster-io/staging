@@ -19,7 +19,7 @@ from dagster.core.errors import DagsterUnmetExecutorRequirementsError
 from dagster.core.events import EngineEventData
 from dagster.core.events.log import EventRecord
 from dagster.core.execution.plan.objects import StepFailureData, UserFailureData
-from dagster.core.execution.retries import Retries
+from dagster.core.execution.retries import Retries, RetryMode
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.serdes import pack_value, serialize_dagster_namedtuple, unpack_value
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -130,7 +130,7 @@ def celery_k8s_job_executor(init_context):
     backend = run_launcher.backend or exc_cfg.get("backend")
     config_source = run_launcher.config_source or exc_cfg.get("config_source")
     include = run_launcher.include or exc_cfg.get("include")
-    retries = run_launcher.retries or Retries.from_config(exc_cfg.get("retries"))
+    retries = run_launcher.retries or RetryMode.from_config(exc_cfg.get("retries"))
 
     return CeleryK8sJobExecutor(
         broker=broker,
@@ -169,7 +169,7 @@ class CeleryK8sJobExecutor(Executor):
         else:
             check.opt_str_param(kubeconfig_file, "kubeconfig_file")
 
-        self._retries = check.inst_param(retries, "retries", Retries)
+        self._retries = check.inst_param(retries, "retries", RetryMode)
         self.broker = check.opt_str_param(broker, "broker", default=broker_url)
         self.backend = check.opt_str_param(backend, "backend", default=result_backend)
         self.include = check.opt_list_param(include, "include", of_type=str)

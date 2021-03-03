@@ -105,7 +105,7 @@ def _submit_task(app, pipeline_context, step, queue, priority):
         pipeline_run_id=pipeline_context.pipeline_run.run_id,
         step_keys_to_execute=[step.key],
         instance_ref=pipeline_context.instance.get_ref(),
-        retries_dict=pipeline_context.executor.retries.for_inner_plan().to_config(),
+        retry_mode=pipeline_context.executor.retries.for_inner_plan(),
     )
 
     task = create_task(app)

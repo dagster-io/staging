@@ -14,7 +14,7 @@ from dagster import (
 from dagster.cli.api import ExecuteStepArgs
 from dagster.core.definitions.executor import check_cross_process_constraints
 from dagster.core.events import EngineEventData
-from dagster.core.execution.retries import Retries
+from dagster.core.execution.retries import RetryMode
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.serdes import pack_value, serialize_dagster_namedtuple, unpack_value
 from dagster.utils import merge_dicts
@@ -153,7 +153,7 @@ class CeleryDockerExecutor(Executor):
         include=None,
         config_source=None,
     ):
-        self._retries = check.inst_param(retries, "retries", Retries)
+        self._retries = check.inst_param(retries, "retries", RetryMode)
         self.broker = check.opt_str_param(broker, "broker", default=broker_url)
         self.backend = check.opt_str_param(backend, "backend", default=result_backend)
         self.include = check.opt_list_param(include, "include", of_type=str)
