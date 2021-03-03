@@ -20,6 +20,8 @@ class SyncInMemoryRunLauncher(RunLauncher, ConfigurableClass):
         self._repository = None
         self._instance_ref = None
 
+        super().__init__()
+
     @property
     def inst_data(self):
         return self._inst_data

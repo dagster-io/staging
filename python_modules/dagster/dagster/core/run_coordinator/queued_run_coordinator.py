@@ -40,6 +40,8 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
             dequeue_interval_seconds, "dequeue_interval_seconds", 5
         )
 
+        super().__init__()
+
     @property
     def inst_data(self):
         return self._inst_data
