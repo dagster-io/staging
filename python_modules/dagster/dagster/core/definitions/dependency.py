@@ -270,7 +270,7 @@ class SolidHandle(namedtuple("_SolidHandle", "name parent")):
 
         return SolidHandle.from_path(self.path[len(ancestor.path) :])
 
-    def with_ancestor(self, ancestor: "SolidHandle") -> Optional["SolidHandle"]:
+    def with_ancestor(self, ancestor: Optional["SolidHandle"]) -> Optional["SolidHandle"]:
         """Returns a copy of the handle with an ancestor grafted on.
 
         Args:
