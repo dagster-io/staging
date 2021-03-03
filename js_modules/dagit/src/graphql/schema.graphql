@@ -1766,16 +1766,6 @@ input MarshalledOutput {
   key: String!
 }
 
-input Retries {
-  mode: String
-  retriesPreviousAttempts: [RetriesPreviousAttempts]
-}
-
-input RetriesPreviousAttempts {
-  key: String
-  count: Int
-}
-
 input StepExecution {
   stepKey: String!
   marshalledInputs: [MarshalledInput!]

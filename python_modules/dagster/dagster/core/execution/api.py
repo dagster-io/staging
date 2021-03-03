@@ -12,7 +12,7 @@ from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
-from dagster.core.execution.retries import Retries
+from dagster.core.execution.retries import RetryMode
 from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.selector import parse_items_from_selection, parse_step_selection
 from dagster.core.storage.mem_io_manager import InMemoryIOManager
@@ -617,13 +617,13 @@ def execute_plan_iterator(
     execution_plan: ExecutionPlan,
     pipeline_run: PipelineRun,
     instance: DagsterInstance,
-    retries: Optional[Retries] = None,
+    retry_mode: Optional[RetryMode] = None,
     run_config: Optional[dict] = None,
 ) -> Iterator[DagsterEvent]:
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
     check.inst_param(instance, "instance", DagsterInstance)
-    retries = check.opt_inst_param(retries, "retries", Retries, Retries.disabled_mode())
+    retry_mode = check.opt_inst_param(retry_mode, "retry_mode", RetryMode, RetryMode.DISABLED)
     run_config = check.opt_dict_param(run_config, "run_config")
 
     return iter(
@@ -631,7 +631,7 @@ def execute_plan_iterator(
             execution_plan=execution_plan,
             iterator=inner_plan_execution_iterator,
             execution_context_manager=PlanExecutionContextManager(
-                retries=retries,
+                retry_mode=retry_mode,
                 execution_plan=execution_plan,
                 run_config=run_config,
                 pipeline_run=pipeline_run,
@@ -647,7 +647,7 @@ def execute_plan(
     instance: DagsterInstance,
     pipeline_run: PipelineRun,
     run_config: Optional[Dict] = None,
-    retries: Optional[Retries] = None,
+    retry_mode: Optional[RetryMode] = None,
 ) -> List[DagsterEvent]:
     """This is the entry point of dagster-graphql executions. For the dagster CLI entry point, see
     execute_pipeline() above.
@@ -656,7 +656,7 @@ def execute_plan(
     check.inst_param(instance, "instance", DagsterInstance)
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
     run_config = check.opt_dict_param(run_config, "run_config")
-    check.opt_inst_param(retries, "retries", Retries)
+    check.opt_inst_param(retry_mode, "retry_mode", RetryMode)
 
     return list(
         execute_plan_iterator(
@@ -664,7 +664,7 @@ def execute_plan(
             run_config=run_config,
             pipeline_run=pipeline_run,
             instance=instance,
-            retries=retries,
+            retry_mode=retry_mode,
         )
     )
 
@@ -683,6 +683,7 @@ def create_execution_plan(
     run_config: Optional[dict] = None,
     mode: Optional[str] = None,
     step_keys_to_execute: Optional[List[str]] = None,
+    known_state=None,
 ) -> ExecutionPlan:
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
@@ -695,7 +696,11 @@ def create_execution_plan(
     environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode)
 
     return ExecutionPlan.build(
-        pipeline, environment_config, mode=mode, step_keys_to_execute=step_keys_to_execute
+        pipeline,
+        environment_config,
+        mode=mode,
+        step_keys_to_execute=step_keys_to_execute,
+        known_state=known_state,
     )
 
 
