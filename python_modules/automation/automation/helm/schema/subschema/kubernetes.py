@@ -35,6 +35,11 @@ class Image(BaseModel):
     tag: str
     pullPolicy: PullPolicy
 
+class ImageWithRegistry(BaseModel):
+    registry: str
+    repository: str
+    tag: str
+    pullPolicy: PullPolicy
 
 class Service(BaseModel):
     type: str

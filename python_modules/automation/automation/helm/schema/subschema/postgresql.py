@@ -1,6 +1,6 @@
 from pydantic import BaseModel  # pylint: disable=E0611
 
-from .kubernetes import Image
+from .kubernetes import ImageWithRegistry
 
 
 class Service(BaseModel):
@@ -8,7 +8,7 @@ class Service(BaseModel):
 
 
 class PostgreSQL(BaseModel):
-    image: Image
+    image: ImageWithRegistry
     enabled: bool
     postgresqlHost: str
     postgresqlUsername: str

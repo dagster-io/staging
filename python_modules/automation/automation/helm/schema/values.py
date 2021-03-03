@@ -22,3 +22,4 @@ class HelmValues(BaseModel):
     scheduler: subschema.Scheduler
     runLauncher: subschema.RunLauncher
     dagsterDaemon: subschema.Daemon
+    busybox: subschema.Busybox
