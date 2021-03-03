@@ -329,6 +329,8 @@ class MockedRunCoordinator(RunCoordinator, ConfigurableClass):
         self._inst_data = inst_data
         self._queue = []
 
+        super().__init__()
+
     def submit_run(self, pipeline_run, external_pipeline):
         check.inst_param(pipeline_run, "run", PipelineRun)
         check.opt_inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
