@@ -315,8 +315,10 @@ def _schedule_runs_at_time(
             try:
                 instance.submit_run(run.run_id, external_pipeline)
                 logger.info(f"Completed scheduled launch of run {run.run_id} for {schedule_name}")
-            except Exception:  # pylint: disable=broad-except
-                logger.error(f"Run {run.run_id} created successfully but failed to launch.")
+            except Exception as e:  # pylint: disable=broad-except
+                logger.error(
+                    f"Run {run.run_id} created successfully but failed to launch: {str(serializable_error_info_from_exc_info(sys.exc_info()))}"
+                )
 
         _check_for_debug_crash(debug_crash_flags, "RUN_LAUNCHED")
         tick_context.add_run(run_id=run.run_id, run_key=run_request.run_key)
