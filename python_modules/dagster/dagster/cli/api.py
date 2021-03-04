@@ -437,6 +437,12 @@ def grpc_command(
             fixed_server_id=fixed_server_id,
         )
 
+        print(  # pylint: disable=print-call
+            "Serving on {host}:{port_or_socket}...".format(
+                host=host, port_or_socket=port if port else socket
+            )
+        )
+
         server.serve()
 
 
