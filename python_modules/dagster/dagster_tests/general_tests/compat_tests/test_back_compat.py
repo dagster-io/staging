@@ -347,9 +347,7 @@ def test_0_10_0_schedule_wipe():
             with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
                 pass
 
-        with DagsterInstance.from_ref(
-            InstanceRef.from_dir(test_dir), skip_validation_checks=True
-        ) as instance:
+        with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
             instance.upgrade()
 
         assert "schedules" not in get_sqlite3_tables(db_path)
