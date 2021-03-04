@@ -1,4 +1,5 @@
 import graphene
+from dagster.core.definitions.events import AssetKey
 
 from ...implementation.execution import (
     create_and_launch_partition_backfill,
@@ -6,6 +7,7 @@ from ...implementation.execution import (
     launch_pipeline_execution,
     launch_pipeline_reexecution,
     terminate_pipeline_execution,
+    wipe_asset,
 )
 from ...implementation.external import get_full_external_pipeline_or_raise
 from ...implementation.utils import (
@@ -15,8 +17,10 @@ from ...implementation.utils import (
     capture_error,
     pipeline_selector_from_graphql,
 )
+from ..asset_key import GrapheneAssetKey
 from ..backfill import GraphenePartitionBackfillResult
 from ..errors import (
+    GrapheneAssetNotFoundError,
     GrapheneConflictingExecutionParamsError,
     GraphenePipelineRunNotFoundError,
     GraphenePresetNotFoundError,
@@ -25,7 +29,7 @@ from ..errors import (
     GrapheneRepositoryLocationNotFound,
 )
 from ..external import GrapheneRepositoryLocation, GrapheneRepositoryLocationLoadFailure
-from ..inputs import GrapheneExecutionParams, GraphenePartitionBackfillParams
+from ..inputs import GrapheneAssetKeyInput, GrapheneExecutionParams, GraphenePartitionBackfillParams
 from ..pipelines.pipeline import GraphenePipelineRun
 from ..runs import GrapheneLaunchPipelineExecutionResult, GrapheneLaunchPipelineReexecutionResult
 from ..schedules import (
@@ -306,6 +310,36 @@ class GrapheneReloadRepositoryLocationMutation(graphene.Mutation):
             )
 
 
+class GrapheneAssetWipeSuccess(graphene.ObjectType):
+    assetKey = graphene.NonNull(GrapheneAssetKey)
+
+    class Meta:
+        name = "AssetWipeSuccess"
+
+
+class GrapheneAssetWipeMutationResult(graphene.Union):
+    class Meta:
+        types = (
+            GrapheneAssetNotFoundError,
+            GraphenePythonError,
+            GrapheneAssetWipeSuccess,
+        )
+        name = "AssetWipeMutationResult"
+
+
+class GrapheneAssetWipeMutation(graphene.Mutation):
+    Output = graphene.NonNull(GrapheneAssetWipeMutationResult)
+
+    class Arguments:
+        assetKey = graphene.Argument(graphene.NonNull(GrapheneAssetKeyInput))
+
+    class Meta:
+        name = "AssetWipeMutation"
+
+    def mutate(self, graphene_info, **kwargs):
+        return wipe_asset(graphene_info, AssetKey.from_graphql_input(kwargs["assetKey"]))
+
+
 class GrapheneMutation(graphene.ObjectType):
     launch_pipeline_execution = GrapheneLaunchPipelineExecutionMutation.Field()
     launch_pipeline_reexecution = GrapheneLaunchPipelineReexecutionMutation.Field()
@@ -318,6 +352,7 @@ class GrapheneMutation(graphene.ObjectType):
     delete_pipeline_run = GrapheneDeleteRunMutation.Field()
     reload_repository_location = GrapheneReloadRepositoryLocationMutation.Field()
     launch_partition_backfill = GrapheneLaunchPartitionBackfillMutation.Field()
+    wipe_asset = GrapheneAssetWipeMutation.Field()
 
     class Meta:
         name = "Mutation"
