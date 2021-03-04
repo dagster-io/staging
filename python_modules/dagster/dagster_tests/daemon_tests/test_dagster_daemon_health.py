@@ -105,11 +105,9 @@ def test_thread_die_daemon(monkeypatch):
                             in str(e)
                         )
                         break
-                    else:
-                        raise Exception("check_daemons should fail if a thread has died")
 
-                if (now - init_time).total_seconds() > 10:
-                    raise Exception("timed out waiting for heartbeat error")
+                if (now - init_time).total_seconds() > 20:
+                    raise Exception("timed out waiting for check_daemons to fail")
 
                 time.sleep(0.5)
 
