@@ -274,6 +274,10 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
             self._obs.remove_handler_for_watch(event_handler, watch)
             del self._watchers[run_id][handler]
 
+    def dispose(self):
+        self._obs.stop()
+        self._obs.join(timeout=15)
+
 
 class SqliteEventLogStorageWatchdog(PatternMatchingEventHandler):
     def __init__(self, event_log_storage, run_id, callback, start_cursor, **kwargs):
