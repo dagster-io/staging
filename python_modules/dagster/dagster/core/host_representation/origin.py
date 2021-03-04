@@ -81,6 +81,27 @@ class RepositoryLocationOrigin(ABC):
 
 
 @whitelist_for_serdes
+class DaemonRepositoryLocationOrigin(
+    namedtuple("DaemonRepositoryLocationOrigin", "location_name"), RepositoryLocationOrigin
+):
+    """Identifies a repository location that the daemon knows how to construct using additional
+    metadata that can be derived from the location name.
+    """
+
+    def __new__(cls, location_name):
+        return super(DaemonRepositoryLocationOrigin, cls).__new__(cls, location_name)
+
+    def get_cli_args(self):
+        raise NotImplementedError
+
+    def get_display_metadata(self):
+        return {}
+
+    def create_handle(self):
+        raise Exception("")
+
+
+@whitelist_for_serdes
 class InProcessRepositoryLocationOrigin(
     namedtuple("_InProcessRepositoryLocationOrigin", "recon_repo"),
     RepositoryLocationOrigin,
