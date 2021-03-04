@@ -987,6 +987,7 @@ type Mutation {
   reloadRepositoryLocation(repositoryLocationName: String!): ReloadRepositoryLocationMutationResult!
   reloadWorkspace: ReloadWorkspaceMutationResult!
   launchPartitionBackfill(backfillParams: PartitionBackfillParams!): PartitionBackfillResult!
+  wipeAsset(assetKey: AssetKeyInput!): AssetWipeMutationResult!
 }
 
 union LaunchPipelineExecutionResult = LaunchPipelineRunSuccess | InvalidStepError | InvalidOutputError | PipelineConfigValidationInvalid | PipelineNotFoundError | PipelineRunConflict | PythonError | PresetNotFoundError | ConflictingExecutionParamsError
@@ -1106,6 +1107,12 @@ input PartitionBackfillParams {
 input PartitionSetSelector {
   partitionSetName: String!
   repositorySelector: RepositorySelector!
+}
+
+union AssetWipeMutationResult = AssetNotFoundError | PythonError | AssetWipeSuccess
+
+type AssetWipeSuccess {
+  assetKey: AssetKey!
 }
 
 type Subscription {
