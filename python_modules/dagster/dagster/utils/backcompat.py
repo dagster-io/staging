@@ -148,10 +148,9 @@ def experimental_functionality_warning(desc, stacklevel=3):
     )
 
 
-def experimental(fn):
+def experimental_fn(fn):
     """
-    Spews an "experimental" warning whenever the given callable is called. If the argument is a
-    class, this means the warning will be emitted when the class is instantiated.
+    Spews an "experimental" warning whenever the given callable is called.
 
     Usage:
 
@@ -169,3 +168,50 @@ def experimental(fn):
         return fn(*args, **kwargs)
 
     return _inner
+
+
+def experimental_class(cls):
+    """
+    Spews an "experimental" warning whenever the given class is instantiated.
+
+    Usage:
+
+        .. code-block:: python
+
+            @experimental
+            class MyExperimentalClass:
+                pass
+    """
+    check.inst_param(cls, "cls", type)
+
+    dunder_init = cls.__init__
+
+    def warn_and_init(self, *args, **kwargs):
+        experimental_class_warning(cls.__name__)
+        dunder_init(self, *args, **kwargs)
+
+    cls.__init__ = warn_and_init
+    return cls
+
+
+def experimental(callable_obj):
+    """
+    Spews an "experimental" warning whenever the given callable is called. If the argument is a
+    class, this means the warning will be emitted when the class is instantiated.
+
+    Usage:
+
+        .. code-block:: python
+
+            @experimental
+            def my_experimental_function(my_arg):
+                do_stuff()
+
+            @experimental
+            class MyExperimentalClass:
+                pass
+    """
+    if isinstance(callable_obj, type):
+        return experimental_class(callable_obj)
+    else:
+        return experimental_fn(callable_obj)

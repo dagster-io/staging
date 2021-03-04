@@ -5,7 +5,7 @@ from functools import wraps
 
 import pandas as pd
 from dagster import DagsterType, EventMetadataEntry, TypeCheck, check
-from dagster.utils.backcompat import experimental_class_warning
+from dagster.utils.backcompat import experimental
 from pandas import DataFrame
 
 
@@ -134,6 +134,7 @@ class Constraint:
         self.error_description = check.str_param(error_description, "error_description")
 
 
+@experimental
 class ConstraintWithMetadata:
     """
     This class defines a base constraint over pandas DFs with organized metadata
@@ -156,7 +157,6 @@ class ConstraintWithMetadata:
     def __init__(
         self, description, validation_fn, resulting_exception, raise_or_typecheck=True, name=None
     ):
-        experimental_class_warning(self.__class__.__name__)
         if name is None:
             self.name = self.__class__.__name__
         else:
