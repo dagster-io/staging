@@ -127,7 +127,7 @@
         "children": [
           {
             "title": "Run Config",
-            "path": "/overview/solids-pipelines/solids"
+            "path": "/concepts/pipeline-runs/run-config"
           },
           {
             "title": "Creating Pipeline Runs",
@@ -165,12 +165,12 @@
             "path": "/concepts/configuration/config-schema"
           },
           {
-            "title": "Presets",
-            "path": "/concepts/configuration/presets"
-          },
-          {
             "title": "Configured API",
             "path": "/concepts/configuration/configured"
+          },
+          {
+            "title": "Presets",
+            "path": "/concepts/configuration/presets"
           }
         ]
       },
