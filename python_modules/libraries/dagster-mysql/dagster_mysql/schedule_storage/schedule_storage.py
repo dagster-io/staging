@@ -3,7 +3,7 @@ from dagster import check
 from dagster.core.storage.schedules import ScheduleStorageSqlMetadata, SqlScheduleStorage
 from dagster.core.storage.sql import create_engine, run_alembic_upgrade, stamp_alembic_rev
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
-from dagster.utils.backcompat import experimental_class_warning
+from dagster.utils.backcompat import experimental
 
 from ..utils import (
     create_mysql_connection,
@@ -15,6 +15,7 @@ from ..utils import (
 )
 
 
+@experimental
 class MySQLScheduleStorage(SqlScheduleStorage, ConfigurableClass):
     """MySQL-backed run storage.
 
@@ -35,7 +36,6 @@ class MySQLScheduleStorage(SqlScheduleStorage, ConfigurableClass):
     """
 
     def __init__(self, mysql_url, inst_data=None):
-        experimental_class_warning("MySQLScheduleStorage")
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self.mysql_url = mysql_url
 
