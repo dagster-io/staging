@@ -17,6 +17,7 @@ from dagster_k8s_test_infra.cluster import (  # isort:skip
     dagster_instance_for_user_deployments,
     dagster_instance_for_daemon,
     define_cluster_provider_fixture,
+    helm_postgres_url,
 )
 
 cluster_provider = define_cluster_provider_fixture()
