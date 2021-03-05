@@ -3,6 +3,7 @@ from collections import defaultdict
 from dagster import check
 from dagster.core.events import DagsterEventType
 from dagster.core.execution.plan.handle import StepHandle, UnresolvedStepHandle
+from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.plan.step import ResolvedFromDynamicStepHandle
 from dagster.core.host_representation import ExternalExecutionPlan
 from dagster.core.instance import DagsterInstance
@@ -32,10 +33,12 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
     check.opt_str_param(parent_run_id, "parent_run_id")
 
     if not parent_run_id:
-        return execution_plan.step_keys_in_plan
+        return execution_plan.step_keys_in_plan, None
 
     parent_run = instance.get_run_by_id(parent_run_id)
     parent_run_logs = instance.all_logs(parent_run_id)
+
+    parent_state = KnownExecutionState.derive_from_logs(parent_run_logs)
 
     # keep track of steps with dicts that point:
     # * step_key -> set(step_handle) in the normal case
@@ -111,4 +114,15 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
                 else:
                     to_retry[step_key].add(step_handle)
 
-    return [step_handle.to_key() for step_set in to_retry.values() for step_handle in step_set]
+    steps_to_retry = [
+        step_handle.to_key() for step_set in to_retry.values() for step_handle in step_set
+    ]
+
+    # copy over all dynamic mappings for steps that will not be retried
+    dynamic_mappings_to_reuse = {
+        step_key: parent_state.dynamic_mappings[step_key]
+        for step_key in parent_state.dynamic_mappings.keys()
+        if step_key not in steps_to_retry
+    }
+
+    return steps_to_retry, KnownExecutionState({}, dynamic_mappings_to_reuse)
