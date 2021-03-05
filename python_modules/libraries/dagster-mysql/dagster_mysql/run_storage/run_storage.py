@@ -17,6 +17,7 @@ from ..utils import (
 )
 
 
+@experimental
 class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
     """MySQL-backed run storage.
 
@@ -36,7 +37,6 @@ class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
     :py:class:`~dagster.IntSource` and can be configured from environment variables.
     """
 
-    @experimental
     def __init__(self, mysql_url, inst_data=None):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self.mysql_url = mysql_url
