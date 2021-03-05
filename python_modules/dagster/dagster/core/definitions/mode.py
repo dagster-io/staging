@@ -1,3 +1,4 @@
+import warnings
 from collections import namedtuple
 
 from dagster import check
@@ -56,18 +57,18 @@ class ModeDefinition(
         check.opt_dict_param(
             resource_defs, "resource_defs", key_type=str, value_type=ResourceDefinition
         )
-        print("*" * 100)
+        warnings.warn("*" * 100)
         if resource_defs and "io_manager" in resource_defs:
             resource_defs_with_defaults = resource_defs
-            print(name, "has io_manager")
+            warnings.warn(f"{name} has io_manager")
         else:
             from dagster.core.storage.mem_io_manager import mem_io_manager
 
             resource_defs_with_defaults = merge_dicts(
                 {"io_manager": mem_io_manager}, resource_defs or {}
             )
-            print(name, "does not have io_manager")
-        print(resource_defs_with_defaults)
+            warnings.warn(f"{name} does not have io_manager")
+        warnings.warn(repr(resource_defs_with_defaults))
 
         return super(ModeDefinition, cls).__new__(
             cls,

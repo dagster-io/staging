@@ -66,6 +66,7 @@ def test_airline_pipeline_1_warehouse(postgres, pg_hostname):
             warehouse_config_object["resources"]["pyspark_io_manager"] = {
                 "config": {"base_dir": temp_dir}
             }
+            warnings.warn(f"warehouse_config_object: {warehouse_config_object}")
             result_warehouse = execute_pipeline(
                 pipeline=warehouse_pipeline,
                 mode="local",
