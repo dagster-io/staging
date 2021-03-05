@@ -1,6 +1,20 @@
 # pylint: disable=unused-argument
 
 from dagster import InputDefinition, Nothing, Output, OutputDefinition, solid
+import requests
+
+
+class MockResponse:
+    def json(self):
+        return {}
+
+
+class MockRequest:
+    def get(self, _url):
+        return MockResponse()
+
+
+requests = MockRequest()
 
 # start_solid_marker
 
@@ -26,7 +40,18 @@ InputDefinition(name="xyz", dagster_type=int, description="Some description")
 
 # end_input_definition_marker
 
-# start_input_example_solid_maker
+
+# start_configured_solid_marker
+@solid(config_schema={"api_endpoint": str})
+def my_configured_solid(context):
+    api_endpoint = context.solid_config["api_endpoint"]
+    data = requests.get(f"{api_endpoint}/data").json()
+    return data
+
+
+# end_configured_solid_marker
+
+# start_input_example_solid_marker
 
 # Inputs abc and xyz must appear in the same order on the compute fn
 @solid(
@@ -39,7 +64,7 @@ def my_input_example_solid(context, abc, xyz):
     pass
 
 
-# end_input_example_solid_maker
+# end_input_example_solid_marker
 
 # start_typehints_solid_marker
 @solid
@@ -67,6 +92,15 @@ def my_input_output_example_solid(context, a, b):
 
 
 # end_input_output_solid_marker
+
+# start_solid_context_marker
+@solid(config_schema={"name": str})
+def context_solid(context):
+    name = context.solid_config["name"]
+    context.log.info(f"My name is {name}")
+
+
+# end_solid_context_marker
 
 # start_with_multiple_inputs_marker
 @solid(

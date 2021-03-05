@@ -1,5 +1,7 @@
 from dagster import SolidDefinition, execute_solid
 from docs_snippets.concepts.solids_pipelines.solids import (
+    context_solid,
+    my_configured_solid,
     addder,
     multiple_outputs_solid,
     my_input_example_solid,
@@ -27,6 +29,8 @@ def generate_stub_input_values(solid):
 
 def test_solids_compile_and_excute():
     solids = [
+        context_solid,
+        my_configured_solid,
         my_solid,
         my_input_example_solid,
         my_typehints_solid,
