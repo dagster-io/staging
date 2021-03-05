@@ -1,7 +1,8 @@
 import pytest
-from dagster import Field, resource
+from dagster import Field, InputContext, OutputContext, fs_io_manager, resource
 from dagster.core.errors import DagsterResourceFunctionError
-from dagster.core.execution.build_resources import build_resources
+from dagster.core.execution.build_resources import build_resources, initialize_console_manager
+from dagster.core.test_utils import instance_for_test
 
 
 def test_basic_resource():
@@ -59,3 +60,38 @@ def test_error_in_resource_initialization():
     ):
         with build_resources(resource_defs={"i_will_fail": i_will_fail}):
             pass
+
+
+def fs_io_manager_with_instance_test(instance):
+    with build_resources(
+        resource_defs={"io_manager": fs_io_manager}, instance=instance
+    ) as resources:
+        log_manager = initialize_console_manager(None)
+        output_context = OutputContext(
+            step_key="test_step_key",
+            name="result",
+            pipeline_name="fake_pipeline",
+            run_id="run_id",
+            log_manager=log_manager,
+        )
+        resources.resource_instance_dict["io_manager"].handle_output(
+            output_context,
+            "foo",
+        )
+        assert (
+            resources.resource_instance_dict["io_manager"].load_input(
+                InputContext(
+                    name="result",
+                    pipeline_name="fake_pipeline",
+                    upstream_output=output_context,
+                    log_manager=log_manager,
+                ),
+            )
+            == "foo"
+        )
+
+
+def test_build_fs_io_manager():
+    with instance_for_test() as instance:
+        fs_io_manager_with_instance_test(instance)
+    fs_io_manager_with_instance_test(None)
