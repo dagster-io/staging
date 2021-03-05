@@ -36,24 +36,16 @@ def run_config_for_date_partition(partition):
 
     return {
         "solids": {
-            "download_data": {
-                "outputs": {"result": {"table": "daily_raw_data", "partitions": [date]}}
-            },
+            "download_data": {"outputs": {"result": {"partitions": [date]}}},
             "split_action_types": {
                 "outputs": {
-                    "comments": {"table": "daily_raw_comments", "partitions": [date]},
-                    "stories": {"table": "daily_raw_stories", "partitions": [date]},
+                    "comments": {"partitions": [date]},
+                    "stories": {"partitions": [date]},
                 }
             },
-            "top_10_comments": {
-                "outputs": {"result": {"table": "daily_top_comments", "partitions": [date]}}
-            },
-            "top_10_stories": {
-                "outputs": {"result": {"table": "daily_top_stories", "partitions": [date]}}
-            },
-            "top_10_actions": {
-                "outputs": {"result": {"table": "daily_top_actions", "partitions": [date]}}
-            },
+            "top_10_comments": {"outputs": {"result": {"partitions": [date]}}},
+            "top_10_stories": {"outputs": {"result": {"partitions": [date]}}},
+            "top_10_actions": {"outputs": {"result": {"partitions": [date]}}},
         }
     }
 

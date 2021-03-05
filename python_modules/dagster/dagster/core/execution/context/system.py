@@ -4,6 +4,7 @@ Not every property on these should be exposed to random Jane or Joe dagster user
 so we have a different layer of objects that encode the explicit public API
 in the user_context module
 """
+import warnings
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
@@ -392,6 +393,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
 
             output_manager = IntermediateStorageAdapter(self.intermediate_storage)
         else:
+            warnings.warn(f"{step_output_handle} MIGHT BE ABOUT TO FAIL")
             output_manager = getattr(self.resources, io_manager_key)
         return check.inst(output_manager, IOManager)
 
