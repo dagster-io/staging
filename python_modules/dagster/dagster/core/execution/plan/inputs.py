@@ -122,7 +122,7 @@ class StepInputSource(ABC):
         return set()
 
     def get_asset_lineage(
-        self, _step_context: "SystemStepExecutionContext", depth=0
+        self, _step_context: "SystemStepExecutionContext"
     ) -> List[AssetLineageInfo]:
         return []
 
@@ -283,9 +283,12 @@ class FromStepOutput(
         return set()
 
     def get_asset_lineage(
-        self, step_context: "SystemStepExecutionContext", depth=0
+        self, step_context: "SystemStepExecutionContext"
     ) -> List[AssetLineageInfo]:
         source_handle = self.step_output_handle
+        step_context.log.info("in get asset lineage")
+        step_context.log.info(repr(source_handle))
+        step_context.log.info(repr(step_context.execution_plan.get_step_output(source_handle)))
         input_manager = step_context.get_io_manager(source_handle)
         load_context = self.get_load_context(step_context)
 
@@ -316,18 +319,7 @@ class FromStepOutput(
             )
             return [lineage_info] if lineage_info else []
 
-        # if nothing definied within scope of this input/output, recurse
-        upstream_step = step_context.execution_plan.get_step_by_key(
-            self.step_output_handle.step_key
-        )
-        # check all outputs of upstream solids (for now limit recursion for perf)
-        if depth > 2:
-            return []
-        return [
-            lineage_info
-            for input in upstream_step.step_inputs
-            for lineage_info in input.source.get_asset_lineage(step_context, depth=depth + 1)
-        ]
+        return []
 
 
 class FromConfig(
@@ -498,12 +490,12 @@ class FromMultipleSources(
         )
 
     def get_asset_lineage(
-        self, step_context: "SystemStepExecutionContext", depth=0
+        self, step_context: "SystemStepExecutionContext"
     ) -> List[AssetLineageInfo]:
         return [
             relation
             for source in self.sources
-            for relation in source.get_asset_lineage(step_context, depth=depth + 1)
+            for relation in source.get_asset_lineage(step_context)
         ]
 
 
