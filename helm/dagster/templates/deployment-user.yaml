@@ -79,34 +79,35 @@ spec:
             {{- end }}
           resources:
             {{- toYaml $deployment.resources | nindent 12 }}
-        {{- if $deployment.livenessProbe }}
-          {{- if not $deployment.livenessProbe.exec }}
+        {{- $livenessProbe := $deployment.livenessProbe | default $.Values.userDeployments.livenessProbe }}
+        {{- if $livenessProbe }}
+          {{- if not $livenessProbe.exec }}
           livenessProbe:
             exec:
               command: ["dagster", "api", "grpc-health-check", "-p", "{{ $deployment.port }}"]
-            {{- if hasKey $deployment.livenessProbe "initialDelaySeconds" }}
+            {{- if hasKey $livenessProbe "initialDelaySeconds" }}
             initialDelaySeconds:
-              {{- toYaml $deployment.livenessProbe.initialDelaySeconds | nindent 14 }}
+              {{- toYaml $livenessProbe.initialDelaySeconds | nindent 14 }}
             {{- end }}
-            {{- if hasKey $deployment.livenessProbe "periodSeconds" }}
+            {{- if hasKey $livenessProbe "periodSeconds" }}
             periodSeconds:
-              {{- toYaml $deployment.livenessProbe.periodSeconds | nindent 14 }}
+              {{- toYaml $livenessProbe.periodSeconds | nindent 14 }}
             {{- end }}
-            {{- if hasKey $deployment.livenessProbe "timeoutSeconds" }}
+            {{- if hasKey $livenessProbe "timeoutSeconds" }}
             timeoutSeconds:
-              {{- toYaml $deployment.livenessProbe.timeoutSeconds | nindent 14 }}
+              {{- toYaml $livenessProbe.timeoutSeconds | nindent 14 }}
             {{- end }}
-            {{- if hasKey $deployment.livenessProbe "successThreshold" }}
+            {{- if hasKey $livenessProbe "successThreshold" }}
             successThreshold:
-              {{- toYaml $deployment.livenessProbe.successThreshold | nindent 14 }}
+              {{- toYaml $livenessProbe.successThreshold | nindent 14 }}
             {{- end }}
-            {{- if hasKey $deployment.livenessProbe "failureThreshold" }}
+            {{- if hasKey $livenessProbe "failureThreshold" }}
             failureThreshold:
-              {{- toYaml $deployment.livenessProbe.failureThreshold | nindent 14 }}
+              {{- toYaml $livenessProbe.failureThreshold | nindent 14 }}
             {{- end }}
           {{- else}}
           livenessProbe:
-            {{- toYaml $deployment.livenessProbe | nindent 12 }}
+            {{- toYaml $livenessProbe | nindent 12 }}
           {{- end }}
         {{- end }}
         {{- if $deployment.startupProbe }}
