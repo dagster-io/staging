@@ -164,10 +164,8 @@ def local_port_forward_postgres(namespace):
         p.terminate()
 
 
-@pytest.fixture
-def dagster_instance_with_k8s_scheduler(
-    helm_namespace_for_k8s_run_launcher, run_launcher, k8s_scheduler, schedule_tempdir
-):
+@pytest.fixture(scope="session")
+def postgres_url(helm_namespace_for_k8s_run_launcher):
     with local_port_forward_postgres(
         namespace=helm_namespace_for_k8s_run_launcher
     ) as local_forward_port:
@@ -175,20 +173,26 @@ def dagster_instance_with_k8s_scheduler(
             local_forward_port=local_forward_port
         )
         print("Local Postgres forwarding URL: ", postgres_url)
+        yield postgres_url
 
-        instance = DagsterInstance(
-            instance_type=InstanceType.EPHEMERAL,
-            local_artifact_storage=LocalArtifactStorage(schedule_tempdir),
-            run_storage=SqliteRunStorage.from_local(os.path.join(schedule_tempdir, "runs")),
-            event_storage=PostgresEventLogStorage(postgres_url),
-            compute_log_manager=NoOpComputeLogManager(),
-            run_coordinator=DefaultRunCoordinator(),
-            run_launcher=run_launcher,
-            schedule_storage=SqliteScheduleStorage.from_local(
-                os.path.join(schedule_tempdir, "schedules")
-            ),
-            scheduler=k8s_scheduler,
-        )
+
+@pytest.fixture(scope="function")
+def dagster_instance_with_k8s_scheduler(
+    postgres_url, run_launcher, k8s_scheduler, schedule_tempdir
+):  # pylint: disable=redefined-outer-name
+    with DagsterInstance(
+        instance_type=InstanceType.EPHEMERAL,
+        local_artifact_storage=LocalArtifactStorage(schedule_tempdir),
+        run_storage=SqliteRunStorage.from_local(os.path.join(schedule_tempdir, "runs")),
+        event_storage=PostgresEventLogStorage(postgres_url),
+        compute_log_manager=NoOpComputeLogManager(),
+        run_coordinator=DefaultRunCoordinator(),
+        run_launcher=run_launcher,
+        schedule_storage=SqliteScheduleStorage.from_local(
+            os.path.join(schedule_tempdir, "schedules")
+        ),
+        scheduler=k8s_scheduler,
+    ) as instance:
         yield instance
 
 
