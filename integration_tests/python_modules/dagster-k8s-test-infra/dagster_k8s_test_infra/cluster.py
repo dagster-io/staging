@@ -164,7 +164,7 @@ def local_port_forward_postgres(namespace):
         p.terminate()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def dagster_instance_with_k8s_scheduler(
     helm_namespace_for_k8s_run_launcher, run_launcher, k8s_scheduler, schedule_tempdir
 ):
