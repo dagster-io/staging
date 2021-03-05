@@ -5,6 +5,7 @@ from dagster import (
     ModeDefinition,
     Output,
     OutputDefinition,
+    composite_solid,
     execute_pipeline,
     io_manager,
     pipeline,
@@ -16,6 +17,7 @@ from dagster.core.definitions.events import (
     PartitionMetadataEntry,
 )
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.storage.fs_io_manager import fs_io_manager
 from dagster.core.storage.io_manager import IOManager
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
@@ -29,6 +31,54 @@ def check_materialization(materialization, asset_key, parent_assets=None, metada
     assert event_data.materialization.asset_key == asset_key
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
     assert event_data.asset_lineage == (parent_assets or [])
+
+
+def test_io_manager_mode_definition_lineage():
+    class MyIOManager(IOManager):
+        def handle_output(self, context, obj):
+            # store asset
+            return
+
+        def load_input(self, context):
+            return None
+
+        def get_output_asset_key(self, context):
+            return None
+            return AssetKey([context.step_key, context.name])
+
+    @io_manager
+    def my_io_manager(_):
+        return MyIOManager()
+
+    @solid(output_defs=[OutputDefinition(io_manager_key="my_io_manager")])
+    def solid1(_, _in):
+        return None
+
+    @solid(output_defs=[OutputDefinition(io_manager_key="my_io_manager")])
+    def solid2(_, _in):
+        return None
+
+    @solid
+    def solid3(_, _in1, _in2):
+        return None
+
+    @solid
+    def my_gen_solid(_):
+        return None
+
+    @composite_solid
+    def my_comp_solid(in1, in2):
+        return solid2(solid3(in1, solid1(in2)))
+
+    local_mode = ModeDefinition(name="local", resource_defs={"my_io_manager": my_io_manager})
+
+    @pipeline(mode_defs=[local_mode])
+    def my_pipeline():
+        a = my_gen_solid()
+        my_comp_solid(a, a)
+
+    result = execute_pipeline(my_pipeline, mode="local")
+    assert result.success
 
 
 def test_output_definition_transitive_lineage():
