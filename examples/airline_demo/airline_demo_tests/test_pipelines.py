@@ -1,5 +1,6 @@
 import os
 import tempfile
+import warnings
 
 # pylint: disable=unused-argument
 import pytest
@@ -40,6 +41,7 @@ def test_ingest_pipeline_fast(postgres, pg_hostname):
             ingest_config_dict["resources"]["pyspark_io_manager"] = {
                 "config": {"base_dir": temp_dir}
             }
+            warnings.warn(repr(ingest_config_dict))
             result_ingest = execute_pipeline(
                 pipeline=ingest_pipeline,
                 mode="local",
