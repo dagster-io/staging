@@ -13,7 +13,7 @@ from dagster.core.definitions import (
     Materialization,
     SolidHandle,
 )
-from dagster.core.definitions.events import AssetRelation, ObjectStoreOperationType
+from dagster.core.definitions.events import AssetLineageInfo, ObjectStoreOperationType
 from dagster.core.execution.context.system import (
     HookContext,
     SystemExecutionContext,
@@ -606,15 +606,15 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def step_materialization(step_context, materialization, parent_asset_relations=None):
+    def step_materialization(step_context, materialization, asset_lineage=None):
         check.inst_param(
             materialization, "materialization", (AssetMaterialization, Materialization)
         )
-        check.opt_list_param(parent_asset_relations, "parent_asset_relations", AssetRelation)
+        check.opt_list_param(asset_lineage, "asset_lineage", AssetLineageInfo)
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_MATERIALIZATION,
             step_context=step_context,
-            event_specific_data=StepMaterializationData(materialization, parent_asset_relations),
+            event_specific_data=StepMaterializationData(materialization, asset_lineage),
             message=materialization.description
             if materialization.description
             else "Materialized value{label_clause}.".format(
@@ -1027,15 +1027,13 @@ def get_step_output_event(events, step_key, output_name="result"):
 
 @whitelist_for_serdes
 class StepMaterializationData(
-    namedtuple("_StepMaterializationData", "materialization parent_asset_relations")
+    namedtuple("_StepMaterializationData", "materialization asset_lineage")
 ):
-    def __new__(cls, materialization, parent_asset_relations=None):
+    def __new__(cls, materialization, asset_lineage=None):
         return super(StepMaterializationData, cls).__new__(
             cls,
             materialization=materialization,
-            parent_asset_relations=check.opt_list_param(
-                parent_asset_relations, "parent_asset_relations", AssetRelation
-            ),
+            asset_lineage=check.opt_list_param(asset_lineage, "asset_lineage", AssetLineageInfo),
         )
 
 

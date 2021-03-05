@@ -11,9 +11,9 @@ from dagster import (
     solid,
 )
 from dagster.core.definitions.events import (
-    AssetRelation,
+    AssetLineageInfo,
     EventMetadataEntry,
-    PartitionSpecificMetadataEntry,
+    PartitionMetadataEntry,
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.storage.io_manager import IOManager
@@ -21,14 +21,14 @@ from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
 
 def n_asset_keys(path, n):
-    return AssetRelation(AssetKey(path), set([str(i) for i in range(n)]))
+    return AssetLineageInfo(AssetKey(path), set([str(i) for i in range(n)]))
 
 
 def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
-    assert event_data.parent_asset_relations == (parent_assets or [])
+    assert event_data.asset_lineage == (parent_assets or [])
 
 
 def test_output_definition_transitive_lineage():
@@ -74,7 +74,7 @@ def test_output_definition_transitive_lineage():
     check_materialization(
         materializations[1],
         AssetKey(["table3"]),
-        parent_assets=[AssetRelation(AssetKey(["table1"]))],
+        parent_assets=[AssetLineageInfo(AssetKey(["table1"]))],
         metadata_entries=[entry2],
     )
 
@@ -135,8 +135,8 @@ def test_io_manager_diamond_lineage():
             ["solid_combine", "outputC"],
         ),
         parent_assets=[
-            AssetRelation(AssetKey(["solid_produce", "outputA"])),
-            AssetRelation(AssetKey(["solid_produce", "outputB"])),
+            AssetLineageInfo(AssetKey(["solid_produce", "outputA"])),
+            AssetLineageInfo(AssetKey(["solid_produce", "outputB"])),
         ],
     )
 
@@ -196,7 +196,7 @@ def test_input_definition_multiple_partition_lineage():
             metadata_entries=[
                 entry1,
                 *[
-                    PartitionSpecificMetadataEntry(str(i), entry)
+                    PartitionMetadataEntry(str(i), entry)
                     for i, entry in enumerate(partition_entries)
                 ],
             ],
@@ -317,16 +317,16 @@ def test_mixed_asset_definition_lineage():
         materializations[2],
         AssetKey(["output_def_table", "combine_solid"]),
         parent_assets=[
-            AssetRelation(AssetKey(["io_manager_table", "io_manager_solid"])),
-            AssetRelation(AssetKey(["output_def_table", "output_def_solid"])),
+            AssetLineageInfo(AssetKey(["io_manager_table", "io_manager_solid"])),
+            AssetLineageInfo(AssetKey(["output_def_table", "output_def_solid"])),
         ],
     )
     check_materialization(
         materializations[3],
         AssetKey(["io_manager_table", "combine_solid"]),
         parent_assets=[
-            AssetRelation(AssetKey(["io_manager_table", "io_manager_solid"])),
-            AssetRelation(AssetKey(["output_def_table", "output_def_solid"])),
+            AssetLineageInfo(AssetKey(["io_manager_table", "io_manager_solid"])),
+            AssetLineageInfo(AssetKey(["output_def_table", "output_def_solid"])),
         ],
     )
 
@@ -380,6 +380,6 @@ def test_dynamic_output_definition_single_partition_materialization():
             materializations[i],
             AssetKey(path),
             metadata_entries=[entry2],
-            parent_assets=[AssetRelation(AssetKey(["table1"]))],
+            parent_assets=[AssetLineageInfo(AssetKey(["table1"]))],
         )
     assert len(seen_paths) == 4

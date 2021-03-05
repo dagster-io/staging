@@ -42,7 +42,7 @@ def create_step_outputs(
             name=output_def.name,
             dagster_type_key=output_def.dagster_type.key,
             is_required=output_def.is_required,
-            defines_asset_relation=output_def.defines_asset_relation,
+            is_asset=output_def.is_asset,
             get_asset_key=output_def.get_asset_key,
             get_asset_partitions=output_def.get_asset_partitions,
             should_materialize=output_def.name in config_output_names,

@@ -12,23 +12,23 @@ from dagster import (
 )
 from dagster.check import CheckError
 from dagster.core.definitions.events import (
-    AssetRelation,
+    AssetLineageInfo,
     EventMetadataEntry,
-    PartitionSpecificMetadataEntry,
+    PartitionMetadataEntry,
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.storage.io_manager import IOManager
 
 
 def n_asset_keys(path, n):
-    return AssetRelation(AssetKey(path), set([str(i) for i in range(n)]))
+    return AssetLineageInfo(AssetKey(path), set([str(i) for i in range(n)]))
 
 
 def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
-    assert event_data.parent_asset_relations == (parent_assets or [])
+    assert event_data.asset_lineage == (parent_assets or [])
 
 
 def test_output_definition_single_partition_materialization():
@@ -64,7 +64,7 @@ def test_output_definition_single_partition_materialization():
         materializations[1],
         AssetKey(["table2"]),
         metadata_entries=[entry2],
-        parent_assets=[AssetRelation(AssetKey(["table1"]))],
+        parent_assets=[AssetLineageInfo(AssetKey(["table1"]))],
     )
 
 
@@ -89,7 +89,7 @@ def test_output_definition_multiple_partition_materialization():
             metadata_entries=[
                 entry1,
                 *[
-                    PartitionSpecificMetadataEntry(str(i), entry)
+                    PartitionMetadataEntry(str(i), entry)
                     for i, entry in enumerate(partition_entries)
                 ],
             ],
@@ -182,7 +182,7 @@ def test_io_manager_single_partition_materialization():
         materializations[1],
         AssetKey(["solid2"]),
         metadata_entries=[entry1, entry2],
-        parent_assets=[AssetRelation(AssetKey(["solid1"]))],
+        parent_assets=[AssetLineageInfo(AssetKey(["solid1"]))],
     )
 
 
@@ -193,7 +193,7 @@ def test_partition_specific_fails_on_na_partitions():
     def fail_solid(_):
         yield Output(
             None,
-            metadata_entries=[PartitionSpecificMetadataEntry("3", EventMetadataEntry.int(1, "x"))],
+            metadata_entries=[PartitionMetadataEntry("3", EventMetadataEntry.int(1, "x"))],
         )
 
     @pipeline
@@ -209,7 +209,7 @@ def test_partition_specific_fails_on_zero_partitions():
     def fail_solid(_):
         yield Output(
             None,
-            metadata_entries=[PartitionSpecificMetadataEntry("3", EventMetadataEntry.int(1, "x"))],
+            metadata_entries=[PartitionMetadataEntry("3", EventMetadataEntry.int(1, "x"))],
         )
 
     @pipeline

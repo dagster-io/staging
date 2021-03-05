@@ -67,7 +67,7 @@ class InputDefinition:
         asset_key (Optional[Union[AssetKey, InputContext -> AssetKey]]): (Experimental) An AssetKey
             (or function that produces an AssetKey from the InputContext) which should be associated
             with this InputDefinition. Used for tracking lineage information through Dagster.
-        asset_partitions(Optional[Union[Set[str], InputContext -> Set[str]]]): (Experimental) A
+        asset_partitions (Optional[Union[Set[str], InputContext -> Set[str]]]): (Experimental) A
             set of partitions of the given asset_key (or a function that produces this list of
             partitions from the InputContext) which should be associated with this InputDefinition.
     """
@@ -92,30 +92,38 @@ class InputDefinition:
         self._default_value = _check_default_value(self._name, self._dagster_type, default_value)
 
         if root_manager_key:
-            experimental_arg_warning("root_manager_key", "InputDefinition")
+            experimental_arg_warning("root_manager_key", "InputDefinition.__init__")
 
         self._root_manager_key = check.opt_str_param(root_manager_key, "root_manager_key")
 
         if metadata:
-            experimental_arg_warning("metadata", "InputDefinition")
+            experimental_arg_warning("metadata", "InputDefinition.__init__")
 
         self._metadata = check.opt_dict_param(metadata, "metadata", key_type=str)
 
         if asset_key:
-            experimental_arg_warning("asset_key", "InputDefinition")
+            experimental_arg_warning("asset_key", "InputDefinition.__init__")
 
-        self._defines_asset_relation = asset_key is not None
-        self._asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
+        self._is_asset = asset_key is not None
+
+        if callable(asset_key):
+            self._asset_key_fn = asset_key
+        else:
+            asset_key = check.opt_inst_param(asset_key, "asset_key", AssetKey)
+            self._asset_key_fn = lambda _: asset_key
 
         if asset_partitions:
-            experimental_arg_warning("asset_partitions", "InputDefinition")
-            if not asset_key:
-                check.failed(
-                    'Cannot specify "asset_partitions" argument without also specifying "asset_key"'
-                )
-        self._asset_partitions_fn = check.opt_set_coerce_callable_param(
-            asset_partitions, "asset_partitions", str
-        )
+            experimental_arg_warning("asset_partitions", "InputDefinition.__init__")
+            check.param_invariant(
+                asset_key is not None,
+                "asset_partitions",
+                'Cannot specify "asset_partitions" argument without also specifying "asset_key"',
+            )
+        if callable(asset_partitions):
+            self._asset_partitions_fn = asset_partitions
+        else:
+            asset_partitions = check.opt_set_param(asset_partitions, "asset_partitions", str)
+            self._asset_partitions_fn = lambda _: asset_partitions
 
     @property
     def name(self):
@@ -147,26 +155,26 @@ class InputDefinition:
         return self._metadata
 
     @property
-    def defines_asset_relation(self):
-        return self._defines_asset_relation
+    def is_asset(self):
+        return self._is_asset
 
     def get_asset_key(self, context) -> Optional[AssetKey]:
         """Get the AssetKey associated with this InputDefinition for the given
         :py:class:`InputContext` (if any).
 
         Args:
-            context (InputContext): The OutputContext that this OutputDefinition is being evaluated
-            in
+            context (InputContext): The InputContext that this OutputDefinition is being evaluated
+                in
         """
         return self._asset_key_fn(context)
 
     def get_asset_partitions(self, context) -> Optional[Set[str]]:
-        """Get the set of partitions associated with this InputDefinition for the given
+        """Get the set of partitions that this solid will read from this InputDefinition for the given
         :py:class:`InputContext` (if any).
 
         Args:
-            context (InputContext): The OutputContext that this OutputDefinition is being evaluated
-            in
+            context (InputContext): The InputContext that this InputDefinition is being evaluated
+                in
         """
         return self._asset_partitions_fn(context)
 

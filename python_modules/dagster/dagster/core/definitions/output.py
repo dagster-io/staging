@@ -36,7 +36,7 @@ class OutputDefinition:
         asset_key (Optional[Union[AssetKey, OutputContext -> AssetKey]]): (Experimental) An AssetKey
             (or function that produces an AssetKey from the OutputContext) which should be associated
             with this OutputDefinition. Used for tracking lineage information through Dagster.
-        asset_partitions(Optional[Union[Set[str], OutputContext -> Set[str]]]): (Experimental) A
+        asset_partitions (Optional[Union[Set[str], OutputContext -> Set[str]]]): (Experimental) A
             set of partitions of the given asset_key (or a function that produces this list of
             partitions from the OutputContext) which should be associated with this OutputDefinition.
     """
@@ -60,24 +60,32 @@ class OutputDefinition:
             io_manager_key, "io_manager_key", default="io_manager"
         )
         if metadata:
-            experimental_arg_warning("metadata", "OutputDefinition")
+            experimental_arg_warning("metadata", "OutputDefinition.__init__")
         self._metadata = metadata
 
         if asset_key:
-            experimental_arg_warning("asset_key", "OutputDefinition")
+            experimental_arg_warning("asset_key", "OutputDefinition.__init__")
 
-        self._defines_asset_relation = asset_key is not None
-        self._asset_key_fn = check.opt_inst_coerce_callable_param(asset_key, "asset_key", AssetKey)
+        self._is_asset = asset_key is not None
+
+        if callable(asset_key):
+            self._asset_key_fn = asset_key
+        else:
+            asset_key = check.opt_inst_param(asset_key, "asset_key", AssetKey)
+            self._asset_key_fn = lambda _: asset_key
 
         if asset_partitions:
-            experimental_arg_warning("asset_partitions", "OutputDefinition")
-            if not asset_key:
-                check.failed(
-                    'Cannot specify "asset_partitions" argument without also specifying "asset_key"'
-                )
-        self._asset_partitions_fn = check.opt_set_coerce_callable_param(
-            asset_partitions, "asset_partitions", str
-        )
+            experimental_arg_warning("asset_partitions", "OutputDefinition.__init__")
+            check.param_invariant(
+                asset_key is not None,
+                "asset_partitions",
+                'Cannot specify "asset_partitions" argument without also specifying "asset_key"',
+            )
+        if callable(asset_partitions):
+            self._asset_partitions_fn = asset_partitions
+        else:
+            asset_partitions = check.opt_set_param(asset_partitions, "asset_partitions", str)
+            self._asset_partitions_fn = lambda _: asset_partitions
 
     @property
     def name(self):
@@ -112,8 +120,8 @@ class OutputDefinition:
         return False
 
     @property
-    def defines_asset_relation(self):
-        return self._defines_asset_relation
+    def is_asset(self):
+        return self._is_asset
 
     def get_asset_key(self, context) -> Optional[AssetKey]:
         """Get the AssetKey associated with this OutputDefinition for the given

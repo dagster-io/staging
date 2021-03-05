@@ -10,7 +10,7 @@ from dagster.core.definitions import (
     RetryRequested,
     SolidHandle,
 )
-from dagster.core.definitions.events import AssetRelation
+from dagster.core.definitions.events import AssetLineageInfo
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
     DagsterTypeLoadingError,
@@ -32,13 +32,13 @@ if TYPE_CHECKING:
     from dagster.core.execution.context.system import SystemStepExecutionContext, InputContext
 
 
-def _get_asset_relation_from_fns(
+def _get_asset_lineage_from_fns(
     context, asset_key_fn, asset_partitions_fn
-) -> Optional[AssetRelation]:
+) -> Optional[AssetLineageInfo]:
     asset_key = asset_key_fn(context)
     if not asset_key:
         return None
-    return AssetRelation(
+    return AssetLineageInfo(
         asset_key=asset_key,
         partitions=asset_partitions_fn(context),
     )
@@ -121,9 +121,9 @@ class StepInputSource(ABC):
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
-    def get_asset_relations(
+    def get_asset_lineage(
         self, _step_context: "SystemStepExecutionContext"
-    ) -> List[AssetRelation]:
+    ) -> List[AssetLineageInfo]:
         return []
 
     @abstractmethod
@@ -282,24 +282,23 @@ class FromStepOutput(
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
-    def get_asset_relations(
+    def get_asset_lineage(
         self, step_context: "SystemStepExecutionContext"
-    ) -> List[AssetRelation]:
+    ) -> List[AssetLineageInfo]:
         source_handle = self.step_output_handle
         input_manager = step_context.get_io_manager(source_handle)
         load_context = self.get_load_context(step_context)
 
         # check input_def
-        # TODO: maybe check that this is a subset of OutputDef's assets?
         input_def = self.get_input_def(step_context.pipeline_def)
-        if input_def.defines_asset_relation:
-            relation = _get_asset_relation_from_fns(
+        if input_def.is_asset:
+            relation = _get_asset_lineage_from_fns(
                 load_context, input_def.get_asset_key, input_def.get_asset_partitions
             )
             return [relation] if relation else []
 
         # check io manager
-        io_relation = _get_asset_relation_from_fns(
+        io_relation = _get_asset_lineage_from_fns(
             load_context,
             input_manager.get_input_asset_key,
             input_manager.get_input_asset_partitions,
@@ -309,8 +308,8 @@ class FromStepOutput(
 
         # check output_def
         upstream_output = step_context.execution_plan.get_step_output(self.step_output_handle)
-        if upstream_output.defines_asset_relation:
-            relation = _get_asset_relation_from_fns(
+        if upstream_output.is_asset:
+            relation = _get_asset_lineage_from_fns(
                 load_context.upstream_output,
                 upstream_output.get_asset_key,
                 upstream_output.get_asset_partitions,
@@ -325,7 +324,7 @@ class FromStepOutput(
         return [
             relation
             for input in upstream_step.step_inputs
-            for relation in input.source.get_asset_relations(step_context)
+            for relation in input.source.get_asset_lineage(step_context)
         ]
 
 
@@ -496,13 +495,13 @@ class FromMultipleSources(
             ]
         )
 
-    def get_asset_relations(
+    def get_asset_lineage(
         self, step_context: "SystemStepExecutionContext"
-    ) -> List[AssetRelation]:
+    ) -> List[AssetLineageInfo]:
         return [
             relation
             for source in self.sources
-            for relation in source.get_asset_relations(step_context)
+            for relation in source.get_asset_lineage(step_context)
         ]
 
 

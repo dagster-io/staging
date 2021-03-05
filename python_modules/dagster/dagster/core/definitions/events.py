@@ -7,6 +7,7 @@ from enum import Enum
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
 from dagster.serdes import DefaultNamedTupleSerializer, whitelist_for_serdes
+from dagster.utils.backcompat import experimental_arg_warning
 
 from .utils import DEFAULT_OUTPUT, check_valid_name
 
@@ -132,11 +133,11 @@ class AssetKey(namedtuple("_AssetKey", "path")):
 
 
 @whitelist_for_serdes
-class AssetRelation(namedtuple("_AssetRelation", "asset_key partitions")):
+class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions")):
     def __new__(cls, asset_key, partitions=None):
         asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
         partitions = check.opt_set_param(partitions, "partitions", str)
-        return super(AssetRelation, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
+        return super(AssetLineageInfo, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
 
 
 @whitelist_for_serdes
@@ -475,9 +476,7 @@ EntryDataUnion = (
 )
 
 
-class PartitionSpecificMetadataEntry(
-    namedtuple("_PartitionSpecificMetadataEntry", "partition entry")
-):
+class PartitionMetadataEntry(namedtuple("_PartitionMetadataEntry", "partition entry")):
     """Event containing an :py:class:`EventMetdataEntry` and the name of a partition that the entry
     applies to.
 
@@ -486,7 +485,7 @@ class PartitionSpecificMetadataEntry(
     """
 
     def __new__(cls, partition: str, entry: EventMetadataEntry):
-        return super(PartitionSpecificMetadataEntry, cls).__new__(
+        return super(PartitionMetadataEntry, cls).__new__(
             cls,
             check.str_param(partition, "partition"),
             check.inst_param(entry, "entry", EventMetadataEntry),
@@ -508,9 +507,13 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
         value (Any): The value returned by the compute function.
         output_name (Optional[str]): Name of the corresponding output definition. (default:
             "result")
+        metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
+            (Experimental) A set of metadata entries to attach to events related to this Output.
     """
 
     def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+        if metadata_entries:
+            experimental_arg_warning("metadata_entries", "Output.__new__")
         return super(Output, cls).__new__(
             cls,
             value,
@@ -518,7 +521,7 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
             check.opt_list_param(
                 metadata_entries,
                 "metadata_entries",
-                (EventMetadataEntry, PartitionSpecificMetadataEntry),
+                (EventMetadataEntry, PartitionMetadataEntry),
             ),
         )
 
@@ -536,10 +539,13 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             The key that uniquely identifies this dynamic value relative to its peers.
         output_name (Optional[str]):
             Name of the corresponding output definition. (default: "result")
+        metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
+            (Experimental) A set of metadata entries to attach to events related to this Output.
     """
 
     def __new__(cls, value, mapping_key, output_name=DEFAULT_OUTPUT, metadata_entries=None):
-
+        if metadata_entries:
+            experimental_arg_warning("metadata_entries", "DynamicOutput.__new__")
         return super(DynamicOutput, cls).__new__(
             cls,
             value,
@@ -548,7 +554,7 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             check.opt_list_param(
                 metadata_entries,
                 "metadata_entries",
-                (EventMetadataEntry, PartitionSpecificMetadataEntry),
+                (EventMetadataEntry, PartitionMetadataEntry),
             ),
         )
 

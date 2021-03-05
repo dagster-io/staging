@@ -21,7 +21,7 @@ class StepOutput(
             ("name", str),
             ("dagster_type_key", str),
             ("is_required", bool),
-            ("defines_asset_relation", bool),
+            ("is_asset", bool),
             ("get_asset_key", Optional[Callable]),
             ("get_asset_partitions", Optional[Callable]),
             ("should_materialize", Optional[bool]),
@@ -36,7 +36,7 @@ class StepOutput(
         name: str,
         dagster_type_key: str,
         is_required: bool,
-        defines_asset_relation: bool = False,
+        is_asset: bool = False,
         get_asset_key: Optional[Callable] = None,
         get_asset_partitions: Optional[Callable] = None,
         should_materialize: Optional[bool] = None,
@@ -47,9 +47,7 @@ class StepOutput(
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             is_required=check.bool_param(is_required, "is_required"),
-            defines_asset_relation=check.bool_param(
-                defines_asset_relation, "defines_asset_relation"
-            ),
+            is_asset=check.bool_param(is_asset, "is_asset"),
             get_asset_key=check.opt_callable_param(get_asset_key, "get_asset_key"),
             get_asset_partitions=check.opt_callable_param(
                 get_asset_partitions, "get_asset_partitions"
