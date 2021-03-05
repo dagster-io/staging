@@ -57,8 +57,8 @@ def test_output_definition_transitive_lineage():
         # attach an asset to an output
         out1 = solid1()
         outX = out1
-        # 10 solids later,
-        for i in range(10):
+        # 2 solids later,
+        for i in range(2):
             outX = solidX.alias(f"solidX_{i}")(outX)
         solid3(outX)
 

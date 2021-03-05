@@ -122,7 +122,7 @@ class StepInputSource(ABC):
         return set()
 
     def get_asset_lineage(
-        self, _step_context: "SystemStepExecutionContext"
+        self, _step_context: "SystemStepExecutionContext", depth=0
     ) -> List[AssetLineageInfo]:
         return []
 
@@ -283,7 +283,7 @@ class FromStepOutput(
         return set()
 
     def get_asset_lineage(
-        self, step_context: "SystemStepExecutionContext"
+        self, step_context: "SystemStepExecutionContext", depth=0
     ) -> List[AssetLineageInfo]:
         source_handle = self.step_output_handle
         input_manager = step_context.get_io_manager(source_handle)
@@ -292,39 +292,41 @@ class FromStepOutput(
         # check input_def
         input_def = self.get_input_def(step_context.pipeline_def)
         if input_def.is_asset:
-            relation = _get_asset_lineage_from_fns(
+            lineage_info = _get_asset_lineage_from_fns(
                 load_context, input_def.get_asset_key, input_def.get_asset_partitions
             )
-            return [relation] if relation else []
+            return [lineage_info] if lineage_info else []
 
         # check io manager
-        io_relation = _get_asset_lineage_from_fns(
+        io_lineage_info = _get_asset_lineage_from_fns(
             load_context,
             input_manager.get_input_asset_key,
             input_manager.get_input_asset_partitions,
         )
-        if io_relation is not None:
-            return [io_relation]
+        if io_lineage_info is not None:
+            return [io_lineage_info]
 
         # check output_def
         upstream_output = step_context.execution_plan.get_step_output(self.step_output_handle)
         if upstream_output.is_asset:
-            relation = _get_asset_lineage_from_fns(
+            lineage_info = _get_asset_lineage_from_fns(
                 load_context.upstream_output,
                 upstream_output.get_asset_key,
                 upstream_output.get_asset_partitions,
             )
-            return [relation] if relation else []
+            return [lineage_info] if lineage_info else []
 
         # if nothing definied within scope of this input/output, recurse
         upstream_step = step_context.execution_plan.get_step_by_key(
             self.step_output_handle.step_key
         )
-        # check all outputs of upstream solids
+        # check all outputs of upstream solids (for now limit recursion for perf)
+        if depth > 2:
+            return []
         return [
-            relation
+            lineage_info
             for input in upstream_step.step_inputs
-            for relation in input.source.get_asset_lineage(step_context)
+            for lineage_info in input.source.get_asset_lineage(step_context, depth=depth + 1)
         ]
 
 
@@ -496,12 +498,12 @@ class FromMultipleSources(
         )
 
     def get_asset_lineage(
-        self, step_context: "SystemStepExecutionContext"
+        self, step_context: "SystemStepExecutionContext", depth=0
     ) -> List[AssetLineageInfo]:
         return [
             relation
             for source in self.sources
-            for relation in source.get_asset_lineage(step_context)
+            for relation in source.get_asset_lineage(step_context, depth=depth + 1)
         ]
 
 
