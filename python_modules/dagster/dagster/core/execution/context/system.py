@@ -4,6 +4,7 @@ Not every property on these should be exposed to random Jane or Joe dagster user
 so we have a different layer of objects that encode the explicit public API
 in the user_context module
 """
+import warnings
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
@@ -378,6 +379,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
         )
 
     def get_io_manager(self, step_output_handle) -> IOManager:
+        warnings.warn(repr(step_output_handle))
         step_output = self.execution_plan.get_step_output(step_output_handle)
         io_manager_key = (
             self.pipeline_def.get_solid(step_output.solid_handle)

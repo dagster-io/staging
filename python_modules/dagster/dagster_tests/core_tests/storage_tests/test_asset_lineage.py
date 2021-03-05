@@ -16,6 +16,7 @@ from dagster.core.definitions.events import (
     PartitionMetadataEntry,
 )
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.storage.fs_io_manager import fs_io_manager
 from dagster.core.storage.io_manager import IOManager
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
@@ -29,6 +30,26 @@ def check_materialization(materialization, asset_key, parent_assets=None, metada
     assert event_data.materialization.asset_key == asset_key
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
     assert event_data.asset_lineage == (parent_assets or [])
+
+
+def test_io_manager_mode_definition_lineage():
+    @solid
+    def solid1(_):
+        return None
+
+    @solid
+    def solid2(_, _in):
+        return None
+
+    local_mode = ModeDefinition(name="local", resource_defs={"io_manager": fs_io_manager})
+
+    @pipeline(mode_defs=[local_mode])
+    def my_pipeline():
+        return solid2(solid1())
+
+    config_dict = {"resources": {"io_manager": {"config": {"base_dir": "/tmp"}}}}
+    result = execute_pipeline(my_pipeline, run_config=config_dict)
+    assert result.success
 
 
 def test_output_definition_transitive_lineage():
