@@ -42,7 +42,7 @@ def dagster_docker_image():
     return docker_image
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def run_launcher(cluster_provider):  # pylint: disable=redefined-outer-name,unused-argument
     return CeleryK8sRunLauncher(
         instance_config_map="dagster-instance",

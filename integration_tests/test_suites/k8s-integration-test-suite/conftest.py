@@ -71,7 +71,7 @@ def restore_k8s_cron_tab(
     kube_api.delete_collection_namespaced_cron_job(namespace=helm_namespace_for_k8s_run_launcher)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def run_launcher(
     cluster_provider, helm_namespace_for_k8s_run_launcher
 ):  # pylint: disable=redefined-outer-name,unused-argument
