@@ -26,7 +26,7 @@ import {PageHeader} from 'src/ui/PageHeader';
 import {RefreshableCountdown} from 'src/ui/RefreshableCountdown';
 import {Code, Heading} from 'src/ui/Text';
 import {FontFamily} from 'src/ui/styles';
-import {useScheduleSelector} from 'src/workspace/WorkspaceContext';
+import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
 import {RepoAddress} from 'src/workspace/types';
 import {workspacePathFromAddress} from 'src/workspace/workspacePath';
 
@@ -57,7 +57,10 @@ export const ScheduleDetails: React.FC<{
     },
   );
 
-  const scheduleSelector = useScheduleSelector(name);
+  const scheduleSelector = {
+    ...repoAddressToSelector(repoAddress),
+    scheduleName: name,
+  };
 
   const timeRemaining = useCountdown({
     duration: countdownDuration,
