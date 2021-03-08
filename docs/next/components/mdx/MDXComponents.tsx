@@ -254,6 +254,22 @@ const InstanceDiagramBox = ({ href = "#", className = "", children }) => {
   );
 };
 
+const TODO = () => {
+  return (
+    <div className="h-48 w-full bg-red-100 flex justify-center items-center rounded-lg">
+      <span className="font-bold">TODO</span>
+    </div>
+  );
+};
+
+const PlaceholderImage = () => {
+  return (
+    <div className="h-48 w-full bg-gray-100 flex justify-center items-center rounded-lg">
+      <span className="font-bold">Placeholder Image</span>
+    </div>
+  );
+};
+
 export default {
   PyObject,
   Link,
@@ -264,4 +280,6 @@ export default {
   Warning,
   CodeReferenceLink,
   InstanceDiagramBox,
+  TODO,
+  PlaceholderImage,
 };

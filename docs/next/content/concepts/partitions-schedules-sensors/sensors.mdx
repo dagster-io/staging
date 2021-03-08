@@ -7,7 +7,7 @@ description: Sensors allow you to instigate runs when some external state change
 
 Sensors allow you to instigate runs when some external state changes.
 
-<img src="/images/schedules.png" />
+<PlaceholderImage />
 
 ## Relevant APIs
 
@@ -68,30 +68,49 @@ def my_directory_sensor(_context):
 
 ### Idempotence using run keys
 
-### Custom evaluation interval
+In the above example, we use the run_key parameter to enforce idempotence for each filename. Dagster will ensure that only one run is created for each unique run_key value for a given sensor. In the example, even though the full directory contents are requested on every sensor evaluation, only new files will actually instigate new runs due to the run key.
 
-TODO
+Run keys enable a sensor evaluation function to declaratively describe what runs should exist, rather than keeping track of cursors or timestamps. However, the last_run_key and last_completion_time attributes on the <PyObject object="SensorExecutionContext"/> that's passed into the sensor evaluation function can also be used to keep track of timestamps and cursors.
 
 ## Testing sensors
 
+<TODO />
+
 ### Monitoring sensors in Dagit
+
+<TODO />
 
 ## Examples
 
 ### Asset sensor
 
-TODO
+<TODO />
 
 ### S3 file sensor
 
-TODO
+<TODO />
 
 ### Pipeline run sensor
 
-TODO
+<TODO />
 
 ### Pipeline failure sensor
 
-TODO
+<TODO />
 
 ### Sensor with custom evaluation interval
+
+By default, sensors are configured to run roughly every 30 seconds, but they can be configured to run at a different interval by setting the minimum_interval_seconds parameter on the sensor decorator. The minimum interval specified on the sensor definition guarantees that the sensor will not be evaluated more frequently than that interval.
+
+For example, here are two sensors that are defined with two different intervals:
+
+```python
+@sensor(pipeline_name="my_pipeline", minimum_interval_seconds=30)
+def sensor_A(_context):
+    yield RunRequest(run_key=None, run_config={})
+
+
+@sensor(pipeline_name="my_pipeline", minimum_interval_seconds=45)
+def sensor_B(_context):
+    yield RunRequest(run_key=None, run_config={})
+```

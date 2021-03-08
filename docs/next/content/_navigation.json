@@ -131,7 +131,7 @@
           },
           {
             "title": "Creating Pipeline Runs",
-            "path": "/overview/solids-pipelines/pipelines"
+            "path": "/concepts/pipeline-runs/creating-pipeline-runs"
           }
         ]
       },
@@ -139,8 +139,8 @@
         "title": "Modes",
         "children": [
           {
-            "title": "Pipeline Modes",
-            "path": "/overview/modes/modes"
+            "title": "Mode Definitions",
+            "path": "/concepts/modes/mode-definition"
           }
         ]
       },
@@ -149,7 +149,7 @@
         "children": [
           {
             "title": "Resource Definitions",
-            "path": "/overview/resources/resource-definition"
+            "path": "/concepts/resources/resource-definition"
           },
           {
             "title": "Testing Resources",
@@ -254,41 +254,12 @@
         "title": "Run Launchers & Executors",
         "children": [
           {
-            "title": "Run Launchers",
-            "path": "/overview/run-launchers-executors/run-launcher"
+            "title": "Run Launcher",
+            "path": "/concepts/run-launcher-executors/run-launcher"
           },
           {
             "title": "Executors",
-            "path": "/overview/run-launchers-executors/executor"
-          }
-        ]
-      },
-
-      {
-        "title": "Dagster Instance",
-        "children": [
-          {
-            "title": "Storages (Run/Event/Schedule)",
-            "path": "/overview/run-launchers-executors/run-launcher"
-          },
-
-          {
-            "title": "Dagster Daemon",
-            "path": "/overview/run-launchers-executors/run-launcher"
-          },
-
-          {
-            "title": "Scheduler",
-            "path": "/overview/run-launchers-executors/run-launcher"
-          },
-
-          {
-            "title": "Run Coordinator",
-            "path": "/overview/run-launchers-executors/run-launcher"
-          },
-          {
-            "title": "Run Launcher",
-            "path": "/overview/run-launchers-executors/run-launcher"
+            "path": "/concepts/run-launcher-executors/executor"
           }
         ]
       }
@@ -359,6 +330,10 @@
           {
             "title": "Dagster Daemon",
             "path": "/deployment/dagster-daemon"
+          },
+          {
+            "title": "Run Concurrency",
+            "path": "/deployment/run-concurrency"
           }
         ]
       },
