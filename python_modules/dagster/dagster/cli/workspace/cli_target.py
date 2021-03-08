@@ -597,7 +597,7 @@ def get_repository_location_from_kwargs(kwargs):
     ) as grpc_server_registry:
         with RepositoryLocationHandleManager(grpc_server_registry) as handle_manager:
             with handle_manager.get_handle(origin) as handle:
-                yield handle
+                yield handle.create_location()
 
 
 def get_repository_location_origin_from_kwargs(kwargs):
