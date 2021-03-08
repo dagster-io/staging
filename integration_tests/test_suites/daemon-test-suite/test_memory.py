@@ -44,6 +44,7 @@ def example_repo():
     return [foo_pipeline, always_run_schedule, always_on_sensor]
 
 
+@contextmanager
 def get_example_repository_location_handle():
     loadable_target_origin = LoadableTargetOrigin(
         executable_path=sys.executable,
@@ -53,7 +54,8 @@ def get_example_repository_location_handle():
 
     origin = ManagedGrpcPythonEnvRepositoryLocationOrigin(loadable_target_origin, location_name)
 
-    return origin.create_handle()
+    with origin.create_test_handle() as handle:
+        yield handle
 
 
 @contextmanager
