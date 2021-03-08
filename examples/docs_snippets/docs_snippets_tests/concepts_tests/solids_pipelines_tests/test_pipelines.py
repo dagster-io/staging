@@ -9,6 +9,9 @@ from docs_snippets.concepts.solids_pipelines.pipelines import (
     one_plus_one_pipeline,
     one_plus_one_pipeline_def,
 )
+from docs_snippets.concepts.solids_pipelines.dynamic_pipeline.dynamic_pipeline import (
+    process_directory,
+)
 
 
 def test_one_plus_one_pipeline():
@@ -31,3 +34,14 @@ def test_other_pipeline():
     for pipeline in other_pipelines:
         result = execute_pipeline(pipeline)
         assert result.success
+
+
+def test_dynamic_pipeline():
+    result = execute_pipeline(process_directory)
+    assert result.success
+
+    assert result.result_for_solid("process_file").output_value() == {
+        "empty_stuff_bin": 0,
+        "program_py": 34,
+        "words_txt": 40,
+    }

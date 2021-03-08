@@ -109,7 +109,7 @@ def context_solid(context):
         InputDefinition(name="value_b", dagster_type=int),
     ]
 )
-def addder(context, value_a, value_b):
+def adder(context, value_a, value_b):
     context.log.info(str(value_a + value_b))
 
 

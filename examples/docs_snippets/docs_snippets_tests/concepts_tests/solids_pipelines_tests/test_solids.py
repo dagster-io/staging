@@ -2,7 +2,7 @@ from dagster import SolidDefinition, execute_solid
 from docs_snippets.concepts.solids_pipelines.solids import (
     context_solid,
     my_configured_solid,
-    addder,
+    adder,
     multiple_outputs_solid,
     my_input_example_solid,
     my_input_output_example_solid,
@@ -35,7 +35,7 @@ def test_solids_compile_and_excute():
         my_input_example_solid,
         my_typehints_solid,
         my_input_output_example_solid,
-        addder,
+        adder,
         single_output_solid,
         multiple_outputs_solid,
         untyped_inputs_solid,

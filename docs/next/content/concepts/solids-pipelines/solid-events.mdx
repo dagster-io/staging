@@ -1,60 +1,33 @@
 ---
-title: Solids | Dagster
-description:
-  Solids are the functional unit of computation in Dagster and contain the core logic of your
-  orchestration graph.
+title: Solid Events | Dagster
+description: A solid can yield a stream of events within its `compute_fn` to communicate with the Dagster framework. This page describes all the events.
 ---
 
-# Solids
+# Solid Events
 
-Solids are the functional unit of work in Dagster. A solid's responsibility is to read its inputs, perform an action, and emit outputs. Multiple solids can be connected to create a [Pipeline](/concepts/solids-pipelines/pipelines).
-
-<img src="/images/solids.png" />
+A solid can yield a stream of events within its `compute_fn` to communicate with the Dagster framework. This page describes all the events.
 
 ## Relevant APIs
 
-| Name                                   | Description                                                                                                                                                                                                  |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <PyObject object="solid" decorator />  | The decorator used to define solids. The decorated function is called the `compute_fn`. The decorator returns a <PyObject object="SolidDefinition" />                                                        |
-| <PyObject object="InputDefinition" />  | InputDefinitions define the inputs to a solid compute function. These are defined on the `input_defs` argument to the <PyObject object="solid" decorator/> decorator                                         |
-| <PyObject object="OutputDefinition" /> | OutputDefinitions define the outputs of a solid compute function. These are defined on the `output_defs` argument to the <PyObject object="solid" displayText="@solid"/> decorator                           |
-| <PyObject object="SolidDefinition"  /> | Base class for solids. You almost never want to use initialize this class directly. Instead, you should use the <PyObject object="solid" decorator /> which returns a <PyObject object="SolidDefinition"  /> |
+| Name                                       | Description                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------- |
+| <PyObject object="Output"  />              | Dagster event used to yield an output from a solid               |
+| <PyObject object="AssetMaterialization" /> | Dagster event indicating that a solid has materialized an asset. |
+| <PyObject object="ExpectationResult" />    |                                                                  |
+| <PyObject object="TypeCheck"  />           |                                                                  |
+| <PyObject object="Failure"  />             |                                                                  |
 
 ## Overview
 
-Solids are used to organize related computations. Solids can later be assembled into Pipelines [Pipelines](/concepts/solids-pipelines/pipelines). Solids generally perform one specific action and are used for batch computations. For example, you can use a solid to:
+Solids yield a stream of structured events. These events are used primary used to drive pipeline execution using the <PyObject object="Output"/> event, but there are several other events useful for monitoring assets, indicating failures, and performing data and type checks.
 
-- Execute a database query and store the result
-- Initiate a Spark job in a remote cluster
-- Query an API data and store the result in a data warehouse
-- Send an email or Slack message
-
-Solids have several important properties:
-
-- **Inputs and Outputs**: Solids have defined [inputs and outputs](#inputs-and-outputs), which can be optionally typed. These types are validated at runtime.
-- **Configurable**: Solids can be configured, using a strongly typed [configuration system](#TODO).
-- **Dependencies**: Solids inputs can depend on the outputs from other solids. A solid will not execute until all of its inputs have been resolved successfully. The dependency structure is defined using a [Pipeline](/concepts/solids-pipelines/pipelines).
-- **Emit an Event Stream**: Solids can emit a stream of structured events, such as These events can be viewed in [Dagit](/concepts/dagit/dagit), Dagster's UI tool.
-
-Solids are meant to be **individually testable** and **reusable**. Dagster provides several APIs that make it easy to create a library of solids that work across test, staging, and production environments that can be re-used across your codebase.
-
----
-
-## Defining a solid
-
-To define a solid, use the <PyObject object="solid" decorator /> decorator. The decorated function is called the `compute_fn` and must have `context` as the first argument. The context provides access to important properties and objects, such as [solid configuration](#TODO) and [resources](#TODO)
-
-```python file=/concepts/solids_pipelines/solids.py startafter=start_solid_marker endbefore=end_solid_marker
-@solid
-def my_solid(context):
-    return "hello"
-```
+## Outputs
 
 ### Solid Configuration
 
 All definitions in dagster expose a `config_schema`, making them configurable and parameterizable. The configuration system is explained in detail on [Config Schema](/concepts/config-schema).
 
-Solid definitions can specify a `config_schema` for the solid's configuration. The configuration is accessible through the [solid context](/#solid-context) at runtime. Therefore, solid configuration can be used to specify solid behavior at runtime, making solids more flexible and reusable.
+Solid definitions can specify a `config_schema` for the solid's configuration. The configuration is accessable through the [solid context](/#solid-context) at runtime. Therefore, solid configuration can be used to specify solid behavior at runtime, making solids more flexible and reusable.
 
 For example, we can define a solid where the API endpoint it queries is define through it's configuration:
 
@@ -80,10 +53,7 @@ Both definitions have a few important properties:
 
 Inputs are passed as arguments to a solid's `compute_fn`. They are specified using <PyObject object="InputDefinition" displayText="InputDefinitions" />. The value of an input can be passed from the output of another solid, or stubbed (hardcoded) using config.
 
-A solid only starts to execute once all of its inputs have been resolved. Inputs can be resolved in two ways:
-
-- The upstream output that the input depends on has been successfully emmitted and stored.
-- The input was stubbed through config.
+A solid only executes once all of its inputs have been resolved. This means for every input, the upstream outputs it depends on have been successfully created, or the input was stubbed.
 
 ```python file=/concepts/solids_pipelines/solids.py startafter=start_input_definition_marker endbefore=end_input_definition_marker
 # The name is required, but both dagster_type and description are optional.
