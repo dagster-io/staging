@@ -13,6 +13,14 @@ class GrapheneAssetKeyInput(graphene.InputObjectType):
         name = "AssetKeyInput"
 
 
+class GrapheneAssetTag(graphene.InputObjectType):
+    key = graphene.NonNull(graphene.String)
+    value = graphene.NonNull(graphene.String)
+
+    class Meta:
+        name = "AssetTag"
+
+
 class GrapheneExecutionTag(graphene.InputObjectType):
     key = graphene.NonNull(graphene.String)
     value = graphene.NonNull(graphene.String)

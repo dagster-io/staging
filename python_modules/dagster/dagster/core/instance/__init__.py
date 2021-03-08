@@ -1017,7 +1017,7 @@ class DagsterInstance:
     # asset storage
 
     def all_asset_keys(self, prefix_path=None):
-        return self._event_storage.get_all_asset_keys(prefix_path)
+        return self._event_storage.get_asset_keys(prefix_path=prefix_path)
 
     def has_asset_key(self, asset_key: AssetKey) -> bool:
         return self._event_storage.has_asset_key(asset_key)
@@ -1048,6 +1048,13 @@ class DagsterInstance:
     def run_ids_for_asset_key(self, asset_key):
         check.inst_param(asset_key, "asset_key", AssetKey)
         return self._event_storage.get_asset_run_ids(asset_key)
+
+    def all_asset_tags(self):
+        return self._event_storage.all_asset_tags()
+
+    def get_asset_tags(self, asset_key):
+        check.inst_param(asset_key, "asset_key", AssetKey)
+        return self._event_storage.get_asset_tags(asset_key)
 
     def wipe_assets(self, asset_keys):
         check.list_param(asset_keys, "asset_keys", of_type=AssetKey)
