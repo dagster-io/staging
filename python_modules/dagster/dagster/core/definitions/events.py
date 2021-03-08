@@ -7,6 +7,7 @@ from enum import Enum
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
 from dagster.serdes import DefaultNamedTupleSerializer, whitelist_for_serdes
+from dagster.utils.backcompat import experimental_class_param_warning
 
 from .utils import DEFAULT_OUTPUT, check_valid_name
 
@@ -519,7 +520,7 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name"
 
 @whitelist_for_serdes
 class AssetMaterialization(
-    namedtuple("_AssetMaterialization", "asset_key description metadata_entries partition")
+    namedtuple("_AssetMaterialization", "asset_key description metadata_entries partition tags")
 ):
     """Event indicating that a solid has materialized an asset.
 
@@ -541,7 +542,7 @@ class AssetMaterialization(
         partition (Optional[str]): The name of the partition that was materialized.
     """
 
-    def __new__(cls, asset_key, description=None, metadata_entries=None, partition=None):
+    def __new__(cls, asset_key, description=None, metadata_entries=None, partition=None, tags=None):
         if isinstance(asset_key, AssetKey):
             check.inst_param(asset_key, "asset_key", AssetKey)
         elif isinstance(asset_key, str):
@@ -553,6 +554,10 @@ class AssetMaterialization(
             check.is_tuple(asset_key, of_type=str)
             asset_key = AssetKey(asset_key)
 
+        if tags:
+            check.opt_dict_param(tags, "tags", key_type=str, value_type=str)
+            experimental_class_param_warning("tags", "AssetMaterialization")
+
         return super(AssetMaterialization, cls).__new__(
             cls,
             asset_key=asset_key,
@@ -561,6 +566,7 @@ class AssetMaterialization(
                 metadata_entries, metadata_entries, of_type=EventMetadataEntry
             ),
             partition=check.opt_str_param(partition, "partition"),
+            tags=tags,
         )
 
     @property

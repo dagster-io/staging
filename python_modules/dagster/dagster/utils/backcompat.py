@@ -138,6 +138,18 @@ def experimental_arg_warning(arg_name, fn_name, stacklevel=3):
     )
 
 
+def experimental_class_param_warning(param_name, class_name, stacklevel=3):
+    """Utility for warning that an argument to a constructor is experimental"""
+    warnings.warn(
+        (
+            f'"{param_name}" is an experimental parameter to the class "{class_name}". It may '
+            f"break in future versions, even between dot releases. {EXPERIMENTAL_WARNING_HELP}"
+        ),
+        ExperimentalWarning,
+        stacklevel=stacklevel,
+    )
+
+
 def experimental(fn):
     """
     Spews an "experimental" warning whenever the given callable is called. If the argument is a

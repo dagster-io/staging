@@ -5,7 +5,7 @@ from datetime import datetime
 
 import sqlalchemy as db
 from dagster import check, seven
-from dagster.core.definitions.events import AssetKey, Materialization
+from dagster.core.definitions.events import AssetKey, AssetMaterialization, Materialization
 from dagster.core.errors import DagsterEventLogInvalidForRun
 from dagster.core.events import DagsterEventType
 from dagster.core.events.log import EventRecord
@@ -90,10 +90,14 @@ class SqlEventLogStorage(EventLogStorage):
             partition=partition,
         )
 
-    def store_asset_key(self, event):
+    def store_asset(self, event):
         check.inst_param(event, "event", EventRecord)
         if not event.is_dagster_event or not event.dagster_event.asset_key:
             return
+
+        materialization = event.dagster_event.step_materialization_data.materialization
+
+        check.inst(materialization, AssetMaterialization)
 
         with self.index_connection() as conn:
             try:
@@ -104,6 +108,8 @@ class SqlEventLogStorage(EventLogStorage):
                 )
             except db.exc.IntegrityError:
                 pass
+
+        self.set_asset_tags(materialization.asset_key, materialization.tags or {})
 
     def store_event(self, event):
         """Store an event corresponding to a pipeline run.
@@ -119,7 +125,7 @@ class SqlEventLogStorage(EventLogStorage):
             conn.execute(insert_event_statement)
 
         if event.is_dagster_event and event.dagster_event.asset_key:
-            self.store_asset_key(event)
+            self.store_asset(event)
 
     def get_logs_for_run_by_log_id(self, run_id, cursor=-1):
         check.str_param(run_id, "run_id")
