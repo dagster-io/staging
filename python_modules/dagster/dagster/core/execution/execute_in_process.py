@@ -17,8 +17,10 @@ from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.io_manager import IOManager, IOManagerDefinition
 from dagster.core.storage.mem_io_manager import mem_io_manager
 from dagster.utils import merge_dicts
+from dagster.utils.merger import deep_merge_dicts
 
 from .api import (
     ExecuteRunWithPlanIterable,
@@ -42,19 +44,25 @@ def _create_value_solid(input_name, input_value):
 
 def execute_in_process(
     node: NodeDefinition,
-    run_config: Optional[dict] = None,
-    resources: Optional[Dict[str, ResourceDefinition]] = None,
+    solid_config: Optional[dict] = None,
+    composed_config: Optional[dict] = None,
+    resources: Optional[Dict[str, Any]] = None,
     loggers: Optional[Dict[str, LoggerDefinition]] = None,
     input_values: Optional[Dict[str, Any]] = None,
     instance: DagsterInstance = None,
     output_capturing_enabled: Optional[bool] = True,
 ) -> NodeExecutionResult:
     node = check.inst_param(node, "node", NodeDefinition)
-    resources = check.opt_dict_param(
-        resources, "resources", key_type=str, value_type=ResourceDefinition
-    )
+    resources = check.opt_dict_param(resources, "resources", key_type=str)
     loggers = check.opt_dict_param(loggers, "logger", key_type=str, value_type=LoggerDefinition)
-    run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
+    solid_config = check.opt_dict_param(solid_config, "solid_config", key_type=str)
+    if isinstance(node, SolidDefinition):
+        check.invariant(
+            not composed_config,
+            "The `composed_config` argument should only be provided when executing graphs "
+            "whose internal solids require config.",
+        )
+    composed_config = check.opt_dict_param(composed_config, "composed_config", key_type=str)
     input_values = check.opt_dict_param(input_values, "input_values", key_type=str)
 
     node_defs = [node]
@@ -65,9 +73,26 @@ def execute_in_process(
         dependencies[node.name][input_name] = DependencyDefinition(input_name)
         node_defs.append(_create_value_solid(input_name, input_value))
 
+    hardcoded_resource_defs = {}
+    for key, val in resources.items():
+        if isinstance(val, IOManager):
+            hardcoded_resource_defs[key] = IOManagerDefinition.hardcoded_io_manager(val)
+        else:
+            hardcoded_resource_defs[key] = ResourceDefinition.hardcoded_resource(val)
+
+    resolved_solid_config = (
+        {"solids": {node.name: {"config": solid_config}}} if solid_config else {}
+    )
+    resolved_composed_config = (
+        {"solids": {node.name: {"solids": composed_config}}} if composed_config else {}
+    )
+    run_config = deep_merge_dicts(resolved_composed_config, resolved_solid_config)
+
     mode_def = ModeDefinition(
         "created",
-        resource_defs=merge_dicts(resources, {EPHEMERAL_IO_MANAGER_KEY: mem_io_manager}),
+        resource_defs=merge_dicts(
+            hardcoded_resource_defs, {EPHEMERAL_IO_MANAGER_KEY: mem_io_manager}
+        ),
         logger_defs=loggers,
     )
 

@@ -1,7 +1,7 @@
 from dagster import solid
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.definitions.graph import GraphDefinition
-from dagster.core.execution.execute import execute_in_process
+from dagster.core.execution.execute_in_process import execute_in_process
 
 
 def get_solids():
