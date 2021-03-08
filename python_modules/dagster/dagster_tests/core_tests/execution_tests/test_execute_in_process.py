@@ -1,9 +1,12 @@
 import re
 
 import pytest
-from dagster import DagsterInvalidDefinitionError, solid
+from dagster import DagsterInvalidDefinitionError, Field, InputDefinition, resource, solid
 from dagster.core.definitions.decorators.graph import graph
-from dagster.core.execution.execute import execute_in_process
+from dagster.core.errors import DagsterInvalidConfigError
+from dagster.core.execution.execute_in_process import execute_in_process
+from dagster.core.storage.io_manager import IOManager, io_manager
+from dagster.core.storage.mem_io_manager import InMemoryIOManager, mem_io_manager
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
 
@@ -22,7 +25,7 @@ def get_solids():
 def test_execute_solid():
     emit_one, _ = get_solids()
 
-    result = execute_in_process(emit_one, output_capturing_enabled=True)
+    result = execute_in_process(emit_one)
 
     assert result.success
     assert result.output_values["result"] == 1
@@ -39,7 +42,7 @@ def test_execute_graph():
     def emit_three():
         return add(emit_two(), emit_one())
 
-    result = execute_in_process(emit_three, output_capturing_enabled=True)
+    result = execute_in_process(emit_three)
 
     assert result.success
 
@@ -61,7 +64,7 @@ def test_execute_solid_with_inputs():
     def add_one(_, x):
         return 1 + x
 
-    result = execute_in_process(add_one, input_values={"x": 5}, output_capturing_enabled=True)
+    result = execute_in_process(add_one, input_values={"x": 5})
     assert result.success
 
     assert result.output_values["result"] == 6
@@ -74,7 +77,7 @@ def test_execute_graph_with_inputs():
     def add_one(x):
         return add(x, emit_one())
 
-    result = execute_in_process(add_one, input_values={"x": 5}, output_capturing_enabled=True)
+    result = execute_in_process(add_one, input_values={"x": 5})
     assert result.success
     assert result.output_values["result"] == 6
     assert result.result_for_node("emit_one").output_values["result"] == 1
@@ -140,3 +143,123 @@ def test_dynamic_output_solid():
     assert result.success
     assert result.output_values["result"]["1"] == 1
     assert result.output_values["result"]["2"] == 2
+
+
+def test_execute_solid_with_required_resources():
+    @solid(required_resource_keys={"foo"})
+    def solid_requires_resource(context):
+        assert context.resources.foo == "bar"
+        return context.resources.foo
+
+    # provide the resource value directly
+    result = execute_in_process(solid_requires_resource, resources={"foo": "bar"})
+    assert result.success
+    assert result.output_values["result"] == "bar"
+
+    @resource
+    def foo_resource(_):
+        return "bar"
+
+    # provide the resource as a definition to be instantiated
+    result = execute_in_process(solid_requires_resource, resources={"foo": foo_resource})
+    assert result.success
+    assert result.output_values["result"] == "bar"
+
+
+def test_execute_solid_requires_config():
+    @solid(config_schema={"foo": str})
+    def solid_requires_config(context):
+        assert context.solid_config["foo"] == "bar"
+        return context.solid_config["foo"]
+
+    result = execute_in_process(solid_requires_config, solid_config={"foo": "bar"})
+    assert result.success
+    assert result.output_values["result"] == "bar"
+
+
+def test_execute_graph_solids_require_config():
+    @solid(config_schema={"foo": str})
+    def solid_requires_config(context):
+        assert context.solid_config["foo"] == "bar"
+        return context.solid_config["foo"]
+
+    @graph
+    def graph_solids_require_config():
+        return solid_requires_config()
+
+    result = execute_in_process(
+        graph_solids_require_config,
+        composed_config={"solid_requires_config": {"config": {"foo": "bar"}}},
+    )
+
+    assert result.success
+    assert result.output_values["result"] == "bar"
+
+
+def test_execute_graph_with_required_io_manager():
+    emit_one, add = get_solids()
+
+    @graph
+    def get_two():
+        return add(emit_one(), emit_one())
+
+    result = execute_in_process(get_two, resources={"io_manager": InMemoryIOManager()})
+    assert result.success
+    assert result.output_values["result"] == 2
+
+    result = execute_in_process(get_two, resources={"io_manager": mem_io_manager})
+    assert result.success
+    assert result.output_values["result"] == 2
+
+
+def test_execute_solid_with_io_config_io_manager():
+    @io_manager(output_config_schema={"test_output": str}, input_config_schema={"test_input": str})
+    def basic_io_manager(_):
+        class BasicIOManager(IOManager):
+            def handle_output(self, context, obj):
+                assert context.config["test_output"] == "foo"
+
+            def load_input(self, context):
+                assert context.config["test_input"] == "bar"
+
+        return BasicIOManager()
+
+    @solid(input_defs=[InputDefinition("_x", root_manager_key="io_manager")])
+    def noop_solid_takes_input(_, _x):
+        return None
+
+    result = execute_in_process(
+        noop_solid_takes_input,
+        resources={"io_manager": basic_io_manager},
+        output_config={"result": {"test_output": "foo"}},
+        input_config={"_x": {"test_input": "bar"}},
+    )
+    assert result.success
+
+
+def test_execute_in_process_resource_requires_config():
+    @resource(
+        config_schema={"foo": str, "animal": Field(str, default_value="dog", is_required=False)}
+    )
+    def basic_resource(init_context):
+        assert init_context.resource_config["foo"] == "bar"
+        assert init_context.resource_config["animal"] == "dog"
+
+    @solid(required_resource_keys={"basic_resource"})
+    def basic_solid(_):
+        pass
+
+    result = execute_in_process(
+        basic_solid, resources={"basic_resource": basic_resource.configured({"foo": "bar"})}
+    )
+
+    assert result.success
+
+    with pytest.raises(
+        DagsterInvalidConfigError,
+        match="Error in config for pipeline ephemeral_basic_solid_node_pipeline",
+    ):
+        execute_in_process(
+            basic_solid,
+            resources={"basic_resource": basic_resource},
+        )
