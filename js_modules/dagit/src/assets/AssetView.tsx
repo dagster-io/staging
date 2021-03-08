@@ -94,27 +94,25 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
         <MetadataTable
           rows={[
             {
-              key: 'Latest pipeline',
+              key: 'Latest source',
               value: latestRun ? (
-                <PipelineReference
-                  pipelineName={latestRun.pipelineName}
-                  pipelineHrefContext="repo-unknown"
-                  snapshotId={latestRun.pipelineSnapshotId}
-                  mode={latestRun.mode}
-                />
-              ) : (
-                'No materialization events'
-              ),
-            },
-            {
-              key: 'Latest run',
-              value: latestRun ? (
-                <Link
-                  style={{fontFamily: FontFamily.monospace}}
-                  to={`/instance/runs/${latestEvent.runId}?timestamp=${latestEvent.timestamp}`}
-                >
-                  {titleForRun({runId: latestEvent.runId})}
-                </Link>
+                <>
+                  {latest.materializationEvent.stepKey}
+                  {' in run '}
+                  <Link
+                    style={{fontFamily: FontFamily.monospace}}
+                    to={`/instance/runs/${latestEvent.runId}?timestamp=${latestEvent.timestamp}`}
+                  >
+                    {titleForRun({runId: latestEvent.runId})}
+                  </Link>
+                  {' of '}
+                  <PipelineReference
+                    pipelineName={latestRun.pipelineName}
+                    pipelineHrefContext="repo-unknown"
+                    snapshotId={latestRun.pipelineSnapshotId}
+                    mode={latestRun.mode}
+                  />
+                </>
               ) : (
                 'No materialization events'
               ),
@@ -135,7 +133,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
             },
             ...latestEvent?.materialization.metadataEntries.map((entry) => ({
               key: entry.label,
-              value: <MetadataEntry entry={entry} />,
+              value: <MetadataEntry entry={entry} expandSmallValues={true} />,
             })),
           ].filter(Boolean)}
         />
@@ -298,12 +296,12 @@ function extractNumericData(
 
     if (xAxis === 'partition') {
       // If the xAxis is partition keys, the graph may only contain one value for each partition.
-      // If the existing sample for the partition was null, replace it. Otherwise take the max.
-      // (We need some sort of approach, might as well make it deterministic.)
+      // If the existing sample for the partition was null, replace it. Otherwise take the
+      // most recent value.
       const existingForPartition = series[label].values.find((v) => v.x === x);
       if (existingForPartition) {
         if (!isNaN(y)) {
-          existingForPartition.y = existingForPartition.y ? Math.max(existingForPartition.y, y) : y;
+          existingForPartition.y = y;
         }
         return;
       }

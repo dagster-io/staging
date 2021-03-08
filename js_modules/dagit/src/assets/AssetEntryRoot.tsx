@@ -60,17 +60,21 @@ export const AssetEntryRoot: React.FunctionComponent<RouteComponentProps> = ({ma
       <Group direction="column" spacing={20}>
         <PageHeader
           title={
-            <Box flex={{alignItems: 'center'}}>
-              {currentPath
-                .map<React.ReactNode>((p, i) => <Heading key={i}>{p}</Heading>)
-                .reduce((prev, curr, i) => [
-                  prev,
-                  <Box key={`separator_${i}`} padding={4}>
-                    <Icon icon={IconNames.CHEVRON_RIGHT} iconSize={18} />
-                  </Box>,
-                  curr,
-                ])}
-            </Box>
+            featureEnabled(FeatureFlag.AssetCatalog) ? (
+              <Box flex={{alignItems: 'center'}}>
+                {currentPath
+                  .map<React.ReactNode>((p, i) => <Heading key={i}>{p}</Heading>)
+                  .reduce((prev, curr, i) => [
+                    prev,
+                    <Box key={`separator_${i}`} padding={4}>
+                      <Icon icon={IconNames.CHEVRON_RIGHT} iconSize={18} />
+                    </Box>,
+                    curr,
+                  ])}
+              </Box>
+            ) : (
+              <Heading>{currentPath.slice(-1)}</Heading>
+            )
           }
           icon="th"
           description={<PathDetails>{pathDetails()}</PathDetails>}
