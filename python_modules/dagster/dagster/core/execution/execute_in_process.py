@@ -1,10 +1,9 @@
 from collections import defaultdict
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from dagster import check
 from dagster.core.definitions import (
     DependencyDefinition,
-    LoggerDefinition,
     ModeDefinition,
     NodeDefinition,
     OutputDefinition,
@@ -17,8 +16,10 @@ from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.io_manager import IOManager, IOManagerDefinition
 from dagster.core.storage.mem_io_manager import mem_io_manager
 from dagster.utils import merge_dicts
+from dagster.utils.merger import deep_merge_dicts
 
 from .api import (
     ExecuteRunWithPlanIterable,
@@ -40,35 +41,60 @@ def _create_value_solid(input_name, input_value):
     return input_solid
 
 
+def _deep_merge_multiple_dicts(*args):
+    result = {}
+    for arg in args:
+        result = deep_merge_dicts(result, arg)
+    return result
+
+
+# Placeholder value for representing that input values are coming from config, not directly passed.
+class FromInputConfig:
+    pass
+
+
 def execute_in_process(
     node: NodeDefinition,
-    run_config: Optional[dict] = None,
-    resources: Optional[Dict[str, ResourceDefinition]] = None,
-    loggers: Optional[Dict[str, LoggerDefinition]] = None,
-    input_values: Optional[Dict[str, Any]] = None,
+    solid_config: Optional[dict] = None,
+    resources: Optional[Dict[str, Union[Any, ResourceDefinition]]] = None,
+    input_values: Optional[Union[Dict[str, Any], FromInputConfig]] = FromInputConfig(),
     instance: DagsterInstance = None,
-    output_capturing_enabled: Optional[bool] = True,
 ) -> NodeExecutionResult:
     node = check.inst_param(node, "node", NodeDefinition)
-    resources = check.opt_dict_param(
-        resources, "resources", key_type=str, value_type=ResourceDefinition
-    )
-    loggers = check.opt_dict_param(loggers, "logger", key_type=str, value_type=LoggerDefinition)
-    run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
-    input_values = check.opt_dict_param(input_values, "input_values", key_type=str)
+    solid_config = check.opt_dict_param(solid_config, "solid_config", key_type=str)
+    resources = check.opt_dict_param(resources, "resources", key_type=str)
+    instance = check.opt_inst_param(instance, "instance", DagsterInstance)
+    input_values = check.inst_param(input_values, "input_values", (dict, FromInputConfig))
 
     node_defs = [node]
 
     dependencies: Dict[str, Dict[str, DependencyDefinition]] = defaultdict(dict)
 
-    for input_name, input_value in input_values.items():
-        dependencies[node.name][input_name] = DependencyDefinition(input_name)
-        node_defs.append(_create_value_solid(input_name, input_value))
+    # If input values are provided directly, build out ephemeral solids to construct those values.
+    if isinstance(input_values, dict):
+        check.invariant(
+            not solid_config.get("inputs"),
+            "Attempted to pass inputs through both config and direct values. Please choose one "
+            "method for providing input values.",
+        )
+        for input_name, input_value in input_values.items():
+            dependencies[node.name][input_name] = DependencyDefinition(input_name)
+            node_defs.append(_create_value_solid(input_name, input_value))
+
+    resource_defs = {}
+    for key, val in resources.items():
+        if isinstance(val, ResourceDefinition):
+            resource_defs[key] = val
+        elif isinstance(val, IOManager):
+            resource_defs[key] = IOManagerDefinition.hardcoded_io_manager(val)
+        else:
+            resource_defs[key] = ResourceDefinition.hardcoded_resource(val)
+
+    run_config = {"solids": {node.name: solid_config}} if solid_config else {}
 
     mode_def = ModeDefinition(
         "created",
-        resource_defs=merge_dicts(resources, {EPHEMERAL_IO_MANAGER_KEY: mem_io_manager}),
-        logger_defs=loggers,
+        resource_defs=merge_dicts(resource_defs, {EPHEMERAL_IO_MANAGER_KEY: mem_io_manager}),
     )
 
     pipeline_def = PipelineDefinition(
@@ -99,7 +125,7 @@ def execute_in_process(
                 pipeline_run=pipeline_run,
                 instance=execute_instance,
                 run_config=run_config,
-                output_capture=recorder if output_capturing_enabled else None,
+                output_capture=recorder,
             ),
         )
         event_list = list(_execute_run_iterable)
