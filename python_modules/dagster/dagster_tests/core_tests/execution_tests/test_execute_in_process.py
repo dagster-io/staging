@@ -3,7 +3,8 @@ import re
 import pytest
 from dagster import DagsterInvalidDefinitionError, solid
 from dagster.core.definitions.decorators.graph import graph
-from dagster.core.execution.execute import execute_in_process
+from dagster.core.execution.context.compute import SolidExecutionContext
+from dagster.core.execution.execute_in_process import execute_in_process
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
 
@@ -140,3 +141,14 @@ def test_dynamic_output_solid():
     assert result.success
     assert result.output_values["result"]["1"] == 1
     assert result.output_values["result"]["2"] == 2
+
+
+def test_execute_solid_with_required_resources():
+    @solid(required_resource_keys={"foo"})
+    def solid_requires_resource(context: SolidExecutionContext):
+        assert context.resources.foo == "bar"
+        return context.resources.foo
+
+    result = execute_in_process(solid_requires_resource, resources={"foo": "bar"})
+    assert result.success
+    assert result.output_values["result"] == "bar"

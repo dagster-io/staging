@@ -43,16 +43,14 @@ def _create_value_solid(input_name, input_value):
 def execute_in_process(
     node: NodeDefinition,
     run_config: Optional[dict] = None,
-    resources: Optional[Dict[str, ResourceDefinition]] = None,
+    resources: Optional[Dict[str, Any]] = None,
     loggers: Optional[Dict[str, LoggerDefinition]] = None,
     input_values: Optional[Dict[str, Any]] = None,
     instance: DagsterInstance = None,
     output_capturing_enabled: Optional[bool] = True,
 ) -> NodeExecutionResult:
     node = check.inst_param(node, "node", NodeDefinition)
-    resources = check.opt_dict_param(
-        resources, "resources", key_type=str, value_type=ResourceDefinition
-    )
+    resources = check.opt_dict_param(resources, "resources", key_type=str)
     loggers = check.opt_dict_param(loggers, "logger", key_type=str, value_type=LoggerDefinition)
     run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
     input_values = check.opt_dict_param(input_values, "input_values", key_type=str)
@@ -65,9 +63,15 @@ def execute_in_process(
         dependencies[node.name][input_name] = DependencyDefinition(input_name)
         node_defs.append(_create_value_solid(input_name, input_value))
 
+    hardcoded_resource_defs = {
+        key: ResourceDefinition.hardcoded_resource(val) for key, val in resources.items()
+    }
+
     mode_def = ModeDefinition(
         "created",
-        resource_defs=merge_dicts(resources, {EPHEMERAL_IO_MANAGER_KEY: mem_io_manager}),
+        resource_defs=merge_dicts(
+            hardcoded_resource_defs, {EPHEMERAL_IO_MANAGER_KEY: mem_io_manager}
+        ),
         logger_defs=loggers,
     )
 
