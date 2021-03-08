@@ -1,6 +1,16 @@
 from time import sleep
 
-from dagster import Field, Int, Output, OutputDefinition, PresetDefinition, pipeline, solid
+from dagster import (
+    Field,
+    Int,
+    ModeDefinition,
+    Output,
+    OutputDefinition,
+    PresetDefinition,
+    fs_io_manager,
+    pipeline,
+    solid,
+)
 
 
 @solid(
@@ -33,11 +43,11 @@ def branch(name, arg, solid_num):
 
 @pipeline(
     description=("Demo fork-shaped pipeline that has two-path parallel structure of solids."),
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})],
     preset_defs=[
         PresetDefinition(
             "sleep_failed",
             {
-                "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
                 "solids": {"root": {"config": {"sleep_secs": [-10, 30]}}},
             },
@@ -45,7 +55,6 @@ def branch(name, arg, solid_num):
         PresetDefinition(
             "sleep",
             {
-                "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
                 "solids": {"root": {"config": {"sleep_secs": [0, 10]}}},
             },

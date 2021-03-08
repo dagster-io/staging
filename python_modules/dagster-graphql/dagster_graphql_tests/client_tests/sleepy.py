@@ -7,9 +7,11 @@ from dagster import (
     InputDefinition,
     Int,
     List,
+    ModeDefinition,
     Output,
     OutputDefinition,
     PresetDefinition,
+    fs_io_manager,
     pipeline,
     solid,
 )
@@ -67,6 +69,7 @@ def total(_, in_1, in_2, in_3, in_4):
         "Demo diamond-shaped pipeline that has four-path parallel structure of solids.  Execute "
         "with the `multi` preset to take advantage of multi-process parallelism."
     ),
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})],
     preset_defs=[
         PresetDefinition(
             "multi",

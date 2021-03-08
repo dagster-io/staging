@@ -16,6 +16,7 @@ from dagster import (
     configured,
     execute_pipeline,
     execute_pipeline_iterator,
+    fs_io_manager,
     reconstructable,
     resource,
     seven,
@@ -874,7 +875,11 @@ def define_resource_teardown_failure_pipeline():
     return PipelineDefinition(
         name="resource_teardown_failure",
         solid_defs=[resource_solid],
-        mode_defs=[ModeDefinition(resource_defs={"a": resource_a, "b": resource_b})],
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={"a": resource_a, "b": resource_b, "io_manager": fs_io_manager}
+            ),
+        ],
     )
 
 
@@ -883,10 +888,7 @@ def test_multiprocessing_resource_teardown_failure():
         pipeline = reconstructable(define_resource_teardown_failure_pipeline)
         result = execute_pipeline(
             pipeline,
-            run_config={
-                "intermediate_storage": {"filesystem": {}},
-                "execution": {"multiprocess": {}},
-            },
+            run_config={"execution": {"multiprocess": {}}},
             instance=instance,
             raise_on_error=False,
         )

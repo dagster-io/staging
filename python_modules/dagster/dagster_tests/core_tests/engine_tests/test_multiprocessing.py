@@ -8,13 +8,16 @@ from dagster import (
     Failure,
     Field,
     InputDefinition,
+    ModeDefinition,
     Nothing,
     Output,
     OutputDefinition,
     PresetDefinition,
     String,
     execute_pipeline,
+    fs_io_manager,
     lambda_solid,
+    mem_io_manager,
     pipeline,
     reconstructable,
     solid,
@@ -41,7 +44,6 @@ def test_diamond_multi_execution():
         result = execute_pipeline(
             pipe,
             run_config={
-                "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
             },
             instance=instance,
@@ -77,11 +79,13 @@ def define_diamond_pipeline():
         return left + right
 
     @pipeline(
+        mode_defs=[
+            ModeDefinition(resource_defs={"io_manager": fs_io_manager}),
+        ],
         preset_defs=[
             PresetDefinition(
                 "just_adder",
                 {
-                    "intermediate_storage": {"filesystem": {}},
                     "execution": {"multiprocess": {}},
                     "solids": {"adder": {"inputs": {"left": {"value": 1}, "right": {"value": 1}}}},
                 },
@@ -105,7 +109,7 @@ def define_error_pipeline():
     def throw_error():
         raise Exception("bad programmer")
 
-    @pipeline
+    @pipeline(mode_defs=[ModeDefinition("multi", resource_defs={"io_manager": fs_io_manager})])
     def error_pipeline():
         should_never_execute(throw_error())
 
@@ -123,7 +127,6 @@ def test_error_pipeline_multiprocess():
         result = execute_pipeline(
             reconstructable(define_error_pipeline),
             run_config={
-                "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
             },
             instance=instance,
@@ -132,9 +135,30 @@ def test_error_pipeline_multiprocess():
 
 
 def test_mem_storage_error_pipeline_multiprocess():
+    @lambda_solid
+    def return_two():
+        return 2
+
+    @lambda_solid(input_defs=[InputDefinition("num")])
+    def add_three(num):
+        return num + 3
+
+    @lambda_solid(input_defs=[InputDefinition("num")])
+    def mult_three(num):
+        return num * 3
+
+    @lambda_solid(input_defs=[InputDefinition("left"), InputDefinition("right")])
+    def adder(left, right):
+        return left + right
+
+    @pipeline
+    def in_mem_diamond_pipeline():
+        two = return_two()
+        adder(left=add_three(two), right=mult_three(two))
+
     with instance_for_test() as instance:
         result = execute_pipeline(
-            reconstructable(define_diamond_pipeline),
+            in_mem_diamond_pipeline,
             run_config={"execution": {"multiprocess": {}}},
             instance=instance,
             raise_on_error=False,
@@ -147,7 +171,7 @@ def test_mem_storage_error_pipeline_multiprocess():
 def test_invalid_instance():
     result = execute_pipeline(
         reconstructable(define_diamond_pipeline),
-        run_config={"intermediate_storage": {"filesystem": {}}, "execution": {"multiprocess": {}}},
+        run_config={"execution": {"multiprocess": {}}},
         instance=DagsterInstance.ephemeral(),
         raise_on_error=False,
     )
@@ -164,7 +188,7 @@ def test_invalid_instance():
 def test_no_handle():
     result = execute_pipeline(
         define_diamond_pipeline(),
-        run_config={"intermediate_storage": {"filesystem": {}}, "execution": {"multiprocess": {}}},
+        run_config={"execution": {"multiprocess": {}}},
         instance=DagsterInstance.ephemeral(),
         raise_on_error=False,
     )
@@ -214,7 +238,7 @@ def define_subdag_pipeline():
     def noop():
         pass
 
-    @pipeline
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
     def separate():
         waiter()
         a = noop.alias("noop_1")()
@@ -233,7 +257,6 @@ def test_separate_sub_dags():
             result = execute_pipeline(
                 pipe,
                 run_config={
-                    "intermediate_storage": {"filesystem": {}},
                     "execution": {"multiprocess": {"config": {"max_concurrent": 2}}},
                     "solids": {
                         "waiter": {"config": filename},
@@ -269,7 +292,6 @@ def test_ephemeral_event_log():
         result = execute_pipeline(
             pipe,
             run_config={
-                "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
             },
             instance=instance,
@@ -294,7 +316,7 @@ def echo(x):
     return x
 
 
-@pipeline
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
 def optional_stuff():
     option_1, option_2 = either_or()
     echo(echo(option_1))
@@ -311,7 +333,6 @@ def test_optional_outputs():
         multi_result = execute_pipeline(
             reconstructable(optional_stuff),
             run_config={
-                "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
             },
             instance=instance,
@@ -331,7 +352,7 @@ def throw():
     )
 
 
-@pipeline
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
 def failure():
     throw()
 
@@ -342,7 +363,6 @@ def test_failure_multiprocessing():
             reconstructable(failure),
             run_config={
                 "execution": {"multiprocess": {}},
-                "intermediate_storage": {"filesystem": {}},
             },
             instance=instance,
             raise_on_error=False,
@@ -368,7 +388,7 @@ def sys_exit(context):
     sys.exit("Crashy output to stderr")
 
 
-@pipeline
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
 def sys_exit_pipeline():
     sys_exit()
 
@@ -380,7 +400,6 @@ def test_crash_multiprocessing():
             reconstructable(sys_exit_pipeline),
             run_config={
                 "execution": {"multiprocess": {}},
-                "intermediate_storage": {"filesystem": {}},
             },
             instance=instance,
             raise_on_error=False,
@@ -419,7 +438,7 @@ def segfault_solid(context):
     segfault()
 
 
-@pipeline
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
 def segfault_pipeline():
     segfault_solid()
 
@@ -431,7 +450,6 @@ def test_crash_hard_multiprocessing():
             reconstructable(segfault_pipeline),
             run_config={
                 "execution": {"multiprocess": {}},
-                "intermediate_storage": {"filesystem": {}},
             },
             instance=instance,
             raise_on_error=False,
