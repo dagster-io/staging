@@ -78,12 +78,14 @@ export const useRepositoryLocationReload = (location: string, onReload: OnReload
 };
 
 interface Props {
-  location: string;
+  locations: string[];
 }
 
 export const ReloadRepositoryLocationButton: React.FC<Props> = (props) => {
-  const {location} = props;
-  const {reloading, onClick} = useRepositoryLocationReload(location);
+  const {locations} = props;
+
+  // todo dish: Allow reloading multiple!
+  const {reloading, onClick} = useRepositoryLocationReload(locations[0]);
 
   return (
     <ShortcutHandler
