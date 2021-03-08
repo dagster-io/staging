@@ -53,6 +53,10 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
         check.inst_param(event, "event", EventRecord)
         run_id = event.run_id
         self._logs[run_id] = self._logs[run_id].append(event)
+        if event.is_dagster_event and event.dagster_event.asset_key:
+            materialization = event.dagster_event.step_materialization_data.materialization
+            self.set_asset_tags(materialization.asset_key, materialization.tags or {})
+
         for handler in self._handlers[run_id]:
             handler(event)
 
@@ -210,4 +214,4 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
         return self._asset_tags[asset_key.to_string()]
 
     def set_asset_tags(self, asset_key: AssetKey, tags: dict):
-        self._asset_tags[asset_key.to_string()] = tags
+        self._asset_tags[asset_key.to_string()] = {k: v for k, v in tags.items()}

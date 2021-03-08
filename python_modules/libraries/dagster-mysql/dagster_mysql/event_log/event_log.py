@@ -1,5 +1,6 @@
 import sqlalchemy as db
 from dagster import check
+from dagster.core.definitions.events import AssetMaterialization
 from dagster.core.events.log import EventRecord
 from dagster.core.storage.event_log import (
     AssetKeyTable,
@@ -102,10 +103,14 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         inst.wipe()
         return inst
 
-    def store_asset_key(self, event):
+    def store_asset(self, event):
         check.inst_param(event, "event", EventRecord)
         if not event.is_dagster_event or not event.dagster_event.asset_key:
             return
+
+        materialization = event.dagster_event.step_materialization_data.materialization
+
+        check.inst(materialization, AssetMaterialization)
 
         with self.index_connection() as conn:
             event_asset_key: str = event.dagster_event.asset_key.to_string()
@@ -122,6 +127,8 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
                 ),
             )
             conn.execute(do_nothing_on_conflict_insert_stmt)
+
+        self.set_asset_tags(materialization.asset_key, materialization.tags or {})
 
     def _connect(self):
         return create_mysql_connection(self._engine, __file__, "event log")

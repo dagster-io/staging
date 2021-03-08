@@ -98,6 +98,18 @@ def solid_normalization(_):
     yield Output(1)
 
 
+@solid
+def solid_asset_tags(_):
+    yield AssetMaterialization(asset_key=AssetKey("asset_tags"), tags={"foo": "FOO", "bar": "BAR"})
+    yield Output(1)
+
+
+@solid
+def solid_asset_tags_overwrite(_):
+    yield AssetMaterialization(asset_key=AssetKey("asset_tags"), tags={"foo": "NOT_FOO"})
+    yield Output(1)
+
+
 @pipeline
 def pipeline_one():
     solid_one()
@@ -112,6 +124,16 @@ def pipeline_two():
 @pipeline
 def pipeline_normalization():
     solid_normalization()
+
+
+@pipeline
+def pipeline_asset_tags():
+    solid_asset_tags()
+
+
+@pipeline
+def pipeline_asset_tags_overwrite():
+    solid_asset_tags_overwrite()
 
 
 @solid(config_schema={"partition": Field(str, is_required=False)})
@@ -418,6 +440,23 @@ def test_asset_tags(asset_aware_context):
         foo_keys = event_log_storage.get_asset_keys(tags=dict(foo="FEZ"))
         assert len(foo_keys) == 1
         assert set([asset_key.to_string() for asset_key in foo_keys]) == set(['["asset_1"]'])
+
+
+@asset_test
+def test_asset_materialization_tags(asset_aware_context):
+    with asset_aware_context() as ctx:
+        instance, event_log_storage = ctx
+        execute_pipeline(pipeline_asset_tags, instance=instance)
+
+        tags = event_log_storage.get_asset_tags(AssetKey("asset_tags"))
+        assert len(tags) == 2
+        assert tags["foo"] == "FOO"
+        assert tags["bar"] == "BAR"
+
+        execute_pipeline(pipeline_asset_tags_overwrite, instance=instance)
+        tags = event_log_storage.get_asset_tags(AssetKey("asset_tags"))
+        assert len(tags) == 1
+        assert tags["foo"] == "NOT_FOO"
 
 
 def _materialization_event_record(run_id, asset_key):
