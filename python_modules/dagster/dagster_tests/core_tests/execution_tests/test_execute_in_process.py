@@ -3,7 +3,8 @@ import re
 import pytest
 from dagster import DagsterInvalidDefinitionError, solid
 from dagster.core.definitions.decorators.graph import graph
-from dagster.core.execution.execute import execute_in_process
+from dagster.core.execution.execute_in_process import execute_in_process
+from dagster.core.storage.mem_io_manager import InMemoryIOManager
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
 
@@ -140,3 +141,56 @@ def test_dynamic_output_solid():
     assert result.success
     assert result.output_values["result"]["1"] == 1
     assert result.output_values["result"]["2"] == 2
+
+
+def test_execute_solid_with_required_resources():
+    @solid(required_resource_keys={"foo"})
+    def solid_requires_resource(context):
+        assert context.resources.foo == "bar"
+        return context.resources.foo
+
+    result = execute_in_process(solid_requires_resource, resources={"foo": "bar"})
+    assert result.success
+    assert result.output_values["result"] == "bar"
+
+
+def test_execute_solid_requires_config():
+    @solid(config_schema={"foo": str})
+    def solid_requires_config(context):
+        assert context.solid_config["foo"] == "bar"
+        return context.solid_config["foo"]
+
+    result = execute_in_process(solid_requires_config, solid_config={"foo": "bar"})
+    assert result.success
+    assert result.output_values["result"] == "bar"
+
+
+def test_execute_graph_solids_require_config():
+    @solid(config_schema={"foo": str})
+    def solid_requires_config(context):
+        assert context.solid_config["foo"] == "bar"
+        return context.solid_config["foo"]
+
+    @graph
+    def graph_solids_require_config():
+        return solid_requires_config()
+
+    result = execute_in_process(
+        graph_solids_require_config,
+        composed_config={"solid_requires_config": {"config": {"foo": "bar"}}},
+    )
+
+    assert result.success
+    assert result.output_values["result"] == "bar"
+
+
+def test_execute_graph_with_required_io_manager():
+    emit_one, add = get_solids()
+
+    @graph
+    def get_two():
+        return add(emit_one(), emit_one())
+
+    result = execute_in_process(get_two, resources={"io_manager": InMemoryIOManager()})
+    assert result.success
+    assert result.output_values["result"] == 2
