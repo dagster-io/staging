@@ -224,7 +224,7 @@ def get_test_project_external_repo(container_image=None):
                 container_image=container_image,
             )
         )
-        .create_handle()
+        .get_handle()
         .create_location()
         .get_repository("demo_execution_repo")
     )

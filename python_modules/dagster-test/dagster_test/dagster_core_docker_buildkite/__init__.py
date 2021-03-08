@@ -47,7 +47,7 @@ def get_test_project_external_pipeline(pipeline_name):
                 "define_demo_execution_repo",
             )
         )
-        .create_handle()
+        .get_handle()
         .create_location()
         .get_repository("demo_execution_repo")
         .get_full_external_pipeline(pipeline_name)
