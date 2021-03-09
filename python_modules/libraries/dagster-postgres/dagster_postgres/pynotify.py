@@ -30,6 +30,8 @@ import os
 import select
 import signal
 import sys
+from threading import Event
+from typing import Iterator, List, NamedTuple, Optional
 
 from dagster import check
 
@@ -69,14 +71,20 @@ def construct_signals(arg):
     return signal.Signals(arg)  # pylint: disable=no-member
 
 
+class NotificationType(NamedTuple):
+    pid: int
+    channel: str
+    payload: str
+
+
 def await_pg_notifications(
-    conn_string,
-    channels=None,
-    timeout=5.0,
-    yield_on_timeout=False,
-    handle_signals=None,
-    exit_event=None,
-):
+    conn_string: str,
+    channels: Optional[List[str]] = None,
+    timeout: float = 5.0,
+    yield_on_timeout: bool = False,
+    handle_signals: Optional[List[int]] = None,
+    exit_event: Optional[Event] = None,
+) -> Iterator[Optional[NotificationType]]:
     """Subscribe to PostgreSQL notifications, and handle them
     in infinite-loop style.
     On an actual message, returns the notification (with .pid,
