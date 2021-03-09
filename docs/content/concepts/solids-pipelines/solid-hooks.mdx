@@ -156,3 +156,18 @@ if __name__ == "__main__":
         run_config = yaml.safe_load(fd.read())
     result = execute_pipeline(notif_all, run_config=run_config, mode="prod")
 ```
+
+### <Cross/> Pipeline-level hooks
+
+You may want to use hooks at the pipeline level, e.g., triggered once per pipeline run or triggered
+by a pipeline event. We currently do not support pipeline-level hooks. All hooks are currently at
+solid level. Apply a hook to a pipeline means attaching the hook to every single step in the pipeline.
+
+Alternatively, to meet your needs, you may build a [sensor](/concepts/partitions-schedules-sensors/sensors)
+which instigates runs when some external state changes. For example, if you want to set up alerts
+on a pipeline failure event, you may build a sensor that instigates an alerting run when the state of
+the run event table changes.
+
+You can find more information about this use case in the
+[Pipeline failure sensor](/concepts/partitions-schedules-sensors/sensors#pipeline-failure-sensor)
+example on the [Sensor](/concepts/partitions-schedules-sensors/sensors) page.
