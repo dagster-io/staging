@@ -5,7 +5,11 @@ import yaml
 from dagster import check
 from dagster.serdes import ConfigurableClassData, class_from_code_pointer, whitelist_for_serdes
 
-from .config import DAGSTER_CONFIG_YAML_FILENAME, dagster_instance_config
+from .config import (
+    DAGSTER_CONFIG_YAML_FILENAME,
+    dagster_instance_config,
+    dagster_instance_config_schema,
+)
 
 
 def _runs_directory(base):
@@ -183,9 +187,18 @@ class InstanceRef(
         settings_keys = {"telemetry", "sensor_settings", "backfill"}
         settings = {key: config_value.get(key) for key in settings_keys}
 
-        custom_instance_class_data = configurable_class_data_or_default(
-            config_value, "custom_instance_class", None
-        )
+        if config_value.get("custom_instance_class"):
+            default_instance_keys = set(dagster_instance_config_schema().keys())
+            custom_instance_class_config = {
+                key: val for key, val in config_value.items() if key not in default_instance_keys
+            }
+            custom_instance_class_data = ConfigurableClassData(
+                config_value["custom_instance_class"]["module"],
+                config_value["custom_instance_class"]["class"],
+                yaml.dump(custom_instance_class_config, default_flow_style=False),
+            )
+        else:
+            custom_instance_class_data = None
 
         return InstanceRef(
             local_artifact_storage_data=local_artifact_storage_data,
