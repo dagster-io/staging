@@ -6,7 +6,7 @@ from dagster.utils.yaml_utils import load_yaml_from_globs
 def test_yaml_schema():
     dagster_yaml_folder = file_relative_path(__file__, "../../../docs_snippets/overview/instances/")
 
-    res = dagster_instance_config(dagster_yaml_folder)
+    res, _custom_instance_class = dagster_instance_config(dagster_yaml_folder)
 
     assert sorted(list(res.keys())) == [
         "compute_logs",
@@ -19,6 +19,8 @@ def test_yaml_schema():
         "scheduler",
         "telemetry",
     ]
+
+    assert _custom_instance_class is None
 
     res = load_yaml_from_globs(
         file_relative_path(__file__, "../../../docs_snippets/overview/instances/pipeline_run.yaml")
