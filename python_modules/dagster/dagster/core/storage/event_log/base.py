@@ -109,6 +109,10 @@ class EventLogStorage(ABC, MayHaveInstanceWeakref):
         pass
 
     @abstractmethod
+    def all_asset_tags(self) -> dict:
+        pass
+
+    @abstractmethod
     def get_asset_tags(self, asset_key: AssetKey) -> dict:
         pass
 

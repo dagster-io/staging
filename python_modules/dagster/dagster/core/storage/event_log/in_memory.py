@@ -210,6 +210,12 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
                     updated_records.append(updated_record)
             self._logs[run_id] = updated_records
 
+    def all_asset_tags(self) -> dict:
+        return {
+            AssetKey.from_db_string(asset_key_string): tags
+            for asset_key_string, tags in self._asset_tags.items()
+        }
+
     def get_asset_tags(self, asset_key: AssetKey) -> dict:
         return self._asset_tags[asset_key.to_string()]
 
