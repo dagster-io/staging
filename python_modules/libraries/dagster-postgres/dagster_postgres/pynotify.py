@@ -30,8 +30,11 @@ import os
 import select
 import signal
 import sys
+from threading import Event
+from typing import Iterator, List, NamedTuple, Optional, Union
 
 from dagster import check
+from psycopg2.extensions import Notify
 
 from .utils import get_conn
 
@@ -70,20 +73,29 @@ def construct_signals(arg):
 
 
 def await_pg_notifications(
-    conn_string,
-    channels=None,
-    timeout=5.0,
-    yield_on_timeout=False,
-    handle_signals=None,
-    exit_event=None,
-):
+    conn_string: str,
+    channels: Optional[List[str]] = None,
+    timeout: float = 5.0,
+    yield_on_timeout: bool = False,
+    handle_signals: Optional[List[int]] = None,
+    exit_event: Optional[Event] = None,
+) -> Iterator[Union[int, Optional[Notify]]]:
     """Subscribe to PostgreSQL notifications, and handle them
     in infinite-loop style.
-    On an actual message, returns the notification (with .pid,
-    .channel, and .payload attributes).
-    If you've enabled 'yield_on_timeout', yields None on timeout.
-    If you've enabled 'handle_keyboardinterrupt', yields False on
-    interrupt.
+
+    Args:
+        conn_string (str): connection string to PG DB
+        channels (Optional[List[str]], optional): List of channel names to listen to. Defaults to None.
+        timeout (float, optional): Timeout interval. Defaults to 5.0.
+        yield_on_timeout (bool, optional): Should the function yield on timeout. Defaults to False.
+        handle_signals (Optional[List[int]], optional): List of OS signal numbers to handle. Defaults to None.
+        exit_event (Optional[Event], optional): Event that indicates that polling for new notifications should stop. Defaults to None.
+
+    Yields:
+        Iterator[Union[int, Optional[Notify]]]: Can yield one of three types:
+            1: None, in case of timeout
+            2: int, in case of a handled signal
+            3: Notify, in case of successful notification reception
     """
 
     check.str_param(conn_string, "conn_string")
@@ -123,16 +135,12 @@ def await_pg_notifications(
                 if conn in r:
                     conn.poll()
 
-                    notify_list = []
-                    while conn.notifies:
-                        notify_list.append(conn.notifies.pop())
-
+                    notify_list, conn.notifies = conn.notifies, []
                     for notif in notify_list:
                         yield notif
 
             except select.error as e:
-                e_num, _e_message = e  # pylint: disable=unpacking-non-sequence
-                if e_num == errno.EINTR:
+                if e.errno == errno.EINTR:
                     pass
                 else:
                     raise
