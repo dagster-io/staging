@@ -759,6 +759,18 @@ class SqlEventLogStorage(EventLogStorage):
         )
         return event_record._replace(dagster_event=updated_dagster_event)
 
+    def all_asset_tags(self):
+        query = db.select(
+            [AssetTagsTable.c.asset_key, AssetTagsTable.c.key, AssetTagsTable.c.value]
+        )
+        tags_by_asset_key = defaultdict(dict)
+        with self.index_connection() as conn:
+            rows = conn.execute(query).fetchall()
+            for asset_key, tag_key, tag_value in rows:
+                tags_by_asset_key[AssetKey.from_db_string(asset_key)][tag_key] = tag_value
+
+        return tags_by_asset_key
+
     def get_asset_tags(self, asset_key):
         check.inst_param(asset_key, "asset_key", AssetKey)
         query = db.select([AssetTagsTable.c.key, AssetTagsTable.c.value]).where(
