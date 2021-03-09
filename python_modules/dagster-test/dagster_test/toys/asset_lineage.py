@@ -14,7 +14,6 @@ from dagster import (
     OutputDefinition,
     Partition,
     PartitionSetDefinition,
-    configured,
     pipeline,
     solid,
 )
@@ -40,11 +39,11 @@ def run_config_for_date_partition(partition):
             "split_action_types": {
                 "outputs": {
                     "comments": {"partitions": [date]},
-                    "stories": {"partitions": [date]},
+                    "reviews": {"partitions": [date]},
                 }
             },
             "top_10_comments": {"outputs": {"result": {"partitions": [date]}}},
-            "top_10_stories": {"outputs": {"result": {"partitions": [date]}}},
+            "top_10_reviews": {"outputs": {"result": {"partitions": [date]}}},
             "top_10_actions": {"outputs": {"result": {"partitions": [date]}}},
         }
     }
@@ -81,7 +80,7 @@ class MyDatabaseIOManager(PickledObjectFilesystemIOManager):
         return AssetKey(
             [
                 "my_database",
-                context.metadata["table_name"],
+                context.metadata["table"],
             ]
         )
 
@@ -89,7 +88,7 @@ class MyDatabaseIOManager(PickledObjectFilesystemIOManager):
         return set(context.config.get("partitions", []))
 
 
-@io_manager(output_config_schema={Field(Array(str), is_required=False)})
+@io_manager(output_config_schema={"partitions": Field(Array(str), is_required=False)})
 def my_db_io_manager(_):
     return MyDatabaseIOManager()
 
@@ -119,40 +118,45 @@ def download_data(_):
 
 @solid(
     output_defs=[
-        OutputDefinition(
-            name="stories", io_manager_key="my_db_io_manager", metadata={"table_name": "stories"}
-        ),
-        OutputDefinition(
-            name="comments", io_manager_key="my_db_io_manager", metadata={"table_name": "comments"}
-        ),
+        OutputDefinition(name="reviews", io_manager_key="my_db_io_manager"),
+        OutputDefinition(name="comments", io_manager_key="my_db_io_manager"),
     ]
 )
 def split_action_types(_, df):
 
-    stories_df = df[df["action_type"] == "story"]
+    reviews_df = df[df["action_type"] == "story"]
     comments_df = df[df["action_type"] == "comment"]
     yield Output(
-        stories_df,
-        "stories",
-        metadata_entries=metadata_for_actions(stories_df),
+        reviews_df,
+        "reviews",
+        metadata_entries=metadata_for_actions(reviews_df),
     )
     yield Output(comments_df, "comments", metadata_entries=metadata_for_actions(comments_df))
 
 
-@solid(config_schema={"n": int}, output_defs=[OutputDefinition(io_manager_key="my_db_io_manager")])
-def best_n_actions(context, df):
-    df = df.nlargest(context.solid_config["n"], "score")
-    return Output(
-        df,
-        metadata_entries=[
-            EventMetadataEntry.md(df.to_markdown(), "data"),
-        ],
+def best_n_actions(n, table_name):
+    @solid(
+        output_defs=[
+            OutputDefinition(
+                io_manager_key="my_db_io_manager",
+                metadata={"table_name": table_name},
+            )
+        ]
     )
+    def _best_n_actions(_, df):
+        df = df.nlargest(n, "score")
+        return Output(
+            df,
+            metadata_entries=[
+                EventMetadataEntry.md(df.to_markdown(), "data"),
+            ],
+        )
+
+    return _best_n_actions
 
 
-top_10_comments = configured(best_n_actions, name="top_10_comments")({"n": 10})
-top_10_stories = configured(best_n_actions, name="top_10_stories")({"n": 10})
-top_10_actions = configured(best_n_actions, name="top_10_actions")({"n": 10})
+top_10_reviews = best_n_actions(10, "reviews")
+top_10_comments = best_n_actions(10, "comments")
 
 
 @solid
@@ -162,5 +166,6 @@ def combine_dfs(_, df1, df2):
 
 @pipeline(mode_defs=[ModeDefinition(resource_defs={"my_db_io_manager": my_db_io_manager})])
 def asset_lineage_pipeline():
-    stories, comments = split_action_types(download_data())
-    top_10_actions(combine_dfs(top_10_stories(stories), top_10_comments(comments)))
+    reviews, comments = split_action_types(download_data())
+    top_10_reviews(reviews)
+    top_10_comments(comments)

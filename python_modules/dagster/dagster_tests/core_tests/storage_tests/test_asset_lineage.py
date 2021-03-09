@@ -31,54 +31,6 @@ def check_materialization(materialization, asset_key, parent_assets=None, metada
     assert event_data.asset_lineage == (parent_assets or [])
 
 
-def test_output_definition_transitive_lineage():
-
-    entry1 = EventMetadataEntry.int(123, "nrows")
-    entry2 = EventMetadataEntry.float(3.21, "some value")
-
-    @solid(output_defs=[OutputDefinition(name="output1", asset_key=lambda _: AssetKey("table1"))])
-    def solid1(_):
-        return Output(None, "output1", metadata_entries=[entry1])
-
-    @solid
-    def solidX(_, _input):
-        return 1
-
-    @solid(output_defs=[OutputDefinition(name="output3", asset_key=AssetKey("table3"))])
-    def solid3(_, _input):
-        yield Output(
-            7,
-            "output3",
-            metadata_entries=[entry2],
-        )
-
-    @pipeline
-    def my_pipeline():
-        # attach an asset to an output
-        out1 = solid1()
-        outX = out1
-        # 2 solids later,
-        for i in range(2):
-            outX = solidX.alias(f"solidX_{i}")(outX)
-        solid3(outX)
-
-    result = execute_pipeline(my_pipeline)
-    events = result.step_event_list
-    materializations = [
-        event for event in events if event.event_type_value == "STEP_MATERIALIZATION"
-    ]
-    assert len(materializations) == 2
-
-    check_materialization(materializations[0], AssetKey(["table1"]), metadata_entries=[entry1])
-
-    check_materialization(
-        materializations[1],
-        AssetKey(["table3"]),
-        parent_assets=[AssetLineageInfo(AssetKey(["table1"]))],
-        metadata_entries=[entry2],
-    )
-
-
 def test_io_manager_diamond_lineage():
     class MyIOManager(IOManager):
         def handle_output(self, context, obj):

@@ -286,9 +286,6 @@ class FromStepOutput(
         self, step_context: "SystemStepExecutionContext"
     ) -> List[AssetLineageInfo]:
         source_handle = self.step_output_handle
-        step_context.log.info("in get asset lineage")
-        step_context.log.info(repr(source_handle))
-        step_context.log.info(repr(step_context.execution_plan.get_step_output(source_handle)))
         input_manager = step_context.get_io_manager(source_handle)
         load_context = self.get_load_context(step_context)
 
