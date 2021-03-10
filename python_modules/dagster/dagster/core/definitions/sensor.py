@@ -3,6 +3,7 @@ import inspect
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.instance import DagsterInstance
+from dagster.core.instance.ref import InstanceRef
 from dagster.utils import ensure_gen
 
 from .job import JobType, RunRequest, SkipReason
@@ -19,23 +20,22 @@ class SensorExecutionContext:
     on SensorDefinition.
 
     Attributes:
-        instance (DagsterInstance): The instance configured to run the schedule
+        instance_ref (InstanceRef): The serialized instance configured to run the schedule
         last_completion_time (float): The last time that the sensor was evaluated (UTC).
         last_run_key (str): The run key of the RunRequest most recently created by this sensor.
     """
 
-    __slots__ = ["_instance", "_last_completion_time", "_last_run_key"]
+    __slots__ = ["_instance_ref", "_last_completion_time", "_last_run_key"]
 
-    def __init__(self, instance, last_completion_time, last_run_key):
-        self._instance = check.inst_param(instance, "instance", DagsterInstance)
+    def __init__(self, instance_ref, last_completion_time, last_run_key):
+        self._instance_ref = check.inst_param(instance_ref, "instance_ref", InstanceRef)
         self._last_completion_time = check.opt_float_param(
             last_completion_time, "last_completion_time"
         )
         self._last_run_key = check.opt_str_param(last_run_key, "last_run_key")
 
-    @property
-    def instance(self):
-        return self._instance
+    def get_instance(self):
+        yield DagsterInstance.from_ref(self._instance_ref)
 
     @property
     def last_completion_time(self):
