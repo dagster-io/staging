@@ -136,12 +136,13 @@ def split_action_types(_, df):
 
 def best_n_actions(n, table_name):
     @solid(
+        name=f"top_{n}_{table_name}",
         output_defs=[
             OutputDefinition(
                 io_manager_key="my_db_io_manager",
                 metadata={"table_name": table_name},
             )
-        ]
+        ],
     )
     def _best_n_actions(_, df):
         df = df.nlargest(n, "score")
