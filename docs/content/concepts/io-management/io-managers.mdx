@@ -7,10 +7,11 @@ description: IO Managers determine how to store solid outputs and load solid inp
 
 IO Managers are user-provided objects that store solid outputs and load them as inputs to downstream solids.
 
-<div className="w-full h-48 bg-gray-50 flex items-center justify-center">
-  TODO diagram: a pipeline, several solids, io managers between solids and point
-  to storage.
-</div>
+<img class="mx-auto" src="/images/io-managers.png" />
+
+<!-- TODO: center images -->
+
+<!-- ![IO Managers Diagram](/images/io-managers.png) -->
 
 ## Relevant APIs
 
@@ -53,7 +54,7 @@ solids.
 I.e. an IOManager handles the teal boxes:
 
 <p align="center">
-  <img src="/images/concepts/io-managers.png" />
+  <img src="/images/concepts/two-io-managers.png" />
 </p>
 
 The default IOManager, <PyObject module="dagster" object="mem_io_manager" />, stores outputs in
