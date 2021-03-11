@@ -98,7 +98,7 @@ def main(quiet):
 
     if not is_39():
         install_targets += [
-            "-e python_modules/libraries/dagster-snowflake",
+            # "-e python_modules/libraries/dagster-snowflake",
             "-e python_modules/libraries/dagstermill",
             '-e "examples/legacy_examples[full]"',
             '-e "examples/airline_demo[full]"',

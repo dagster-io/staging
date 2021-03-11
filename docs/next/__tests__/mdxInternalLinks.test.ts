@@ -7,9 +7,8 @@ import visit from "unist-util-visit";
 // remark
 import mdx from "remark-mdx";
 import remark from "remark";
-import { createCompiler } from "@mdx-js/mdx";
 
-const ROOT_DIR = path.resolve(__dirname, "../");
+const ROOT_DIR = path.resolve(__dirname, "../../");
 const DOCS_DIR = path.resolve(ROOT_DIR, "content");
 
 interface LinkElement extends Node {
