@@ -280,6 +280,7 @@ def create_docker_task(celery_app, **task_kwargs):
                 docker_image,
                 command=command,
                 detach=False,
+                entrypoint=[],
                 auto_remove=True,
                 # pass through this worker's environment for things like AWS creds etc.
                 environment=docker_env,

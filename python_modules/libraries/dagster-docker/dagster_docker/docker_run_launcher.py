@@ -126,6 +126,7 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
                 detach=True,
                 environment=docker_env,
                 network=self._network,
+                entrypoint=[],
             )
 
         except docker.errors.ImageNotFound:
@@ -136,6 +137,7 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
                 detach=True,
                 environment=docker_env,
                 network=self._network,
+                entrypoint=[],
             )
 
         self._instance.report_engine_event(
