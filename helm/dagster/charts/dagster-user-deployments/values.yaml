@@ -1,19 +1,12 @@
 ---
 fullnameOverride: ""
 
-####################################################################################################
-# User Code Deployments: Configuration for user code containers to be loaded via GRPC server. For
-# each item in the "deployments" list, a K8s Deployment and K8s Service will be created to run the
-# GRPC server that Dagit/Dagster communicates with to get repository information and the current
-# image information. These deployments can be updated independently of Dagit, and Dagit/Dagster
-# will pull the current image for all execution. When using a distributed executor (such as
-# Celery-K8s) for pipeline run, the current image will be queried once and used for all
-# solid executions for that pipeline run. In order to guarantee that all solid executions within a
-# pipeline execution use the same image, we recommend using a unique tag (ie not "latest").
-#
-# All user code will be invoked within the images.
-####################################################################################################
+# Creates a workspace file with the gRPC servers hosting your user code.
 enabled: true
+
+# If you plan on deploying user code in a separate Helm release, set this to false.
+enableSubchart: true
+
 # List of unique deployments
 deployments:
   - name: "k8s-example-user-code-1"
