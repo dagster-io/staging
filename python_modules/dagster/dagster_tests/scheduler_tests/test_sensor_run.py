@@ -26,7 +26,7 @@ from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.daemon import get_default_daemon_logger
 from dagster.daemon.daemon import SensorDaemon
-from dagster.scheduler.sensor import execute_sensor_iteration, execute_sensor_iteration_loop
+from dagster.daemon.sensor import execute_sensor_iteration, execute_sensor_iteration_loop
 from dagster.seven import create_pendulum_time, to_timezone
 
 
