@@ -31,7 +31,7 @@ import select
 import signal
 import sys
 from threading import Event
-from typing import Iterator, List, Optional, Union
+from typing import Iterator, List, Optional
 
 from dagster import check
 from psycopg2.extensions import Notify
@@ -77,9 +77,8 @@ def await_pg_notifications(
     channels: Optional[List[str]] = None,
     timeout: float = 5.0,
     yield_on_timeout: bool = False,
-    handle_signals: Optional[List[int]] = None,
     exit_event: Optional[Event] = None,
-) -> Iterator[Union[int, Optional[Notify]]]:
+) -> Iterator[Optional[Notify]]:
     """Subscribe to PostgreSQL notifications, and handle them
     in infinite-loop style.
 
@@ -88,14 +87,12 @@ def await_pg_notifications(
         channels (Optional[List[str]], optional): List of channel names to listen to. Defaults to None.
         timeout (float, optional): Timeout interval. Defaults to 5.0.
         yield_on_timeout (bool, optional): Should the function yield on timeout. Defaults to False.
-        handle_signals (Optional[List[int]], optional): List of OS signal numbers to handle. Defaults to None.
         exit_event (Optional[Event], optional): Event that indicates that polling for new notifications should stop. Defaults to None.
 
     Yields:
-        Iterator[Union[int, Optional[Notify]]]: Can yield one of three types:
+        Iterator[Optional[Notify]]: Can yield one of two types:
             1: None, in case of timeout
-            2: int, in case of a handled signal
-            3: Notify, in case of successful notification reception
+            2: Notify, in case of successful notification reception
     """
 
     check.str_param(conn_string, "conn_string")
@@ -108,29 +105,14 @@ def await_pg_notifications(
     if channels:
         start_listening(conn, channels)
 
-    signals_to_handle = handle_signals or []
-    original_handlers = {}
-
     try:
-        if signals_to_handle:
-            original_handlers = {s: signal.signal(s, _empty_handler) for s in signals_to_handle}
-            wakeup = get_wakeup_fd()
-            listen_on = [conn, wakeup]
-        else:
-            listen_on = [conn]
-            wakeup = None
 
         while True and not (exit_event and exit_event.is_set()):
             try:
-                r, w, x = select.select(listen_on, [], [], max(0, timeout))
+                r, w, x = select.select([conn], [], [], max(0, timeout))
                 if (r, w, x) == ([], [], []):
                     if yield_on_timeout:
                         yield None
-
-                if wakeup is not None and wakeup in r:
-                    signal_byte = os.read(wakeup, 1)
-                    signal_int = int.from_bytes(signal_byte, sys.byteorder)
-                    yield signal_int
 
                 if conn in r:
                     conn.poll()
@@ -147,9 +129,3 @@ def await_pg_notifications(
                     raise
     finally:
         conn.close()
-        for s in signals_to_handle or []:
-            if s in original_handlers:
-                # Commenting out to get pylint to pass
-                # https://github.com/dagster-io/dagster/issues/2510
-                # signal_name = construct_signals(s).name
-                signal.signal(s, original_handlers[s])
