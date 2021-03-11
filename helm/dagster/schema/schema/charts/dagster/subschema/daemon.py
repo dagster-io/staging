@@ -2,13 +2,23 @@ from typing import Dict, List
 
 from pydantic import BaseModel  # pylint: disable=no-name-in-module
 
-from . import kubernetes
+from ...utils import kubernetes
 
 
-class Dagit(BaseModel):
-    replicaCount: int
+class QueuedRunCoordinator(BaseModel):
+    enabled: bool
+    config: dict
+
+
+class Backfill(BaseModel):
+    enabled: bool
+
+
+class Daemon(BaseModel):
+    enabled: bool
     image: kubernetes.Image
-    service: kubernetes.Service
+    queuedRunCoordinator: QueuedRunCoordinator
+    backfill: Backfill
     env: Dict[str, str]
     envConfigMaps: List[kubernetes.ConfigMapEnvSource]
     envSecrets: List[kubernetes.SecretEnvSource]
