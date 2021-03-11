@@ -3,13 +3,14 @@ import path from "path";
 import fg from "fast-glob";
 import { Node } from "hast";
 import visit from "unist-util-visit";
+import { flatten } from "../util/useNavigation";
+import masterNavigation from "../../content/_navigation.json";
 
 // remark
 import mdx from "remark-mdx";
 import remark from "remark";
-import { createCompiler } from "@mdx-js/mdx";
 
-const ROOT_DIR = path.resolve(__dirname, "../");
+const ROOT_DIR = path.resolve(__dirname, "../../");
 const DOCS_DIR = path.resolve(ROOT_DIR, "content");
 
 interface LinkElement extends Node {
@@ -17,7 +18,21 @@ interface LinkElement extends Node {
   url: string;
 }
 
-test("no dead links", async () => {
+test("No dead navs", async () => {
+  const deadNavLinks: Array<{ title: string; deadLink: string }> = [];
+  for (const elem of flatten(masterNavigation)) {
+    if (elem.path && !fileExists(path.join(DOCS_DIR, elem.path) + ".mdx")) {
+      deadNavLinks.push({
+        title: elem.title,
+        deadLink: path.join(DOCS_DIR, elem.path) + ".mdx",
+      });
+    }
+  }
+
+  expect(deadNavLinks).toEqual([]);
+});
+
+test("No dead MDX links", async () => {
   const allMdxFilePaths = await fg(["**/*.mdx"], { cwd: DOCS_DIR });
 
   const astStore: { [filePath: string]: Node } = {};
