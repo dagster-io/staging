@@ -87,6 +87,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
   const latestEvent = latest && latest.materializationEvent;
   const latestRun =
     latest && latest.runOrError.__typename === 'PipelineRun' ? latest.runOrError : null;
+  const latestAssetLineage = latestEvent && latestEvent.assetLineage;
 
   return (
     <>
@@ -156,6 +157,34 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
                 'No materialization events'
               ),
             },
+            latestAssetLineage.length > 0
+              ? {
+                  key: 'Latest parent assets',
+                  value: latestAssetLineage.map((lineage_info) => (
+                    <>
+                      {lineage_info.partitions.length > 0 ? (
+                        <>
+                          Partition(s) &nbsp;
+                          {lineage_info.partitions
+                            .map((partition) => '"' + partition + '"')
+                            .join(', ')}{' '}
+                          &nbsp; of &nbsp;
+                        </>
+                      ) : (
+                        <></>
+                      )}
+                      <Link
+                        to={`/instance/assets/${lineage_info.assetKey.path
+                          .map(encodeURIComponent)
+                          .join('/')}`}
+                      >
+                        {lineage_info.assetKey.path.join('.')}
+                      </Link>
+                      <br></br>
+                    </>
+                  )),
+                }
+              : undefined,
             ...latestEvent?.materialization.metadataEntries.map((entry) => ({
               key: entry.label,
               value: <MetadataEntry entry={entry} expandSmallValues={true} />,
@@ -261,6 +290,12 @@ const ASSET_QUERY = gql`
               metadataEntries {
                 ...MetadataEntryFragment
               }
+            }
+            assetLineage {
+              assetKey {
+                path
+              }
+              partitions
             }
           }
         }

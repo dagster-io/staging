@@ -11,7 +11,7 @@ from dagster.core.host_representation.represented import RepresentedPipeline
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import TagType, get_tag_type
 
-from ...implementation.events import construct_basic_params
+from ...implementation.events import construct_basic_params, to_asset_lineage
 from ...implementation.fetch_assets import get_assets_for_run_id
 from ...implementation.fetch_pipelines import get_pipeline_reference_or_raise
 from ...implementation.fetch_runs import get_run_by_id, get_runs, get_stats, get_step_stats
@@ -64,6 +64,9 @@ class GrapheneAssetMaterialization(graphene.ObjectType):
     def resolve_materializationEvent(self, _graphene_info):
         return GrapheneStepMaterializationEvent(
             materialization=self._event.dagster_event.step_materialization_data.materialization,
+            assetLineage=to_asset_lineage(
+                self._event.dagster_event.step_materialization_data.asset_lineage
+            ),
             **construct_basic_params(self._event),
         )
 
