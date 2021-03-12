@@ -167,7 +167,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
                           Partition(s) &nbsp;
                           {lineage_info.partitions
                             .map((partition) => '"' + partition + '"')
-                            .join(', ')}{' '}
+                            .join(', ')}
                           &nbsp; of &nbsp;
                         </>
                       ) : (
