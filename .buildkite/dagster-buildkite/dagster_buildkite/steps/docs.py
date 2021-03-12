@@ -16,7 +16,11 @@ def docs_steps() -> List[dict]:
         .run("pushd docs; make docs_dev_install; make snapshot", "git diff --exit-code")
         .on_integration_image(SupportedPython.V3_7)
         .build(),
-        # Make sure the docs site can build end-to-end.
+        # If this test is failing because either:
+        #   (1) Broken links in either MDX files or in the navigation json.
+        #       Run `yarn test` to debug locally.
+        #   (2) The docs site couldn't build successfully.
+        #       Run `yarn build` to debug locally.
         StepBuilder("docs next")
         .run(
             "pushd docs/next",
@@ -26,14 +30,14 @@ def docs_steps() -> List[dict]:
         )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
-        # TODO: Yuhan to fix
-        # StepBuilder("docs sphinx json build")
-        # .run(
-        #     "pip install -e python_modules/automation",
-        #     "pip install -r docs-requirements.txt -qqq",
-        #     "pushd docs; make build",
-        #     "git diff --exit-code",
-        # )
-        # .on_integration_image(SupportedPython.V3_7)
-        # .build(),
+        # If this test is failing because your content/api data is out-of-sync.
+        # Run `make build` in the /docs directory to build the api data.
+        StepBuilder("docs sphinx json build")
+        .run(
+            "pushd docs; pip install -r docs-requirements.txt -qqq",
+            "make build",
+            "git diff --exit-code",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
     ]

@@ -4,6 +4,7 @@ import re
 from typing import Dict
 
 from dagster.utils import file_relative_path
+from deepdiff import DeepDiff
 
 
 def read_json(filename):
@@ -69,7 +70,28 @@ def rewrite_relative_links(root: str, file_data: Dict[str, str]):
             transformed,
         )
 
-    file_data["body"] = transformed
+    # if (
+    #     '<pre><span></span>dagster-celery worker start <span class="o">[</span>OPTIONS<span class="o">]</span>'
+    #     in transformed
+    # ):
+
+    #     import ipdb
+
+    #     ipdb.set_trace()
+
+    # def a(matchobj):
+    #     # if matchobj
+    #     return ""
+
+    # clean up \n in the HTML output
+    # transformed = re.sub(r"\\n\s*", "", transformed)
+
+    # import ipdb
+
+    # ipdb.set_trace()
+
+    # transformed = re.sub(r"\n\s*", lambda matchobj: a(matchobj), transformed)
+    file_data["body"] = re.sub(r"\n", "", transformed.strip())
 
 
 def pack_directory_json(path_to_folder: str):
@@ -101,8 +123,23 @@ def main():
     }
 
     for directory, output_file in directories_to_pack.items():
-        data = pack_directory_json(directory)
-        write_json(os.path.join(content_master_directory, output_file), data)
+        new_data = pack_directory_json(directory)
+        file_path = os.path.join(content_master_directory, output_file)
+        old_data = read_json(file_path)
+        # old_data = read_json("./content/api/sections1.json")
+        diff = DeepDiff(old_data, new_data, ignore_order=True)
+        diff.get("values_changed", {}).keys()
+        # import ipdb
+
+        # ipdb.set_trace()
+        # pylint: disable=print-call
+        if diff:
+            # print(DeepDiff(old_data, new_data))
+            write_json(file_path, new_data)
+            print("diffs:" + ".\n".join(list(diff.get("values_changed", {}).keys())))
+            print("✅ {} has been updated.".format(output_file))
+        else:
+            print("✨ {} is up-to-date.".format(output_file))
 
     copy_searchindex(content_master_directory, json_directory)
 
