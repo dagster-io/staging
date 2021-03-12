@@ -89,18 +89,6 @@ def _to_metadata_entries(metadata_entries):
     return list(iterate_metadata_entries(metadata_entries) or [])
 
 
-def to_asset_lineage(asset_lineage):
-    from ..schema.logs.events import GrapheneAssetKey, GrapheneAssetLineageInfo
-
-    return [
-        GrapheneAssetLineageInfo(
-            assetKey=GrapheneAssetKey(path=lineage_info.asset_key.path),
-            partitions=lineage_info.partitions,
-        )
-        for lineage_info in asset_lineage or []
-    ]
-
-
 def from_dagster_event_record(event_record, pipeline_name):
     from ..schema.errors import GraphenePythonError
     from ..schema.logs.events import (
@@ -172,7 +160,7 @@ def from_dagster_event_record(event_record, pipeline_name):
         asset_lineage = dagster_event.step_materialization_data.asset_lineage
         return GrapheneStepMaterializationEvent(
             materialization=materialization,
-            assetLineage=to_asset_lineage(asset_lineage),
+            assetLineage=asset_lineage,
             **basic_params,
         )
     elif dagster_event.event_type == DagsterEventType.STEP_EXPECTATION_RESULT:

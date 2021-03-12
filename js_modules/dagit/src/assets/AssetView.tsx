@@ -7,6 +7,7 @@ import * as React from 'react';
 import {Link} from 'react-router-dom';
 
 import {Timestamp} from 'src/app/time/Timestamp';
+import {AssetLineageInfoElement} from 'src/assets/AssetLineageInfoElement';
 import {AssetMaterializationMatrix} from 'src/assets/AssetMaterializationMatrix';
 import {AssetMaterializationTable} from 'src/assets/AssetMaterializationTable';
 import {AssetValueGraph} from 'src/assets/AssetValueGraph';
@@ -72,6 +73,10 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
   // down through the component tree.
   const isPartitioned = asset.assetMaterializations.some((m) => m.partition);
 
+  const hasLineage = asset.assetMaterializations.some(
+    (m) => m.materializationEvent.assetLineage.length > 0,
+  );
+
   const assetMaterializations = [...asset.assetMaterializations].sort(
     (a, b) =>
       (xAxis === 'partition' && (a.partition || '').localeCompare(b.partition || '')) ||
@@ -92,7 +97,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
   return (
     <>
       <Group direction="column" spacing={8}>
-        <Subheading>Details</Subheading>
+        <Subheading>{isPartitioned ? 'Latest Materialized Partition' : 'Details'}</Subheading>
         <MetadataTable
           rows={[
             {
@@ -160,29 +165,15 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
             latestAssetLineage.length > 0
               ? {
                   key: 'Latest parent assets',
-                  value: latestAssetLineage.map((lineage_info) => (
-                    <>
-                      {lineage_info.partitions.length > 0 ? (
+                  value: (
+                    <Group direction={'column'} spacing={0}>
+                      {latestAssetLineage.map((lineage_info) => (
                         <>
-                          Partition(s) &nbsp;
-                          {lineage_info.partitions
-                            .map((partition) => '"' + partition + '"')
-                            .join(', ')}
-                          &nbsp; of &nbsp;
+                          <AssetLineageInfoElement lineage_info={lineage_info} />
                         </>
-                      ) : (
-                        <></>
-                      )}
-                      <Link
-                        to={`/instance/assets/${lineage_info.assetKey.path
-                          .map(encodeURIComponent)
-                          .join('/')}`}
-                      >
-                        {lineage_info.assetKey.path.join('.')}
-                      </Link>
-                      <br></br>
-                    </>
-                  )),
+                      ))}
+                    </Group>
+                  ),
                 }
               : undefined,
             ...latestEvent?.materialization.metadataEntries.map((entry) => ({
@@ -219,6 +210,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
       {activeTab === 'list' ? (
         <AssetMaterializationTable
           isPartitioned={isPartitioned}
+          hasLineage={hasLineage}
           materializations={[...assetMaterializations].reverse()}
         />
       ) : (
