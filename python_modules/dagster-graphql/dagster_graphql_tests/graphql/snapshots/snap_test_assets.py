@@ -6,7 +6,7 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
-snapshots['TestAssetAwareEventLog.test_get_all_asset_keys[in_memory_instance_in_process_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_get_all_asset_keys[asset_aware_instance_in_process_env] 1'] = {
     'assetsOrError': {
         '__typename': 'AssetConnection',
         'nodes': [
@@ -64,11 +64,63 @@ snapshots['TestAssetAwareEventLog.test_get_all_asset_keys[sqlite_with_default_ru
     }
 }
 
-snapshots['TestAssetAwareEventLog.test_get_asset_key_materialization[in_memory_instance_in_process_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_get_asset_key_lineage[asset_aware_instance_in_process_env] 1'] = {
     'assetOrError': {
         'assetMaterializations': [
             {
                 'materializationEvent': {
+                    'assetLineage': [
+                        {
+                            'assetKey': {
+                                'path': [
+                                    'a'
+                                ]
+                            },
+                            'partitions': [
+                            ]
+                        }
+                    ],
+                    'materialization': {
+                        'label': 'b'
+                    }
+                }
+            }
+        ]
+    }
+}
+
+snapshots['TestAssetAwareEventLog.test_get_asset_key_lineage[sqlite_with_default_run_launcher_managed_grpc_env] 1'] = {
+    'assetOrError': {
+        'assetMaterializations': [
+            {
+                'materializationEvent': {
+                    'assetLineage': [
+                        {
+                            'assetKey': {
+                                'path': [
+                                    'a'
+                                ]
+                            },
+                            'partitions': [
+                            ]
+                        }
+                    ],
+                    'materialization': {
+                        'label': 'b'
+                    }
+                }
+            }
+        ]
+    }
+}
+
+snapshots['TestAssetAwareEventLog.test_get_asset_key_materialization[asset_aware_instance_in_process_env] 1'] = {
+    'assetOrError': {
+        'assetMaterializations': [
+            {
+                'materializationEvent': {
+                    'assetLineage': [
+                    ],
                     'materialization': {
                         'label': 'a'
                     }
@@ -84,7 +136,7 @@ snapshots['TestAssetAwareEventLog.test_get_asset_key_materialization[sqlite_with
     }
 }
 
-snapshots['TestAssetAwareEventLog.test_get_asset_key_not_found[in_memory_instance_in_process_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_get_asset_key_not_found[asset_aware_instance_in_process_env] 1'] = {
     'assetOrError': {
         '__typename': 'AssetNotFoundError'
     }
@@ -96,7 +148,63 @@ snapshots['TestAssetAwareEventLog.test_get_asset_key_not_found[sqlite_with_defau
     }
 }
 
-snapshots['TestAssetAwareEventLog.test_get_partitioned_asset_key_materialization[in_memory_instance_in_process_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_get_partitioned_asset_key_lineage[asset_aware_instance_in_process_env] 1'] = {
+    'assetOrError': {
+        'assetMaterializations': [
+            {
+                'materializationEvent': {
+                    'assetLineage': [
+                        {
+                            'assetKey': {
+                                'path': [
+                                    'a'
+                                ]
+                            },
+                            'partitions': [
+                                '2',
+                                '1',
+                                '3'
+                            ]
+                        }
+                    ],
+                    'materialization': {
+                        'label': 'b'
+                    }
+                }
+            }
+        ]
+    }
+}
+
+snapshots['TestAssetAwareEventLog.test_get_partitioned_asset_key_lineage[sqlite_with_default_run_launcher_managed_grpc_env] 1'] = {
+    'assetOrError': {
+        'assetMaterializations': [
+            {
+                'materializationEvent': {
+                    'assetLineage': [
+                        {
+                            'assetKey': {
+                                'path': [
+                                    'a'
+                                ]
+                            },
+                            'partitions': [
+                                '2',
+                                '1',
+                                '3'
+                            ]
+                        }
+                    ],
+                    'materialization': {
+                        'label': 'b'
+                    }
+                }
+            }
+        ]
+    }
+}
+
+snapshots['TestAssetAwareEventLog.test_get_partitioned_asset_key_materialization[asset_aware_instance_in_process_env] 1'] = {
     'assetOrError': {
         'assetMaterializations': [
             {
@@ -126,7 +234,7 @@ snapshots['TestAssetAwareEventLog.test_get_partitioned_asset_key_materialization
     }
 }
 
-snapshots['TestAssetAwareEventLog.test_get_prefixed_asset_keys[in_memory_instance_in_process_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_get_prefixed_asset_keys[asset_aware_instance_in_process_env] 1'] = {
     'assetsOrError': {
         '__typename': 'AssetConnection',
         'nodes': [
