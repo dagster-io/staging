@@ -4,6 +4,7 @@ import re
 from typing import Dict
 
 from dagster.utils import file_relative_path
+from deepdiff import DeepDiff
 
 
 def read_json(filename):
@@ -101,8 +102,22 @@ def main():
     }
 
     for directory, output_file in directories_to_pack.items():
-        data = pack_directory_json(directory)
-        write_json(os.path.join(content_master_directory, output_file), data)
+        new_data = pack_directory_json(directory)
+        file_path = os.path.join(content_master_directory, output_file)
+        old_data = read_json(file_path)
+        # old_data = read_json("./content/api/sections1.json")
+        diff = DeepDiff(old_data, new_data, ignore_order=True)
+        diff.get("values_changed", {}).keys()
+        # import ipdb
+
+        # ipdb.set_trace()
+        if diff:
+            # print(DeepDiff(old_data, new_data))
+            write_json(file_path, new_data)
+            print("diffs:" + ".\n".join(list(diff.get("values_changed", {}).keys())))
+            print(f"✅ {output_file} has been updated.")
+        else:
+            print(f"✨ {output_file} is up-to-date.")
 
     copy_searchindex(content_master_directory, json_directory)
 
