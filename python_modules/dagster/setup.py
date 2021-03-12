@@ -106,7 +106,6 @@ if __name__ == "__main__":
                 "pytest-runner==5.2",
                 "pytest-xdist==2.1.0",
                 "pytest==6.1.1",
-                "recommonmark==0.4.0",
                 "responses==0.10.*",
                 "snapshottest==0.6.0",
                 "tox==3.14.2",
