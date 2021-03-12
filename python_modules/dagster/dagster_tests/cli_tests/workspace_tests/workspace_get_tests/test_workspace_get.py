@@ -42,3 +42,7 @@ def test_get_pipeline_from_source(pipeline, repo, repo_location):
                 external_repository.handle.repository_location_handle.location_name == repo_location
             )
             assert repository_location.name == repo_location
+
+        with workspace.reconstructable_from_target(pipeline.name) as target:
+            assert target.pipeline_name == pipeline.name
+            assert target.repository.get_definition().name == repo.name

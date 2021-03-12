@@ -239,8 +239,13 @@ class ExternalSolidResult(NodeExecutionResult):
         results: Dict[str, Any] = {}
         for compute_step_event in self.compute_step_events:
             if compute_step_event.is_successful_output:
-                step_snap = self._execution_plan.get_step_by_key(compute_step_event.step_key)
-                step_handle = StepHandle.parse_from_key(step_snap.solid_handle_id)
+                if isinstance(self._execution_plan, ExternalExecutionPlan):
+                    step_snap = self._execution_plan.get_step_by_key(compute_step_event.step_key)
+                    step_handle = StepHandle.parse_from_key(step_snap.solid_handle_id)
+                else:
+                    step_handle = self._execution_plan.get_step_by_key(
+                        compute_step_event.step_key
+                    ).handle
                 mapping_key_from_step = (
                     step_handle.mapping_key
                     if isinstance(step_handle, ResolvedFromDynamicStepHandle)

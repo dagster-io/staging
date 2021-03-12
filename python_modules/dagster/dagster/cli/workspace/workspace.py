@@ -7,7 +7,11 @@ from contextlib import contextmanager
 from typing import Optional
 
 from dagster import check
-from dagster.core.definitions.reconstructable import repository_def_from_target_def
+from dagster.core.code_pointer import CodePointer
+from dagster.core.definitions.reconstructable import (
+    ReconstructableRepository,
+    repository_def_from_target_def,
+)
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import RepositoryLocationOrigin
 from dagster.grpc.utils import get_loadable_targets
@@ -23,6 +27,25 @@ def _find_workspace_in_path(path):
         if parent == path:
             return None  # reached root of filesystem
         return _find_workspace_in_path(parent)
+
+
+def _get_code_pointer_for_target(loadable_target, loadable_target_origin):
+    if loadable_target_origin.python_file:
+        return CodePointer.from_python_file(
+            loadable_target_origin.python_file,
+            loadable_target.attribute,
+            loadable_target_origin.working_directory,
+        )
+    elif loadable_target_origin.module_name:
+        return CodePointer.from_module(
+            loadable_target_origin.module_name,
+            loadable_target.attribute,
+        )
+    else:
+        return CodePointer.from_python_package(
+            loadable_target_origin.package_name,
+            loadable_target.attribute,
+        )
 
 
 def _get_pipeline_def_from_location(repo_location, repo_name, pipeline_name):
@@ -44,6 +67,27 @@ def _get_pipeline_def_from_location(repo_location, repo_name, pipeline_name):
         f"Could not find repository named {repo_name} and pipeline named {pipeline_name} in "
         f"location. Repositories found: {found_repos}"
     )
+
+
+def _get_reconstructable_from_location(repo_location, pipeline_name):
+    found_pipelines = []
+    target_pipeline = None
+    loadable_target_origin = repo_location.location_handle.loadable_target_origin
+    loadable_targets = get_loadable_targets(
+        loadable_target_origin.python_file,
+        loadable_target_origin.module_name,
+        loadable_target_origin.package_name,
+        loadable_target_origin.working_directory,
+        loadable_target_origin.attribute,
+    )
+    for target in loadable_targets:
+        code_pointer = _get_code_pointer_for_target(target, loadable_target_origin)
+        recon_repo = ReconstructableRepository(code_pointer)
+        pipeline_names = recon_repo.get_definition().pipeline_names
+        found_pipelines += pipeline_names
+        if pipeline_name in pipeline_names:
+            target_pipeline = recon_repo.get_reconstructable_pipeline(pipeline_name)
+    return target_pipeline, found_pipelines
 
 
 def _find_closest_workspace(path: str) -> Optional[str]:
@@ -248,4 +292,22 @@ class Workspace:
         all_pipelines_as_str = ", ".join(all_pipeline_names)
         raise DagsterInvariantViolationError(
             f"Could not find {target} in workspace. Pipelines found: {all_pipelines_as_str}"
+        )
+
+    @contextmanager
+    def reconstructable_from_target(self, target: str):
+        found_pipelines = []
+        for origin in self._location_origin_dict.values():
+            with self.create_handle_from_origin(origin) as handle:
+                repo_location = handle.create_location()
+                recon_pipeline, found_pipelines_from_loc = _get_reconstructable_from_location(
+                    repo_location, target
+                )
+                if recon_pipeline:
+                    yield recon_pipeline
+                    return
+                found_pipelines += found_pipelines_from_loc
+        pipelines_found_as_str = ", ".join(found_pipelines)
+        raise DagsterInvariantViolationError(
+            f"Could not find {target} in workspace. Pipelines found: {pipelines_found_as_str}"
         )

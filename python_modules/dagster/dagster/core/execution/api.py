@@ -289,7 +289,7 @@ def execute_pipeline_iterator(
             tags,
             solids_to_execute,
             solid_selection,
-        ) = _check_execute_pipeline_args(
+        ) = check_execute_pipeline_args(
             pipeline=pipeline,
             run_config=run_config,
             mode=mode,
@@ -397,7 +397,7 @@ def _logged_execute_pipeline(
         tags,
         solids_to_execute,
         solid_selection,
-    ) = _check_execute_pipeline_args(
+    ) = check_execute_pipeline_args(
         pipeline=pipeline,
         run_config=run_config,
         mode=mode,
@@ -474,7 +474,7 @@ def reexecute_pipeline(
     check.str_param(parent_run_id, "parent_run_id")
 
     with ephemeral_instance_if_missing(instance) as execute_instance:
-        (pipeline, run_config, mode, tags, _, _) = _check_execute_pipeline_args(
+        (pipeline, run_config, mode, tags, _, _) = check_execute_pipeline_args(
             pipeline=pipeline,
             run_config=run_config,
             mode=mode,
@@ -572,7 +572,7 @@ def reexecute_pipeline_iterator(
     check.str_param(parent_run_id, "parent_run_id")
 
     with ephemeral_instance_if_missing(instance) as execute_instance:
-        (pipeline, run_config, mode, tags, _, _) = _check_execute_pipeline_args(
+        (pipeline, run_config, mode, tags, _, _) = check_execute_pipeline_args(
             pipeline=pipeline,
             run_config=run_config,
             mode=mode,
@@ -817,7 +817,7 @@ class ExecuteRunWithPlanIterable:
                         yield event
 
 
-def _check_execute_pipeline_args(
+def check_execute_pipeline_args(
     pipeline: Union[PipelineDefinition, IPipeline],
     run_config: Optional[dict],
     mode: Optional[str],
