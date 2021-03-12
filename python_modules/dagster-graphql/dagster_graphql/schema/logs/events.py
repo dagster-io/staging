@@ -1,6 +1,6 @@
 import graphene
 from dagster import check
-from dagster.core.events import DagsterEventType
+from dagster.core.events import AssetLineageInfo, DagsterEventType
 from dagster.core.execution.plan.objects import ErrorSource
 from dagster.core.execution.stats import RunStepKeyStatsSnapshot
 
@@ -369,6 +369,18 @@ class GrapheneStepMaterializationEvent(graphene.ObjectType):
         step_key = self.stepKey  # pylint: disable=no-member
         stats = get_step_stats(graphene_info, run_id, step_keys=[step_key])
         return stats[0]
+
+    def resolve_assetLineage(self, _graphene_info):
+        asset_lineage = check.opt_list_param(
+            self.assetLineage, "assetLineage", AssetLineageInfo
+        )  # pylint: disable=no-member
+        return [
+            GrapheneAssetLineageInfo(
+                assetKey=lineage_info.asset_key,
+                partitions=lineage_info.partitions,
+            )
+            for lineage_info in asset_lineage
+        ]
 
 
 class GrapheneHandledOutputEvent(graphene.ObjectType):

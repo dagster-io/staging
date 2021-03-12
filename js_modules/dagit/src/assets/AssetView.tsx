@@ -160,29 +160,34 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
             latestAssetLineage.length > 0
               ? {
                   key: 'Latest parent assets',
-                  value: latestAssetLineage.map((lineage_info) => (
-                    <>
-                      {lineage_info.partitions.length > 0 ? (
-                        <>
-                          Partition(s) &nbsp;
-                          {lineage_info.partitions
-                            .map((partition) => '"' + partition + '"')
-                            .join(', ')}
-                          &nbsp; of &nbsp;
-                        </>
-                      ) : (
-                        <></>
-                      )}
-                      <Link
-                        to={`/instance/assets/${lineage_info.assetKey.path
-                          .map(encodeURIComponent)
-                          .join('/')}`}
-                      >
-                        {lineage_info.assetKey.path.join('.')}
-                      </Link>
-                      <br></br>
-                    </>
-                  )),
+                  value: (
+                    <Group direction={'column'} spacing={16}>
+                      {latestAssetLineage.map((lineage_info) => {
+                        const partition_list_label =
+                          lineage_info.partitions.length == 1 ? 'Partition' : 'Partitions';
+                        const partition_list_str = lineage_info.partitions
+                          .map((partition) => `"${partition}"`)
+                          .join(', ');
+                        const parent_partition_phrase = (
+                          <>
+                            {partition_list_label} {partition_list_str} of{' '}
+                          </>
+                        );
+                        return (
+                          <>
+                            {lineage_info.partitions.length > 0 ? parent_partition_phrase : ''}
+                            <Link
+                              to={`/instance/assets/${lineage_info.assetKey.path
+                                .map(encodeURIComponent)
+                                .join('/')}`}
+                            >
+                              {lineage_info.assetKey.path.join(' > ')}
+                            </Link>
+                          </>
+                        );
+                      })}
+                    </Group>
+                  ),
                 }
               : undefined,
             ...latestEvent?.materialization.metadataEntries.map((entry) => ({
