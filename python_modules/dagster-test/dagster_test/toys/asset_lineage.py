@@ -137,13 +137,13 @@ def split_action_types(_, df):
     yield Output(comments_df, "comments", metadata_entries=metadata_for_actions(comments_df))
 
 
-def best_n_actions(n, table_name):
+def best_n_actions(n, action_type):
     @solid(
-        name=f"top_{n}_{table_name}",
+        name=f"top_{n}_{action_type}",
         output_defs=[
             OutputDefinition(
                 io_manager_key="my_db_io_manager",
-                metadata={"table_name": table_name},
+                metadata={"table_name": f"best_{action_type}"},
             )
         ],
     )

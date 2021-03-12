@@ -20,10 +20,9 @@ export const ReconcileButton = () => {
     },
   ];
 
-  const [
-    reconcileScheduleState,
-    {loading: reconcileInFlight},
-  ] = useMutation<ReconcileSchedulerState>(RECONCILE_SCHEDULE_STATE_MUTATION, {refetchQueries});
+  const [reconcileScheduleState, {loading: reconcileInFlight}] = useMutation<
+    ReconcileSchedulerState
+  >(RECONCILE_SCHEDULE_STATE_MUTATION, {refetchQueries});
 
   if (reconcileInFlight) {
     return <Spinner purpose="body-text" />;
