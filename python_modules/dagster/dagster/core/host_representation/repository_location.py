@@ -308,6 +308,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         )
 
         self._handle = repository_location_handle
+        self.external_repositories = self._handle.create_external_repositories()
 
     @property
     def is_reload_supported(self):
