@@ -1,5 +1,5 @@
 docs_dev_install:
-	cd next; yarn; cd ..;
+	pip install -r docs-requirements.txt; cd next; yarn; cd ..;
 
 dev:
 	cd next; yarn dev;
