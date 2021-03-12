@@ -33,6 +33,7 @@ Open http://localhost:3000/concepts/solids-pipelines/solids in your browser, and
   content. This section will explain how to include [code snippets](#code-snippets-literal-includes)
   and use various [custom components](#using-components).
 - [Navigation](#navigation): this explains how to update the sidebar.
+- [Troubleshooting](https://github.com/dagster-io/dagster/blob/master/.buildkite/dagster-buildkite/dagster_buildkite/steps/docs.py): what to do when your docs tests fail.
 
 <br />
 
