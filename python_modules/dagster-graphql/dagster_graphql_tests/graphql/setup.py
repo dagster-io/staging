@@ -239,8 +239,8 @@ def asset_lineage_pipeline():
 
 @pipeline
 def partitioned_asset_lineage_pipeline():
-    lineage_solid_factory("palp", "b", set("123"))(
-        lineage_solid_factory("palp", "a", set("123"))(noop_solid())
+    lineage_solid_factory("palp", "b", set("1"))(
+        lineage_solid_factory("palp", "a", set("1"))(noop_solid())
     )
 
 

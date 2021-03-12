@@ -161,9 +161,7 @@ snapshots['TestAssetAwareEventLog.test_get_partitioned_asset_key_lineage[asset_a
                                 ]
                             },
                             'partitions': [
-                                '2',
-                                '1',
-                                '3'
+                                '1'
                             ]
                         }
                     ],
@@ -189,9 +187,7 @@ snapshots['TestAssetAwareEventLog.test_get_partitioned_asset_key_lineage[sqlite_
                                 ]
                             },
                             'partitions': [
-                                '2',
-                                '1',
-                                '3'
+                                '1'
                             ]
                         }
                     ],
