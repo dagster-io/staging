@@ -1,4 +1,6 @@
+import gc
 import os
+import random
 import sys
 import threading
 import time
@@ -6,6 +8,7 @@ import warnings
 from contextlib import ExitStack
 
 import click
+import objgraph
 import pendulum
 from dagster import __version__
 from dagster.core.instance import DagsterInstance
@@ -26,6 +29,7 @@ from dagster.utils.interrupts import capture_interrupts, raise_interrupts_as
     help="Run any daemons configured on the DagsterInstance.",
 )
 def run_command():
+    objgraph.show_growth(limit=10)
     with capture_interrupts():
         with DagsterInstance.get() as instance:
             if instance.is_ephemeral:
@@ -37,16 +41,30 @@ def run_command():
 
             with daemon_controller_from_instance(instance) as controller:
                 start_time = pendulum.now("UTC")
+                trial = 0
                 while True:
                     # Wait until a daemon has been unhealthy for a long period of time
                     # before potentially restarting it due to a hanging or failed daemon
                     with raise_interrupts_as(KeyboardInterrupt):
                         time.sleep(1)
 
-                        if (
-                            pendulum.now("UTC") - start_time
-                        ).total_seconds() < 2 * DAEMON_HEARTBEAT_TOLERANCE_SECONDS:
+                        if (pendulum.now("UTC") - start_time).total_seconds() < 30:
                             continue
+
+                        gc.collect()
+
+                        print(
+                            "\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nSHOW THAT GRAPH!"
+                        )
+
+                        objgraph.show_growth(limit=10)
+
+                        for klass in ["ConfigFieldSnap"]:
+                            random_obj = random.choice(objgraph.by_type(klass))
+                            objgraph.show_backrefs(
+                                [random_obj], max_depth=20, filename=f"chain_{trial}.png"
+                            )
+                            trial = trial + 1
 
                     controller.check_daemons()
                     start_time = pendulum.now("UTC")
