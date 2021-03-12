@@ -611,9 +611,8 @@ def test_schedule_without_timezone(external_repo_context, capfd):
                 captured = capfd.readouterr()
 
                 assert (
-                    "Using the system timezone, US/Eastern, for daily_schedule_without_timezone as it did not specify an execution_timezone in its definition. "
-                    "Specifying an execution_timezone on all schedules will be required in the dagster 0.11.0 release."
-                    in captured.out
+                    "Using UTC as the timezone for daily_schedule_without_timezone as "
+                    "it did not specify an execution_timezone in its definition." in captured.out
                 )
 
                 expected_datetime = to_timezone(
