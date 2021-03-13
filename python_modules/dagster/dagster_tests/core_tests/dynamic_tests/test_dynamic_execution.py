@@ -7,18 +7,18 @@ from dagster import (
     reconstructable,
     solid,
 )
-from dagster.core.execution.api import reexecute_pipeline
+from dagster.core.execution.api import create_execution_plan, reexecute_pipeline
 from dagster.core.test_utils import instance_for_test
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
 
-@solid
+@solid(tags={"second": "2"})
 def multiply_by_two(context, y):
     context.log.info("multiply_by_two is returning " + str(y * 2))
     return y * 2
 
 
-@solid
+@solid(tags={"first": "1"})
 def multiply_inputs(context, y, ten):
     context.log.info("multiply_inputs is returning " + str(y * ten))
     return y * ten
@@ -135,6 +135,17 @@ def test_composite_wrapping():
     result = execute_pipeline(deep)
     assert result.success
     assert result.result_for_solid("outer").output_value() == {"0": 0, "1": 1, "2": 2}
+
+
+def test_tags():
+    plan = create_execution_plan(dynamic_pipeline)
+    steps = list(plan.step_dict.values())
+
+    multiply_inputs_step = steps[-2]
+    multiply_two_step = steps[-1]
+
+    assert multiply_inputs_step.tags == {"first": "1"}
+    assert multiply_two_step.tags == {"second": "2"}
 
 
 def test_full_reexecute():
