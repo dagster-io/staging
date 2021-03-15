@@ -2,6 +2,7 @@ import pytest
 from dagster import Failure, execute_solid
 from docs_snippets.concepts.solids_pipelines.solid_events import (
     my_asset_solid,
+    my_failure_metadata_solid,
     my_failure_solid,
     my_metadata_expectation_solid,
     my_metadata_output,
@@ -44,4 +45,9 @@ def test_solids_compile_and_execute():
 
 def test_failure_solid():
     with pytest.raises(Failure):
-        execute_solid(my_failure_solid, input_values={})
+        execute_solid(my_failure_solid)
+
+
+def test_failure_metadata_solid():
+    with pytest.raises(Failure):
+        execute_solid(my_failure_metadata_solid)

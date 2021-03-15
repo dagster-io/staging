@@ -27,7 +27,7 @@ def some_calculation(_):
     return 0
 
 
-def get_files():
+def get_files(_path):
     return []
 
 
@@ -118,13 +118,34 @@ def my_metadata_expectation_solid(context, df):
 
 @solid
 def my_failure_solid(_):
-    my_files = get_files()
+    path = "/path/to/files"
+    my_files = get_files(path)
     if len(my_files) == 0:
         raise Failure("No files to process")
     return some_calculation(my_files)
 
 
 # end_failure_solid
+
+# start_failure_metadata_solid
+
+
+@solid
+def my_failure_metadata_solid(_):
+    path = "/path/to/files"
+    my_files = get_files(path)
+    if len(my_files) == 0:
+        raise Failure(
+            description="No files to process",
+            metadata_entries=[
+                EventMetadataEntry.fspath(path, label="filepath"),
+                EventMetadataEntry.url("http://mycoolsite.com/failures", label="dashboard_url"),
+            ],
+        )
+    return some_calculation(my_files)
+
+
+# end_failure_metadata_solid
 
 # start_retry_solid
 
