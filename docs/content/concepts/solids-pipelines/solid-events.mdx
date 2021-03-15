@@ -62,7 +62,7 @@ or, if you have a specific output name other than the default `result`:
 ```python file=/concepts/solids_pipelines/solid_events.py startafter=start_solid_output_2 endbefore=end_solid_output_2
 @solid(
     output_defs=[
-        OutputDefinition("my_output"),
+        OutputDefinition(name="my_output"),
     ]
 )
 def my_named_yield_solid(context):
@@ -160,7 +160,7 @@ This example shows metadata entries of different types attached to the same expe
 ```python file=/concepts/solids_pipelines/solid_events.py startafter=start_metadata_expectation_solid endbefore=end_metadata_expectation_solid
 @solid
 def my_metadata_expectation_solid(context, df):
-    do_some_transform(df)
+    df = do_some_transform(df)
     yield ExpectationResult(
         success=len(df) > 0,
         description="ensure dataframe has rows",
@@ -187,7 +187,7 @@ on its own, but would still cause problems if the execution were to continue.
 
 ```python file=/concepts/solids_pipelines/solid_events.py startafter=start_failure_solid endbefore=end_failure_solid
 @solid
-def my_failure_solid(_, df):
+def my_failure_solid(_):
     my_files = get_files()
     if len(my_files) == 0:
         raise Failure("No files to process")
@@ -205,7 +205,7 @@ logic.
 
 ```python file=/concepts/solids_pipelines/solid_events.py startafter=start_retry_solid endbefore=end_retry_solid
 @solid
-def my_retry_solid():
+def my_retry_solid(_):
     try:
         result = flaky_operation()
     except:
