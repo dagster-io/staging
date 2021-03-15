@@ -14,7 +14,7 @@ from dagster import (
     solid,
     usable_as_dagster_type,
 )
-from dagster.core.execution.execute import execute_in_process
+from dagster.core.execution.execute_in_process import execute_in_process
 
 
 def builder(graph):

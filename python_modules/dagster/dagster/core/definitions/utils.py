@@ -2,6 +2,7 @@ import keyword
 import os
 import re
 from glob import glob
+from typing import Optional
 
 import pkg_resources
 import yaml
@@ -34,33 +35,40 @@ DISALLOWED_NAMES = set(
 )
 
 VALID_NAME_REGEX_STR = r"^[A-Za-z0-9_]+$"
+SYSTEM_CREATED_REGEX_STR = r"^pipeline_wraps_\[[A-Za-z0-9_]+\]$"
 VALID_NAME_REGEX = re.compile(VALID_NAME_REGEX_STR)
+SYSTEM_CREATED_REGEX = re.compile(SYSTEM_CREATED_REGEX_STR)
 
 
-def has_valid_name_chars(name):
-    return bool(VALID_NAME_REGEX.match(name))
+def has_valid_name_chars(name, system_created_name: Optional[bool] = False):
+    if not system_created_name:
+        return bool(VALID_NAME_REGEX.match(name))
+    else:
+        return bool(SYSTEM_CREATED_REGEX.match(name))
 
 
-def check_valid_name(name: str):
+def check_valid_name(name: str, system_created_name: Optional[bool] = False):
     check.str_param(name, "name")
     if name in DISALLOWED_NAMES:
         raise DagsterInvalidDefinitionError(
             f'"{name}" is not a valid name in Dagster. It conflicts with a Dagster or python reserved keyword.'
         )
 
-    if not has_valid_name_chars(name):
+    if not has_valid_name_chars(name, system_created_name=system_created_name):
         raise DagsterInvalidDefinitionError(
             f'"{name}" is not a valid name in Dagster. Names must be in regex {VALID_NAME_REGEX_STR}.'
         )
 
-    check.invariant(is_valid_name(name))
+    check.invariant(is_valid_name(name, system_created_name=system_created_name))
     return name
 
 
-def is_valid_name(name):
+def is_valid_name(name, system_created_name: Optional[bool] = False):
     check.str_param(name, "name")
 
-    return name not in DISALLOWED_NAMES and has_valid_name_chars(name)
+    return name not in DISALLOWED_NAMES and has_valid_name_chars(
+        name, system_created_name=system_created_name
+    )
 
 
 def _kv_str(key, value):

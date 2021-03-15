@@ -128,6 +128,7 @@ class PipelineDefinition(GraphDefinition):
         output_mappings=None,
         config_mapping=None,
         positional_inputs=None,
+        system_created_node=False,
         _parent_pipeline_def=None,  # https://github.com/dagster-io/dagster/issues/2115
     ):
         # For these warnings they check truthiness because they get changed to [] higher
@@ -155,6 +156,7 @@ class PipelineDefinition(GraphDefinition):
             input_mappings=input_mappings,
             output_mappings=output_mappings,
             config_mapping=config_mapping,
+            system_created_node=system_created_node,
         )
 
         self._current_level_node_defs = solid_defs
