@@ -310,6 +310,8 @@ class TestEventLogStorage:
         while len(watched) < 3 and attempts > 0:
             time.sleep(0.5)
             attempts -= 1
+
+        print("WATCHED: " + str(watched))
         assert len(watched) == 3
 
         assert len(storage.get_logs_for_run(DEFAULT_RUN_ID)) == 4
