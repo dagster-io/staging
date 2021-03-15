@@ -19,8 +19,10 @@ class NodeDefinition(NamedConfigurableDefinition):
         description=None,
         tags=None,
         positional_inputs=None,
+        system_created_node=False,
     ):
-        self._name = check_valid_name(name)
+        self._system_created_node = check.bool_param(system_created_node, "system_created_node")
+        self._name = check_valid_name(name, system_created_name=self._system_created_node)
         self._description = check.opt_str_param(description, "description")
         self._tags = validate_tags(tags)
         self._input_defs = frozenlist(input_defs)
