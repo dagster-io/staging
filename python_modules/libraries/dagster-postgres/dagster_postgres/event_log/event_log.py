@@ -1,3 +1,4 @@
+import sys
 import threading
 from collections import defaultdict
 from typing import Callable, List, MutableMapping, Optional
@@ -210,6 +211,7 @@ def watcher_thread(
             yield_on_timeout=True,
             exit_event=watcher_thread_exit,
         ):
+            print("NOTIF: " + str(notif))
             if not isinstance(notif, psycopg2.extensions.Notify):
                 if watcher_thread_exit.is_set():
                     break
@@ -242,8 +244,10 @@ def watcher_thread(
                 with dict_lock:
                     for callback_with_cursor in handlers:
                         if callback_with_cursor.start_cursor < index:
+                            print("CALLING BACK: " + str(dagster_event))
                             callback_with_cursor.callback(dagster_event)
-    except psycopg2.OperationalError:
+    except:
+        print("GOT AN ISSUE IN THE THREAD, IS THAT BAD?" + str(sys.exc_info()))
         pass
 
 

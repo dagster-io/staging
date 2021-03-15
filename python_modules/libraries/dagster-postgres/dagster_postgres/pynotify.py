@@ -124,6 +124,7 @@ def await_pg_notifications(
 
             except select.error as e:
                 if e.errno == errno.EINTR:
+                    print("INTERRUPT")
                     pass
                 else:
                     raise
