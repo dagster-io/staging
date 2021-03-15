@@ -1,0 +1,120 @@
+---
+title: Pipeline Modes | Dagster
+description: TODO
+---
+
+# Modes and Resources
+
+Resources provide a way to manage dependencies to external APIs. Together with modes, they can be
+used to represent multiple different execution environments for a pipeline.
+## Relevant APIs
+
+| Name                                     | Description                                                                                                                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <PyObject object="resource" decorator /> | The decorator used to define resources. The decorated function is called a `resource_fn`. The decorator returns a <PyObject object="ResourceDefinition" />                                                         |
+| <PyObject object="ResourceDefinition" /> | Base class for solids. You almost never want to use initialize this class directly. Instead, you should use the <PyObject object="resource" decorator /> which returns a <PyObject object="ResourceDefinition"  /> |
+| <PyObject object="ModeDefinition"     /> | Base class used to define a pipeline mode                                                                                                                                                                          |
+
+## Overview
+
+Resources can be used to access features of the execution environment to solids during pipeline
+execution. Modes are used to bind a set of resources (and other environment information) to a
+pipeline, so that those resources can be made available to the solids within a pipeline. You can
+provide multiple modes to a pipeline, each with different resources, to represent the execution
+environment that your pipeline will be run within.
+
+## Defining a Resource
+
+To define a resource, use the <PyObject object="resource" decorator/> decorator. Wrap a function
+that takes an `init_context` argument as the first parameter. From this function, return or yield
+the object that you would like to be available as a resource.
+
+``` python file=/concepts/overview/modes_resources/modes_resources.py
+startafter=start_resource_example endbefore=start_resource_example
+```
+
+## Defining a Mode
+
+To define a mode, construct
+a <PyObject module="dagster" object="ModeDefinition" displayText="ModeDefinition"/>. Each resource
+definition provided to the mode should be mapped to a unique key.
+
+``` python file=/concepts/overview/modes_resources/modes_resources.py
+startafter=start_mode_example endbefore=end_mode_example
+```
+
+## Providing Modes to a Pipeline
+
+Modes can be provided to a pipeline via the `mode_defs` argument on
+the <PyObject object="pipeline" decorator/> decorator.
+
+``` python file=/concepts/overview/modes_resources/modes_resources.py
+startafter=start_pipeline_example endbefore=end_pipeline_example
+```
+
+## Why Use Resources and Modes
+
+Representing external dependencies as resources, in conjunction with modes, have very convenient
+properties:
+- **Pluggable**: I can map a resource to a key in one mode, and then map a different resource to
+    that same key in a different mode. This is useful if there is a heavy external dependency that I
+    want to use in production, but avoid using in testing. I can simply provide different modes for
+    each execution case: one for production with the heavy dependency (ie: AWS) as a resource, and one for
+    testing with something lighter (ie: in memory store) mapped to the same key.
+- **Pipeline Scoped**: Since resources are pipeline scoped, if I provide a resource to a mode, then it
+    becomes available for use with every solid in that pipeline.
+- **Configurable**: Resources can be configured, using a strongly typed [configuration system](#TODO).
+- **Dependencies**: Resources can depend on other resources. This makes it possible to cleanly
+    represent external environment objects that rely on other external environment information for
+    initialization.
+
+### Resource Configuration
+
+<PyObject object="ResourceDefinition" pluralize /> can have a config schema, which
+allows you to customize behavior at runtime through pipeline configuration.
+
+For example, let's say we wanted to pass a connection string to our `DatabaseConnection` resource.
+
+``` python file=/concepts/overview/modes_resources/modes_resources.py
+startafter=start_resource_config endbefore=end_resource_config
+```
+
+### Resource to Resource Dependencies
+Resources can depend upon other resources. Use the `required_resource_keys` parameter of
+the <PyObject object="resource" decorator/> decorator to specify which resources to depend upon.
+Access the required resources through the context object provided to the wrapped function.
+``` python file=/concepts/overview/modes_resources/modes_resources.py
+startafter=start_resource_dep_example endbefore=end_resource_dep_example
+```
+
+Note that the required keys provided must be provided to the same mode as the requiring resource,
+and that dependencies between resources cannot be cyclic.
+``` python file=/concepts/overview/modes_resources/modes_resources.py
+startafter=start_resource_dep_mode endbefore=end_resource_dep_mode
+```
+
+### Default Resources
+
+<TODO />
+
+## Selecting a Mode during execution
+
+### Python API
+When executing a pipeline using `execute_pipeline`, you can toggle between modes by providing the mode
+name to the `mode` parameter.
+
+``` python file=/concepts/overview/modes_resources/modes_resources.py
+startafter=start_execute_example endbefore=end_execute_example
+```
+
+### In Dagit
+
+When Launching the pipeline via the Dagit Playground, you can select a mode from the mode selector dropdown:
+
+<TODO />
+
+### Dagster CLI
+
+When launching a pipeline via the CLI, you can use the `-d` option to specify the mode.
+
+    $ dagster pipeline execute -d prod_mode my_pipeline
