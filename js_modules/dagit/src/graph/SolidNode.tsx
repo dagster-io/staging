@@ -243,6 +243,7 @@ export const SOLID_NODE_INVOCATION_FRAGMENT = gql`
       definition {
         name
       }
+      isDynamicCollect
       dependsOn {
         definition {
           name

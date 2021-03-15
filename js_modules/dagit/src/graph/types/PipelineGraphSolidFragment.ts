@@ -38,6 +38,7 @@ export interface PipelineGraphSolidFragment_inputs_dependsOn {
 export interface PipelineGraphSolidFragment_inputs {
   __typename: "Input";
   definition: PipelineGraphSolidFragment_inputs_definition;
+  isDynamicCollect: boolean;
   dependsOn: PipelineGraphSolidFragment_inputs_dependsOn[];
 }
 

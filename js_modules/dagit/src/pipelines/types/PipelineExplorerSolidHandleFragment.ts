@@ -38,6 +38,7 @@ export interface PipelineExplorerSolidHandleFragment_solid_inputs_dependsOn {
 export interface PipelineExplorerSolidHandleFragment_solid_inputs {
   __typename: "Input";
   definition: PipelineExplorerSolidHandleFragment_solid_inputs_definition;
+  isDynamicCollect: boolean;
   dependsOn: PipelineExplorerSolidHandleFragment_solid_inputs_dependsOn[];
 }
 
