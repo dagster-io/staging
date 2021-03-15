@@ -10,6 +10,7 @@ from dagster.core.execution.context.logger import InitLoggerContext
 from dagster.core.execution.resources_init import resource_initialization_manager
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.io_manager import IOManager, IOManagerDefinition
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import ResourceConfig, config_map_resources
 from dagster.loggers import default_system_loggers
@@ -48,7 +49,7 @@ def _get_mapped_resource_config(
 
 @contextmanager
 def build_resources(
-    resource_defs: Dict[str, ResourceDefinition],
+    resources: Dict[str, Any],
     instance: DagsterInstance,
     run_config: Optional[Dict[str, Any]] = None,
     pipeline_run: Optional[PipelineRun] = None,
@@ -61,7 +62,7 @@ def build_resources(
     context, resources will also be torn down safely.
 
     Args:
-        resource_defs (Dict[str, ResourceDefinition]): Resource definitions to build. All
+        resources (Dict[str, Any]): Resource instances or definitions to build. All
             required resource dependencies to a given resource must be contained within this
             dictionary, or the resource build will fail.
         instance (DagsterInstance): The dagster instance configured to instantiate resources on.
@@ -72,9 +73,17 @@ def build_resources(
             or `run_id` attributes of the provided context during resource initialization and/or
             teardown, this must be provided, or initialization will fail.
     """
-    resource_defs = check.dict_param(
-        resource_defs, "resource_defs", key_type=str, value_type=ResourceDefinition
-    )
+    resources = check.dict_param(resources, "resource_defs", key_type=str)
+    resource_defs = {}
+    # Wrap instantiated resource values in a resource definition.
+    # If an instantiated IO manager is provided, wrap it in an IO manager definition.
+    for resource_key, resource in resources.items():
+        if isinstance(resource, ResourceDefinition):
+            resource_defs[resource_key] = resource
+        elif isinstance(resource, IOManager):
+            resource_defs[resource_key] = IOManagerDefinition.hardcoded_io_manager(resource)
+        else:
+            resource_defs[resource_key] = ResourceDefinition.hardcoded_resource(resource)
     instance = check.inst_param(instance, "instance", DagsterInstance)
     run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
     mapped_resource_config = _get_mapped_resource_config(resource_defs, run_config)
@@ -91,7 +100,9 @@ def build_resources(
     )
     try:
         list(resources_manager.generate_setup_events())
-        resources = check.inst(resources_manager.get_object(), ScopedResourcesBuilder)
-        yield resources.build(set(resources.resource_instance_dict.keys()))
+        instantiated_resources = check.inst(resources_manager.get_object(), ScopedResourcesBuilder)
+        yield instantiated_resources.build(
+            set(instantiated_resources.resource_instance_dict.keys())
+        )
     finally:
         list(resources_manager.generate_teardown_events())
