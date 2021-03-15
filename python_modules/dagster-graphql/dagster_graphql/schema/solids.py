@@ -87,6 +87,7 @@ class GrapheneInput(graphene.ObjectType):
     solid = graphene.NonNull(lambda: GrapheneSolid)
     definition = graphene.NonNull(GrapheneInputDefinition)
     depends_on = non_null_list(lambda: GrapheneOutput)
+    is_collect = graphene.NonNull(graphene.Boolean)
 
     class Meta:
         name = "Input"
@@ -132,6 +133,9 @@ class GrapheneInput(graphene.ObjectType):
                 self._solid_name, self._input_name
             )
         ]
+
+    def resolve_is_collect(self, _graphene_info):
+        return self._solid_invocation_snap.input_dep_snap(self._input_name).is_dynamic_collect
 
 
 class GrapheneOutput(graphene.ObjectType):
