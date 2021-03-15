@@ -678,9 +678,12 @@ class DagsterInstance:
             run_config=run_config,
             mode=mode,
         )
-        check.invariant(
-            len(full_execution_plan.step_keys_to_execute) == len(full_execution_plan.steps)
-        )
+
+        # what was this checking?
+        #
+        # check.invariant(
+        #     len(full_execution_plan.step_keys_to_execute) == len(full_execution_plan.steps)
+        # )
 
         if is_memoized_run(tags):
             from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
