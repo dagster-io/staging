@@ -4,7 +4,7 @@ import styled from 'styled-components/macro';
 
 export enum DagsterTag {
   Namespace = 'dagster/',
-
+  Backfill = 'dagster/backfill',
   SolidSelection = 'dagster/solid_selection',
   StepSelection = 'dagster/step_selection',
   PartitionSet = 'dagster/partition_set',
