@@ -36,19 +36,6 @@ def _check_for_debug_crash(debug_crash_flags, key):
 def execute_backfill_iteration(instance, grpc_server_registry, logger, debug_crash_flags=None):
     check.inst_param(instance, "instance", DagsterInstance)
 
-    if not instance.has_bulk_actions_table():
-        message = (
-            "A schema migration is required before daemon-based backfills can be supported. "
-            "Try running `dagster instance migrate` to migrate your instance and try again."
-        )
-        logger.error(message)
-        yield SerializableErrorInfo(
-            message=message,
-            stack=[],
-            cls_name="",
-        )
-        return
-
     backfill_jobs = instance.get_backfills(status=BulkActionStatus.REQUESTED)
 
     if not backfill_jobs:
