@@ -62,7 +62,7 @@ class TestPartitionBackfillSynchronous(ExecutingGraphQLContextTestMatrix):
 
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
 
     def test_launch_chunked_backfill(self, graphql_context):
@@ -83,7 +83,7 @@ class TestPartitionBackfillSynchronous(ExecutingGraphQLContextTestMatrix):
 
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 26
 
     def test_launch_partial_backfill(self, graphql_context):
@@ -106,7 +106,7 @@ class TestPartitionBackfillSynchronous(ExecutingGraphQLContextTestMatrix):
         )
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
         for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
             logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
@@ -131,7 +131,7 @@ class TestPartitionBackfillSynchronous(ExecutingGraphQLContextTestMatrix):
         )
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
         for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
             logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
@@ -178,7 +178,7 @@ class TestLaunchBackfillFromFailureSynchronous(
 
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
         for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
             logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
@@ -203,7 +203,7 @@ class TestLaunchBackfillFromFailureSynchronous(
 
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         assert len(result.data["launchPartitionBackfill"]["launchedRunIds"]) == 2
         for run_id in result.data["launchPartitionBackfill"]["launchedRunIds"]:
             logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
@@ -240,7 +240,7 @@ class TestDaemonPartitionBackfill(
 
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         backfill_id = result.data["launchPartitionBackfill"]["backfillId"]
 
         result = execute_dagster_graphql(
@@ -278,7 +278,7 @@ class TestDaemonPartitionBackfill(
         )
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         backfill_id = result.data["launchPartitionBackfill"]["backfillId"]
 
         result = execute_dagster_graphql(
@@ -332,7 +332,7 @@ class TestLaunchDaemonBackfillFromFailure(
 
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
 
         # re-execute from failure (without the failure file)
         result = execute_dagster_graphql_and_finish_runs(
@@ -349,7 +349,7 @@ class TestLaunchDaemonBackfillFromFailure(
 
         assert not result.errors
         assert result.data
-        assert result.data["launchPartitionBackfill"]["__typename"] == "PartitionBackfillSuccess"
+        assert result.data["launchPartitionBackfill"]["__typename"] == "LaunchBackfillSuccess"
         backfill_id = result.data["launchPartitionBackfill"]["backfillId"]
 
         result = execute_dagster_graphql(
