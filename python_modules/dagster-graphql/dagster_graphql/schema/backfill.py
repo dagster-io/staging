@@ -25,27 +25,57 @@ pipeline_execution_error_types = (
 ) + create_execution_params_error_types
 
 
-class GraphenePartitionBackfillSuccess(graphene.ObjectType):
+class GrapheneLaunchBackfillSuccess(graphene.ObjectType):
     backfill_id = graphene.NonNull(graphene.String)
     launched_run_ids = graphene.List(graphene.String)
 
     class Meta:
-        name = "PartitionBackfillSuccess"
+        name = "LaunchBackfillSuccess"
 
 
-class GraphenePartitionBackfillResult(graphene.Union):
+class GrapheneLaunchBackfillResult(graphene.Union):
     class Meta:
         types = (
-            GraphenePartitionBackfillSuccess,
+            GrapheneLaunchBackfillSuccess,
             GraphenePartitionSetNotFoundError,
         ) + pipeline_execution_error_types
-        name = "PartitionBackfillResult"
+        name = "LaunchBackfillResult"
+
+
+class GrapheneCancelBackfillSuccess(graphene.ObjectType):
+    backfill_id = graphene.NonNull(graphene.String)
+
+    class Meta:
+        name = "CancelBackfillSuccess"
+
+
+class GrapheneCancelBackfillResult(graphene.Union):
+    class Meta:
+        types = (GrapheneCancelBackfillSuccess, GraphenePythonError)
+        name = "CancelBackfillResult"
+
+
+class GrapheneRepoAddress(graphene.ObjectType):
+    class Meta:
+        name = "RepoAddress"
+
+    name = graphene.NonNull(graphene.String)
+    location = graphene.NonNull(graphene.String)
+
+
+class GraphenePartitionSetOrigin(graphene.ObjectType):
+    class Meta:
+        name = "PartitionSetOrigin"
+
+    repoAddress = graphene.NonNull(GrapheneRepoAddress)
+    partitionSetName = graphene.NonNull(graphene.String)
 
 
 class GrapheneBulkActionStatus(graphene.Enum):
     REQUESTED = "REQUESTED"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+    CANCELED = "CANCELED"
 
     class Meta:
         name = "BulkActionStatus"
@@ -66,6 +96,9 @@ class GraphenePartitionBackfill(graphene.ObjectType):
         non_null_list("dagster_graphql.schema.pipelines.pipeline.GraphenePipelineRun"),
         limit=graphene.Int(),
     )
+    partitionSetOrigin = graphene.Field(GraphenePartitionSetOrigin)
+    partitionSet = graphene.Field("dagster_graphql.schema.partition_sets.GraphenePartitionSet")
+    timestamp = graphene.Float()
 
     def __init__(self, backfill_id, backfill_job=None):
         self._backfill_id = check.str_param(backfill_id, "backfill_id")
@@ -78,6 +111,7 @@ class GraphenePartitionBackfill(graphene.ObjectType):
             numTotal=len(backfill_job.partition_names) if backfill_job else None,
             fromFailure=bool(backfill_job.from_failure) if backfill_job else False,
             reexecutionSteps=backfill_job.reexecution_steps if backfill_job else None,
+            timestamp=backfill_job.backfill_timestamp if backfill_job else None,
         )
 
     def resolve_runs(self, graphene_info, **kwargs):
@@ -108,8 +142,64 @@ class GraphenePartitionBackfill(graphene.ObjectType):
             else 0,
         )
 
+    def resolve_partitionSetOrigin(self, _):
+        if not self._backfill_job:
+            return None
+
+        origin = self._backfill_job.partition_set_origin
+        location_name = origin.external_repository_origin.repository_location_origin.location_name
+        repository_name = origin.external_repository_origin.repository_name
+        return GraphenePartitionSetOrigin(
+            repoAddress=GrapheneRepoAddress(name=repository_name, location=location_name),
+            partitionSetName=origin.partition_set_name,
+        )
+
+    def resolve_partitionSet(self, graphene_info):
+        from ..schema.partition_sets import GraphenePartitionSet
+
+        if not self._backfill_job:
+            return None
+
+        origin = self._backfill_job.partition_set_origin
+        location_name = origin.external_repository_origin.repository_location_origin.location_name
+        repository_name = origin.external_repository_origin.repository_name
+        if not graphene_info.context.has_repository_location(location_name):
+            return None
+
+        location = graphene_info.context.get_repository_location(location_name)
+        if not location.has_repository(repository_name):
+            return None
+
+        repository = location.get_repository(repository_name)
+        external_partition_sets = [
+            partition_set
+            for partition_set in repository.get_external_partition_sets()
+            if partition_set.name == origin.partition_set_name
+        ]
+        if not external_partition_sets:
+            return None
+
+        partition_set = external_partition_sets[0]
+        return GraphenePartitionSet(
+            external_repository_handle=repository.handle,
+            external_partition_set=partition_set,
+        )
+
 
 class GraphenePartitionBackfillOrError(graphene.Union):
     class Meta:
         types = (GraphenePartitionBackfill, GraphenePythonError)
         name = "PartitionBackfillOrError"
+
+
+class GraphenePartitionBackfills(graphene.ObjectType):
+    results = non_null_list(GraphenePartitionBackfill)
+
+    class Meta:
+        name = "PartitionBackfills"
+
+
+class GraphenePartitionBackfillsOrError(graphene.Union):
+    class Meta:
+        types = (GraphenePartitionBackfills, GraphenePythonError)
+        name = "PartitionBackfillsOrError"

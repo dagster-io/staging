@@ -15,7 +15,7 @@ BACKFILL_CHUNK_SIZE = 25
 
 @capture_error
 def create_and_launch_partition_backfill(graphene_info, backfill_params):
-    from ...schema.backfill import GraphenePartitionBackfillSuccess
+    from ...schema.backfill import GrapheneLaunchBackfillSuccess
     from ...schema.errors import GraphenePartitionSetNotFoundError
 
     partition_set_selector = backfill_params.get("selector")
@@ -65,7 +65,7 @@ def create_and_launch_partition_backfill(graphene_info, backfill_params):
         )
     elif daemonEnabled:
         graphene_info.context.instance.add_backfill(backfill)
-        return GraphenePartitionBackfillSuccess(backfill_id=backfill_id)
+        return GrapheneLaunchBackfillSuccess(backfill_id=backfill_id)
     else:
         to_submit = [name for name in partition_names]
         submitted_run_ids = []
@@ -79,17 +79,18 @@ def create_and_launch_partition_backfill(graphene_info, backfill_params):
                 )
                 if run_id != None
             )
-        return GraphenePartitionBackfillSuccess(
+        return GrapheneLaunchBackfillSuccess(
             backfill_id=backfill_id, launched_run_ids=submitted_run_ids
         )
 
 
 @capture_error
-def get_backfill(graphene_info, backfill_id):
-    from ...schema.backfill import GraphenePartitionBackfill
+def cancel_partition_backfill(graphene_info, backfill_id):
+    from ...schema.backfill import GrapheneCancelBackfillSuccess
 
-    if graphene_info.context.instance.has_bulk_actions_table():
-        backfill_job = graphene_info.context.instance.get_backfill(backfill_id)
-        return GraphenePartitionBackfill(backfill_id, backfill_job)
-    else:
-        return GraphenePartitionBackfill(backfill_id)
+    backfill = graphene_info.context.instance.get_backfill(backfill_id)
+    if not backfill:
+        check.failed(f"No backfill found for id: {backfill_id}")
+
+    graphene_info.context.instance.update_backfill(backfill.with_status(BulkActionStatus.CANCELED))
+    return GrapheneCancelBackfillSuccess(backfill_id=backfill_id)
