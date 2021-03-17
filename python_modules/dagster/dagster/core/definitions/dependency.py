@@ -835,19 +835,19 @@ class DependencyStructure:
         )
         return cast(List[Union[SolidOutputHandle, Type["MappedInputPlaceholder"]]], deps)
 
-    def has_dynamic_fan_in_dep(self, solid_input_handle: SolidInputHandle) -> bool:
+    def has_dynamic_collect_dep(self, solid_input_handle: SolidInputHandle) -> bool:
         check.inst_param(solid_input_handle, "solid_input_handle", SolidInputHandle)
         if solid_input_handle not in self._handle_dict:
             return False
         dep_type, _ = self._handle_dict[solid_input_handle]
         return dep_type == DependencyType.DYNAMIC_COLLECT
 
-    def get_dynamic_fan_in_dep(self, solid_input_handle: SolidInputHandle) -> SolidOutputHandle:
+    def get_dynamic_collect_dep(self, solid_input_handle: SolidInputHandle) -> SolidOutputHandle:
         check.inst_param(solid_input_handle, "solid_input_handle", SolidInputHandle)
         dep_type, dep = self._handle_dict[solid_input_handle]
         check.invariant(
             dep_type == DependencyType.DYNAMIC_COLLECT,
-            f"Cannot call get_dynamic_fan_in_dep when dep is not, got {dep_type}",
+            f"Cannot call get_dynamic_collect_dep when dep is not, got {dep_type}",
         )
         return cast(SolidOutputHandle, dep)
 

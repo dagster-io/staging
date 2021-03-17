@@ -421,8 +421,8 @@ def get_step_input_source(
 
         return FromMultipleSources(solid_handle=handle, input_name=input_name, sources=sources)
 
-    if dependency_structure.has_dynamic_fan_in_dep(input_handle):
-        solid_output_handle = dependency_structure.get_dynamic_fan_in_dep(input_handle)
+    if dependency_structure.has_dynamic_collect_dep(input_handle):
+        solid_output_handle = dependency_structure.get_dynamic_collect_dep(input_handle)
         step_output_handle = plan_builder.get_output_handle(solid_output_handle)
         if isinstance(step_output_handle, UnresolvedStepOutputHandle):
             return FromDynamicCollect(

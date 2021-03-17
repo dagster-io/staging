@@ -519,8 +519,8 @@ def _get_pipeline_subset_def(pipeline_def, solids_to_execute):
                     deps[_dep_key_of(solid)][input_handle.input_def.name] = DependencyDefinition(
                         solid=output_handle.solid.name, output=output_handle.output_def.name
                     )
-            if pipeline_def.dependency_structure.has_dynamic_fan_in_dep(input_handle):
-                output_handle = pipeline_def.dependency_structure.get_dynamic_fan_in_dep(
+            if pipeline_def.dependency_structure.has_dynamic_collect_dep(input_handle):
+                output_handle = pipeline_def.dependency_structure.get_dynamic_collect_dep(
                     input_handle
                 )
                 if output_handle.solid.name in solids_to_execute:

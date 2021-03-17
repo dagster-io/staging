@@ -239,3 +239,21 @@ def test_bad_step_selection():
                 instance=instance,
                 step_selection=["emit", "multiply_by_two[1]"],
             )
+
+
+def test_non_required_dynamic():
+    @solid(
+        output_defs=[DynamicOutputDefinition(is_required=False)],
+        config_schema={"range": Field(int, is_required=False, default_value=3)},
+    )
+    def emit_optional(context):
+        for i in range(context.solid_config["range"]):
+            yield DynamicOutput(value=i, mapping_key=str(i))
+
+    @pipeline
+    def direct():
+        sum_numbers(emit().collect())
+
+    result = execute_pipeline(direct, run_config={"solids": {"emit": {"config": {"range": 0}}}})
+    assert result.success
+    assert result.result_for_solid("sum_numbers").skipped

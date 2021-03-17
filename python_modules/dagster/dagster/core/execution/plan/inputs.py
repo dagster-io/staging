@@ -413,11 +413,14 @@ class FromMultipleSources(
 
     def __new__(cls, solid_handle: SolidHandle, input_name: str, sources):
         check.list_param(sources, "sources", StepInputSource)
+        check.invariant(len(sources) > 0, "Can not have 0 sources in FromMultipleSources")
+
         for source in sources:
             check.invariant(
                 not isinstance(source, FromMultipleSources),
                 "Can not have multiple levels of FromMultipleSources StepInputSource",
             )
+
         return super(FromMultipleSources, cls).__new__(
             cls, solid_handle=solid_handle, input_name=input_name, sources=sources
         )
@@ -663,7 +666,14 @@ class FromDynamicCollect(
     def required_resource_keys(self, _pipeline_def: PipelineDefinition) -> Set[str]:
         return set()
 
-    def resolve(self, mapping_keys):
+    def resolve(self, mapping_keys: List[str]):
+        # if not mapping_keys:
+
+        # DefaultValue of [] if required
+        # FromStepOutput if non required to trigger skip?
+        # fuck
+        # return FromStepOutput()
+
         return FromMultipleSources(
             solid_handle=self.solid_handle,
             input_name=self.input_name,
