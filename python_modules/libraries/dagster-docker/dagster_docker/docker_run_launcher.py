@@ -23,7 +23,8 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
     env_vars (Optional[List[str]]): The list of environment variables names to forward to the
         docker container.
     network (Optional[str]): Name of the network this container to which to connect the
-        launched container at creation time."""
+        launched container at creation time.
+    """
 
     def __init__(self, inst_data=None, image=None, registry=None, env_vars=None, network=None):
         self._inst_data = inst_data

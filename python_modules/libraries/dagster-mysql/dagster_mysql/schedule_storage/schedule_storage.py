@@ -25,7 +25,7 @@ class MySQLScheduleStorage(SqlScheduleStorage, ConfigurableClass):
     To use MySQL for schedule storage, you can add a block such as the following to your
     ``dagster.yaml``:
 
-    .. literalinclude:: ../../../../../examples/docs_snippets/docs_snippets/deploying/dagster-mysql.yaml
+    .. literalinclude:: ../../../../../../examples/docs_snippets/docs_snippets/deploying/dagster-mysql.yaml
        :caption: dagster.yaml
        :lines: 23-32
        :language: YAML
