@@ -264,6 +264,34 @@ class PandasCsvIOManagerWithOutputAssetPartitions(IOManager):
 
 When a solid output is linked to an <PyObject object="AssetKey"/>, Dagster can automatically generate lineage information that describes how this asset relates to other output-linked assets.
 
-It does this by
+As a simplified example, imagine a two-solid pipeline that first scrapes some user data from an API, storing it to a table, then trains an ML model on that data, persisting it to a model store:
 
-<TODO />
+```python file=/concepts/assets/materialization_pipelines.py startafter=start_pipeline_0 endbefore=end_pipeline_0
+from dagster import solid, pipeline, OutputDefinition, AssetKey
+
+
+@solid(output_defs=[OutputDefinition(asset_key=AssetKey("my_db.users"))])
+def scrape_users(_):
+    users_df = some_api_call()
+    persist_to_db(users_df)
+    return users_df
+
+
+@solid(output_defs=[OutputDefinition(asset_key=AssetKey("ml_models.user_prediction"))])
+def get_prediction_model(_, users_df):
+    my_ml_model = train_prediction_model(users_df)
+    persist_to_model_store(my_ml_model)
+    return my_ml_model
+
+
+@pipeline
+def my_user_model_pipeline():
+    get_prediction_model(scrape_users())
+
+```
+
+In this case, it's certainly fair to say that this ML model, which we have assigned the key `ml_models.user_prediction` _depends on_ the table that we created, `my_db.users` (it uses the data in the table to train the model).
+
+Because we have encoded the fact that `my_db.users` corresponds to the output of `scrape_users`, and `get_prediction_model` uses that as input, Dagster has enough information to infer that the output of `get_prediction_model` (corresponding to `ml_models.user_prediction`) does in fact depend on
+
+This feature is still in its early stages, but for now, this lineage information is surfaced in the Asset Catalog page for each asset:
