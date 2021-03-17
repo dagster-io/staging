@@ -222,6 +222,15 @@
         ]
       },
       {
+        "title": "Assets",
+        "children": [
+          {
+            "title": "Asset Materializations",
+            "path": "/concepts/assets/asset-materializations"
+          }
+        ]
+      },
+      {
         "title": "Executors",
         "children": [
           {
