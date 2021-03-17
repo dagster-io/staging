@@ -7,11 +7,11 @@ description: Dagster provides functionality to record and track changes to exter
 
 "Asset" is Dagster's word for an entity, external to solids, that is mutated or created by a solid. An asset might be a table in a database that a solid appends to, an ML model in a model store that a solid overwrites, or even a slack channel that a solid writes messages to.
 
-Solid outputs often correspond to assets. For example, a solid might be respoinsble for recreating a table, and one of its outputs might be a dataframe containing the contents of that table.
+Solid outputs often correspond to assets. For example, a solid might be responsible for recreating a table, and one of its outputs might be a dataframe containing the contents of that table.
 
 Assets can also have partitions, which refer to slices of the overall asset. The simplest example would be a table that has a partition for each day. A given solid execution may simply write a single day's worth of data to that table, rather than dropping the existing contents and replacing them with new data.
 
-Dagster lets you track the interactions between solids, outputs, and assets over time and view them in the Dagit [Asset Catalog](/concepts/dagit/asset-catalog). Every asset has a "key", which serves as a unique identifier for that particular entity. The act of creating or updating the contents of an asset is called a "materialization", and Dagster tracks these materializations using <PyObject object="AssetMaterialization" /> events. These events can either be yielded by the user at runtime, or automatically created by Dagster in cases where an <PyObject object="AssetKey" /> has been referenced by a solid output.
+Dagster lets you track the interactions between solids, outputs, and assets over time and view them in the Dagit [Asset Catalog](/concepts/dagit/dagit#assets). Every asset has a "key", which serves as a unique identifier for that particular entity. The act of creating or updating the contents of an asset is called a "materialization", and Dagster tracks these materializations using <PyObject object="AssetMaterialization" /> events. These events can either be yielded by the user at runtime, or automatically created by Dagster in cases where an <PyObject object="AssetKey" /> has been referenced by a solid output.
 
 ## Relevant APIs
 
@@ -88,7 +88,7 @@ class PandasCsvIOManager(IOManager):
 
 ### Attaching Metadata to an AssetMaterialization
 
-There are a variety of types of metadata that can be associated with a materialization event, all through the <PyObject module="dagster" object="EventMetadataEntry" /> class. Each materialization event optionally takes a list of metadata entries that are then displayed in the event log and the Asset Catalog.
+There are a variety of types of metadata that can be associated with a materialization event, all through the <PyObject module="dagster" object="EventMetadataEntry" /> class. Each materialization event optionally takes a list of metadata entries that are then displayed in the event log and the [Asset Catalog](/concepts/dagit/dagit#assets).
 
 #### Example: Solid body
 
@@ -287,11 +287,16 @@ def get_prediction_model(_, users_df):
 @pipeline
 def my_user_model_pipeline():
     get_prediction_model(scrape_users())
-
 ```
 
-In this case, it's certainly fair to say that this ML model, which we have assigned the key `ml_models.user_prediction` _depends on_ the table that we created, `my_db.users` (it uses the data in the table to train the model).
+In this case, it's certainly fair to say that this ML model, which we have assigned the key `ml_models.user_prediction`, _depends on_ the table that we created, `my_db.users` (it uses the data in the table to train the model).
 
-Because we have encoded the fact that `my_db.users` corresponds to the output of `scrape_users`, and `get_prediction_model` uses that as input, Dagster has enough information to infer that the output of `get_prediction_model` (corresponding to `ml_models.user_prediction`) does in fact depend on
+Why is that? Well, by specifying the structure of your pipeline, you have already defined data depedencies between these solids. By linking the output of `scrape_users` to the input of `get_prediction_model`, we can now infer that whatever this second solid outputs will be some function of its input. Furthermore, since we have linked each of these outputs to external assets, we can use this knowledge to say that the asset associated with the output of `get_prediction_model` depends on the asset associated with the output of `scrape_users`.
 
-This feature is still in its early stages, but for now, this lineage information is surfaced in the Asset Catalog page for each asset:
+This feature is still in its early stages, but for now, this lineage information is surfaced in the [Asset Catalog](/concepts/dagit/dagit#assets) page for each asset (Latest parent assets):
+
+<!-- This was generated with:
+    * `dagit -f materialization_pipelines.py -p 3333` inside dagster/examples/docs_snippets/docs_snippets/concepts/assets directory
+-->
+
+<img src="/images/concepts/assets/asset-lineage.png" />
