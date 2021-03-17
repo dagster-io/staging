@@ -33,6 +33,7 @@
 -e ./python_modules/libraries/dagstermill
 -e ./python_modules/libraries/lakehouse
 -e ./python_modules/automation
-Sphinx==3.5.2
-sphinx-click==2.5.0
-recommonmark==0.7.1
+Sphinx==2.2.2
+sphinx-click==2.3.1
+recommonmark==0.4.0
+nbsphinx==0.8.2

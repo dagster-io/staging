@@ -11,12 +11,12 @@
    sections/api/apidocs/internals
    sections/api/apidocs/loggers
    sections/api/apidocs/modes-resources
-   sections/api/apidocs/object-managers
+   sections/api/apidocs/io-managers
    sections/api/apidocs/partitions
    sections/api/apidocs/pipeline
    sections/api/apidocs/presets
    sections/api/apidocs/repositories
-   sections/api/apidocs/schedules
+   sections/api/apidocs/schedules-sensors
    sections/api/apidocs/solids
    sections/api/apidocs/dynamic
    sections/api/apidocs/types
@@ -32,10 +32,12 @@
    sections/api/apidocs/libraries/dagster_databricks
    sections/api/apidocs/libraries/dagster_datadog
    sections/api/apidocs/libraries/dagster_dbt
+   sections/api/apidocs/libraries/dagster_docker
    sections/api/apidocs/libraries/dagster_gcp
    sections/api/apidocs/libraries/dagster_ge
    sections/api/apidocs/libraries/dagster_github
    sections/api/apidocs/libraries/dagster_k8s
+   sections/api/apidocs/libraries/dagster_mysql
    sections/api/apidocs/libraries/dagster_pagerduty
    sections/api/apidocs/libraries/dagster_pandas
    sections/api/apidocs/libraries/dagster_papertrail
