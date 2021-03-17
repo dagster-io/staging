@@ -3,10 +3,8 @@ import os
 
 from dagster import file_relative_path
 from dagster.core.instance import DagsterInstance, InstanceRef
-from dagster.core.storage.event_log.sql_event_log import (
-    SECONDARY_INDEX_ASSET_KEY,
-    SqlEventLogStorage,
-)
+from dagster.core.storage.event_log.migration import SECONDARY_INDEX_ASSET_KEY
+from dagster.core.storage.event_log.sql_event_log import SqlEventLogStorage
 from dagster.utils.test import copy_directory
 
 

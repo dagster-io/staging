@@ -132,7 +132,7 @@ snapshots['TestAssetAwareEventLog.test_get_asset_key_not_found[sqlite_with_defau
     }
 }
 
-snapshots['TestAssetAwareEventLog.test_get_asset_keys[asset_aware_instance_in_process_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_all_asset_keys[asset_aware_instance_in_process_env] 1'] = {
     'assetsOrError': {
         '__typename': 'AssetConnection',
         'nodes': [
@@ -161,7 +161,7 @@ snapshots['TestAssetAwareEventLog.test_get_asset_keys[asset_aware_instance_in_pr
     }
 }
 
-snapshots['TestAssetAwareEventLog.test_get_asset_keys[postgres_with_default_run_launcher_managed_grpc_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_all_asset_keys[postgres_with_default_run_launcher_managed_grpc_env] 1'] = {
     'assetsOrError': {
         '__typename': 'AssetConnection',
         'nodes': [
@@ -190,7 +190,7 @@ snapshots['TestAssetAwareEventLog.test_get_asset_keys[postgres_with_default_run_
     }
 }
 
-snapshots['TestAssetAwareEventLog.test_get_asset_keys[sqlite_with_default_run_launcher_managed_grpc_env] 1'] = {
+snapshots['TestAssetAwareEventLog.test_all_asset_keys[sqlite_with_default_run_launcher_managed_grpc_env] 1'] = {
     'assetsOrError': {
         '__typename': 'AssetConnection',
         'nodes': [
