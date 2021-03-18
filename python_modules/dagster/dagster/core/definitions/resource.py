@@ -219,6 +219,20 @@ def resource(config_schema=None, description=None, required_resource_keys=None, 
     return _wrap
 
 
+class Resources(tuple):
+    def __init__(self, resources_dict):
+        resources_dict = check.dict_param(resources_dict, "resources_dict", key_type=str)
+        resources_tuple = namedtuple("_Resources", resources_dict.keys())
+        self._resources = resources_tuple(**resources_dict)
+        super(Resources, self).__init__()
+
+    def __getattr__(self, attr):
+        try:
+            return getattr(self._resources, attr)
+        except AttributeError:
+            raise DagsterUnknownResourceError(attr)
+
+
 class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_instance_dict")):
     """There are concepts in the codebase (e.g. solids, system storage) that receive
     only the resources that they have specified in required_resource_keys.
@@ -259,8 +273,4 @@ class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_inst
             if key in self.resource_instance_dict
         }
 
-        class ScopedResources(namedtuple("Resources", list(resource_instance_dict.keys()))):
-            def __getattr__(self, attr):
-                raise DagsterUnknownResourceError(attr)
-
-        return ScopedResources(**resource_instance_dict)
+        return Resources(resource_instance_dict)
