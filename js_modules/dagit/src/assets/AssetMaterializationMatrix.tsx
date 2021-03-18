@@ -3,7 +3,7 @@ import flatMap from 'lodash/flatMap';
 import uniq from 'lodash/uniq';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {formatElapsedTime} from 'src/app/Util';
 import {Timestamp} from 'src/app/time/Timestamp';

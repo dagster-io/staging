@@ -1,7 +1,7 @@
 import {Button, Dialog, Colors} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {useQueryPersistedState} from 'src/hooks/useQueryPersistedState';
 import {PartitionGraphSet} from 'src/partitions/PartitionGraphSet';

@@ -1,7 +1,7 @@
 import {gql} from '@apollo/client';
 import {Dialog} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {DirectGraphQLSubscription} from 'src/app/DirectGraphQLSubscription';
 import {ComputeLogContent, COMPUTE_LOG_CONTENT_FRAGMENT} from 'src/runs/ComputeLogContent';

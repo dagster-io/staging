@@ -14,7 +14,7 @@ import {IconNames} from '@blueprintjs/icons';
 import * as qs from 'query-string';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {copyValue} from 'src/app/DomUtils';
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from 'src/app/PythonErrorInfo';

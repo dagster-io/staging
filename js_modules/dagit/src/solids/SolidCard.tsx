@@ -1,6 +1,6 @@
 import {gql} from '@apollo/client';
 import React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {SolidNode, SOLID_NODE_DEFINITION_FRAGMENT} from 'src/graph/SolidNode';
 import {layoutSolid} from 'src/graph/getFullSolidLayout';

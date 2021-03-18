@@ -1,7 +1,7 @@
 import {Colors, Icon} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {useConfirmation} from 'src/app/CustomConfirmationProvider';
 import {

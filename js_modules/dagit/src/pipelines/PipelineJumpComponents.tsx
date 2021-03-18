@@ -2,7 +2,7 @@ import {Button, MenuItem} from '@blueprintjs/core';
 import {Select} from '@blueprintjs/select';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {ShortcutHandler} from 'src/app/ShortcutHandler';
 import {PipelineExplorerSolidHandleFragment_solid} from 'src/pipelines/types/PipelineExplorerSolidHandleFragment';

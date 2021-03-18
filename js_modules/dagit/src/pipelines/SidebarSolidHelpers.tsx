@@ -1,7 +1,7 @@
 import {Colors, Icon, Text} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {titleOfIO} from 'src/app/Util';
 import {SectionHeader} from 'src/pipelines/SidebarComponents';

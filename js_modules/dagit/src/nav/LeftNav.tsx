@@ -1,8 +1,7 @@
 import {Colors, Icon} from '@blueprintjs/core';
 import * as React from 'react';
-import {useHistory} from 'react-router';
-import {Link, useRouteMatch} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import {useHistory, Link, useRouteMatch} from 'react-router-dom';
+import styled from 'styled-components';
 
 import {ShortcutHandler} from 'src/app/ShortcutHandler';
 import {WebsocketStatus} from 'src/app/WebsocketStatus';

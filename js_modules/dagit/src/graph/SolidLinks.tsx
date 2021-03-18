@@ -1,7 +1,7 @@
 import {Colors} from '@blueprintjs/core';
 import {pathVerticalDiagonal} from '@vx/shape';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {weakmapMemoize} from 'src/app/Util';
 import {

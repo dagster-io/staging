@@ -1,5 +1,5 @@
 import {Colors} from '@blueprintjs/core';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 export const STEP_STATUS_COLORS = {
   SUCCESS: '#009857',

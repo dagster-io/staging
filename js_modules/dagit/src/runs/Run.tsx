@@ -2,7 +2,7 @@ import {ApolloClient, useMutation} from '@apollo/client';
 import {NonIdealState} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {showCustomAlert} from 'src/app/CustomAlertProvider';
 import {filterByQuery} from 'src/app/GraphQueryImpl';

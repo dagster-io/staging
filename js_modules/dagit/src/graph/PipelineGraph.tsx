@@ -1,7 +1,7 @@
 import {gql} from '@apollo/client';
 import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {ParentSolidNode, SVGLabeledParentRect} from 'src/graph/ParentSolidNode';
 import {SVGViewport, DETAIL_ZOOM, SVGViewportInteractor} from 'src/graph/SVGViewport';

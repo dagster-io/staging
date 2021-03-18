@@ -2,7 +2,7 @@ import {gql} from '@apollo/client';
 import {Colors, Icon, IconName} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {PipelineExplorerPath} from 'src/pipelines/PipelinePathUtils';
 import {

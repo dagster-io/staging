@@ -4,7 +4,7 @@ import {Colors} from '@blueprintjs/core';
 import pretty from 'pretty';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom/server';
-import {StyleSheetManager} from 'styled-components/macro';
+import {StyleSheetManager} from 'styled-components';
 
 import {PipelineGraphContents} from 'src/graph/PipelineGraph';
 import {getDagrePipelineLayout} from 'src/graph/getFullSolidLayout';

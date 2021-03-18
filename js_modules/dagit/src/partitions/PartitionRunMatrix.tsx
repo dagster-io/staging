@@ -1,7 +1,7 @@
 import {gql, useQuery} from '@apollo/client';
 import {Colors, Dialog, Button, Classes, MenuItem, Menu, Popover, Icon} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {useViewport} from 'src/gantt/useViewport';
 import {useQueryPersistedState} from 'src/hooks/useQueryPersistedState';

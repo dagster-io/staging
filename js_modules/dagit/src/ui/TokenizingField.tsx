@@ -1,7 +1,7 @@
 import {Menu, MenuItem, Popover, TagInput} from '@blueprintjs/core';
 import isEqual from 'lodash/isEqual';
 import React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {Box} from 'src/ui/Box';
 import {Spinner} from 'src/ui/Spinner';

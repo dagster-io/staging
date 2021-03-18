@@ -1,6 +1,6 @@
 import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {getJSONForKey} from 'src/app/LocalStorage';
 

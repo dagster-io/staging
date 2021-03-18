@@ -4,7 +4,7 @@ import * as querystring from 'query-string';
 import * as React from 'react';
 import {useHistory, useLocation} from 'react-router-dom';
 import {AutoSizer, CellMeasurer, CellMeasurerCache, List} from 'react-virtualized';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {SolidDetailScrollContainer, UsedSolidDetails} from 'src/solids/SolidDetailsRoot';

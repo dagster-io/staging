@@ -1,7 +1,7 @@
 import {gql} from '@apollo/client';
 import {Button, Checkbox, Code, Colors, Icon, Intent, Position, Tooltip} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {showCustomAlert} from 'src/app/CustomAlertProvider';
 import {useConfirmation} from 'src/app/CustomConfirmationProvider';

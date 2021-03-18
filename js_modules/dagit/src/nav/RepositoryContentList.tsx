@@ -2,7 +2,7 @@ import {gql, useApolloClient} from '@apollo/client';
 import {Button, ButtonGroup, Colors, Icon} from '@blueprintjs/core';
 import React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {tabForPipelinePathComponent} from 'src/nav/PipelineNav';
 import {ContentListSolidsQuery} from 'src/nav/types/ContentListSolidsQuery';

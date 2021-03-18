@@ -2,7 +2,7 @@ import {gql, useApolloClient} from '@apollo/client';
 import {Button, Colors, Icon} from '@blueprintjs/core';
 import merge from 'deepmerge';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 import * as yaml from 'yaml';
 
 import {showCustomAlert} from 'src/app/CustomAlertProvider';

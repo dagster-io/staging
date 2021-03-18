@@ -9,7 +9,7 @@ import {
   Tooltip,
 } from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {ShortcutHandler} from 'src/app/ShortcutHandler';
 import {WebsocketStatusContext} from 'src/app/WebsocketStatus';

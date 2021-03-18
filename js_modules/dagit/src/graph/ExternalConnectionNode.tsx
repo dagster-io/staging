@@ -1,7 +1,7 @@
 import {Colors} from '@blueprintjs/core';
 import {LinkVertical as Link} from '@vx/shape';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {SVGMonospaceText} from 'src/graph/SVGComponents';
 import {Edge} from 'src/graph/SolidLinks';

@@ -11,7 +11,7 @@ import {WebSocketLink} from '@apollo/client/link/ws';
 import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import {createGlobalStyle} from 'styled-components/macro';
+import {createGlobalStyle} from 'styled-components';
 import {SubscriptionClient} from 'subscriptions-transport-ws';
 
 import {App} from 'src/app/App';

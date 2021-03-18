@@ -2,7 +2,7 @@ import {gql, useQuery} from '@apollo/client';
 import {NonIdealState, Button, Colors, Tooltip} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {PYTHON_ERROR_FRAGMENT} from 'src/app/PythonErrorInfo';
 import {STEP_STATUS_COLORS} from 'src/partitions/RunMatrixUtils';

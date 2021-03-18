@@ -50,6 +50,14 @@ module.exports = {
             importNames: ['Alert', 'Callout', 'Spinner'],
             message: 'Please use components in src/ui instead.',
           },
+          {
+            name: 'styled-components/macro',
+            message: 'Import from `styled-components`.',
+          },
+          {
+            name: 'react-router',
+            message: 'Import from `react-router-dom`.',
+          },
         ],
       },
     ],

@@ -4,7 +4,7 @@ import {IconNames} from '@blueprintjs/icons';
 import isEqual from 'lodash/isEqual';
 import uniq from 'lodash/uniq';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {GraphQueryItem} from 'src/app/GraphQueryImpl';
 import {dynamicKeyWithoutIndex, isDynamicStep} from 'src/gantt/DynamicStepSupport';

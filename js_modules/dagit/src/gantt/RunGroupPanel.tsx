@@ -2,7 +2,7 @@ import {gql, useQuery} from '@apollo/client';
 import {Colors, Icon} from '@blueprintjs/core';
 import React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {showCustomAlert} from 'src/app/CustomAlertProvider';
 import {

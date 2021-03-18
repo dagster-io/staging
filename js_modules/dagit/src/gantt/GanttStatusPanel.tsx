@@ -1,6 +1,6 @@
 import {Colors, Tooltip, Position} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {formatElapsedTime} from 'src/app/Util';
 import {GanttChartMode} from 'src/gantt/Constants';

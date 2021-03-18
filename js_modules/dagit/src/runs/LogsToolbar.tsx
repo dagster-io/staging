@@ -1,7 +1,7 @@
 import {Button, Checkbox, Colors, IconName, Tag} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {LogLevel} from 'src/runs/LogLevel';
 import {LogsFilterInput} from 'src/runs/LogsFilterInput';

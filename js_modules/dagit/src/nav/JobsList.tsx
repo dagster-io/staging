@@ -2,7 +2,7 @@ import {gql, useApolloClient} from '@apollo/client';
 import {Colors, Icon} from '@blueprintjs/core';
 import React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {JobsListQuery} from 'src/nav/types/JobsListQuery';
 import {JobStatus, JobType} from 'src/types/globalTypes';

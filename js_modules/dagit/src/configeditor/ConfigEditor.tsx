@@ -17,7 +17,7 @@ import 'src/configeditor/codemirror-yaml/mode'; // eslint-disable-line import/no
 import {Editor} from 'codemirror';
 import * as React from 'react';
 import {Controlled as CodeMirrorReact} from 'react-codemirror2';
-import {createGlobalStyle} from 'styled-components/macro';
+import {createGlobalStyle} from 'styled-components';
 import * as yaml from 'yaml';
 
 import {debounce} from 'src/app/Util';

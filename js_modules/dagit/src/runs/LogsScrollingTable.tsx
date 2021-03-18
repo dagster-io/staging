@@ -4,7 +4,7 @@ import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import {CellMeasurer, CellMeasurerCache, List, ListRowProps} from 'react-virtualized';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {LogFilter, LogsProviderLogs} from 'src/runs/LogsProvider';
 import {

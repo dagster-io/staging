@@ -3,7 +3,7 @@ import {Colors, Icon} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import Ansi from 'ansi-to-react';
 import * as React from 'react';
-import styled, {createGlobalStyle} from 'styled-components/macro';
+import styled, {createGlobalStyle} from 'styled-components';
 
 import {ROOT_SERVER_URI} from 'src/app/DomUtils';
 import {ExecutionStateDot} from 'src/runs/ExecutionStateDot';

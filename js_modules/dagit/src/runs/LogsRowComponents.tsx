@@ -1,6 +1,6 @@
 import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {TimezoneContext} from 'src/app/time/TimezoneContext';
 import {browserTimezone} from 'src/app/time/browserTimezone';

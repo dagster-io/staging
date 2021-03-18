@@ -4,7 +4,7 @@ import CSS from 'csstype';
 import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {copyValue} from 'src/app/DomUtils';
 import {assertUnreachable} from 'src/app/Util';

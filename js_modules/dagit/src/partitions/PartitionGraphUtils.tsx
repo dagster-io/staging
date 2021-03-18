@@ -1,7 +1,7 @@
 import {gql} from '@apollo/client';
 import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {colorHash} from 'src/app/Util';
 import {PartitionGraphFragment} from 'src/partitions/types/PartitionGraphFragment';

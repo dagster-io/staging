@@ -2,7 +2,7 @@ import {gql} from '@apollo/client';
 import {Colors, Icon} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {breakOnUnderscores} from 'src/app/Util';
 import {Description} from 'src/pipelines/Description';

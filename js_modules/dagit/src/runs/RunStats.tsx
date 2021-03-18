@@ -1,7 +1,7 @@
 import {gql, useQuery} from '@apollo/client';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from 'src/app/PythonErrorInfo';
 import {RunStatsQuery, RunStatsQueryVariables} from 'src/runs/types/RunStatsQuery';

@@ -1,7 +1,7 @@
 import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import ReactDOM from 'react-dom';
-import styled from 'styled-components/macro';
+import styled from 'styled-components';
 
 const MODIFIER_KEYCODES = [17, 18, 91, 224];
 const SHORTCUT_VISIBILITY_EVENT_TYPE = 'shortcut-visibility';

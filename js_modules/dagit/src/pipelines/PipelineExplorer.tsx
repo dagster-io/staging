@@ -4,8 +4,8 @@ import Color from 'color';
 import {History} from 'history';
 import * as querystring from 'query-string';
 import * as React from 'react';
-import {Route} from 'react-router';
-import styled from 'styled-components/macro';
+import {Route} from 'react-router-dom';
+import styled from 'styled-components';
 
 import {filterByQuery} from 'src/app/GraphQueryImpl';
 import {PIPELINE_GRAPH_SOLID_FRAGMENT} from 'src/graph/PipelineGraph';
