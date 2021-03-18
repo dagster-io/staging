@@ -154,7 +154,7 @@ class GraphExecutionResult:
 class PipelineExecutionResult(GraphExecutionResult):
     """The result of executing a pipeline.
 
-    Returned by :py:func:`execute_pipeline`. Users should not instantiate this class.
+    Returned by :py:func:`execute_pipeline`. Users should not instantiate this class directly.
     """
 
     def __init__(
@@ -176,6 +176,7 @@ class PipelineExecutionResult(GraphExecutionResult):
         )
 
     @property
+    """PipelineDefinition: The pipeline for which this is the result."""
     def pipeline_def(self):
         return self.container
 
@@ -183,7 +184,7 @@ class PipelineExecutionResult(GraphExecutionResult):
 class CompositeSolidExecutionResult(GraphExecutionResult):
     """Execution result for a composite solid in a pipeline.
 
-    Users should not instantiate this class.
+    Users should not instantiate this class directly.
     """
 
     def __init__(
