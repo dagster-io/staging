@@ -33,7 +33,9 @@
 -e ./python_modules/libraries/dagstermill
 -e ./python_modules/libraries/lakehouse
 -e ./python_modules/automation
+enum_tools==0.6.4
+nbsphinx==0.8.2
+recommonmark==0.7.1
 Sphinx==3.5.2
 sphinx-click==2.5.0
-recommonmark==0.7.1
-nbsphinx==0.8.2
+sphinx-toolbox==2.2.0

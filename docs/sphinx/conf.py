@@ -18,6 +18,7 @@
 
 # -- Project information -----------------------------------------------------
 
+from enum_tools.autoenum import setup as setup_autoenum
 from recommonmark.parser import CommonMarkParser
 
 project = "Dagster"
@@ -28,6 +29,7 @@ author = "The Dagster Team"
 version = ""
 # The full version, including alpha/beta/rc tags
 release = ""
+
 
 # -- General configuration ---------------------------------------------------
 
@@ -69,6 +71,7 @@ intersphinx_mapping = {
     "celery": ("http://docs.celeryproject.org/en/latest/", "intersphinx/celery.inv"),
     "boto3": ("https://boto3.amazonaws.com/v1/documentation/api/latest/", "intersphinx/boto3.inv"),
     "psycopg2": ("https://www.psycopg.org/docs/", "intersphinx/psycopg2.inv"),
+    "rx": ("https://rxpy.readthedocs.io/en/latest/", "intersphinx/rx.inv"),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -111,6 +114,7 @@ html_title = "Dagster"
 
 def setup(app):
     app.add_stylesheet("css/custom.css")
+    setup_autoenum(app)
 
 
 # Theme options are theme-specific and customize the look and feel of a theme

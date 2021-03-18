@@ -7,12 +7,12 @@ def hello_logs(context):
     context.log.info("Hello, world!")
 
 
+# end_builtin_logger_marker_0
+
+
 @pipeline
 def demo_pipeline():
     hello_logs()
-
-
-# end_builtin_logger_marker_0
 
 
 # start_builtin_logger_error_marker_0

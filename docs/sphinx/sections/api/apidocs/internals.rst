@@ -14,13 +14,6 @@ We're curious what you're up to, happy to help, excited for new community contri
 to make the system as easy to work with as possible -- including for teams who are looking to
 customize it.
 
-Logging
--------
-
-.. autoclass:: DagsterLogManager
-    :members:
-
-----
 
 Executors
 ---------
@@ -133,20 +126,6 @@ See also: :py:class:`dagster_postgres.PostgresEventLogStorage`.
 
 ----
 
-Compute log manager
--------------------
-
-.. currentmodule:: dagster.core.storage.compute_log_manager
-
-.. autoclass:: ComputeLogManager
-
-.. currentmodule:: dagster.core.storage.local_compute_log_manager
-
-.. autoclass:: LocalComputeLogManager
-
-See also: :py:class:`dagster_aws.S3ComputeLogManager`.
-
-----
 
 Memoizable IO Manager (Experimental)
 -------------------

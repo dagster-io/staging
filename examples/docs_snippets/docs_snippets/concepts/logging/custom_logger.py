@@ -7,7 +7,7 @@ from dagster import Field, ModeDefinition, logger, pipeline, solid
 
 
 @logger(
-    {
+    config_schema={
         "log_level": Field(str, is_required=False, default_value="INFO"),
         "name": Field(str, is_required=False, default_value="dagster"),
     },
@@ -32,6 +32,10 @@ def json_console_logger(init_context):
     return logger_
 
 
+# end_custom_logger_marker_0
+
+
+# start_custom_logger_marker_1
 @solid
 def hello_logs(context):
     context.log.info("Hello, world!")
@@ -42,4 +46,4 @@ def demo_pipeline():
     hello_logs()
 
 
-# end_custom_logger_marker_0
+# end_custom_logger_marker_1

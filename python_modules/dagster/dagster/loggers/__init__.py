@@ -16,6 +16,12 @@ from dagster.utils.log import default_format_string
     description="The default colored console logger.",
 )
 def colored_console_logger(init_context):
+    """The default colored console logger.
+    
+    This logger is used when no loggers are explicitly defined on a pipeline's
+    :py:class:`~dagster.ModeDefinition`. Set ``log_level`` in the run config for this logger to
+    change the level at which logs are recorded.
+    """
     level = coerce_valid_log_level(init_context.logger_config["log_level"])
     name = init_context.logger_config["name"]
 
@@ -39,6 +45,14 @@ def colored_console_logger(init_context):
     description="A JSON-formatted console logger",
 )
 def json_console_logger(init_context):
+    """Built-in JSON console logger.
+    
+    Add this logger to your pipeline's :py:class:`~dagster.ModeDefinition` if you want
+    JSON-structured console logs (e.g., for consumption by ELK).
+
+    By default, this logger will record only logs at level ``INFO`` and above. Set ``log_level``
+    in the run config for this logger to change the level at which logs are recorded.
+    """
     level = coerce_valid_log_level(init_context.logger_config["log_level"])
     name = init_context.logger_config["name"]
 

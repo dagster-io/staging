@@ -103,14 +103,14 @@ class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags lo
 
     The log manager supports standard convenience methods like those exposed by the Python standard
     library :py:mod:`python:logging` module (i.e., within the body of a solid,
-    ``context.log.{debug, info, warning, warn, error, critical, fatal}``).
+    ``context.log.{debug(), info(), warning(), warn(), error(), critical(), fatal()}``).
 
     The underlying integer API can also be called directly using, e.g.
-    ``context.log.log(5, msg)``, and the log manager will delegate to the ``log`` method
+    ``context.log.log(5, msg)``, and the log manager will delegate to the ``log()`` method
     defined on each of the loggers it manages.
 
     User-defined custom log levels are not supported, and calls to, e.g.,
-    ``context.log.trace`` or ``context.log.notice`` will result in hard exceptions **at runtime**.
+    ``context.log.trace()`` or ``context.log.notice()`` will result in hard exceptions **at runtime**.
     """
 
     def __new__(cls, run_id, logging_tags, loggers):

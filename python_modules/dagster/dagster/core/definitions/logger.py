@@ -1,3 +1,6 @@
+from functools import update_wrapper
+from typing import Callable, Optional
+
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.configurable import AnonymousConfigurableDefinition
@@ -22,9 +25,9 @@ class LoggerDefinition(AnonymousConfigurableDefinition):
 
     def __init__(
         self,
-        logger_fn,
+        logger_fn: Callable,
         config_schema=None,
-        description=None,
+        description: Optional[str] = None,
     ):
         self._logger_fn = check.callable_param(logger_fn, "logger_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
@@ -50,7 +53,26 @@ class LoggerDefinition(AnonymousConfigurableDefinition):
         )
 
 
-def logger(config_schema=None, description=None):
+class _Logger:
+    def __init__(self, config_schema=None, description: Optional[str] = None):
+        self.config_schema = config_schema
+        self.description = check.opt_str_param(description, "description")
+
+    def __call__(self, logger_fn: Callable):
+        check.callable_param(logger_fn, "logger_fn")
+
+        logger_def = LoggerDefinition(
+            logger_fn=logger_fn,
+            config_schema=self.config_schema,
+            description=self.description,
+        )
+
+        update_wrapper(logger_def, logger_fn)
+
+        return logger_def
+
+
+def logger(config_schema=None, description: Optional[str] = None):
     """Define a logger.
 
     The decorated function should accept an :py:class:`InitLoggerContext` and return an instance of
@@ -65,13 +87,6 @@ def logger(config_schema=None, description=None):
     # This case is for when decorator is used bare, without arguments.
     # E.g. @logger versus @logger()
     if callable(config_schema) and not is_callable_valid_config_arg(config_schema):
-        return LoggerDefinition(logger_fn=config_schema)
+        return _Logger()(logger_fn=config_schema)
 
-    def _wrap(logger_fn):
-        return LoggerDefinition(
-            logger_fn=logger_fn,
-            config_schema=config_schema,
-            description=description,
-        )
-
-    return _wrap
+    return _Logger(config_schema=config_schema, description=description)
