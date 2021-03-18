@@ -227,7 +227,7 @@ const VersionDropdown = () => {
                     <Menu.Item>
                       {({ active }) => (
                         <a
-                          href="legacy-docs.dagster.io"
+                          href="https://legacy-docs.dagster.io"
                           className={`${
                             active
                               ? "bg-gray-100 text-gray-900"
