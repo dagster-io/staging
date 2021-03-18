@@ -24,10 +24,10 @@ def n_asset_keys(path, n):
     return AssetLineageInfo(AssetKey(path), set([str(i) for i in range(n)]))
 
 
-def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
+def check_materialization(materialization, asset_key, parent_assets=None, metadata=None):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
-    assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
+    assert sorted(event_data.materialization.metadata) == sorted(metadata or [])
     assert event_data.asset_lineage == (parent_assets or [])
 
 
@@ -145,7 +145,7 @@ def test_input_definition_multiple_partition_lineage():
         return Output(
             None,
             "output1",
-            metadata_entries=[
+            metadata=[
                 entry1,
                 *[
                     PartitionMetadataEntry(str(i), entry)
@@ -167,7 +167,7 @@ def test_input_definition_multiple_partition_lineage():
         yield Output(
             7,
             "output2",
-            metadata_entries=[entry2],
+            metadata=[entry2],
         )
 
     @pipeline
@@ -188,7 +188,7 @@ def test_input_definition_multiple_partition_lineage():
         check_materialization(
             materializations[i],
             AssetKey(["table1"]),
-            metadata_entries=[entry1, partition_entries[int(partition)]],
+            metadata=[entry1, partition_entries[int(partition)]],
         )
 
     assert len(seen_partitions) == 3
@@ -197,7 +197,7 @@ def test_input_definition_multiple_partition_lineage():
         materializations[-1],
         AssetKey(["table2"]),
         parent_assets=[n_asset_keys("table1", 1)],
-        metadata_entries=[entry2],
+        metadata=[entry2],
     )
 
 
@@ -277,7 +277,7 @@ def test_dynamic_output_definition_single_partition_materialization():
 
     @solid(output_defs=[OutputDefinition(name="output1", asset_key=AssetKey("table1"))])
     def solid1(_):
-        return Output(None, "output1", metadata_entries=[entry1])
+        return Output(None, "output1", metadata=[entry1])
 
     @solid(
         output_defs=[
@@ -292,7 +292,7 @@ def test_dynamic_output_definition_single_partition_materialization():
                 7,
                 mapping_key=str(i),
                 output_name="output2",
-                metadata_entries=[entry2],
+                metadata=[entry2],
             )
 
     @solid
@@ -310,7 +310,7 @@ def test_dynamic_output_definition_single_partition_materialization():
     ]
     assert len(materializations) == 5
 
-    check_materialization(materializations[0], AssetKey(["table1"]), metadata_entries=[entry1])
+    check_materialization(materializations[0], AssetKey(["table1"]), metadata=[entry1])
     seen_paths = set()
     for i in range(1, 5):
         path = materializations[i].asset_key.path
@@ -318,7 +318,7 @@ def test_dynamic_output_definition_single_partition_materialization():
         check_materialization(
             materializations[i],
             AssetKey(path),
-            metadata_entries=[entry2],
+            metadata=[entry2],
             parent_assets=[AssetLineageInfo(AssetKey(["table1"]))],
         )
     assert len(seen_paths) == 4
