@@ -1,7 +1,13 @@
 import datetime
 from collections import defaultdict
 
-from dagster import PartitionSetDefinition, ScheduleExecutionContext
+from dagster import (
+    PartitionSetDefinition,
+    RunRequest,
+    ScheduleDefinition,
+    ScheduleExecutionContext,
+    schedule,
+)
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.utils.partitions import date_partition_range
 
@@ -150,6 +156,25 @@ def longitudinal_schedule():
     )
 
 
+def execute_fn(_context):
+    import uuid
+
+    for _trial in range(5000):
+        yield RunRequest(
+            run_key=str(uuid.uuid4()),
+            run_config={"intermediate_storage": {"filesystem": {}}},
+        )
+
+
+many_events_every_min = ScheduleDefinition(
+    name="many_events_every_min",
+    cron_schedule="* * * * *",
+    pipeline_name="many_events",
+    execution_timezone=_toys_tz_info(),
+    execution_fn=execute_fn,
+)
+
+
 def get_toys_schedules():
     from dagster import ScheduleDefinition
 
@@ -157,11 +182,5 @@ def get_toys_schedules():
         backfill_test_schedule(),
         longitudinal_schedule(),
         materialization_schedule(),
-        ScheduleDefinition(
-            name="many_events_every_min",
-            cron_schedule="* * * * *",
-            pipeline_name="many_events",
-            run_config_fn=lambda _: {"intermediate_storage": {"filesystem": {}}},
-            execution_timezone=_toys_tz_info(),
-        ),
+        many_events_every_min,
     ]
