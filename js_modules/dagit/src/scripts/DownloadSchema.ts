@@ -23,7 +23,7 @@ const schemaJson = JSON.parse(result).data;
 
 // Write schema.graphql in the SDL format
 const sdl = printSchema(buildClientSchema(schemaJson));
-writeFileSync('./src/graphql/schema.graphql', sdl);
+writeFileSync('./../graphql/schema.graphql', sdl);
 
 // Write `possibleTypes.generated.json`, used for creating a mocked schema in tests.
 const possibleTypes = {};
@@ -34,4 +34,4 @@ schemaJson.__schema.types.forEach((supertype: {name: string; possibleTypes: [{na
   }
 });
 
-writeFileSync('./src/graphql/possibleTypes.generated.json', JSON.stringify(possibleTypes));
+writeFileSync('./../graphql/possibleTypes.generated.json', JSON.stringify(possibleTypes));
