@@ -1,3 +1,5 @@
+import pytest
+from dagster import seven
 from dagster.core.host_representation import PipelineHandle
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.test_utils import create_run_for_test, poll_for_finished_run
@@ -26,6 +28,7 @@ def assert_events_in_order(logs, expected_events):
     assert filtered_logged_events == expected_events
 
 
+@pytest.mark.skipif(seven.IS_WINDOWS, reason="Unix-only test")
 def test_queue_from_schedule_and_sensor(tmpdir, foo_example_repo):
     dagster_home_path = tmpdir.strpath
     with setup_instance(
@@ -45,7 +48,7 @@ def test_queue_from_schedule_and_sensor(tmpdir, foo_example_repo):
         instance.start_schedule_and_update_storage_state(external_schedule)
         instance.start_sensor(external_sensor)
 
-        with start_daemon(timeout=180):
+        with start_daemon(timeout=90):
             run = create_run(instance, foo_pipeline_handle)
             with external_pipeline_from_run(run) as external_pipeline:
                 instance.submit_run(run.run_id, external_pipeline)
