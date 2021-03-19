@@ -100,7 +100,7 @@ def test_no_memory_leaks():
                     print(  # pylint: disable=print-call
                         f"Memory stopped growing after {int(time.time() - start_time)} seconds"
                     )
-                    break
+                    return
 
                 if (time.time() - start_time) > 300:
                     raise Exception(
