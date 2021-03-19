@@ -77,7 +77,7 @@ class _Solid:
             output_defs=output_defs,
             compute_fn=compute_fn,
             config_schema=self.config_schema,
-            description=self.description,
+            description=self.description or fn.__doc__,
             required_resource_keys=self.required_resource_keys,
             tags=self.tags,
             positional_inputs=positional_inputs,
