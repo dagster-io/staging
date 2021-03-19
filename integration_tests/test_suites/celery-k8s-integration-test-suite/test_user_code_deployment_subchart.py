@@ -4,10 +4,9 @@ import os
 
 import kubernetes
 import pytest
-from dagster_k8s.test import wait_for_job_and_get_raw_logs
 from dagster_k8s_test_infra.helm import TEST_AWS_CONFIGMAP_NAME
 from dagster_k8s_test_infra.integration_utils import image_pull_policy
-from kubernetes.stream import stream
+from kubernetes import stream, watch
 from marks import mark_user_code_deployment_subchart
 
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
@@ -70,7 +69,7 @@ def test_execute_on_celery_k8s_subchart_disabled(  # pylint: disable=redefined-o
         run_config_json,
     ]
 
-    stream(
+    stream.stream(
         core_api.connect_get_namespaced_pod_exec,
         name=dagit_pod_name,
         namespace=namespace,
@@ -82,20 +81,21 @@ def test_execute_on_celery_k8s_subchart_disabled(  # pylint: disable=redefined-o
         _preload_content=False,
     )
 
+    w = watch.Watch()
     runmaster_job_name = None
-    timeout = datetime.timedelta(0, 90)
-    start_time = datetime.datetime.now()
-    while datetime.datetime.now() < start_time + timeout and not runmaster_job_name:
-        jobs = batch_api.list_namespaced_job(namespace=namespace)
-        runmaster_job_list = list(
-            filter(lambda item: "dagster-run-" in item.metadata.name, jobs.items)
-        )
-        if len(runmaster_job_list) > 0:
-            runmaster_job_name = runmaster_job_list[0].metadata.name
+
+    for event in w.stream(batch_api.list_namespaced_job, namespace=namespace, timeout_seconds=90):
+        runmaster_job_name = event["object"].metadata.name
+        w.stop()
 
     assert runmaster_job_name
 
-    result = wait_for_job_and_get_raw_logs(
-        job_name=runmaster_job_name, namespace=namespace, wait_timeout=450
-    )
+    for event in w.stream(
+        batch_api.read_namespaced_job_status, name=runmaster_job_name, timeout_seconds=300
+    ):
+        if event["object"].status.completion_time:
+            w.stop()
+
+    result = core_api.read_namespaced_pod_log(name=runmaster_job_name, namespace=namespace).data
+
     assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
