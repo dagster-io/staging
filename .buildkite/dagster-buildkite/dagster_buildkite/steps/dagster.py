@@ -549,6 +549,19 @@ def schema_checks(version=SupportedPython.V3_8):
     ]
 
 
+def manifest_checks(version=SupportedPython.V3_7):
+    return [
+        StepBuilder("manifest")
+        .on_integration_image(version)
+        .run(
+            "pip install check-manifest",
+            "check-manifest python_modules/libraries/dagster-postgres"
+            "check-manifest python_modules/libraries/dagster-mysql",
+        )
+        .build()
+    ]
+
+
 def dagster_steps():
     steps = []
     steps += publish_test_images()
@@ -574,6 +587,8 @@ def dagster_steps():
         steps += m.get_tox_build_steps()
 
     steps += extra_library_tests()
+
+    steps += manifest_checks()
 
     # https://github.com/dagster-io/dagster/issues/2785
     steps += pipenv_smoke_tests()
