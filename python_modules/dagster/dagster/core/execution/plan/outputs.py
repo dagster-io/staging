@@ -13,6 +13,7 @@ from .handle import UnresolvedStepHandle
 from .objects import TypeCheckData
 
 
+@whitelist_for_serdes
 class StepOutput(
     NamedTuple(
         "_StepOutput",
@@ -21,9 +22,9 @@ class StepOutput(
             ("name", str),
             ("dagster_type_key", str),
             ("is_required", bool),
+            ("is_dynamic", bool),
             ("is_asset", bool),
             ("should_materialize", Optional[bool]),
-            ("is_dynamic", bool),
         ],
     )
 ):
@@ -114,6 +115,7 @@ class StepOutputHandle(
         )
 
 
+@whitelist_for_serdes
 class UnresolvedStepOutputHandle(
     NamedTuple(
         "_UnresolvedStepOutputHandle",
