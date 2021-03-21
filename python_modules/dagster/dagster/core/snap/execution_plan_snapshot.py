@@ -1,13 +1,15 @@
 from collections import namedtuple
 
 from dagster import check
+from dagster.core.definitions import SolidHandle
 from dagster.core.execution.plan.inputs import (
     StepInput,
+    StepInputSourceTypes,
     UnresolvedCollectStepInput,
     UnresolvedMappedStepInput,
 )
-from dagster.core.execution.plan.outputs import StepOutput, StepOutputHandle
-from dagster.core.execution.plan.plan import ExecutionPlan
+from dagster.core.execution.plan.outputs import StepOutput, StepOutputHandle, StepOutputProperties
+from dagster.core.execution.plan.plan import ExecutionPlan, StepHandleTypes
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.plan.step import (
     ExecutionStep,
@@ -81,9 +83,22 @@ class ExecutionPlanSnapshotErrorData(namedtuple("_ExecutionPlanSnapshotErrorData
 
 @whitelist_for_serdes
 class ExecutionStepSnap(
-    namedtuple("_ExecutionStepSnap", "key inputs outputs solid_handle_id kind metadata_items")
+    namedtuple(
+        "_ExecutionStepSnap",
+        "key inputs outputs solid_handle_id kind metadata_items tags step_handle",
+    )
 ):
-    def __new__(cls, key, inputs, outputs, solid_handle_id, kind, metadata_items):
+    def __new__(
+        cls,
+        key,
+        inputs,
+        outputs,
+        solid_handle_id,
+        kind,
+        metadata_items,
+        tags=None,
+        step_handle=None,
+    ):
         return super(ExecutionStepSnap, cls).__new__(
             cls,
             key=check.str_param(key, "key"),
@@ -94,14 +109,16 @@ class ExecutionStepSnap(
             metadata_items=check.list_param(
                 metadata_items, "metadata_items", ExecutionPlanMetadataItemSnap
             ),
+            tags=check.opt_dict_param(tags, "tags", key_type=str),
+            step_handle=check.opt_inst_param(step_handle, "step_handle", StepHandleTypes),
         )
 
 
 @whitelist_for_serdes
 class ExecutionStepInputSnap(
-    namedtuple("_ExecutionStepInputSnap", "name dagster_type_key upstream_output_handles")
+    namedtuple("_ExecutionStepInputSnap", "name dagster_type_key upstream_output_handles source")
 ):
-    def __new__(cls, name, dagster_type_key, upstream_output_handles):
+    def __new__(cls, name, dagster_type_key, upstream_output_handles, source=None):
         return super(ExecutionStepInputSnap, cls).__new__(
             cls,
             check.str_param(name, "name"),
@@ -109,6 +126,7 @@ class ExecutionStepInputSnap(
             check.list_param(
                 upstream_output_handles, "upstream_output_handles", of_type=StepOutputHandle
             ),
+            check.opt_inst_param(source, "source", StepInputSourceTypes),
         )
 
     @property
@@ -117,12 +135,25 @@ class ExecutionStepInputSnap(
 
 
 @whitelist_for_serdes
-class ExecutionStepOutputSnap(namedtuple("_ExecutionStepOutputSnap", "name dagster_type_key")):
-    def __new__(cls, name, dagster_type_key):
+class ExecutionStepOutputSnap(
+    namedtuple(
+        "_ExecutionStepOutputSnap",
+        "name dagster_type_key solid_handle properties",
+    )
+):
+    def __new__(
+        cls,
+        name,
+        dagster_type_key,
+        solid_handle=None,
+        properties=None,
+    ):
         return super(ExecutionStepOutputSnap, cls).__new__(
             cls,
             check.str_param(name, "name"),
             check.str_param(dagster_type_key, "dagster_type_key"),
+            check.opt_inst_param(solid_handle, "solid_handle", SolidHandle),
+            check.opt_inst_param(properties, "properties", StepOutputProperties),
         )
 
 
@@ -148,13 +179,17 @@ def _snapshot_from_step_input(step_input):
         name=step_input.name,
         dagster_type_key=step_input.dagster_type_key,
         upstream_output_handles=upstream_output_handles,
+        source=step_input.source,
     )
 
 
 def _snapshot_from_step_output(step_output):
     check.inst_param(step_output, "step_output", StepOutput)
     return ExecutionStepOutputSnap(
-        name=step_output.name, dagster_type_key=step_output.dagster_type_key
+        name=step_output.name,
+        dagster_type_key=step_output.dagster_type_key,
+        solid_handle=step_output.solid_handle,
+        properties=step_output.properties,
     )
 
 
@@ -184,6 +219,8 @@ def _snapshot_from_execution_step(execution_step):
         )
         if execution_step.tags
         else [],
+        tags=execution_step.tags,
+        step_handle=execution_step.handle,
     )
 
 
