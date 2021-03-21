@@ -23,11 +23,12 @@ from dagster import (
     reexecute_pipeline,
     solid,
 )
+from dagster.check import CheckError
 from dagster.cli.workspace.load import location_origin_from_python_file
 from dagster.core.definitions import Solid
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.definitions.graph import _create_adjacency_lists
-from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.results import SolidExecutionResult
 from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import instance_for_test, step_output_event_filter
@@ -825,8 +826,8 @@ def test_reexecution_fs_storage_with_solid_selection():
     # Case 3: re-execute a pipeline partially when the original pipeline has solid selection and
     #   re-exeucte a step which hasn't been included in the original pipeline
     with pytest.raises(
-        DagsterExecutionStepNotFoundError,
-        match="Can not build subset plan from unknown step: add_one",
+        CheckError,
+        match="test has no solid named add_on",
     ):
         reexecute_pipeline(
             pipeline_def,
