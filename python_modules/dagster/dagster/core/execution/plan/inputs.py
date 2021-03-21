@@ -137,6 +137,7 @@ class StepInputSource(ABC):
         raise NotImplementedError()
 
 
+@whitelist_for_serdes
 class FromRootInputManager(
     NamedTuple(
         "_FromRootInputManager",
@@ -181,6 +182,7 @@ class FromRootInputManager(
         return {input_def.root_manager_key}
 
 
+@whitelist_for_serdes
 class FromStepOutput(
     NamedTuple(
         "_FromStepOutput",
@@ -319,6 +321,7 @@ class FromStepOutput(
         return []
 
 
+@whitelist_for_serdes
 class FromConfig(
     NamedTuple("_FromConfig", [("solid_handle", SolidHandle), ("input_name", str)]),
     StepInputSource,
@@ -369,6 +372,7 @@ class FromConfig(
         return dagster_type.loader.compute_loaded_input_version(config_data)
 
 
+@whitelist_for_serdes
 class FromDefaultValue(
     NamedTuple(
         "_FromDefaultValue",
@@ -398,6 +402,7 @@ class FromDefaultValue(
         return join_and_hash(repr(self._load_value(pipeline_def)))
 
 
+@whitelist_for_serdes
 class FromMultipleSources(
     NamedTuple(
         "_FromMultipleSources",
@@ -512,6 +517,7 @@ def _load_input_with_input_manager(input_manager: "InputManager", context: "Inpu
     return value
 
 
+@whitelist_for_serdes
 class FromPendingDynamicStepOutput(
     NamedTuple(
         "_FromPendingDynamicStepOutput",
@@ -577,6 +583,7 @@ class FromPendingDynamicStepOutput(
         return pipeline_def.get_solid(self.solid_handle).input_def_named(self.input_name)
 
 
+@whitelist_for_serdes
 class FromUnresolvedStepOutput(
     NamedTuple(
         "_FromUnresolvedStepOutput",
@@ -636,6 +643,7 @@ class FromUnresolvedStepOutput(
         return pipeline_def.get_solid(self.solid_handle).input_def_named(self.input_name)
 
 
+@whitelist_for_serdes
 class FromDynamicCollect(
     NamedTuple(
         "_FromDynamicCollect",
@@ -725,3 +733,11 @@ class UnresolvedCollectStepInput(NamedTuple):
         """Return StepOutputHandles with placeholders, unresolved step keys and None mapping keys"""
 
         return [self.source.get_step_output_handle_dep_with_placeholder()]
+
+
+StepInputSourceTypes = (
+    StepInputSource,
+    FromDynamicCollect,
+    FromUnresolvedStepOutput,
+    FromPendingDynamicStepOutput,
+)
