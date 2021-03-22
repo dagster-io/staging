@@ -9,7 +9,7 @@
 
 **Bugfixes**
 
-- Fixed `dagster new-project`, which broke on the 0.11.0 release
+- Fixed `dagster new-project`, which broke on the 0.11.0 release (Thank you @saulius!)
 - Previously, fonts were not served correctly in Dagit when using the `--path-prefix option`. Custom fonts and their CSS have now been removed, and system fonts are now used for both normal and monospace text.
 - In Dagit, table borders are now visible in Safari.
 - Stopping and starting a sensor was preventing future sensor evaluations due to a timezone issue when calculating the minimum interval from the last tick timestamp. This is now fixed.
@@ -17,6 +17,7 @@
 - Asset catalog entries were returning an error if they had not been recently materialized since (since 0.11.0). Our asset queries are now backwards compatible to read from old materializations.
 - Backfills can now successfully be created with step selections even for partitions that did not have an existing run.
 - Backfill progress were sometimes showing negative counts for the “Skipped” category, when backfill runs were manually re-executed. This has now been amended to adjust the total run counts to include manually re-executed runs.
+- Docs fixes (Thanks @michaellynton and @zuik!)
 
 ## 0.11.0
 
