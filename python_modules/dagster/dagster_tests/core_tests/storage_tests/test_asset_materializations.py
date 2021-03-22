@@ -24,11 +24,21 @@ def n_asset_keys(path, n):
     return AssetLineageInfo(AssetKey(path), set([str(i) for i in range(n)]))
 
 
-def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
+def check_materialization(
+    materialization, asset_key, parent_assets=None, metadata_entries=None, ignore_asset_path=True
+):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
-    assert event_data.asset_lineage == (parent_assets or [])
+    if ignore_asset_path:
+        assert len(event_data.asset_lineage) == len(parent_assets or [])
+        for i in range(len(event_data.asset_lineage)):
+            event_asset = event_data.asset_lineage[i]
+            expected_asset = parent_assets[i]
+            assert event_asset.asset_key == expected_asset.asset_key
+            assert event_asset.partitions == expected_asset.partitions
+    else:
+        assert event_data.asset_lineage == (parent_assets or [])
 
 
 def test_output_definition_single_partition_materialization():

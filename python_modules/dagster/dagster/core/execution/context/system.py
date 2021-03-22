@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod, abstractproperty
 from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
-from dagster import check
+from dagster import OutputDefinition, check
 from dagster.core.definitions.hook import HookDefinition
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
@@ -18,8 +18,14 @@ from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvalidPropertyError, DagsterInvariantViolationError
+from dagster.core.events import AssetLineageInfo
+from dagster.core.execution.plan.inputs import StepInput
 from dagster.core.execution.plan.outputs import StepOutputHandle
-from dagster.core.execution.plan.step import ExecutionStep
+from dagster.core.execution.plan.step import (
+    ExecutionStep,
+    UnresolvedCollectExecutionStep,
+    UnresolvedMappedExecutionStep,
+)
 from dagster.core.execution.plan.utils import build_resources_for_manager
 from dagster.core.execution.retries import RetryMode
 from dagster.core.executor.base import Executor
@@ -272,13 +278,140 @@ class HostModeStepExecutionContext(HostModeExecutionContext, BaseStepExecutionCo
         return self._step
 
 
+class AssetNodeHandle(namedtuple("_AssetNodeHandle", "step_key name")):
+    pass
+
+
+class AssetOutputHandle(AssetNodeHandle):
+    pass
+
+
+class AssetInputHandle(AssetNodeHandle):
+    pass
+
+
+class AssetDependencyGraph:
+    def __init__(
+        self,
+        execution_plan: "ExecutionPlan",
+        resources: ScopedResourcesBuilder,
+        environment_config: EnvironmentConfig,
+    ):
+        self.execution_plan = execution_plan
+        self.resources = resources.resource_instance_dict
+        self.environment_config = environment_config
+        self._lineage_in: Dict[AssetNodeHandle, List[AssetLineageInfo]] = defaultdict(list)
+        self._lineage_produced: Dict[AssetNodeHandle, Optional[AssetLineageInfo]] = {}
+        self._build()
+
+    def _build(self):
+        # get steps in topo order so that you know for any input, upstream outputs have already been processed
+        for step in self.execution_plan.get_all_steps_in_topo_order():
+            if isinstance(step, ExecutionStep):
+                solid = self.execution_plan.pipeline_def.get_solid(step.solid_handle)
+                for step_input in step.step_inputs:
+                    self._add_step_input(step, step_input)
+                for step_output in step.step_outputs:
+                    output_def = solid.output_def_named(step_output.name)
+                    self._add_step_output(step, output_def)
+            # TODO: Figure out what to do w/ dynamic portions of the graph
+            elif isinstance(step, (UnresolvedMappedExecutionStep, UnresolvedCollectExecutionStep)):
+                pass
+            else:
+                # error
+                pass
+
+    def _get_asset_lineage_from_fns(
+        self, context, asset_key_fn, asset_partitions_fn
+    ) -> Optional[AssetLineageInfo]:
+        asset_key = asset_key_fn(context)
+        if not asset_key:
+            return None
+        return AssetLineageInfo(
+            asset_key=asset_key,
+            partitions=asset_partitions_fn(context),
+        )
+
+    def _add_step_input(self, step: ExecutionStep, step_input: StepInput):
+        upstream_output_handles = step_input.source.step_output_handle_dependencies
+        parent_handles = [
+            AssetOutputHandle(output_handle.step_key, output_handle.output_name)
+            for output_handle in upstream_output_handles
+        ]
+        node_handle = AssetInputHandle(step.key, step_input.name)
+        input_def = step_input.source.get_input_def(self.execution_plan.pipeline_def)
+        # initial draft, don't handle io_manager overrides yet, ignore context
+        produced_lineage = self._get_asset_lineage_from_fns(
+            None, input_def.get_asset_key, input_def.get_asset_partitions
+        )
+        self._add_node(node_handle, parent_handles, produced_lineage)
+
+    def _add_step_output(self, step: ExecutionStep, output_def: OutputDefinition):
+        # initial draft, still assume all inputs are parent nodes
+        parent_handles = [
+            AssetInputHandle(step.key, step_input.name) for step_input in step.step_inputs
+        ]
+        node_handle = AssetOutputHandle(step.key, output_def.name)
+
+        io_manager = self.resources[output_def.io_manager_key]
+        # horrible hack that will be unnecessary once we switch to a different context object
+        context = get_output_context(
+            self.execution_plan,
+            self.environment_config,
+            StepOutputHandle(step.key, output_def.name),
+        )
+        io_lineage_info = self._get_asset_lineage_from_fns(
+            context,
+            io_manager.get_output_asset_key,
+            io_manager.get_output_asset_partitions,
+        )
+        output_lineage_info = self._get_asset_lineage_from_fns(
+            context, output_def.get_asset_key, output_def.get_asset_partitions
+        )
+        # TODO: assert at most 1
+        produced_lineage = io_lineage_info or output_lineage_info
+        self._add_node(node_handle, parent_handles, produced_lineage)
+
+    def _add_node(
+        self,
+        node_handle: AssetNodeHandle,
+        parent_handles: Sequence[AssetNodeHandle],
+        produced_lineage: Optional[AssetLineageInfo],
+    ):
+        for handle in parent_handles:
+            self._lineage_in[node_handle] += [
+                lineage_info._replace(path=lineage_info.path + [handle])
+                for lineage_info in self._propogated_lineage(handle)
+            ]
+        self._lineage_produced[node_handle] = produced_lineage
+
+    def _propogated_lineage(self, node_handle):
+        produced_lineage = self.produced_lineage(node_handle)
+        # if a node produces or directly reads an asset, use that as the propogated information
+        if produced_lineage:
+            return [produced_lineage]
+        return self._lineage_in[node_handle]
+
+    def produced_lineage(self, node_handle):
+        """
+        Return the asset that will be directly read/created while processing this node (if any)
+        """
+        return self._lineage_produced[node_handle]
+
+    def lineage(self, node_handle):
+        """
+        Return the set of lineage information for this node
+        """
+        return self._lineage_in[node_handle]
+
+
 class SystemExecutionContextData(
     namedtuple(
         "_SystemExecutionContextData",
         (
             "pipeline_run scoped_resources_builder environment_config pipeline "
             "mode_def intermediate_storage_def instance intermediate_storage "
-            "raise_on_error retry_mode execution_plan"
+            "raise_on_error retry_mode execution_plan asset_dependency_graph"
         ),
     )
 ):
@@ -306,6 +439,12 @@ class SystemExecutionContextData(
         from dagster.core.instance import DagsterInstance
         from dagster.core.execution.plan.plan import ExecutionPlan
 
+        asset_dependency_graph = AssetDependencyGraph(
+            execution_plan,
+            scoped_resources_builder,
+            environment_config,
+        )
+
         return super(SystemExecutionContextData, cls).__new__(
             cls,
             pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
@@ -327,6 +466,7 @@ class SystemExecutionContextData(
             raise_on_error=check.bool_param(raise_on_error, "raise_on_error"),
             retry_mode=check.inst_param(retry_mode, "retry_mode", RetryMode),
             execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
+            asset_dependency_graph=asset_dependency_graph,
         )
 
     @property
@@ -343,7 +483,12 @@ class SystemExecutionContextData(
 
 
 class SystemExecutionContext:
-    __slots__ = ["_execution_context_data", "_log_manager", "_output_capture"]
+    __slots__ = [
+        "_execution_context_data",
+        "_log_manager",
+        "_output_capture",
+        "_asset_dependency_graph",
+    ]
 
     def __init__(
         self,
@@ -428,6 +573,10 @@ class SystemExecutionContext:
     @property
     def output_capture(self) -> Optional[Dict[StepOutputHandle, Any]]:
         return self._output_capture
+
+    @property
+    def asset_dependency_graph(self) -> AssetDependencyGraph:
+        return self._execution_context_data.asset_dependency_graph
 
     def has_tag(self, key: str) -> bool:
         check.str_param(key, "key")
