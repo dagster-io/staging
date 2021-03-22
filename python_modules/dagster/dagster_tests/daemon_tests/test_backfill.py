@@ -368,6 +368,11 @@ def test_partial_backfill(external_repo_context):
         assert step_succeeded(instance, three, "step_two")
         assert step_succeeded(instance, three, "step_three")
 
+        # delete one of the runs, the partial reexecution should still succeed because the steps
+        # can be executed independently, require no input/output config
+        instance.delete_run(one.run_id)
+        assert instance.get_runs_count() == 2
+
         # create partial runs
         instance.add_backfill(
             PartitionBackfill(
@@ -388,13 +393,13 @@ def test_partial_backfill(external_repo_context):
         )
         wait_for_all_runs_to_start(instance)
 
-        assert instance.get_runs_count() == 6
+        assert instance.get_runs_count() == 5
         partial_filter = PipelineRunsFilter(tags={BACKFILL_ID_TAG: "partial"})
         assert instance.get_runs_count(filters=partial_filter) == 3
         runs = instance.get_runs(filters=partial_filter)
         three, two, one = runs
 
-        assert one.status == PipelineRunStatus.SUCCESS
+        assert two.status == PipelineRunStatus.SUCCESS
         assert step_succeeded(instance, one, "step_one")
         assert step_did_not_run(instance, one, "step_two")
         assert step_did_not_run(instance, one, "step_three")
