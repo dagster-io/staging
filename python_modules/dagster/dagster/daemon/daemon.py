@@ -110,6 +110,8 @@ class DagsterDaemon(AbstractContextManager):
             finally:
                 self._check_add_heartbeat(instance, daemon_uuid)
 
+        daemon_generator.close()
+
     def _check_add_heartbeat(self, instance, daemon_uuid):
         # Always log a heartbeat after the first time an iteration returns an error to make sure we
         # don't incorrectly say the daemon is healthy
