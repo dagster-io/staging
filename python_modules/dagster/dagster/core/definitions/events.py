@@ -137,11 +137,14 @@ class AssetKey(namedtuple("_AssetKey", "path")):
 
 
 @whitelist_for_serdes
-class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions")):
-    def __new__(cls, asset_key, partitions=None):
+class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions path")):
+    def __new__(cls, asset_key, partitions=None, path=None):
         asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
         partitions = check.opt_set_param(partitions, "partitions", str)
-        return super(AssetLineageInfo, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
+        path = path or []  # TODO: check opt list param once I move asset stuff out to its own file
+        return super(AssetLineageInfo, cls).__new__(
+            cls, asset_key=asset_key, partitions=partitions, path=path
+        )
 
 
 @whitelist_for_serdes
