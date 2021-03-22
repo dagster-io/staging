@@ -31,6 +31,7 @@ from dagster.core.errors import (
 )
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import (
+    AssetOutputHandle,
     OutputContext,
     SystemStepExecutionContext,
     TypeCheckContext,
@@ -276,7 +277,6 @@ def core_dagster_event_sequence_for_step(
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
-    input_lineage = []
 
     for step_input in step_context.step.step_inputs:
         input_def = step_input.source.get_input_def(step_context.pipeline_def)
@@ -284,8 +284,6 @@ def core_dagster_event_sequence_for_step(
 
         if dagster_type.kind == DagsterTypeKind.NOTHING:
             continue
-
-        input_lineage.extend(step_input.source.get_asset_lineage(step_context))
 
         for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
             if isinstance(event_or_input_value, DagsterEvent):
@@ -300,7 +298,6 @@ def core_dagster_event_sequence_for_step(
         ):
             yield evt
 
-    input_lineage = _dedup_asset_lineage(input_lineage)
     with time_execution_scope() as timer_result:
         user_event_sequence = check.generator(
             _user_event_sequence_for_step_compute_fn(step_context, inputs)
@@ -313,12 +310,12 @@ def core_dagster_event_sequence_for_step(
         ):
 
             if isinstance(user_event, (Output, DynamicOutput)):
-                for evt in _type_check_and_store_output(step_context, user_event, input_lineage):
+                for evt in _type_check_and_store_output(step_context, user_event):
                     yield evt
             # for now, I'm ignoring AssetMaterializations yielded manually, but we might want
             # to do something with these in the above path eventually
             elif isinstance(user_event, (AssetMaterialization, Materialization)):
-                yield DagsterEvent.asset_materialization(step_context, user_event, input_lineage)
+                yield DagsterEvent.asset_materialization(step_context, user_event, [])
             elif isinstance(user_event, ExpectationResult):
                 yield DagsterEvent.step_expectation_result(step_context, user_event)
             else:
@@ -334,14 +331,11 @@ def core_dagster_event_sequence_for_step(
 
 
 def _type_check_and_store_output(
-    step_context: SystemStepExecutionContext,
-    output: Union[DynamicOutput, Output],
-    input_lineage: List[AssetLineageInfo],
+    step_context: SystemStepExecutionContext, output: Union[DynamicOutput, Output]
 ) -> Iterator[DagsterEvent]:
 
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
     check.inst_param(output, "output", (Output, DynamicOutput))
-    check.list_param(input_lineage, "input_lineage", AssetLineageInfo)
 
     mapping_key = output.mapping_key if isinstance(output, DynamicOutput) else None
 
@@ -363,7 +357,7 @@ def _type_check_and_store_output(
     for output_event in _type_check_output(step_context, step_output_handle, output, version):
         yield output_event
 
-    for evt in _store_output(step_context, step_output_handle, output, input_lineage):
+    for evt in _store_output(step_context, step_output_handle, output):
         yield evt
 
     for evt in _create_type_materializations(step_context, output.output_name, output.value):
@@ -461,7 +455,6 @@ def _store_output(
     step_context: SystemStepExecutionContext,
     step_output_handle: StepOutputHandle,
     output: Union[Output, DynamicOutput],
-    input_lineage: List[AssetLineageInfo],
 ) -> Iterator[DagsterEvent]:
 
     output_def = step_context.solid_def.output_def_named(step_output_handle.output_name)
@@ -500,15 +493,15 @@ def _store_output(
 
     # do not alter explicitly created AssetMaterializations
     for materialization in manager_materializations:
-        yield DagsterEvent.asset_materialization(step_context, materialization, input_lineage)
+        yield DagsterEvent.asset_materialization(step_context, materialization, [])
 
-    asset_key, partitions = _asset_key_and_partitions_for_output(
-        output_context, output_def, output_manager
-    )
-    if asset_key:
+    asset_node_handle = AssetOutputHandle(step_context.step.key, step_output_handle.output_name)
+    produced_lineage = step_context.asset_dependency_graph.produced_lineage(asset_node_handle)
+    if produced_lineage:
+        input_lineage = step_context.asset_dependency_graph.lineage(asset_node_handle)
         for materialization in _get_output_asset_materializations(
-            asset_key,
-            partitions,
+            produced_lineage.asset_key,
+            produced_lineage.partitions,
             output,
             output_def,
             manager_metadata_entries,

@@ -16,6 +16,7 @@ from dagster.core.definitions.events import (
     PartitionMetadataEntry,
 )
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.execution.context.system import AssetInputHandle, AssetOutputHandle
 from dagster.core.storage.io_manager import IOManager
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
@@ -24,11 +25,21 @@ def n_asset_keys(path, n):
     return AssetLineageInfo(AssetKey(path), set([str(i) for i in range(n)]))
 
 
-def check_materialization(materialization, asset_key, parent_assets=None, metadata_entries=None):
+def check_materialization(
+    materialization, asset_key, parent_assets=None, metadata_entries=None, ignore_asset_path=True
+):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
-    assert event_data.asset_lineage == (parent_assets or [])
+    if ignore_asset_path:
+        assert len(event_data.asset_lineage) == len(parent_assets or [])
+        for i in range(len(event_data.asset_lineage)):
+            event_asset = event_data.asset_lineage[i]
+            expected_asset = parent_assets[i]
+            assert event_asset.asset_key == expected_asset.asset_key
+            assert event_asset.partitions == expected_asset.partitions
+    else:
+        assert event_data.asset_lineage == (parent_assets or [])
 
 
 def test_io_manager_diamond_lineage():
@@ -90,6 +101,67 @@ def test_io_manager_diamond_lineage():
             AssetLineageInfo(AssetKey(["a_transform", "outputT"])),
             AssetLineageInfo(AssetKey(["b_transform", "outputT"])),
         ],
+    )
+
+
+def test_io_manager_transitive_lineage():
+    class MyIOManager(IOManager):
+        def handle_output(self, context, obj):
+            # store asset
+            return
+
+        def load_input(self, context):
+            return None
+
+        def get_output_asset_key(self, context):
+            return AssetKey([context.step_key, context.name])
+
+    @io_manager
+    def my_io_manager(_):
+        return MyIOManager()
+
+    @solid(output_defs=[OutputDefinition(io_manager_key="asset_io_manager")])
+    def solid_produce(_):
+        return 1
+
+    @solid
+    def passthrough_solid(_, inp):
+        return inp
+
+    @solid(output_defs=[OutputDefinition(io_manager_key="asset_io_manager")])
+    def solid_transform(_, inp):
+        return inp
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"asset_io_manager": my_io_manager})])
+    def my_pipeline():
+        x = solid_produce()
+        for i in range(10):
+            x = passthrough_solid.alias(f"passthrough_{i}")(x)
+        solid_transform(x)
+
+    result = execute_pipeline(my_pipeline)
+    events = result.step_event_list
+    materializations = [
+        event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
+    ]
+
+    expected_path = [AssetOutputHandle("solid_produce", "result")]
+    for i in range(10):
+        expected_path.extend(
+            [
+                AssetInputHandle(f"passthrough_{i}", "inp"),
+                AssetOutputHandle(f"passthrough_{i}", "result"),
+            ]
+        )
+    expected_path.append(AssetInputHandle("solid_transform", "inp"))
+    assert len(materializations) == 2
+
+    check_materialization(materializations[0], AssetKey(["solid_produce", "result"]))
+    check_materialization(
+        materializations[1],
+        AssetKey(["solid_transform", "result"]),
+        parent_assets=[AssetLineageInfo(AssetKey(["solid_produce", "result"]), path=expected_path)],
+        ignore_asset_path=False,
     )
 
 
