@@ -32,6 +32,13 @@ export const RunTag = ({tag, onClick}: IRunTagProps) => {
     ? {key: tag.key.substr(DagsterTag.Namespace.length), value: tag.value}
     : tag;
 
+  const onTagClick = (_: any) => {
+    if (!onClick) {
+      return;
+    }
+    onClick(tag);
+  };
+
   if (isDagsterTag) {
     return (
       <Tooltip
@@ -40,10 +47,10 @@ export const RunTag = ({tag, onClick}: IRunTagProps) => {
         targetTagName="div"
         position={Position.LEFT}
       >
-        <Tag isDagsterTag={isDagsterTag} onClick={onClick} tag={displayTag} />
+        <Tag isDagsterTag={isDagsterTag} onClick={onTagClick} tag={displayTag} />
       </Tooltip>
     );
   }
 
-  return <Tag isDagsterTag={isDagsterTag} onClick={onClick} tag={displayTag} />;
+  return <Tag isDagsterTag={isDagsterTag} onClick={onTagClick} tag={displayTag} />;
 };
