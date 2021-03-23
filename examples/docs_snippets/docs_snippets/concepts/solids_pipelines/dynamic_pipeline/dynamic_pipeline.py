@@ -1,7 +1,7 @@
 # pylint: disable=unused-argument, no-value-for-parameter
-
 # start_marker
 import os
+import time
 from typing import List
 
 from dagster import Field, pipeline, solid
@@ -16,6 +16,7 @@ from dagster.utils import file_relative_path
 def files_in_directory(context):
     path = context.solid_config["path"]
     dirname, _, filenames = next(os.walk(path))
+
     for file in filenames:
         yield DynamicOutput(
             value=os.path.join(dirname, file),
@@ -27,12 +28,14 @@ def files_in_directory(context):
 @solid
 def process_file(_, path: str) -> int:
     # simple example of calculating size
+    time.sleep(1.2)
     return os.path.getsize(path)
 
 
 @solid
 def summarize_directory(_, sizes: List[int]) -> int:
     # simple example of totalling sizes
+    time.sleep(1)
     return sum(sizes)
 
 
