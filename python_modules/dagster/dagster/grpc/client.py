@@ -279,16 +279,18 @@ class DagsterGrpcClient:
             SensorExecutionArgs,
         )
 
-        res = self._query(
-            "ExternalSensorExecution",
-            api_pb2.ExternalSensorExecutionRequest,
-            serialized_external_sensor_execution_args=serialize_dagster_namedtuple(
-                sensor_execution_args
-            ),
+        chunks = list(
+            self._streaming_query(
+                "ExternalSensorExecution",
+                api_pb2.ExternalSensorExecutionRequest,
+                serialized_external_sensor_execution_args=serialize_dagster_namedtuple(
+                    sensor_execution_args
+                ),
+            )
         )
 
         return deserialize_json_to_dagster_namedtuple(
-            res.serialized_external_sensor_execution_data_or_external_sensor_execution_error
+            "".join([chunk.serialized_chunk for chunk in chunks])
         )
 
     def shutdown_server(self, timeout=15):

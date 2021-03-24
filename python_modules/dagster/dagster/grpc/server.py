@@ -78,7 +78,7 @@ EVENT_QUEUE_POLL_INTERVAL = 0.1
 
 CLEANUP_TICK = 0.5
 
-STREAMING_EXTERNAL_REPOSITORY_CHUNK_SIZE = 4000000
+STREAMING_CHUNK_SIZE = 4000000
 
 
 class CouldNotBindGrpcServerToAddress(Exception):
@@ -479,16 +479,13 @@ class DagsterApiServer(DagsterApiServicer):
         serialized_external_repository_data = self._get_serialized_external_repository_data(request)
 
         num_chunks = int(
-            math.ceil(
-                float(len(serialized_external_repository_data))
-                / STREAMING_EXTERNAL_REPOSITORY_CHUNK_SIZE
-            )
+            math.ceil(float(len(serialized_external_repository_data)) / STREAMING_CHUNK_SIZE)
         )
 
         for i in range(num_chunks):
-            start_index = i * STREAMING_EXTERNAL_REPOSITORY_CHUNK_SIZE
+            start_index = i * STREAMING_CHUNK_SIZE
             end_index = min(
-                (i + 1) * STREAMING_EXTERNAL_REPOSITORY_CHUNK_SIZE,
+                (i + 1) * STREAMING_CHUNK_SIZE,
                 len(serialized_external_repository_data),
             )
 
@@ -532,18 +529,28 @@ class DagsterApiServer(DagsterApiServicer):
         check.inst_param(args, "args", SensorExecutionArgs)
 
         recon_repo = self._recon_repository_from_origin(args.repository_origin)
-
-        return api_pb2.ExternalSensorExecutionReply(
-            serialized_external_sensor_execution_data_or_external_sensor_execution_error=serialize_dagster_namedtuple(
-                get_external_sensor_execution(
-                    recon_repo,
-                    args.instance_ref,
-                    args.sensor_name,
-                    args.last_completion_time,
-                    args.last_run_key,
-                )
+        serialized_sensor_data = serialize_dagster_namedtuple(
+            get_external_sensor_execution(
+                recon_repo,
+                args.instance_ref,
+                args.sensor_name,
+                args.last_completion_time,
+                args.last_run_key,
             )
         )
+
+        num_chunks = int(math.ceil(float(len(serialized_sensor_data)) / STREAMING_CHUNK_SIZE))
+        for i in range(num_chunks):
+            start_index = i * STREAMING_CHUNK_SIZE
+            end_index = min(
+                (i + 1) * STREAMING_CHUNK_SIZE,
+                len(serialized_sensor_data),
+            )
+
+            yield api_pb2.StreamingChunkEvent(
+                sequence_number=i,
+                serialized_chunk=serialized_sensor_data[start_index:end_index],
+            )
 
     def ShutdownServer(self, request, _context):
         try:
