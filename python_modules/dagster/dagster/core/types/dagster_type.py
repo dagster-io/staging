@@ -784,7 +784,6 @@ class TypeHintInferredDagsterType(PythonObjectDagsterType):
         qualified_name = f"{python_type.__module__}.{python_type.__name__}"
         super(TypeHintInferredDagsterType, self).__init__(
             python_type,
-            name=qualified_name,
             key=f"_TypeHintInferred[{qualified_name}]",
             description=f"DagsterType created from a type hint for the Python type {qualified_name}",
         )
