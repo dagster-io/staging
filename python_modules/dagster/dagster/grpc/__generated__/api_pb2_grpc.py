@@ -92,10 +92,10 @@ class DagsterApiStub(object):
             request_serializer=api__pb2.ExternalScheduleExecutionRequest.SerializeToString,
             response_deserializer=api__pb2.ExternalScheduleExecutionReply.FromString,
         )
-        self.ExternalSensorExecution = channel.unary_unary(
+        self.ExternalSensorExecution = channel.unary_stream(
             "/api.DagsterApi/ExternalSensorExecution",
             request_serializer=api__pb2.ExternalSensorExecutionRequest.SerializeToString,
-            response_deserializer=api__pb2.ExternalSensorExecutionReply.FromString,
+            response_deserializer=api__pb2.StreamingChunkEvent.FromString,
         )
         self.ShutdownServer = channel.unary_unary(
             "/api.DagsterApi/ShutdownServer",
@@ -320,10 +320,10 @@ def add_DagsterApiServicer_to_server(servicer, server):
             request_deserializer=api__pb2.ExternalScheduleExecutionRequest.FromString,
             response_serializer=api__pb2.ExternalScheduleExecutionReply.SerializeToString,
         ),
-        "ExternalSensorExecution": grpc.unary_unary_rpc_method_handler(
+        "ExternalSensorExecution": grpc.unary_stream_rpc_method_handler(
             servicer.ExternalSensorExecution,
             request_deserializer=api__pb2.ExternalSensorExecutionRequest.FromString,
-            response_serializer=api__pb2.ExternalSensorExecutionReply.SerializeToString,
+            response_serializer=api__pb2.StreamingChunkEvent.SerializeToString,
         ),
         "ShutdownServer": grpc.unary_unary_rpc_method_handler(
             servicer.ShutdownServer,
@@ -778,12 +778,12 @@ class DagsterApi(object):
         timeout=None,
         metadata=None,
     ):
-        return grpc.experimental.unary_unary(
+        return grpc.experimental.unary_stream(
             request,
             target,
             "/api.DagsterApi/ExternalSensorExecution",
             api__pb2.ExternalSensorExecutionRequest.SerializeToString,
-            api__pb2.ExternalSensorExecutionReply.FromString,
+            api__pb2.StreamingChunkEvent.FromString,
             options,
             channel_credentials,
             insecure,
