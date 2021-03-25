@@ -70,14 +70,11 @@ def create_test_pipeline_execution_context(logger_defs=None):
     execution_plan = create_execution_plan(pipeline=pipeline_def, run_config=run_config)
     creation_data = create_context_creation_data(execution_plan, run_config, pipeline_run, instance)
     log_manager = create_log_manager(creation_data)
-    scoped_resources_builder = ScopedResourcesBuilder()
     executor = create_executor(creation_data)
 
     return SystemPipelineExecutionContext(
         construct_execution_context_data(
             context_creation_data=creation_data,
-            scoped_resources_builder=scoped_resources_builder,
-            intermediate_storage=build_in_mem_intermediates_storage(pipeline_run.run_id),
             log_manager=log_manager,
             retry_mode=executor.retries,
             raise_on_error=True,

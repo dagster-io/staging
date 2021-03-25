@@ -31,6 +31,6 @@ def validate_reexecution_memoization(pipeline_context, execution_plan):
         "Cannot perform reexecution with in-memory io managers.\n"
         "You may have configured non persistent intermediate storage `{}` for reexecution. "
         "Intermediate Storage is deprecated in 0.10.0 and will be removed in a future release.".format(
-            pipeline_context.intermediate_storage.__class__.__name__
+            pipeline_context.intermediate_storage_def.name
         )
     )

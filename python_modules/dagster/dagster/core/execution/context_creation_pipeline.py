@@ -21,6 +21,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.init import InitIntermediateStorageContext
 from dagster.core.storage.intermediate_storage import IntermediateStorage
+from dagster.core.storage.mem_io_manager import InMemoryIOManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.type_storage import construct_type_storage_plugin_registry
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -30,9 +31,9 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 
 from .context.logger import InitLoggerContext
 from .context.system import (
-    SystemExecutionContext,
     SystemExecutionContextData,
     SystemPipelineExecutionContext,
+    SystemPlanExecutionContext,
 )
 
 
@@ -147,6 +148,8 @@ def execution_context_event_generator(
     raise_on_error=False,
     resource_instances_to_override=None,
     output_capture=None,
+    resource_retriever=None,
+    in_execution_iterator=False,
 ):
     scoped_resources_builder_cm = check.opt_callable_param(
         scoped_resources_builder_cm,
@@ -168,6 +171,7 @@ def execution_context_event_generator(
     resource_instances_to_override = check.opt_dict_param(
         resource_instances_to_override, "resource_instances_to_override"
     )
+    in_execution_iterator = check.bool_param(in_execution_iterator, "in_execution_iterator")
 
     execution_context = None
     resources_manager = None
@@ -181,44 +185,61 @@ def execution_context_event_generator(
         )
 
         log_manager = create_log_manager(context_creation_data)
-        resource_defs = execution_plan.pipeline_def.get_mode_definition(
-            context_creation_data.environment_config.mode
-        ).resource_defs
-        resources_manager = scoped_resources_builder_cm(
-            resource_defs=resource_defs,
-            resource_configs=context_creation_data.environment_config.resources,
-            log_manager=log_manager,
-            execution_plan=execution_plan,
-            pipeline_run=context_creation_data.pipeline_run,
-            resource_keys_to_init=context_creation_data.resource_keys_to_init,
-            instance=instance,
-            resource_instances_to_override=resource_instances_to_override,
-            emit_persistent_events=True,
-        )
-        yield from resources_manager.generate_setup_events()
-        scoped_resources_builder = check.inst(
-            resources_manager.get_object(), ScopedResourcesBuilder
-        )
 
-        intermediate_storage = create_intermediate_storage(
-            context_creation_data,
-            intermediate_storage,
-            scoped_resources_builder,
-        )
+        if in_execution_iterator:
+            resource_defs = execution_plan.pipeline_def.get_mode_definition(
+                context_creation_data.environment_config.mode
+            ).resource_defs
+            resources_manager = scoped_resources_builder_cm(
+                resource_defs=resource_defs,
+                resource_configs=context_creation_data.environment_config.resources,
+                log_manager=log_manager,
+                execution_plan=execution_plan,
+                pipeline_run=context_creation_data.pipeline_run,
+                resource_keys_to_init=context_creation_data.resource_keys_to_init,
+                instance=instance,
+                resource_instances_to_override=resource_instances_to_override,
+                emit_persistent_events=True,
+            )
+            yield from resources_manager.generate_setup_events()
+            scoped_resources_builder = check.inst(
+                resources_manager.get_object(), ScopedResourcesBuilder
+            )
 
-        execution_context = construct_context_fn(
-            context_creation_data=context_creation_data,
-            scoped_resources_builder=scoped_resources_builder,
-            log_manager=log_manager,
-            intermediate_storage=intermediate_storage,
-            raise_on_error=raise_on_error,
-            output_capture=output_capture,
-        )
+            # For each in memory IO manager, retrieve it so we can pull outputs off of it
+            if resource_retriever is not None:
+                for key, resource in scoped_resources_builder.resource_instance_dict.items():
+                    if isinstance(resource, InMemoryIOManager):
+                        resource_retriever[key] = resource
+
+            intermediate_storage = create_intermediate_storage(
+                context_creation_data,
+                intermediate_storage,
+                scoped_resources_builder,
+            )
+
+            execution_context = construct_context_fn(
+                context_creation_data=context_creation_data,
+                scoped_resources_builder=scoped_resources_builder,
+                log_manager=log_manager,
+                intermediate_storage=intermediate_storage,
+                raise_on_error=raise_on_error,
+                output_capture=output_capture,
+            )
+        else:
+            execution_context = construct_context_fn(
+                context_creation_data=context_creation_data,
+                log_manager=log_manager,
+                raise_on_error=raise_on_error,
+                output_capture=output_capture,
+                resource_retriever=resource_retriever,
+            )
 
         _validate_plan_with_context(execution_context, execution_plan)
 
         yield execution_context
-        yield from resources_manager.generate_teardown_events()
+        if in_execution_iterator:
+            yield from resources_manager.generate_teardown_events()
     except DagsterError as dagster_error:
         if execution_context is None:
             user_facing_exc_info = (
@@ -257,8 +278,8 @@ class PipelineExecutionContextManager(ExecutionContextManager):
         raise_on_error=False,
         resource_instances_to_override=None,
         output_capture=None,
+        resource_retriever=None,
     ):
-
         super(PipelineExecutionContextManager, self).__init__(
             execution_context_event_generator(
                 self.construct_context,
@@ -271,6 +292,8 @@ class PipelineExecutionContextManager(ExecutionContextManager):
                 raise_on_error,
                 resource_instances_to_override,
                 output_capture,
+                resource_retriever=resource_retriever,
+                in_execution_iterator=False,
             )
         )
 
@@ -281,11 +304,10 @@ class PipelineExecutionContextManager(ExecutionContextManager):
     def construct_context(
         self,
         context_creation_data,
-        scoped_resources_builder,
-        intermediate_storage,
         log_manager,
         raise_on_error,
         output_capture,
+        resource_retriever,
     ):
         executor = check.inst(
             create_executor(context_creation_data), Executor, "Must return an Executor"
@@ -294,8 +316,6 @@ class PipelineExecutionContextManager(ExecutionContextManager):
         return SystemPipelineExecutionContext(
             construct_execution_context_data(
                 context_creation_data=context_creation_data,
-                scoped_resources_builder=scoped_resources_builder,
-                intermediate_storage=intermediate_storage,
                 log_manager=log_manager,
                 retry_mode=executor.retries,
                 raise_on_error=raise_on_error,
@@ -303,6 +323,7 @@ class PipelineExecutionContextManager(ExecutionContextManager):
             executor=executor,
             log_manager=log_manager,
             output_capture=output_capture,
+            resource_retriever=resource_retriever,
         )
 
 
@@ -316,6 +337,9 @@ class PlanExecutionContextManager(ExecutionContextManager):
         retry_mode,
         scoped_resources_builder_cm=None,
         raise_on_error=False,
+        resource_instances_to_override=None,
+        output_capture=None,
+        resource_retriever=None,
     ):
         self._retry_mode = check.inst_param(retry_mode, "retry_mode", RetryMode)
         super(PlanExecutionContextManager, self).__init__(
@@ -327,12 +351,16 @@ class PlanExecutionContextManager(ExecutionContextManager):
                 instance,
                 scoped_resources_builder_cm,
                 raise_on_error=raise_on_error,
+                resource_retriever=resource_retriever,
+                output_capture=output_capture,
+                in_execution_iterator=True,
+                resource_instances_to_override=resource_instances_to_override,
             )
         )
 
     @property
     def context_type(self):
-        return SystemExecutionContext
+        return SystemPlanExecutionContext
 
     def construct_context(
         self,
@@ -343,16 +371,16 @@ class PlanExecutionContextManager(ExecutionContextManager):
         raise_on_error,
         output_capture=None,
     ):
-        return SystemExecutionContext(
+        return SystemPlanExecutionContext(
             construct_execution_context_data(
                 context_creation_data=context_creation_data,
-                scoped_resources_builder=scoped_resources_builder,
-                intermediate_storage=intermediate_storage,
                 log_manager=log_manager,
                 retry_mode=self._retry_mode,
                 raise_on_error=raise_on_error,
             ),
             log_manager=log_manager,
+            intermediate_storage=intermediate_storage,
+            scoped_resources_builder=scoped_resources_builder,
             output_capture=output_capture,
         )
 
@@ -418,19 +446,11 @@ def create_executor(context_creation_data):
 
 def construct_execution_context_data(
     context_creation_data,
-    scoped_resources_builder,
-    intermediate_storage,
     log_manager,
     retry_mode,
     raise_on_error,
 ):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
-    scoped_resources_builder = check.inst_param(
-        scoped_resources_builder if scoped_resources_builder else ScopedResourcesBuilder(),
-        "scoped_resources_builder",
-        ScopedResourcesBuilder,
-    )
-    check.inst_param(intermediate_storage, "intermediate_storage", IntermediateStorage)
     check.inst_param(log_manager, "log_manager", DagsterLogManager)
     check.inst_param(retry_mode, "retry_mode", RetryMode)
 
@@ -439,10 +459,8 @@ def construct_execution_context_data(
         mode_def=context_creation_data.mode_def,
         intermediate_storage_def=context_creation_data.intermediate_storage_def,
         pipeline_run=context_creation_data.pipeline_run,
-        scoped_resources_builder=scoped_resources_builder,
         environment_config=context_creation_data.environment_config,
         instance=context_creation_data.instance,
-        intermediate_storage=intermediate_storage,
         raise_on_error=raise_on_error,
         retry_mode=retry_mode,
         execution_plan=context_creation_data.execution_plan,
@@ -456,7 +474,6 @@ def scoped_pipeline_context(
     pipeline_run,
     instance,
     scoped_resources_builder_cm=resource_initialization_manager,
-    intermediate_storage=None,
     raise_on_error=False,
     resource_instances_to_override=None,
 ):
@@ -472,16 +489,15 @@ def scoped_pipeline_context(
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
     check.inst_param(instance, "instance", DagsterInstance)
     check.callable_param(scoped_resources_builder_cm, "scoped_resources_builder_cm")
-    check.opt_inst_param(intermediate_storage, "intermediate_storage", IntermediateStorage)
     check.opt_dict_param(resource_instances_to_override, "resource_instances_to_override")
 
-    initialization_manager = PipelineExecutionContextManager(
+    initialization_manager = PlanExecutionContextManager(
         execution_plan,
         run_config,
         pipeline_run,
         instance,
+        RetryMode.DISABLED,
         scoped_resources_builder_cm=scoped_resources_builder_cm,
-        intermediate_storage=intermediate_storage,
         raise_on_error=raise_on_error,
         resource_instances_to_override=resource_instances_to_override,
     )
@@ -489,7 +505,7 @@ def scoped_pipeline_context(
         pass
 
     try:
-        yield check.inst(initialization_manager.get_context(), SystemPipelineExecutionContext)
+        yield check.inst(initialization_manager.get_context(), SystemPlanExecutionContext)
     finally:
         for _ in initialization_manager.shutdown_context():
             pass
