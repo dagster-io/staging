@@ -126,6 +126,26 @@ class ComputeLogManager(ABC):
             String
         """
 
+    @contextmanager
+    @abstractmethod
+    def read_stdout(self, run_id, key):
+        """Get a file-like object representing the stdout for a given compute step.
+
+        Args:
+            run_id (str): The id of the pipeline run.
+            key (str): The unique descriptor of the execution step (e.g. `solid_invocation.compute`)
+        """
+
+    @contextmanager
+    @abstractmethod
+    def read_stderr(self, run_id, key):
+        """Get a file-like object representing the stderr for a given compute step.
+
+        Args:
+            run_id (str): The id of the pipeline run.
+            key (str): The unique descriptor of the execution step (e.g. `solid_invocation.compute`)
+        """
+
     @abstractmethod
     def read_logs_file(self, run_id, key, io_type, cursor=0, max_bytes=MAX_BYTES_FILE_READ):
         """Get compute log data for a given compute step.

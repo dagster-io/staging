@@ -9,7 +9,7 @@ import weakref
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Dict, Iterable, Union
+from typing import TYPE_CHECKING, Dict, Iterable, Optional, TextIO, Union
 
 import yaml
 from dagster import check
@@ -1555,3 +1555,10 @@ class DagsterInstance:
 
     def update_backfill(self, partition_backfill):
         return self._run_storage.update_backfill(partition_backfill)
+
+    # compute logs
+    def stdout_for_step(self, run_id, step_key) -> Optional[TextIO]:
+        return self.compute_log_manager.read_stdout(run_id, step_key)
+
+    def stderr_for_step(self, run_id, step_key) -> Optional[TextIO]:
+        return self.compute_log_manager.read_stderr(run_id, step_key)
