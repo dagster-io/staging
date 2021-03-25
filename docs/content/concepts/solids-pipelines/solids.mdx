@@ -26,7 +26,7 @@ Solids are the functional unit of work in Dagster. A solid's responsibility is t
 
 ## Overview
 
-Solids are used to organize related computations. Solids can later be assembled into Pipelines [Pipelines](/concepts/solids-pipelines/pipelines). Solids generally perform one specific action and are used for batch computations. For example, you can use a solid to:
+Solids are used to organize related computations. Solids can later be assembled into [Pipelines](/concepts/solids-pipelines/pipelines). Solids generally perform one specific action and are used for batch computations. For example, you can use a solid to:
 
 - Execute a database query and store the result
 - Initiate a Spark job in a remote cluster
@@ -36,17 +36,17 @@ Solids are used to organize related computations. Solids can later be assembled 
 Solids have several important properties:
 
 - **Inputs and Outputs**: Solids have defined [inputs and outputs](#inputs-and-outputs), which can be optionally typed. These types are validated at runtime.
-- **Configurable**: Solids can be configured, using a strongly typed [configuration system](#TODO).
-- **Dependencies**: Solids inputs can depend on the outputs from other solids. A solid will not execute until all of its inputs have been resolved successfully. The dependency structure is defined using a [Pipeline](/concepts/solids-pipelines/pipelines).
-- **Emit an Event Stream**: Solids can emit a stream of structured events, such as These events can be viewed in [Dagit](/concepts/dagit/dagit), Dagster's UI tool.
+- **Configurable**: Solids can be configured, and gradually schematized using our [configuration system](#TODO).
+- **Data Dependencies**: Solids inputs can depend on the outputs from other solids. A solid will not execute until all of its inputs have been resolved successfully. The dependency structure is defined using a [Pipeline](/concepts/solids-pipelines/pipelines).
+- **Emit an Event Stream**: Solids can emit a stream of structured events, such as an <PyObject object="Output>/ or an <PyObject object="AssetMaterialization"/>. These events can be viewed in [Dagit](/concepts/dagit/dagit), Dagster's UI tool.
 
-Solids are meant to be **individually testable** and **reusable**. Dagster provides several APIs that make it easy to create a library of solids that work across test, staging, and production environments that can be re-used across your codebase.
+Solids are meant to be independently executable and testable (see the <PythonObject object="execute_solid"/> API). Dagster provides several APIs that make it easy to create a library of solids that work across test, staging, and production environments that can be re-used across your codebase.
 
 ---
 
 ## Defining a solid
 
-To define a solid, use the <PyObject object="solid" decorator /> decorator. The decorated function is called the `compute_fn` and must have `context` as the first argument. The context provides access to important properties and objects, such as [solid configuration](#TODO) and [resources](#TODO)
+To define a solid, use the <PyObject object="solid" decorator /> decorator. The decorated function must have `context` as the first argument. The context provides access to important properties and objects, such as [solid configuration](#TODO) and [resources](#TODO).
 
 ```python file=/concepts/solids_pipelines/solids.py startafter=start_solid_marker endbefore=end_solid_marker
 @solid
@@ -86,7 +86,7 @@ Inputs are passed as arguments to a solid's `compute_fn`. They are specified usi
 
 A solid only starts to execute once all of its inputs have been resolved. Inputs can be resolved in two ways:
 
-- The upstream output that the input depends on has been successfully emmitted and stored.
+- The upstream output that the input depends on has been successfully emitted and stored.
 - The input was stubbed through config.
 
 ```python file=/concepts/solids_pipelines/solids.py startafter=start_input_definition_marker endbefore=end_input_definition_marker
