@@ -68,7 +68,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "dagsterUserDeployments.serviceAccountName" -}}
-{{ printf "%s-user-deployments" (include "dagster.fullname" .) }}
+{{- if .Values.global }}
+{{- .Values.global.serviceAccountName }}
+{{- else }}
+{{- printf "%s-user-deployments" (include "dagster.fullname" .) }}
+{{- end }}
 {{- end -}}
 
 {{- define "dagsterUserDeployments.postgresql.secretName" -}}
