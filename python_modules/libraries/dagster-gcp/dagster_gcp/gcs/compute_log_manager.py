@@ -108,10 +108,28 @@ class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
         return url
 
     def read_logs_file(self, run_id, key, io_type, cursor=0, max_bytes=MAX_BYTES_FILE_READ):
-        if self._should_download(run_id, key, io_type):
-            self._download_to_local(run_id, key, io_type)
+        self._fetch_local(run_id, key)
         data = self.local_manager.read_logs_file(run_id, key, io_type, cursor, max_bytes)
         return self._from_local_file_data(run_id, key, io_type, data)
+
+    def _fetch_local(self, run_id, key):
+        if self._should_download(run_id, key, ComputeIOType.STDOUT):
+            self._download_to_local(run_id, key, ComputeIOType.STDOUT)
+
+        if self._should_download(run_id, key, ComputeIOType.STDERR):
+            self._download_to_local(run_id, key, ComputeIOType.STDERR)
+
+    @contextmanager
+    def read_stdout(self, run_id, key):
+        self._fetch_local(run_id, key)
+        with self.local_manager.read_stdout(run_id, key) as f:
+            yield f
+
+    @contextmanager
+    def read_stderr(self, run_id, key):
+        self._fetch_local(run_id, key)
+        with self.local_manager.read_stderr(run_id, key) as f:
+            yield f
 
     def on_subscribe(self, subscription):
         self.local_manager.on_subscribe(subscription)

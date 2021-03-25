@@ -98,6 +98,26 @@ class LocalComputeLogManager(ComputeLogManager, ConfigurableClass):
             download_url=download_url,
         )
 
+    @contextmanager
+    def read_stdout(self, run_id, key):
+        path = self.get_local_path(run_id, key, ComputeIOType.STDOUT)
+        if not os.path.exists(path) or not os.path.isfile(path):
+            yield None
+            return
+
+        with open(path, "r") as f:
+            yield f
+
+    @contextmanager
+    def read_stderr(self, run_id, key):
+        path = self.get_local_path(run_id, key, ComputeIOType.STDERR)
+        if not os.path.exists(path) or not os.path.isfile(path):
+            yield None
+            return
+
+        with open(path, "r") as f:
+            yield f
+
     def is_watch_completed(self, run_id, key):
         return os.path.exists(self.complete_artifact_path(run_id, key))
 
