@@ -1,4 +1,5 @@
-import codeTransformer, { Stats } from "../util/codeTransformer";
+import codeTransformer, { SnapshotStats } from "../util/codeTransformer";
+import imageTransformer, { ImageStats } from "../util/imageTransformer";
 import { read, write } from "to-vfile";
 
 import extract from "remark-extract-frontmatter";
@@ -12,13 +13,22 @@ import { parse as yaml } from "yaml";
 (async () => {
   const stream = fg.stream(["../content/**/*.mdx"]);
 
-  let stats: Stats = { totalSnapshots: 0, updatedSnapshots: [] };
-  const setStats = (newStats: Stats) => {
+  let stats: SnapshotStats & ImageStats = {
+    totalSnapshots: 0,
+    updatedSnapshots: [],
+    totalImages: 0,
+    updatedImages: [],
+  };
+  const setSnapshotStats = (newStats: SnapshotStats) => {
     const { totalSnapshots, updatedSnapshots } = newStats;
     stats.totalSnapshots += totalSnapshots;
     stats.updatedSnapshots = stats.updatedSnapshots.concat(updatedSnapshots);
   };
-
+  const setImageStats = (newStats: ImageStats) => {
+    const { totalImages, updatedImages } = newStats;
+    stats.totalImages += totalImages;
+    stats.updatedImages = stats.updatedImages.concat(updatedImages);
+  };
   for await (const path of stream) {
     const file = await read(path);
     const contents = await remark()
@@ -35,7 +45,8 @@ import { parse as yaml } from "yaml";
         },
       })
       .use(mdx)
-      .use(codeTransformer, { setStats })
+      .use(codeTransformer, { setSnapshotStats })
+      .use(imageTransformer, { setImageStats })
       .process(file);
 
     await write({
@@ -50,5 +61,13 @@ import { parse as yaml } from "yaml";
     console.log(`\t${stats.updatedSnapshots.join("\n\t")}`);
   } else {
     console.log(`✨ No snapshots were updated`);
+  }
+
+  console.log(`✅ ${stats.totalImages} images parsed`);
+  if (stats.updatedImages.length) {
+    console.log(`⚡️ ${stats.updatedImages.length} updated:`);
+    console.log(`\t${stats.updatedImages.join("\n\t")}`);
+  } else {
+    console.log(`✨ No images were updated`);
   }
 })();
