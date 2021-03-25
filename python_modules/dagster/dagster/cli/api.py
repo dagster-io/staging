@@ -224,10 +224,10 @@ def execute_step_command(input_json):
 
             buff = []
 
-            # Flag that the step execution is skipped
-            if should_skip_step(execution_plan, instance=instance, run_id=pipeline_run.run_id):
-                click.echo(serialize_dagster_namedtuple(StepExecutionSkipped()))
-                return
+            # # Flag that the step execution is skipped
+            # if should_skip_step(execution_plan, instance=instance, run_id=pipeline_run.run_id):
+            #     click.echo(serialize_dagster_namedtuple(StepExecutionSkipped()))
+            #     return
 
             for event in execute_plan_iterator(
                 execution_plan,
