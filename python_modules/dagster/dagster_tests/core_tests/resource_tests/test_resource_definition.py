@@ -897,7 +897,7 @@ def test_multiprocessing_resource_teardown_failure():
             for event in result.event_list
             if event.is_engine_event and event.event_specific_data.error
         ]
-        assert len(error_events) > 1
+        assert len(error_events) == 1
 
 
 def test_single_step_resource_event_logs():
