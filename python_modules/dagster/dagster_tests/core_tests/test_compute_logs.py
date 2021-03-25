@@ -141,6 +141,28 @@ def test_compute_log_manager():
 @pytest.mark.skipif(
     should_disable_io_stream_redirect(), reason="compute logs disabled for win / py3.6+"
 )
+def test_instance_compute_logs():
+    with instance_for_test() as instance:
+        spew_pipeline = define_pipeline()
+        result = execute_pipeline(spew_pipeline, instance=instance)
+        assert result.success
+
+        with instance.stdout_for_step(result.run_id, "spew") as f:
+            assert f
+            assert normalize_file_content(f.read()) == HELLO_SOLID
+
+        with instance.stderr_for_step(result.run_id, "spew") as f:
+            assert f
+            cleaned_err_output = f.read().replace("\x1b[34m", "").replace("\x1b[0m", "")
+            assert "dagster - DEBUG - spew_pipeline - " in cleaned_err_output
+
+        with instance.stdout_for_step("not_a_run_id", "spew") as f:
+            assert f is None
+
+
+@pytest.mark.skipif(
+    should_disable_io_stream_redirect(), reason="compute logs disabled for win / py3.6+"
+)
 def test_compute_log_manager_subscriptions():
     with instance_for_test() as instance:
         spew_pipeline = define_pipeline()

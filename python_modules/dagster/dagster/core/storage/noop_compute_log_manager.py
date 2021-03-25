@@ -43,5 +43,11 @@ class NoOpComputeLogManager(ComputeLogManager, ConfigurableClass):
             path="{}.{}".format(key, io_type), data=None, cursor=0, size=0, download_url=None
         )
 
+    def read_stdout(self, run_id, key):
+        return None
+
+    def read_stderr(self, run_id, key):
+        return None
+
     def on_subscribe(self, subscription):
         pass
