@@ -11,7 +11,11 @@ from dagster.core.errors import (
     user_code_error_boundary,
 )
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.context.system import SystemExecutionContext, SystemStepExecutionContext
+from dagster.core.execution.context.system import (
+    SystemPipelineExecutionContext,
+    SystemPlanExecutionContext,
+    SystemStepExecutionContext,
+)
 from dagster.core.execution.plan.execute_step import core_dagster_event_sequence_for_step
 from dagster.core.execution.plan.objects import (
     ErrorSource,
@@ -26,9 +30,14 @@ from dagster.utils.error import SerializableErrorInfo, serializable_error_info_f
 
 
 def inner_plan_execution_iterator(
-    pipeline_context: SystemExecutionContext, execution_plan: ExecutionPlan
+    pipeline_context: SystemPlanExecutionContext,
+    execution_plan: ExecutionPlan,
 ) -> Iterator[DagsterEvent]:
-    check.inst_param(pipeline_context, "pipeline_context", SystemExecutionContext)
+    check.inst_param(
+        pipeline_context,
+        "pipeline_context",
+        (SystemPipelineExecutionContext, SystemPlanExecutionContext),
+    )
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
 
     with execution_plan.start(retry_mode=pipeline_context.retry_mode) as active_execution:
