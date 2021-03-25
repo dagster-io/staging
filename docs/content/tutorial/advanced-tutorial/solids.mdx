@@ -57,7 +57,7 @@ solid's definition. The invocation is named and bound via a dependency graph to 
 other solids. The definition is the generic, reusable piece of logic that is invoked many times
 within this pipeline.
 
-![reusable_solids.png](/images/tutorial/reusable_solids.png)
+<Image alt="reusable_solids.png" src="/images/tutorial/reusable_solids.png" width={1680} height={946} />
 
 Configuring solids also uses the aliases, as in the following YAML:
 
@@ -101,12 +101,12 @@ that we use the <PyObject module="dagster" object="composite_solid" displayText=
 instead of <PyObject module="dagster" object="pipeline" displayText="@pipeline" />. Dagit has
 sophisticated facilities for visualizing composite solids:
 
-![composite_solids.png](/images/tutorial/composite_solids.png)
+<Image alt="composite_solids.png" src="/images/tutorial/composite_solids.png" width={1680} height={946} />
 
 All of the complexity of the composite solid is hidden by default, but we can expand it at will by
 clicking into the solid (or on the "Expand" button in the right-hand pane):
 
-![composite_solids_expanded.png](/images/tutorial/composite_solids_expanded.png)
+<Image alt="composite_solids_expanded.png" src="/images/tutorial/composite_solids_expanded.png" width={1680} height={946} />
 
 Note the line indicating that the output of `join_cereal` is returned as the output of the composite
 solid as a whole.
@@ -132,6 +132,6 @@ solids:
 When we execute this pipeline, Dagit includes information about the nesting of individual execution
 steps within the composite:
 
-![composite_solids_results.png](/images/tutorial/composite_solids_results.png)
+<Image alt="composite_solids_results.png" src="/images/tutorial/composite_solids_results.png" width={1680} height={946} />
 
 <br />
