@@ -10,6 +10,7 @@ from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvaria
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
+from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
@@ -209,6 +210,8 @@ def execute_run(
             execution_plan, pipeline_run.run_config, instance
         )
 
+    resource_retrieval_dict: Dict[str, InMemoryIOManager] = {}
+
     _execute_run_iterable = ExecuteRunWithPlanIterable(
         execution_plan=execution_plan,
         iterator=pipeline_execution_iterator,
@@ -218,23 +221,10 @@ def execute_run(
             instance=instance,
             run_config=pipeline_run.run_config,
             raise_on_error=raise_on_error,
+            resource_retriever=resource_retrieval_dict,
         ),
     )
     event_list = list(_execute_run_iterable)
-    pipeline_context = _execute_run_iterable.pipeline_context
-
-    # workaround for mem_io_manager to work in reconstruct_context, e.g. result.result_for_solid
-    # in-memory values dict will get lost when the resource is re-initiated in reconstruct_context
-    # so instead of re-initiating every single resource, we pass the resource instances to
-    # reconstruct_context directly to avoid re-building from resource def.
-    resource_instances_to_override = {}
-    if pipeline_context:  # None if we have a pipeline failure
-        for (
-            key,
-            resource_instance,
-        ) in pipeline_context.scoped_resources_builder.resource_instance_dict.items():
-            if isinstance(resource_instance, InMemoryIOManager):
-                resource_instances_to_override[key] = resource_instance
 
     return PipelineExecutionResult(
         pipeline.get_definition(),
@@ -245,10 +235,9 @@ def execute_run(
             pipeline_run.run_config,
             pipeline_run,
             instance,
-            intermediate_storage=pipeline_context.intermediate_storage,
             resource_instances_to_override=hardcoded_resources_arg,
         ),
-        resource_instances_to_override=resource_instances_to_override,
+        resource_instances_to_override=resource_retrieval_dict,
     )
 
 
@@ -646,6 +635,8 @@ def execute_plan_iterator(
     instance: DagsterInstance,
     retry_mode: Optional[RetryMode] = None,
     run_config: Optional[dict] = None,
+    resource_retriever: Optional[Dict[str, InMemoryIOManager]] = None,
+    output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
 ) -> Iterator[DagsterEvent]:
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
@@ -664,6 +655,8 @@ def execute_plan_iterator(
                 pipeline_run=pipeline_run,
                 instance=instance,
                 raise_on_error=False,
+                output_capture=output_capture,
+                resource_retriever=resource_retriever,
             ),
         )
     )

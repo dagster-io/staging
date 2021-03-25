@@ -2,8 +2,8 @@ import os
 
 from dagster import check
 from dagster.core.events import DagsterEvent, EngineEventData
+from dagster.core.execution.api import execute_plan_iterator
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
-from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
 from dagster.utils.timing import format_duration, time_execution_scope
@@ -33,7 +33,15 @@ class InProcessExecutor(Executor):
         )
 
         with time_execution_scope() as timer_result:
-            yield from inner_plan_execution_iterator(pipeline_context, execution_plan)
+            yield from execute_plan_iterator(
+                execution_plan,
+                pipeline_context.pipeline_run,
+                pipeline_context.instance,
+                pipeline_context.retry_mode,
+                pipeline_context.run_config,
+                pipeline_context.resource_retriever,
+                pipeline_context.output_capture,
+            )
 
         yield DagsterEvent.engine_event(
             pipeline_context,
