@@ -147,6 +147,7 @@ def execute_run(
     check.inst_param(pipeline, "pipeline", IPipeline)
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
     check.inst_param(instance, "instance", DagsterInstance)
+    check.bool_param(in_process_output_capture, "in_process_output_capture")
 
     if pipeline_run.status == PipelineRunStatus.CANCELED:
         message = "Not starting execution since the run was canceled before execution could start"
@@ -206,7 +207,6 @@ def execute_run(
         ),
     )
     event_list = list(_execute_run_iterable)
-    pipeline_context = _execute_run_iterable.pipeline_context
 
     return PipelineExecutionResult(
         pipeline.get_definition(),
@@ -217,7 +217,6 @@ def execute_run(
             pipeline_run.run_config,
             pipeline_run,
             instance,
-            intermediate_storage=pipeline_context.intermediate_storage,
         ),
         output_capture=output_capture,
     )
@@ -626,6 +625,8 @@ def execute_plan_iterator(
     instance: DagsterInstance,
     retry_mode: Optional[RetryMode] = None,
     run_config: Optional[dict] = None,
+    raise_on_error: Optional[bool] = False,
+    output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
 ) -> Iterator[DagsterEvent]:
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
@@ -643,7 +644,8 @@ def execute_plan_iterator(
                 run_config=run_config,
                 pipeline_run=pipeline_run,
                 instance=instance,
-                raise_on_error=False,
+                raise_on_error=raise_on_error,
+                output_capture=output_capture,
             ),
         )
     )
@@ -763,6 +765,7 @@ def pipeline_execution_iterator(
 
     yield DagsterEvent.pipeline_start(pipeline_context)
 
+    pipeline_failed = False
     pipeline_exception_info = None
     pipeline_canceled_info = None
     failed_steps = []
@@ -771,7 +774,10 @@ def pipeline_execution_iterator(
         for event in pipeline_context.executor.execute(pipeline_context, execution_plan):
             if event.is_step_failure:
                 failed_steps.append(event.step_key)
-
+            if event.is_pipeline_init_failure:
+                yield event
+                pipeline_failed = True
+                break
             yield event
     except GeneratorExit:
         # Shouldn't happen, but avoid runtime-exception in case this generator gets GC-ed
@@ -808,6 +814,8 @@ def pipeline_execution_iterator(
                 pipeline_context,
                 "Steps failed: {}.".format(failed_steps),
             )
+        elif pipeline_failed:
+            pass
         else:
             event = DagsterEvent.pipeline_success(pipeline_context)
         if not generator_closed:
