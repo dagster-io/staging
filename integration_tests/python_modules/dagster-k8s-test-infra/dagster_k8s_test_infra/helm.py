@@ -558,13 +558,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
                     "env": {"TEST_SET_ENV_VAR": "test_celery_env_var"},
                     "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
                     "envSecrets": [{"name": TEST_SECRET_NAME}],
-                    "livenessProbe": {
-                        "initialDelaySeconds": 15,
-                        "periodSeconds": 10,
-                        "timeoutSeconds": 10,
-                        "successThreshold": 1,
-                        "failureThreshold": 3,
-                    },
+                    "livenessProbe": None,
                     "configSource": {
                         "broker_transport_options": {"priority_steps": [9]},
                         "worker_concurrency": 1,
@@ -662,13 +656,7 @@ def helm_chart_for_user_deployments_subchart_disabled(namespace, docker_image, s
                     "env": {"TEST_SET_ENV_VAR": "test_celery_env_var"},
                     "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
                     "envSecrets": [{"name": TEST_SECRET_NAME}],
-                    "livenessProbe": {
-                        "initialDelaySeconds": 15,
-                        "periodSeconds": 10,
-                        "timeoutSeconds": 10,
-                        "successThreshold": 1,
-                        "failureThreshold": 3,
-                    },
+                    "livenessProbe": None,
                     "configSource": {
                         "broker_transport_options": {"priority_steps": [9]},
                         "worker_concurrency": 1,

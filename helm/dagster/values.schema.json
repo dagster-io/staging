@@ -1433,7 +1433,15 @@
                     "$ref": "#/definitions/Resources"
                 },
                 "livenessProbe": {
-                    "$ref": "#/definitions/LivenessProbe"
+                    "title": "LivenessProbe",
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/LivenessProbe"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
                 }
             },
             "required": [
@@ -1450,8 +1458,7 @@
                 "tolerations",
                 "podSecurityContext",
                 "securityContext",
-                "resources",
-                "livenessProbe"
+                "resources"
             ],
             "additionalProperties": false
         },
