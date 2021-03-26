@@ -606,15 +606,20 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def asset_materialization(step_context, materialization, asset_lineage=None):
+    def asset_materialization(
+        step_context, materialization, asset_lineage=None, associated_output=None
+    ):
         check.inst_param(
             materialization, "materialization", (AssetMaterialization, Materialization)
         )
         check.opt_list_param(asset_lineage, "asset_lineage", AssetLineageInfo)
+        check.opt_str_param(associated_output, "associated_output")
         return DagsterEvent.from_step(
             event_type=DagsterEventType.ASSET_MATERIALIZATION,
             step_context=step_context,
-            event_specific_data=StepMaterializationData(materialization, asset_lineage),
+            event_specific_data=StepMaterializationData(
+                materialization, asset_lineage, associated_output
+            ),
             message=materialization.description
             if materialization.description
             else "Materialized value{label_clause}.".format(
@@ -885,6 +890,8 @@ class DagsterEvent(
         manager_key,
         message_override=None,
         metadata_entries=None,
+        lineage=None,
+        mapping_key=None,
     ):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
@@ -896,6 +903,8 @@ class DagsterEvent(
                 output_name=output_name,
                 manager_key=manager_key,
                 metadata_entries=metadata_entries if metadata_entries else [],
+                lineage=lineage,
+                mapping_key=mapping_key,
             ),
             message=message_override or message,
         )
@@ -1027,13 +1036,14 @@ def get_step_output_event(events, step_key, output_name="result"):
 
 @whitelist_for_serdes
 class StepMaterializationData(
-    namedtuple("_StepMaterializationData", "materialization asset_lineage")
+    namedtuple("_StepMaterializationData", "materialization asset_lineage associated_output")
 ):
-    def __new__(cls, materialization, asset_lineage=None):
+    def __new__(cls, materialization, asset_lineage=None, associated_output=None):
         return super(StepMaterializationData, cls).__new__(
             cls,
             materialization=materialization,
             asset_lineage=check.opt_list_param(asset_lineage, "asset_lineage", AssetLineageInfo),
+            associated_output=check.opt_str_param(associated_output, "associated_output"),
         )
 
 
@@ -1157,9 +1167,11 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
 
 @whitelist_for_serdes
 class HandledOutputData(
-    namedtuple("_HandledOutputData", "output_name manager_key metadata_entries")
+    namedtuple("_HandledOutputData", "output_name manager_key metadata_entries lineage mapping_key")
 ):
-    def __new__(cls, output_name, manager_key, metadata_entries=None):
+    def __new__(
+        cls, output_name, manager_key, metadata_entries=None, lineage=None, mapping_key=None
+    ):
         return super(HandledOutputData, cls).__new__(
             cls,
             output_name=check.str_param(output_name, "output_name"),
@@ -1167,6 +1179,8 @@ class HandledOutputData(
             metadata_entries=check.opt_list_param(
                 metadata_entries, "metadata_entries", EventMetadataEntry
             ),
+            lineage=check.opt_list_param(lineage, "lineage", AssetLineageInfo),
+            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
         )
 
 
