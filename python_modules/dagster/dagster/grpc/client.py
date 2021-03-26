@@ -260,16 +260,18 @@ class DagsterGrpcClient:
             ExternalScheduleExecutionArgs,
         )
 
-        res = self._query(
-            "ExternalScheduleExecution",
-            api_pb2.ExternalScheduleExecutionRequest,
-            serialized_external_schedule_execution_args=serialize_dagster_namedtuple(
-                external_schedule_execution_args
-            ),
+        chunks = list(
+            self._streaming_query(
+                "ExternalScheduleExecution",
+                api_pb2.ExternalScheduleExecutionRequest,
+                serialized_external_schedule_execution_args=serialize_dagster_namedtuple(
+                    external_schedule_execution_args
+                ),
+            )
         )
 
         return deserialize_json_to_dagster_namedtuple(
-            res.serialized_external_schedule_execution_data_or_external_schedule_execution_error
+            "".join([chunk.serialized_chunk for chunk in chunks])
         )
 
     def external_sensor_execution(self, sensor_execution_args):

@@ -87,10 +87,10 @@ class DagsterApiStub(object):
             request_serializer=api__pb2.ExternalRepositoryRequest.SerializeToString,
             response_deserializer=api__pb2.StreamingExternalRepositoryEvent.FromString,
         )
-        self.ExternalScheduleExecution = channel.unary_unary(
+        self.ExternalScheduleExecution = channel.unary_stream(
             "/api.DagsterApi/ExternalScheduleExecution",
             request_serializer=api__pb2.ExternalScheduleExecutionRequest.SerializeToString,
-            response_deserializer=api__pb2.ExternalScheduleExecutionReply.FromString,
+            response_deserializer=api__pb2.StreamingChunkEvent.FromString,
         )
         self.ExternalSensorExecution = channel.unary_stream(
             "/api.DagsterApi/ExternalSensorExecution",
@@ -315,10 +315,10 @@ def add_DagsterApiServicer_to_server(servicer, server):
             request_deserializer=api__pb2.ExternalRepositoryRequest.FromString,
             response_serializer=api__pb2.StreamingExternalRepositoryEvent.SerializeToString,
         ),
-        "ExternalScheduleExecution": grpc.unary_unary_rpc_method_handler(
+        "ExternalScheduleExecution": grpc.unary_stream_rpc_method_handler(
             servicer.ExternalScheduleExecution,
             request_deserializer=api__pb2.ExternalScheduleExecutionRequest.FromString,
-            response_serializer=api__pb2.ExternalScheduleExecutionReply.SerializeToString,
+            response_serializer=api__pb2.StreamingChunkEvent.SerializeToString,
         ),
         "ExternalSensorExecution": grpc.unary_stream_rpc_method_handler(
             servicer.ExternalSensorExecution,
@@ -749,12 +749,12 @@ class DagsterApi(object):
         timeout=None,
         metadata=None,
     ):
-        return grpc.experimental.unary_unary(
+        return grpc.experimental.unary_stream(
             request,
             target,
             "/api.DagsterApi/ExternalScheduleExecution",
             api__pb2.ExternalScheduleExecutionRequest.SerializeToString,
-            api__pb2.ExternalScheduleExecutionReply.FromString,
+            api__pb2.StreamingChunkEvent.FromString,
             options,
             channel_credentials,
             insecure,

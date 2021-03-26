@@ -496,6 +496,20 @@ class DagsterApiServer(DagsterApiServicer):
                 ],
             )
 
+    def _split_serialized_data_into_chunk_events(self, serialized_data):
+        num_chunks = int(math.ceil(float(len(serialized_data)) / STREAMING_CHUNK_SIZE))
+        for i in range(num_chunks):
+            start_index = i * STREAMING_CHUNK_SIZE
+            end_index = min(
+                (i + 1) * STREAMING_CHUNK_SIZE,
+                len(serialized_data),
+            )
+
+            yield api_pb2.StreamingChunkEvent(
+                sequence_number=i,
+                serialized_chunk=serialized_data[start_index:end_index],
+            )
+
     def ExternalScheduleExecution(self, request, _context):
         args = deserialize_json_to_dagster_namedtuple(
             request.serialized_external_schedule_execution_args
@@ -508,18 +522,17 @@ class DagsterApiServer(DagsterApiServicer):
         )
 
         recon_repo = self._recon_repository_from_origin(args.repository_origin)
-
-        return api_pb2.ExternalScheduleExecutionReply(
-            serialized_external_schedule_execution_data_or_external_schedule_execution_error=serialize_dagster_namedtuple(
-                get_external_schedule_execution(
-                    recon_repo,
-                    args.instance_ref,
-                    args.schedule_name,
-                    args.scheduled_execution_timestamp,
-                    args.scheduled_execution_timezone,
-                )
+        serialized_schedule_data = serialize_dagster_namedtuple(
+            get_external_schedule_execution(
+                recon_repo,
+                args.instance_ref,
+                args.schedule_name,
+                args.scheduled_execution_timestamp,
+                args.scheduled_execution_timezone,
             )
         )
+
+        yield from self._split_serialized_data_into_chunk_events(serialized_schedule_data)
 
     def ExternalSensorExecution(self, request, _context):
         args = deserialize_json_to_dagster_namedtuple(
@@ -539,18 +552,7 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
-        num_chunks = int(math.ceil(float(len(serialized_sensor_data)) / STREAMING_CHUNK_SIZE))
-        for i in range(num_chunks):
-            start_index = i * STREAMING_CHUNK_SIZE
-            end_index = min(
-                (i + 1) * STREAMING_CHUNK_SIZE,
-                len(serialized_sensor_data),
-            )
-
-            yield api_pb2.StreamingChunkEvent(
-                sequence_number=i,
-                serialized_chunk=serialized_sensor_data[start_index:end_index],
-            )
+        yield from self._split_serialized_data_into_chunk_events(serialized_sensor_data)
 
     def ShutdownServer(self, request, _context):
         try:
