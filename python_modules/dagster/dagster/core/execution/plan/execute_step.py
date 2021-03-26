@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, Iterator, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, Iterator, List, Optional, Set, Union
 
 from dagster import check
 from dagster.core.definitions import (
@@ -261,6 +261,18 @@ def _type_check_output(
         )
 
 
+def _get_asset_lineage_from_fns(
+    context, asset_key_fn, asset_partitions_fn
+) -> Optional[AssetLineageInfo]:
+    asset_key = asset_key_fn(context)
+    if not asset_key:
+        return None
+    return AssetLineageInfo(
+        asset_key=asset_key,
+        partitions=asset_partitions_fn(context),
+    )
+
+
 def core_dagster_event_sequence_for_step(
     step_context: SystemStepExecutionContext, prior_attempt_count: int
 ) -> Iterator[DagsterEvent]:
@@ -367,51 +379,6 @@ def _type_check_and_store_output(
         yield evt
 
 
-def _asset_key_and_partitions_for_output(
-    output_context: OutputContext,
-    output_def: OutputDefinition,
-    output_manager: IOManager,
-) -> Tuple[Optional[AssetKey], Set[str]]:
-
-    manager_asset_key = output_manager.get_output_asset_key(output_context)
-
-    if output_def.is_asset:
-        if manager_asset_key is not None:
-            raise DagsterInvariantViolationError(
-                f'Both the OutputDefinition and the IOManager of output "{output_def.name}" on '
-                f'solid "{output_context.solid_def.name}" associate it with an asset. Either remove '
-                "the asset_key parameter on the OutputDefinition or use an IOManager that does not "
-                "specify an AssetKey in its get_output_asset_key() function."
-            )
-        return (
-            output_def.get_asset_key(output_context),
-            output_def.get_asset_partitions(output_context) or set(),
-        )
-    elif manager_asset_key:
-        return manager_asset_key, output_manager.get_output_asset_partitions(output_context)
-
-    return None, set()
-
-
-def _dedup_asset_lineage(asset_lineage: List[AssetLineageInfo]) -> List[AssetLineageInfo]:
-    """Method to remove duplicate specifications of the same Asset/Partition pair from the lineage
-    information. Duplicates can occur naturally when calculating transitive dependencies from solids
-    with multiple Outputs, which in turn have multiple Inputs (because each Output of the solid will
-    inherit all dependencies from all of the solid Inputs).
-    """
-    key_partition_mapping: Dict[AssetKey, Set[str]] = defaultdict(set)
-
-    for lineage_info in asset_lineage:
-        if not lineage_info.partitions:
-            key_partition_mapping[lineage_info.asset_key] |= set()
-        for partition in lineage_info.partitions:
-            key_partition_mapping[lineage_info.asset_key].add(partition)
-    return [
-        AssetLineageInfo(asset_key=asset_key, partitions=partitions)
-        for asset_key, partitions in key_partition_mapping.items()
-    ]
-
-
 def _get_output_asset_materializations(
     asset_key: AssetKey,
     asset_partitions: Set[str],
@@ -498,18 +465,53 @@ def _store_output(
     for materialization in manager_materializations:
         yield DagsterEvent.asset_materialization(step_context, materialization, [])
 
-    asset_node_handle = AssetOutputHandle(step_context.step.key, step_output_handle.output_name)
-    produced_lineage = step_context.asset_dependency_graph.produced_lineage(asset_node_handle)
-    if produced_lineage:
-        input_lineage = step_context.asset_dependency_graph.lineage(asset_node_handle)
+    def _get_asset_lineage_from_fns(
+        context, asset_key_fn, asset_partitions_fn
+    ) -> Optional[AssetLineageInfo]:
+        asset_key = asset_key_fn(context)
+        if not asset_key:
+            return None
+        return AssetLineageInfo(
+            asset_key=asset_key,
+            partitions=asset_partitions_fn(context),
+        )
+
+    io_lineage_info = _get_asset_lineage_from_fns(
+        output_context,
+        output_manager.get_output_asset_key,
+        output_manager.get_output_asset_partitions,
+    )
+    output_lineage_info = _get_asset_lineage_from_fns(
+        output_context, output_def.get_asset_key, output_def.get_asset_partitions
+    )
+    if io_lineage_info and output_lineage_info:
+        raise DagsterInvariantViolationError(
+            f'Both the OutputDefinition and the IOManager of output "{output_def.name}" on '
+            f'solid "{step_context.solid_def.name}" associate it with an asset. Either remove '
+            "the asset_key parameter on the OutputDefinition or use an IOManager that does not "
+            "specify an AssetKey in its get_output_asset_key() function."
+        )
+    produced_lineage_info = io_lineage_info or output_lineage_info
+    produced_lineage = [produced_lineage_info] if produced_lineage_info else []
+    mapping_key = output.mapping_key if isinstance(output, DynamicOutput) else None
+    step_context.asset_dependency_graph.add_step_output(
+        step_context.step.key, output_def.name, mapping_key, produced_lineage
+    )
+    lineage = step_context.asset_dependency_graph.output_lineage(
+        step_context.step.key, output_def.name, mapping_key
+    )
+    propagated_lineage = step_context.asset_dependency_graph.propagated_output_lineage(
+        step_context.step.key, output_def.name, mapping_key
+    )
+    if produced_lineage_info:
         for materialization in _get_output_asset_materializations(
-            produced_lineage.asset_key,
-            produced_lineage.partitions,
+            produced_lineage_info.asset_key,
+            produced_lineage_info.partitions,
             output,
             output_def,
             manager_metadata_entries,
         ):
-            yield DagsterEvent.asset_materialization(step_context, materialization, input_lineage)
+            yield DagsterEvent.asset_materialization(step_context, materialization, lineage)
 
     yield DagsterEvent.handled_output(
         step_context,
@@ -521,6 +523,8 @@ def _store_output(
         metadata_entries=[
             entry for entry in manager_metadata_entries if isinstance(entry, EventMetadataEntry)
         ],
+        lineage=propagated_lineage,
+        mapping_key=mapping_key,
     )
 
 

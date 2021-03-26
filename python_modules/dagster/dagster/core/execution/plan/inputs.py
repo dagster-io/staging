@@ -10,6 +10,7 @@ from dagster.core.definitions import (
     RetryRequested,
     SolidHandle,
 )
+from dagster.core.definitions.events import AssetLineageInfo
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
     DagsterTypeLoadingError,
@@ -29,6 +30,18 @@ if TYPE_CHECKING:
     from dagster.core.storage.input_manager import InputManager
     from dagster.core.events import DagsterEvent
     from dagster.core.execution.context.system import SystemStepExecutionContext, InputContext
+
+
+def _get_asset_lineage_from_fns(
+    context, asset_key_fn, asset_partitions_fn
+) -> Optional[AssetLineageInfo]:
+    asset_key = asset_key_fn(context)
+    if not asset_key:
+        return None
+    return AssetLineageInfo(
+        asset_key=asset_key,
+        partitions=asset_partitions_fn(context),
+    )
 
 
 @whitelist_for_serdes
@@ -118,6 +131,11 @@ class StepInputSource(ABC):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
+    def get_asset_lineage(
+        self, _step_context: "SystemStepExecutionContext"
+    ) -> List[AssetLineageInfo]:
+        return []
+
 
 @whitelist_for_serdes
 class FromRootInputManager(
@@ -147,6 +165,11 @@ class FromRootInputManager(
                 input_def.root_manager_key
             ].config,
             resources=build_resources_for_manager(input_def.root_manager_key, step_context),
+        )
+        step_context.asset_dependency_graph.add_step_input(
+            step_context.step.key,
+            self.input_name,
+            produced_lineage=self.get_asset_lineage(step_context),
         )
         yield _load_input_with_input_manager(loader, load_input_context)
         yield DagsterEvent.loaded_input(
@@ -198,6 +221,32 @@ class FromStepOutput(
     def step_output_handle_dependencies(self) -> List[StepOutputHandle]:
         return [self.step_output_handle]
 
+    def get_asset_lineage(
+        self, step_context: "SystemStepExecutionContext"
+    ) -> List[AssetLineageInfo]:
+        source_handle = self.step_output_handle
+        input_manager = step_context.get_io_manager(source_handle)
+        load_context = self.get_load_context(step_context)
+
+        # check input_def
+        input_def = self.get_input_def(step_context.pipeline_def)
+        if input_def.is_asset:
+            lineage_info = _get_asset_lineage_from_fns(
+                load_context, input_def.get_asset_key, input_def.get_asset_partitions
+            )
+            return [lineage_info] if lineage_info else []
+
+        # check io manager
+        io_lineage_info = _get_asset_lineage_from_fns(
+            load_context,
+            input_manager.get_input_asset_key,
+            input_manager.get_input_asset_partitions,
+        )
+        if io_lineage_info is not None:
+            return [io_lineage_info]
+
+        return []
+
     def get_load_context(self, step_context: "SystemStepExecutionContext") -> "InputContext":
         io_manager_key = step_context.execution_plan.get_manager_key(
             self.step_output_handle, step_context.pipeline_def
@@ -231,6 +280,11 @@ class FromStepOutput(
             source_handle, step_context.pipeline_def
         )
         input_manager = step_context.get_io_manager(source_handle)
+        step_context.asset_dependency_graph.add_step_input(
+            step_context.step.key,
+            self.input_name,
+            produced_lineage=self.get_asset_lineage(step_context),
+        )
         check.invariant(
             isinstance(input_manager, IOManager),
             f'Input "{self.input_name}" for step "{step_context.step.key}" is depending on '
@@ -298,6 +352,12 @@ class FromConfig(
             solid_config = step_context.environment_config.solids.get(str(self.solid_handle))
             config_data = solid_config.inputs.get(self.input_name) if solid_config else None
 
+            step_context.asset_dependency_graph.add_step_input(
+                step_context.step.key,
+                self.input_name,
+                produced_lineage=self.get_asset_lineage(step_context),
+            )
+
             return dagster_type.loader.construct_from_config_value(step_context, config_data)
 
     def required_resource_keys(self, pipeline_def: PipelineDefinition) -> Set[str]:
@@ -341,6 +401,11 @@ class FromDefaultValue(
         )
 
     def load_input_object(self, step_context: "SystemStepExecutionContext"):
+        step_context.asset_dependency_graph.add_step_input(
+            step_context.step.key,
+            self.input_name,
+            produced_lineage=self.get_asset_lineage(step_context),
+        )
         return self._load_value(step_context.pipeline_def)
 
     def compute_version(
@@ -376,6 +441,15 @@ class FromMultipleSources(
         return super(FromMultipleSources, cls).__new__(
             cls, solid_handle=solid_handle, input_name=input_name, sources=sources
         )
+
+    def get_asset_lineage(
+        self, step_context: "SystemStepExecutionContext"
+    ) -> List[AssetLineageInfo]:
+        return [
+            lineage_info
+            for source in self.sources
+            for lineage_info in source.get_asset_lineage(step_context)
+        ]
 
     @property
     def step_key_dependencies(self):
@@ -424,6 +498,12 @@ class FromMultipleSources(
                     yield event_or_input_value
                 else:
                     values.append(event_or_input_value)
+
+        step_context.asset_dependency_graph.add_step_input(
+            step_context.step.key,
+            self.input_name,
+            produced_lineage=self.get_asset_lineage(step_context),
+        )
 
         yield values
 

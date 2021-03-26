@@ -5,9 +5,12 @@ from dagster import (
     ModeDefinition,
     Output,
     OutputDefinition,
+    composite_solid,
     execute_pipeline,
+    fs_io_manager,
     io_manager,
     pipeline,
+    reconstructable,
     solid,
 )
 from dagster.core.definitions.events import (
@@ -17,7 +20,9 @@ from dagster.core.definitions.events import (
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.system import AssetInputHandle, AssetOutputHandle
+from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 from dagster.core.storage.io_manager import IOManager
+from dagster.core.test_utils import instance_for_test
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
 
@@ -145,12 +150,12 @@ def test_io_manager_transitive_lineage():
         event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
     ]
 
-    expected_path = [AssetOutputHandle("solid_produce", "result")]
+    expected_path = [AssetOutputHandle("solid_produce", "result", None)]
     for i in range(10):
         expected_path.extend(
             [
                 AssetInputHandle(f"passthrough_{i}", "inp"),
-                AssetOutputHandle(f"passthrough_{i}", "result"),
+                AssetOutputHandle(f"passthrough_{i}", "result", None),
             ]
         )
     expected_path.append(AssetInputHandle("solid_transform", "inp"))
@@ -394,3 +399,131 @@ def test_dynamic_output_definition_single_partition_materialization():
             parent_assets=[AssetLineageInfo(AssetKey(["table1"]))],
         )
     assert len(seen_paths) == 4
+
+
+# ========
+
+NSPLIT = 5
+
+
+class AssetFSIOManager(PickledObjectFilesystemIOManager):
+    def get_output_asset_key(self, context):
+        return AssetKey(context.metadata["asset_key"])
+
+
+@io_manager
+def my_fancy_io_manager_1(_):
+    return AssetFSIOManager(base_dir="/tmp/")
+
+
+@io_manager
+def my_fancy_io_manager_2(_):
+    return AssetFSIOManager(base_dir="/tmp/")
+
+
+@solid(
+    output_defs=[
+        OutputDefinition(
+            io_manager_key="fancy1",
+            metadata={"asset_key": "load"},
+        )
+    ]
+)
+def my_loading_solid(_):
+    return 1
+
+
+@solid(output_defs=[OutputDefinition(name=f"out_{i}") for i in range(NSPLIT)])
+def my_splitting_solid(_, inp):
+    for i in range(NSPLIT):
+        yield Output(inp, f"out_{i}")
+
+
+@solid(output_defs=[DynamicOutputDefinition(name="out")])
+def my_dynamic_splitting_solid(_, inp):
+    for i in range(NSPLIT):
+        yield DynamicOutput(inp, mapping_key=str(i), output_name="out")
+
+
+@solid
+def my_passthrough_solid(_, inp):
+    return inp
+
+
+@solid(
+    output_defs=[
+        OutputDefinition(
+            io_manager_key="fancy2",
+            metadata={"asset_key": "transform"},
+        )
+    ]
+)
+def my_transforming_solid(_, inp):
+    return inp + 1
+
+
+@composite_solid
+def my_big_passthrough_solid(inp):
+    return my_passthrough_solid(my_passthrough_solid(my_passthrough_solid(inp)))
+
+
+@composite_solid
+def my_composite_transforming_solid(inp):
+    return my_transforming_solid(my_big_passthrough_solid(inp))
+
+
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            resource_defs={
+                "io_manager": fs_io_manager,
+                "fancy1": my_fancy_io_manager_1,
+                "fancy2": my_fancy_io_manager_2,
+            }
+        )
+    ]
+)
+def my_complex_pipeline():
+    split_vals = my_splitting_solid(my_loading_solid())
+    for val in split_vals:
+        my_transforming_solid(my_big_passthrough_solid(val))
+
+
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            resource_defs={
+                "io_manager": fs_io_manager,
+                "fancy1": my_fancy_io_manager_1,
+                "fancy2": my_fancy_io_manager_2,
+            }
+        )
+    ]
+)
+def my_dynamic_complex_pipeline():
+    split_vals = my_dynamic_splitting_solid(my_loading_solid())
+    split_vals.map(my_composite_transforming_solid)
+
+
+def test_multiproc_pipelines():
+
+    for test_pipeline in [my_complex_pipeline, my_dynamic_complex_pipeline]:
+        with instance_for_test() as instance:
+            result = execute_pipeline(
+                reconstructable(test_pipeline),
+                run_config={"execution": {"multiprocess": {"config": {"max_concurrent": 4}}}},
+                instance=instance,
+            )
+            events = result.step_event_list
+            materializations = [
+                event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
+            ]
+            assert len(materializations) == 1 + NSPLIT
+
+            check_materialization(materializations[0], AssetKey(["load"]))
+            for i in range(NSPLIT):
+                check_materialization(
+                    materializations[i + 1],
+                    AssetKey(["transform"]),
+                    parent_assets=[AssetLineageInfo(AssetKey("load"))],
+                )

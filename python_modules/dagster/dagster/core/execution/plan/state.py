@@ -1,7 +1,8 @@
 from collections import defaultdict
-from typing import Dict, List, NamedTuple
+from typing import Dict, List, NamedTuple, Tuple
 
 from dagster import check
+from dagster.core.events import AssetLineageInfo
 from dagster.core.events.log import EventRecord
 from dagster.core.execution.retries import RetryState
 from dagster.serdes import whitelist_for_serdes
@@ -16,6 +17,8 @@ class KnownExecutionState(
             ("previous_retry_attempts", Dict[str, int]),
             # step_key -> output_name -> mapping_keys
             ("dynamic_mappings", Dict[str, Dict[str, List[str]]]),
+            # step_key -> output_name -> (mapping_key, asset_lineage)
+            ("asset_output_mappings", Dict[str, Dict[str, Tuple[str, List[AssetLineageInfo]]]]),
         ],
     )
 ):
@@ -25,7 +28,7 @@ class KnownExecutionState(
     resolved dynamic outputs.
     """
 
-    def __new__(cls, previous_retry_attempts, dynamic_mappings):
+    def __new__(cls, previous_retry_attempts, dynamic_mappings, asset_output_mappings=None):
 
         return super(KnownExecutionState, cls).__new__(
             cls,
@@ -33,6 +36,9 @@ class KnownExecutionState(
                 previous_retry_attempts, "previous_retry_attempts", key_type=str, value_type=int
             ),
             check.dict_param(dynamic_mappings, "dynamic_mappings", key_type=str, value_type=dict),
+            check.dict_param(
+                asset_output_mappings, "asset_output_mappings", key_type=str, value_type=dict
+            ),
         )
 
     def get_retry_state(self):
