@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Dict, Iterator, List, Optional, Set, cast
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, cast
 
 from dagster import check
 from dagster.core.errors import (
@@ -7,7 +7,7 @@ from dagster.core.errors import (
     DagsterInvariantViolationError,
     DagsterUnknownStepStateError,
 )
-from dagster.core.events import DagsterEvent
+from dagster.core.events import AssetLineageInfo, DagsterEvent
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.retries import RetryMode, RetryState
@@ -59,6 +59,9 @@ class ActiveExecution:
         self._successful_dynamic_outputs: Dict[str, Dict[str, List[str]]] = (
             dict(self._plan.known_state.dynamic_mappings) if self._plan.known_state else {}
         )
+
+        # track which outputs have produced an asset
+        self._asset_outputs: Dict[str, Dict[str, Tuple[str, List[AssetLineageInfo]]]] = {}
 
         # steps move in to these buckets as a result of _update calls
         self._executable: List[str] = []
@@ -408,6 +411,12 @@ class ActiveExecution:
                 self._successful_dynamic_outputs[dagster_event.step_key][
                     dagster_event.step_output_data.step_output_handle.output_name
                 ].append(dagster_event.step_output_data.step_output_handle.mapping_key)
+        elif dagster_event.is_handled_output:
+            self._asset_outputs[dagster_event.step_key][
+                dagster_event.event_specific_data.output_name
+            ][
+                dagster_event.event_specific_data.mapping_key
+            ] = dagster_event.event_specific_data.lineage
 
     def verify_complete(
         self, pipeline_context: SystemPipelineExecutionContext, step_key: str
@@ -452,9 +461,12 @@ class ActiveExecution:
         return KnownExecutionState(
             previous_retry_attempts=self._retry_state.snapshot_attempts(),
             dynamic_mappings=dict(self._successful_dynamic_outputs),
+            asset_output_mappings=dict(self._asset_outputs),
         )
 
     def _prep_for_dynamic_outputs(self, step: ExecutionStep):
+        # TODO: move this away
+        self._asset_outputs[step.key] = {out.name: {} for out in step.step_outputs}
         dyn_outputs = [step_out for step_out in step.step_outputs if step_out.is_dynamic]
 
         if dyn_outputs:

@@ -577,6 +577,13 @@ class ExecutionPlan(
 
         return deps
 
+    def get_downstream_steps_for_key(self, step_key) -> Set[str]:
+        downstream = set()
+        for k, v in self.get_all_step_deps().items():
+            if step_key in v:
+                downstream.add(k)
+        return downstream
+
     def get_steps_to_execute_in_topo_order(self) -> List[ExecutionStep]:
         return [step for step_level in self.get_steps_to_execute_by_level() for step in step_level]
 
