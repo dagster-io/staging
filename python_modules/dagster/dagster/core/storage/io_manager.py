@@ -128,7 +128,7 @@ class IOManager(InputManager, OutputManager):
         """
         return set()
 
-    def get_input_asset_key(self, context) -> Optional[AssetKey]:
+    def get_input_asset_key(self, _context) -> Optional[AssetKey]:
         """User-defined method that associates inputs loaded by this IOManager with a particular
         AssetKey.
 
@@ -136,9 +136,9 @@ class IOManager(InputManager, OutputManager):
             context (InputContext): The input context, which describes the input that's being loaded
                 and the upstream output that's being loaded from.
         """
-        return self.get_output_asset_key(context.upstream_output)
+        return None
 
-    def get_input_asset_partitions(self, context) -> Set[str]:
+    def get_input_asset_partitions(self, _context) -> Set[str]:
         """User-defined method that associates inputs loaded by this IOManager with a set of
         partitions of an AssetKey.
 
@@ -146,7 +146,7 @@ class IOManager(InputManager, OutputManager):
             context (InputContext): The input context, which describes the input that's being loaded
                 and the upstream output that's being loaded from.
         """
-        return self.get_output_asset_partitions(context.upstream_output)
+        return set()
 
 
 def io_manager(
