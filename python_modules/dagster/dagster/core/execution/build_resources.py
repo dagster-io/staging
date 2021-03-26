@@ -15,8 +15,6 @@ from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import ResourceConfig, config_map_resources
 from dagster.loggers import default_system_loggers
 
-from .api import ephemeral_instance_if_missing
-
 
 def initialize_console_manager(pipeline_run: Optional[PipelineRun]) -> DagsterLogManager:
     # initialize default colored console logger
@@ -78,6 +76,8 @@ def build_resources(
         log_manager (Optional[DagsterLogManager]): Log Manager to use during resource
             initialization. Defaults to system log manager.
     """
+    from .api import ephemeral_instance_if_missing
+
     resources = check.dict_param(resources, "resource_defs", key_type=str)
     resource_defs = {}
     # Wrap instantiated resource values in a resource definition.

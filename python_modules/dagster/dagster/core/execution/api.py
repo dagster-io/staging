@@ -10,6 +10,7 @@ from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvaria
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
+from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
@@ -30,6 +31,7 @@ from .context_creation_pipeline import (
     ExecutionContextManager,
     PipelineExecutionContextManager,
     PlanExecutionContextManager,
+    executor_def_from_config,
     scoped_pipeline_context,
 )
 from .results import PipelineExecutionResult
@@ -188,6 +190,8 @@ def execute_run(
             execution_plan, pipeline_run.run_config, instance
         )
 
+    recorder: Dict[StepOutputHandle, Any] = {}
+
     _execute_run_iterable = ExecuteRunWithPlanIterable(
         execution_plan=execution_plan,
         iterator=pipeline_execution_iterator,
@@ -197,37 +201,24 @@ def execute_run(
             instance=instance,
             run_config=pipeline_run.run_config,
             raise_on_error=raise_on_error,
+            output_capture=recorder,
         ),
     )
     event_list = list(_execute_run_iterable)
     pipeline_context = _execute_run_iterable.pipeline_context
 
-    # workaround for mem_io_manager to work in reconstruct_context, e.g. result.result_for_solid
-    # in-memory values dict will get lost when the resource is re-initiated in reconstruct_context
-    # so instead of re-initiating every single resource, we pass the resource instances to
-    # reconstruct_context directly to avoid re-building from resource def.
-    resource_instances_to_override = {}
-    if pipeline_context:  # None if we have a pipeline failure
-        for (
-            key,
-            resource_instance,
-        ) in pipeline_context.scoped_resources_builder.resource_instance_dict.items():
-            if isinstance(resource_instance, InMemoryIOManager):
-                resource_instances_to_override[key] = resource_instance
+    pipeline_def = pipeline.get_definition()
+    mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
+    environment_config = EnvironmentConfig.build(
+        pipeline_def, run_config=pipeline_run.run_config, mode=pipeline_run.mode
+    )
+    executor = executor_def_from_config(mode_def, environment_config)
 
     return PipelineExecutionResult(
         pipeline.get_definition(),
-        pipeline_run.run_id,
+        pipeline_run,
         event_list,
-        lambda hardcoded_resources_arg: scoped_pipeline_context(
-            execution_plan,
-            pipeline_run.run_config,
-            pipeline_run,
-            instance,
-            intermediate_storage=pipeline_context.intermediate_storage,
-            resource_instances_to_override=hardcoded_resources_arg,
-        ),
-        resource_instances_to_override=resource_instances_to_override,
+        output_capture=recorder if executor.name == "in_process" else None,
     )
 
 
