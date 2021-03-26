@@ -67,10 +67,10 @@ class DagsterApiStub(object):
             request_serializer=api__pb2.ExternalPartitionTagsRequest.SerializeToString,
             response_deserializer=api__pb2.ExternalPartitionTagsReply.FromString,
         )
-        self.ExternalPartitionSetExecutionParams = channel.unary_unary(
+        self.ExternalPartitionSetExecutionParams = channel.unary_stream(
             "/api.DagsterApi/ExternalPartitionSetExecutionParams",
             request_serializer=api__pb2.ExternalPartitionSetExecutionParamsRequest.SerializeToString,
-            response_deserializer=api__pb2.ExternalPartitionSetExecutionParamsReply.FromString,
+            response_deserializer=api__pb2.StreamingChunkEvent.FromString,
         )
         self.ExternalPipelineSubsetSnapshot = channel.unary_unary(
             "/api.DagsterApi/ExternalPipelineSubsetSnapshot",
@@ -295,10 +295,10 @@ def add_DagsterApiServicer_to_server(servicer, server):
             request_deserializer=api__pb2.ExternalPartitionTagsRequest.FromString,
             response_serializer=api__pb2.ExternalPartitionTagsReply.SerializeToString,
         ),
-        "ExternalPartitionSetExecutionParams": grpc.unary_unary_rpc_method_handler(
+        "ExternalPartitionSetExecutionParams": grpc.unary_stream_rpc_method_handler(
             servicer.ExternalPartitionSetExecutionParams,
             request_deserializer=api__pb2.ExternalPartitionSetExecutionParamsRequest.FromString,
-            response_serializer=api__pb2.ExternalPartitionSetExecutionParamsReply.SerializeToString,
+            response_serializer=api__pb2.StreamingChunkEvent.SerializeToString,
         ),
         "ExternalPipelineSubsetSnapshot": grpc.unary_unary_rpc_method_handler(
             servicer.ExternalPipelineSubsetSnapshot,
@@ -633,12 +633,12 @@ class DagsterApi(object):
         timeout=None,
         metadata=None,
     ):
-        return grpc.experimental.unary_unary(
+        return grpc.experimental.unary_stream(
             request,
             target,
             "/api.DagsterApi/ExternalPartitionSetExecutionParams",
             api__pb2.ExternalPartitionSetExecutionParamsRequest.SerializeToString,
-            api__pb2.ExternalPartitionSetExecutionParamsReply.FromString,
+            api__pb2.StreamingChunkEvent.FromString,
             options,
             channel_credentials,
             insecure,

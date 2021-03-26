@@ -399,16 +399,15 @@ class DagsterApiServer(DagsterApiServicer):
         )
 
         recon_repo = self._recon_repository_from_origin(args.repository_origin)
-
-        return api_pb2.ExternalPartitionSetExecutionParamsReply(
-            serialized_external_partition_set_execution_param_data_or_external_partition_execution_error=serialize_dagster_namedtuple(
-                get_partition_set_execution_param_data(
-                    recon_repo=recon_repo,
-                    partition_set_name=args.partition_set_name,
-                    partition_names=args.partition_names,
-                )
+        serialized_data = serialize_dagster_namedtuple(
+            get_partition_set_execution_param_data(
+                recon_repo=recon_repo,
+                partition_set_name=args.partition_set_name,
+                partition_names=args.partition_names,
             )
         )
+
+        yield from self._split_serialized_data_into_chunk_events(serialized_data)
 
     def ExternalPartitionConfig(self, request, _context):
         args = deserialize_json_to_dagster_namedtuple(request.serialized_partition_args)
