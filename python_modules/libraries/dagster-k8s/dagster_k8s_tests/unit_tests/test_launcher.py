@@ -39,10 +39,10 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
     recon_repo = recon_pipeline.repository
     repo_def = recon_repo.get_definition()
     location_origin = InProcessRepositoryLocationOrigin(recon_repo)
-    location_handle = location_origin.create_handle()
+    location = location_origin.create_location()
     repo_handle = RepositoryHandle(
         repository_name=repo_def.name,
-        repository_location_handle=location_handle,
+        repository_location=location,
     )
     fake_external_pipeline = external_pipeline_from_recon_pipeline(
         recon_pipeline,
