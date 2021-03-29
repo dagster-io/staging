@@ -46,7 +46,7 @@ def test_io_manager_with_config():
         my_solid()
 
     run_config = {"solids": {"my_solid": {"outputs": {"result": {"some_config": "some_value"}}}}}
-    result = execute_pipeline(my_pipeline, run_config=run_config)
+    result = execute_pipeline(my_pipeline, run_config=run_config, in_process_output_capture=False)
     assert result.output_for_solid("my_solid") == 1
 
 
@@ -87,7 +87,7 @@ def test_io_manager_with_required_resource_keys():
     def my_pipeline():
         my_solid()
 
-    result = execute_pipeline(my_pipeline)
+    result = execute_pipeline(my_pipeline, in_process_output_capture=False)
     assert result.output_for_solid("my_solid") == "foobar"
 
 
