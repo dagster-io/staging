@@ -22,6 +22,17 @@ EXPECTED_LOGS = [
 ]
 
 
+@pipeline
+def simple():
+    @solid
+    def easy(context):
+        context.log.info("easy")
+        print(HELLO_WORLD)  # pylint: disable=print-call
+        return "easy"
+
+    easy()
+
+
 @mock.patch("dagster_azure.blob.compute_log_manager.generate_blob_sas")
 @mock.patch("dagster_azure.blob.compute_log_manager.create_blob_client")
 def test_compute_log_manager(
@@ -30,16 +41,6 @@ def test_compute_log_manager(
     mock_generate_blob_sas.return_value = "fake-url"
     fake_client = FakeBlobServiceClient(storage_account)
     mock_create_blob_client.return_value = fake_client
-
-    @pipeline
-    def simple():
-        @solid
-        def easy(context):
-            context.log.info("easy")
-            print(HELLO_WORLD)  # pylint: disable=print-call
-            return "easy"
-
-        easy()
 
     with tempfile.TemporaryDirectory() as temp_dir:
         run_store = SqliteRunStorage.from_local(temp_dir)
@@ -98,6 +99,44 @@ def test_compute_log_manager(
         stderr = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDERR)
         for expected in EXPECTED_LOGS:
             assert expected in stderr.data
+
+
+@mock.patch("dagster_azure.blob.compute_log_manager.generate_blob_sas")
+@mock.patch("dagster_azure.blob.compute_log_manager.create_blob_client")
+def test_file_based_instance_api(
+    mock_create_blob_client, mock_generate_blob_sas, storage_account, container, credential
+):
+    mock_generate_blob_sas.return_value = "fake-url"
+    fake_client = FakeBlobServiceClient(storage_account)
+    mock_create_blob_client.return_value = fake_client
+    with tempfile.TemporaryDirectory() as temp_dir:
+        run_store = SqliteRunStorage.from_local(temp_dir)
+        event_store = SqliteEventLogStorage(temp_dir)
+        manager = AzureBlobComputeLogManager(
+            storage_account=storage_account,
+            container=container,
+            prefix="my_prefix",
+            local_dir=temp_dir,
+            secret_key=credential,
+        )
+        instance = DagsterInstance(
+            instance_type=InstanceType.PERSISTENT,
+            local_artifact_storage=LocalArtifactStorage(temp_dir),
+            run_storage=run_store,
+            event_storage=event_store,
+            compute_log_manager=manager,
+            run_coordinator=DefaultRunCoordinator(),
+            run_launcher=SyncInMemoryRunLauncher(),
+        )
+        result = execute_pipeline(simple, instance=instance)
+        # test textio-based API
+        with instance.stdout_for_step(result.run_id, "easy") as f:
+            assert f.read() == HELLO_WORLD + SEPARATOR
+
+        with instance.stderr_for_step(result.run_id, "easy") as f:
+            content = f.read()
+            for expected in EXPECTED_LOGS:
+                assert expected in content
 
 
 def test_compute_log_manager_from_config(storage_account, container, credential):

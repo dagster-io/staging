@@ -21,17 +21,18 @@ EXPECTED_LOGS = [
 ]
 
 
+@pipeline
+def simple():
+    @solid
+    def easy(context):
+        context.log.info("easy")
+        print(HELLO_WORLD)  # pylint: disable=print-call
+        return "easy"
+
+    easy()
+
+
 def test_compute_log_manager(mock_s3_bucket):
-    @pipeline
-    def simple():
-        @solid
-        def easy(context):
-            context.log.info("easy")
-            print(HELLO_WORLD)  # pylint: disable=print-call
-            return "easy"
-
-        easy()
-
     with tempfile.TemporaryDirectory() as temp_dir:
         run_store = SqliteRunStorage.from_local(temp_dir)
         event_store = SqliteEventLogStorage(temp_dir)
@@ -84,6 +85,33 @@ def test_compute_log_manager(mock_s3_bucket):
         stderr = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDERR)
         for expected in EXPECTED_LOGS:
             assert expected in stderr.data
+
+
+def test_file_based_instance_api(mock_s3_bucket):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        run_store = SqliteRunStorage.from_local(temp_dir)
+        event_store = SqliteEventLogStorage(temp_dir)
+        manager = S3ComputeLogManager(
+            bucket=mock_s3_bucket.name, prefix="my_prefix", local_dir=temp_dir
+        )
+        instance = DagsterInstance(
+            instance_type=InstanceType.PERSISTENT,
+            local_artifact_storage=LocalArtifactStorage(temp_dir),
+            run_storage=run_store,
+            event_storage=event_store,
+            compute_log_manager=manager,
+            run_coordinator=DefaultRunCoordinator(),
+            run_launcher=DefaultRunLauncher(),
+        )
+        result = execute_pipeline(simple, instance=instance)
+        # test textio-based API
+        with instance.stdout_for_step(result.run_id, "easy") as f:
+            assert f.read() == HELLO_WORLD + SEPARATOR
+
+        with instance.stderr_for_step(result.run_id, "easy") as f:
+            content = f.read()
+            for expected in EXPECTED_LOGS:
+                assert expected in content
 
 
 def test_compute_log_manager_from_config(mock_s3_bucket):
