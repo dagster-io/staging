@@ -4,6 +4,7 @@ import * as React from 'react';
 import {MemoryRouter} from 'react-router-dom';
 
 import {App} from '../app/App';
+import {AppContext} from '../app/AppContext';
 import {breakOnUnderscores} from '../app/Util';
 import {ApolloTestProvider} from '../testing/ApolloTestProvider';
 import {WorkspaceProvider} from '../workspace/WorkspaceContext';
@@ -79,15 +80,23 @@ describe('App', () => {
     }),
   };
 
+  const appContext = {
+    basePath: '',
+    rootServerURI: '',
+    websocketURI: 'ws://foo',
+  };
+
   it('renders left nav without error', async () => {
     render(
-      <MemoryRouter>
-        <ApolloTestProvider mocks={defaultMocks}>
-          <WorkspaceProvider>
-            <App />
-          </WorkspaceProvider>
-        </ApolloTestProvider>
-      </MemoryRouter>,
+      <AppContext.Provider value={appContext}>
+        <MemoryRouter>
+          <ApolloTestProvider mocks={defaultMocks}>
+            <WorkspaceProvider>
+              <App />
+            </WorkspaceProvider>
+          </ApolloTestProvider>
+        </MemoryRouter>
+      </AppContext.Provider>,
     );
 
     await waitFor(() => {
@@ -106,13 +115,15 @@ describe('App', () => {
   describe('Routes', () => {
     it('renders solids explorer', async () => {
       render(
-        <MemoryRouter initialEntries={['/workspace/my_repository@my_location/solids/foo_solid']}>
-          <ApolloTestProvider mocks={defaultMocks}>
-            <WorkspaceProvider>
-              <App />
-            </WorkspaceProvider>
-          </ApolloTestProvider>
-        </MemoryRouter>,
+        <AppContext.Provider value={appContext}>
+          <MemoryRouter initialEntries={['/workspace/my_repository@my_location/solids/foo_solid']}>
+            <ApolloTestProvider mocks={defaultMocks}>
+              <WorkspaceProvider>
+                <App />
+              </WorkspaceProvider>
+            </ApolloTestProvider>
+          </MemoryRouter>
+        </AppContext.Provider>,
       );
 
       await waitFor(() => {
@@ -141,15 +152,19 @@ describe('App', () => {
       };
 
       render(
-        <MemoryRouter
-          initialEntries={['/workspace/my_repository@my_location/pipelines/foo_pipeline/overview']}
-        >
-          <ApolloTestProvider mocks={mocks}>
-            <WorkspaceProvider>
-              <App />
-            </WorkspaceProvider>
-          </ApolloTestProvider>
-        </MemoryRouter>,
+        <AppContext.Provider value={appContext}>
+          <MemoryRouter
+            initialEntries={[
+              '/workspace/my_repository@my_location/pipelines/foo_pipeline/overview',
+            ]}
+          >
+            <ApolloTestProvider mocks={mocks}>
+              <WorkspaceProvider>
+                <App />
+              </WorkspaceProvider>
+            </ApolloTestProvider>
+          </MemoryRouter>
+        </AppContext.Provider>,
       );
 
       await waitFor(() => {

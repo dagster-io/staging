@@ -3,6 +3,7 @@ import {render, screen, waitFor} from '@testing-library/react';
 import React from 'react';
 import {MemoryRouter} from 'react-router-dom';
 
+import {AppContext} from '../app/AppContext';
 import {ApolloTestProvider} from '../testing/ApolloTestProvider';
 import {WorkspaceProvider} from '../workspace/WorkspaceContext';
 
@@ -33,15 +34,23 @@ describe('LeftNav', () => {
     }),
   };
 
+  const appContext = {
+    basePath: '',
+    rootServerURI: '',
+    websocketURI: 'ws://foo',
+  };
+
   const Test: React.FC<{mocks: any}> = ({mocks}) => {
     return (
-      <MemoryRouter>
-        <ApolloTestProvider mocks={mocks}>
-          <WorkspaceProvider>
-            <LeftNav />
-          </WorkspaceProvider>
-        </ApolloTestProvider>
-      </MemoryRouter>
+      <AppContext.Provider value={appContext}>
+        <MemoryRouter>
+          <ApolloTestProvider mocks={mocks}>
+            <WorkspaceProvider>
+              <LeftNav />
+            </WorkspaceProvider>
+          </ApolloTestProvider>
+        </MemoryRouter>
+      </AppContext.Provider>
     );
   };
 
