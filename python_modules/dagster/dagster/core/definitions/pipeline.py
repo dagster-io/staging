@@ -24,7 +24,7 @@ from .graph import GraphDefinition
 from .hook import HookDefinition
 from .mode import ModeDefinition
 from .preset import PresetDefinition
-from .solid import NodeDefinition
+from .solid import CompositeSolidDefinition, NodeDefinition
 from .utils import validate_tags
 
 
@@ -254,6 +254,19 @@ class PipelineDefinition(GraphDefinition):
 
         self._cached_run_config_schemas[mode_def.name] = _create_run_config_schema(self, mode_def)
         return self._cached_run_config_schemas[mode_def.name]
+
+    def as_composite_solid(self):
+        return CompositeSolidDefinition(
+            self.name,
+            self._solid_defs,
+            input_mappings=self.input_mappings,
+            output_mappings=self.output_mappings,
+            config_mapping=self.config_mapping,
+            dependencies=self.dependencies,
+            description=self.description,
+            tags=self._tags,
+            positional_inputs=None,
+        )
 
     @property
     def mode_definitions(self):

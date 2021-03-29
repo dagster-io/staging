@@ -14,6 +14,7 @@ from dagster import (
     solid,
     usable_as_dagster_type,
 )
+from dagster.core.execution.execute import execute_in_process
 
 
 def builder(graph):
@@ -306,3 +307,26 @@ def test_bad_positional_input_use():
             # so the two remaining have no positions and this is
             # ambiguous
             add_kw(return_two(), return_two(), return_two())
+
+
+def test_as_composite_solid():
+    @solid
+    def basic_solid(_):
+        return 5
+
+    @pipeline(tags={"dagster/hello": "goodbye"}, description="naught but a simple unit test")
+    def basic_pipeline():
+        basic_solid()
+
+    basic_comp_solid = basic_pipeline.as_composite_solid()
+    assert basic_comp_solid.name == basic_pipeline.name
+    assert basic_comp_solid.node_defs == basic_pipeline.node_defs
+    assert basic_comp_solid.input_mappings == basic_pipeline.input_mappings
+    assert basic_comp_solid.output_mappings == basic_pipeline.output_mappings
+    assert basic_comp_solid.tags["dagster/hello"] == "goodbye"
+    assert basic_comp_solid.description == "naught but a simple unit test"
+    assert not basic_comp_solid.positional_inputs
+
+    result = execute_in_process(basic_comp_solid)
+    assert result.success
+    assert result.result_for_node("basic_solid").output_values["result"] == 5
