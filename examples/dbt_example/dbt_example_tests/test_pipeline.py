@@ -48,5 +48,6 @@ def test_pipeline(pg_hostname, postgres):  # pylint: disable=unused-argument
                         "io_manager": {"config": {"base_dir": temp_dir}},
                     },
                 },
+                in_process_output_capture=False,
             )
             assert res.success

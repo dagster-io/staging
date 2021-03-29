@@ -71,5 +71,6 @@ def test_airline_pipeline_1_warehouse(postgres, pg_hostname):
                 mode="local",
                 run_config=warehouse_config_object,
                 instance=instance,
+                in_process_output_capture=False,
             )
             assert result_warehouse.success
