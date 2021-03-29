@@ -205,6 +205,7 @@ def test_pipeline(mode):
             pipeline=reconstructable(define_basic_pipeline),
             mode=mode,
             run_config=make_run_config(tmpdir, mode),
+            in_process_output_capture=False,
         )
         assert result.result_for_solid("return_two").output_value() == 2
         assert result.result_for_solid("add_one").output_value() == 3

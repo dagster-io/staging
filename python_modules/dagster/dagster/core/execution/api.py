@@ -11,6 +11,7 @@ from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvaria
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import RunWorkerExecutionContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
+from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
@@ -18,7 +19,6 @@ from dagster.core.execution.retries import RetryMode
 from dagster.core.executor.base import Executor
 from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.selector import parse_step_selection
-from dagster.core.storage.mem_io_manager import InMemoryIOManager
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.telemetry import log_repo_stats, telemetry_wrapper
@@ -180,6 +180,7 @@ def execute_run(
     pipeline_run: PipelineRun,
     instance: DagsterInstance,
     raise_on_error: bool = False,
+    in_process_output_capture: bool = True,
 ) -> PipelineExecutionResult:
     """Executes an existing pipeline run synchronously.
 
@@ -256,6 +257,10 @@ def execute_run(
             environment_config,
         )
 
+    output_capture: Optional[Dict[StepOutputHandle, Any]] = (
+        {} if in_process_output_capture else None
+    )
+
     _execute_run_iterable = ExecuteRunWithPlanIterable(
         execution_plan=execution_plan,
         iterator=pipeline_execution_iterator,
@@ -266,38 +271,25 @@ def execute_run(
             instance=instance,
             run_config=pipeline_run.run_config,
             raise_on_error=raise_on_error,
+            output_capture=output_capture,
         ),
     )
     event_list = list(_execute_run_iterable)
     pipeline_context = _execute_run_iterable.pipeline_context
 
-    # workaround for mem_io_manager to work in reconstruct_context, e.g. result.result_for_solid
-    # in-memory values dict will get lost when the resource is re-initiated in reconstruct_context
-    # so instead of re-initiating every single resource, we pass the resource instances to
-    # reconstruct_context directly to avoid re-building from resource def.
-    resource_instances_to_override = {}
-    if pipeline_context:  # None if we have a pipeline failure
-        for (
-            key,
-            resource_instance,
-        ) in pipeline_context.scoped_resources_builder.resource_instance_dict.items():
-            if isinstance(resource_instance, InMemoryIOManager):
-                resource_instances_to_override[key] = resource_instance
-
     return PipelineExecutionResult(
         pipeline.get_definition(),
         pipeline_run.run_id,
         event_list,
-        lambda hardcoded_resources_arg: scoped_pipeline_context(
+        lambda: scoped_pipeline_context(
             execution_plan,
             pipeline,
             pipeline_run.run_config,
             pipeline_run,
             instance,
             intermediate_storage=pipeline_context.intermediate_storage,
-            resource_instances_to_override=hardcoded_resources_arg,
         ),
-        resource_instances_to_override=resource_instances_to_override,
+        output_capture=output_capture,
     )
 
 
@@ -394,6 +386,7 @@ def execute_pipeline(
     solid_selection: Optional[List[str]] = None,
     instance: Optional[DagsterInstance] = None,
     raise_on_error: bool = True,
+    in_process_output_capture: bool = True,
 ) -> PipelineExecutionResult:
     """Execute a pipeline synchronously.
 
@@ -440,6 +433,7 @@ def execute_pipeline(
             tags=tags,
             solid_selection=solid_selection,
             raise_on_error=raise_on_error,
+            in_process_output_capture=in_process_output_capture,
         )
 
 
@@ -453,6 +447,7 @@ def _logged_execute_pipeline(
     tags: Optional[Dict[str, Any]] = None,
     solid_selection: Optional[List[str]] = None,
     raise_on_error: bool = True,
+    in_process_output_capture: bool = True,
 ) -> PipelineExecutionResult:
     check.inst_param(instance, "instance", DagsterInstance)
     (
@@ -482,7 +477,13 @@ def _logged_execute_pipeline(
         tags=tags,
     )
 
-    return execute_run(pipeline, pipeline_run, instance, raise_on_error=raise_on_error)
+    return execute_run(
+        pipeline,
+        pipeline_run,
+        instance,
+        raise_on_error=raise_on_error,
+        in_process_output_capture=in_process_output_capture,
+    )
 
 
 def reexecute_pipeline(

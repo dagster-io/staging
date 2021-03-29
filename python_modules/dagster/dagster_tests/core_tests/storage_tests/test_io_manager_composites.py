@@ -56,7 +56,7 @@ def test_composite_solid_output():
     def my_pipeline():
         my_composite()
 
-    result = execute_pipeline(my_pipeline)
+    result = execute_pipeline(my_pipeline, in_process_output_capture=False)
     assert result.output_for_solid("my_composite") == {
         "value": 5,
         "output_manager_name": "inner",

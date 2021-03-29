@@ -39,5 +39,6 @@ def test_pipelines_success(file_path, run_config_path):
                     run_config=run_config,
                     instance=instance,
                     solid_selection=["k_means_iris"],  # skip download_file in tests
+                    in_process_output_capture=False,
                 )
                 assert pipeline_result.success

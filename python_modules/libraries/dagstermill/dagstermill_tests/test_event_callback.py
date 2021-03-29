@@ -27,7 +27,12 @@ def test_event_callback_logging():
 
         instance.watch_event_logs(pipeline_run.run_id, -1, _event_callback)
 
-        execute_run(pipeline, pipeline_run, instance)
+        execute_run(
+            pipeline,
+            pipeline_run,
+            instance,
+            in_process_output_capture=False,
+        )
 
         passed_before_timeout = False
         retries = 5
