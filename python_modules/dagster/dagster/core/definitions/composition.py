@@ -194,7 +194,7 @@ class CompleteCompositionContext(
                         node.solid_name, node.output_name
                     )
                 else:
-                    check.failed("Unexpected input binding - got {node}".format(node=node))
+                    check.failed(f"Unexpected input binding - got {node}")
 
             dep_dict[
                 SolidInvocation(
@@ -521,7 +521,8 @@ class InvokedSolidDynamicOutputWrapper:
             return result
         else:
             check.failed(
-                f"Could not handle output from map function invoked on {self.solid_name}:{self.output_name}, received {result}"
+                "Could not handle output from map function invoked on "
+                f"{self.solid_name}:{self.output_name}, received {result}"
             )
 
     def collect(self):
