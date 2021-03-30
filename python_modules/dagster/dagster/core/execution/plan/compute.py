@@ -12,7 +12,7 @@ from dagster.core.definitions import (
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
-from dagster.core.execution.context.system import SystemComputeExecutionContext
+from dagster.core.execution.context.system import UserCodeComputeExecutionContext
 from dagster.core.system_config.objects import EnvironmentConfig
 
 from .outputs import StepOutput, StepOutputProperties
@@ -53,9 +53,9 @@ def create_step_outputs(
 
 
 def _yield_compute_results(
-    compute_context: SystemComputeExecutionContext, inputs: Dict[str, Any], compute_fn: Callable
+    compute_context: UserCodeComputeExecutionContext, inputs: Dict[str, Any], compute_fn: Callable
 ) -> Iterator[SolidOutputUnion]:
-    check.inst_param(compute_context, "compute_context", SystemComputeExecutionContext)
+    check.inst_param(compute_context, "compute_context", UserCodeComputeExecutionContext)
     step = compute_context.step
     user_event_sequence = compute_fn(SolidExecutionContext(compute_context), inputs)
 
@@ -93,13 +93,13 @@ def _yield_compute_results(
 
 
 def execute_core_compute(
-    compute_context: SystemComputeExecutionContext, inputs: Dict[str, Any], compute_fn
+    compute_context: UserCodeComputeExecutionContext, inputs: Dict[str, Any], compute_fn
 ) -> Iterator[SolidOutputUnion]:
     """
     Execute the user-specified compute for the solid. Wrap in an error boundary and do
     all relevant logging and metrics tracking
     """
-    check.inst_param(compute_context, "compute_context", SystemComputeExecutionContext)
+    check.inst_param(compute_context, "compute_context", UserCodeComputeExecutionContext)
     check.dict_param(inputs, "inputs", key_type=str)
 
     step = compute_context.step

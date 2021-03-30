@@ -5,7 +5,7 @@ from dagster.core.definitions.executor import check_cross_process_constraints, e
 from dagster.core.errors import raise_execution_interrupts
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.api import create_execution_plan, execute_plan
-from dagster.core.execution.context.system import SystemPipelineExecutionContext
+from dagster.core.execution.context.system import RunWorkerExecutionContext
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
 from dagster.core.instance import DagsterInstance
@@ -156,7 +156,7 @@ class DaskExecutor(Executor):
         return RetryMode.DISABLED
 
     def execute(self, pipeline_context, execution_plan):
-        check.inst_param(pipeline_context, "pipeline_context", SystemPipelineExecutionContext)
+        check.inst_param(pipeline_context, "pipeline_context", RunWorkerExecutionContext)
         check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
         check.param_invariant(
             isinstance(pipeline_context.executor, DaskExecutor),

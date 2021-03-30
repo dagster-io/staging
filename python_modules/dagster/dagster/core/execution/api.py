@@ -30,8 +30,8 @@ from dagster.utils.interrupts import capture_interrupts
 from .context_creation_pipeline import (
     ExecutionContextManager,
     HostModeRunWorkerExecutionContextManager,
-    PipelineExecutionContextManager,
-    PlanExecutionContextManager,
+    UserCodePlanExecutionContextManager,
+    UserCodeRunWorkerContextManager,
     scoped_pipeline_context,
 )
 from .results import PipelineExecutionResult
@@ -106,7 +106,7 @@ def execute_run_iterator(
         ExecuteRunWithPlanIterable(
             execution_plan=execution_plan,
             iterator=pipeline_execution_iterator,
-            execution_context_manager=PipelineExecutionContextManager(
+            execution_context_manager=UserCodeRunWorkerContextManager(
                 pipeline=pipeline,
                 execution_plan=execution_plan,
                 pipeline_run=pipeline_run,
@@ -259,7 +259,7 @@ def execute_run(
     _execute_run_iterable = ExecuteRunWithPlanIterable(
         execution_plan=execution_plan,
         iterator=pipeline_execution_iterator,
-        execution_context_manager=PipelineExecutionContextManager(
+        execution_context_manager=UserCodeRunWorkerContextManager(
             pipeline=pipeline,
             execution_plan=execution_plan,
             pipeline_run=pipeline_run,
@@ -708,7 +708,7 @@ def execute_plan_iterator(
         ExecuteRunWithPlanIterable(
             execution_plan=execution_plan,
             iterator=inner_plan_execution_iterator,
-            execution_context_manager=PlanExecutionContextManager(
+            execution_context_manager=UserCodePlanExecutionContextManager(
                 pipeline=pipeline,
                 retry_mode=retry_mode,
                 execution_plan=execution_plan,

@@ -24,8 +24,8 @@ from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import NodeDefinition
 from dagster.core.execution.api import create_execution_plan, scoped_pipeline_context
+from dagster.core.execution.context.system import UserCodeRunWorkerExecutionContext
 from dagster.core.execution.context_creation_pipeline import (
-    SystemPipelineExecutionContext,
     construct_execution_context_data,
     create_context_creation_data,
     create_executor,
@@ -75,7 +75,7 @@ def create_test_pipeline_execution_context(logger_defs=None):
     scoped_resources_builder = ScopedResourcesBuilder()
     executor = create_executor(creation_data)
 
-    return SystemPipelineExecutionContext(
+    return UserCodeRunWorkerExecutionContext(
         construct_execution_context_data(
             context_creation_data=creation_data,
             scoped_resources_builder=scoped_resources_builder,

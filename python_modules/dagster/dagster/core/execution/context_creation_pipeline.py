@@ -34,9 +34,9 @@ from .context.logger import InitLoggerContext
 from .context.system import (
     HostModeExecutionContextData,
     HostModeRunWorkerExecutionContext,
-    SystemExecutionContext,
-    SystemExecutionContextData,
-    SystemPipelineExecutionContext,
+    UserCodeExecutionContextData,
+    UserCodePlanExecutionContext,
+    UserCodeRunWorkerExecutionContext,
 )
 
 
@@ -253,7 +253,7 @@ def execution_context_event_generator(
             raise dagster_error
 
 
-class PipelineExecutionContextManager(ExecutionContextManager):
+class UserCodeRunWorkerContextManager(ExecutionContextManager):
     def __init__(
         self,
         pipeline,
@@ -268,7 +268,7 @@ class PipelineExecutionContextManager(ExecutionContextManager):
         output_capture=None,
     ):
 
-        super(PipelineExecutionContextManager, self).__init__(
+        super(UserCodeRunWorkerContextManager, self).__init__(
             execution_context_event_generator(
                 self.construct_context,
                 pipeline,
@@ -286,7 +286,7 @@ class PipelineExecutionContextManager(ExecutionContextManager):
 
     @property
     def context_type(self):
-        return SystemPipelineExecutionContext
+        return UserCodeRunWorkerExecutionContext
 
     def construct_context(
         self,
@@ -301,7 +301,7 @@ class PipelineExecutionContextManager(ExecutionContextManager):
             create_executor(context_creation_data), Executor, "Must return an Executor"
         )
 
-        return SystemPipelineExecutionContext(
+        return UserCodeRunWorkerExecutionContext(
             construct_execution_context_data(
                 context_creation_data=context_creation_data,
                 scoped_resources_builder=scoped_resources_builder,
@@ -425,7 +425,7 @@ class HostModeRunWorkerExecutionContextManager(ExecutionContextManager):
         return HostModeRunWorkerExecutionContext
 
 
-class PlanExecutionContextManager(ExecutionContextManager):
+class UserCodePlanExecutionContextManager(ExecutionContextManager):
     def __init__(
         self,
         pipeline,
@@ -438,7 +438,7 @@ class PlanExecutionContextManager(ExecutionContextManager):
         raise_on_error=False,
     ):
         self._retry_mode = check.inst_param(retry_mode, "retry_mode", RetryMode)
-        super(PlanExecutionContextManager, self).__init__(
+        super(UserCodePlanExecutionContextManager, self).__init__(
             execution_context_event_generator(
                 self.construct_context,
                 pipeline,
@@ -453,7 +453,7 @@ class PlanExecutionContextManager(ExecutionContextManager):
 
     @property
     def context_type(self):
-        return SystemExecutionContext
+        return UserCodePlanExecutionContext
 
     def construct_context(
         self,
@@ -464,7 +464,7 @@ class PlanExecutionContextManager(ExecutionContextManager):
         raise_on_error,
         output_capture=None,
     ):
-        return SystemExecutionContext(
+        return UserCodePlanExecutionContext(
             construct_execution_context_data(
                 context_creation_data=context_creation_data,
                 scoped_resources_builder=scoped_resources_builder,
@@ -555,7 +555,7 @@ def construct_execution_context_data(
     check.inst_param(log_manager, "log_manager", DagsterLogManager)
     check.inst_param(retry_mode, "retry_mode", RetryMode)
 
-    return SystemExecutionContextData(
+    return UserCodeExecutionContextData(
         pipeline=context_creation_data.pipeline,
         mode_def=context_creation_data.mode_def,
         intermediate_storage_def=context_creation_data.intermediate_storage_def,
@@ -598,7 +598,7 @@ def scoped_pipeline_context(
     check.opt_inst_param(intermediate_storage, "intermediate_storage", IntermediateStorage)
     check.opt_dict_param(resource_instances_to_override, "resource_instances_to_override")
 
-    initialization_manager = PipelineExecutionContextManager(
+    initialization_manager = UserCodeRunWorkerContextManager(
         pipeline,
         execution_plan,
         run_config,
@@ -613,7 +613,7 @@ def scoped_pipeline_context(
         pass
 
     try:
-        yield check.inst(initialization_manager.get_context(), SystemPipelineExecutionContext)
+        yield check.inst(initialization_manager.get_context(), UserCodeRunWorkerExecutionContext)
     finally:
         for _ in initialization_manager.shutdown_context():
             pass

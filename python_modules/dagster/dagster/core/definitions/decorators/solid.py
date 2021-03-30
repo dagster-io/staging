@@ -20,7 +20,7 @@ from ..output import OutputDefinition
 from ..solid import SolidDefinition
 
 if TYPE_CHECKING:
-    from dagster.core.execution.context.system import SystemComputeExecutionContext
+    from dagster.core.execution.context.system import UserCodeComputeExecutionContext
 
 
 class _Solid:

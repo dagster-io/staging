@@ -20,7 +20,7 @@ from dagster import (
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.utils import validate_tags
 from dagster.core.execution.context.compute import SolidExecutionContext
-from dagster.core.execution.context.system import SystemComputeExecutionContext
+from dagster.core.execution.context.system import UserCodeComputeExecutionContext
 from dagster.core.storage.file_manager import FileHandle
 from dagster.serdes import pack_value
 from dagster.utils import mkdir_p, safe_tempfile_path
@@ -87,11 +87,11 @@ def replace_parameters(context, nb, parameters):
 
 
 def get_papermill_parameters(compute_context, inputs, output_log_path):
-    check.inst_param(compute_context, "compute_context", SystemComputeExecutionContext)
+    check.inst_param(compute_context, "compute_context", UserCodeComputeExecutionContext)
     check.param_invariant(
         isinstance(compute_context.run_config, dict),
         "compute_context",
-        "SystemComputeExecutionContext must have valid run_config",
+        "UserCodeComputeExecutionContext must have valid run_config",
     )
     check.dict_param(inputs, "inputs", key_type=str)
 
@@ -149,7 +149,7 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
         check.param_invariant(
             isinstance(compute_context.run_config, dict),
             "context",
-            "SystemComputeExecutionContext must have valid run_config",
+            "UserCodeComputeExecutionContext must have valid run_config",
         )
 
         system_compute_context = compute_context.get_system_context()

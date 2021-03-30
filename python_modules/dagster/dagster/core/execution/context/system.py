@@ -272,9 +272,9 @@ class HostModeStepExecutionContext(HostModeExecutionContext, BaseStepExecutionCo
         return self._step
 
 
-class SystemExecutionContextData(
+class UserCodeExecutionContextData(
     namedtuple(
-        "_SystemExecutionContextData",
+        "_UserCodeExecutionContextData",
         (
             "pipeline_run scoped_resources_builder environment_config pipeline "
             "mode_def intermediate_storage_def instance intermediate_storage "
@@ -283,7 +283,7 @@ class SystemExecutionContextData(
     )
 ):
     """
-    SystemExecutionContextData is the data that remains constant throughout the entire
+    UserCodeExecutionContextData is the data that remains constant throughout the entire
     execution of a pipeline or plan.
     """
 
@@ -306,7 +306,7 @@ class SystemExecutionContextData(
         from dagster.core.instance import DagsterInstance
         from dagster.core.execution.plan.plan import ExecutionPlan
 
-        return super(SystemExecutionContextData, cls).__new__(
+        return super(UserCodeExecutionContextData, cls).__new__(
             cls,
             pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
             scoped_resources_builder=check.inst_param(
@@ -342,17 +342,17 @@ class SystemExecutionContextData(
         return self.pipeline_run.pipeline_name
 
 
-class SystemExecutionContext:
+class UserCodePlanExecutionContext:
     __slots__ = ["_execution_context_data", "_log_manager", "_output_capture"]
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
     ):
         self._execution_context_data = check.inst_param(
-            execution_context_data, "execution_context_data", SystemExecutionContextData
+            execution_context_data, "execution_context_data", UserCodeExecutionContextData
         )
         self._log_manager = check.inst_param(log_manager, "log_manager", DagsterLogManager)
 
@@ -437,11 +437,11 @@ class SystemExecutionContext:
         check.str_param(key, "key")
         return self.logging_tags.get(key)
 
-    def for_step(self, step: ExecutionStep) -> "SystemStepExecutionContext":
+    def for_step(self, step: ExecutionStep) -> "UserCodeStepExecutionContext":
 
         check.inst_param(step, "step", ExecutionStep)
 
-        return SystemStepExecutionContext(
+        return UserCodeStepExecutionContext(
             self._execution_context_data,
             self._log_manager.with_tags(**step.logging_tags),
             step,
@@ -452,17 +452,17 @@ class SystemExecutionContext:
         return TypeCheckContext(self._execution_context_data, self.log, dagster_type)
 
 
-class SystemPipelineExecutionContext(SystemExecutionContext, RunWorkerExecutionContext):
+class UserCodeRunWorkerExecutionContext(UserCodePlanExecutionContext, RunWorkerExecutionContext):
     __slots__ = ["_executor"]
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         executor: Executor,
         output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
     ):
-        super(SystemPipelineExecutionContext, self).__init__(
+        super(UserCodeRunWorkerExecutionContext, self).__init__(
             execution_context_data, log_manager, output_capture=output_capture
         )
         self._executor = check.inst_param(executor, "executor", Executor)
@@ -480,12 +480,12 @@ class SystemPipelineExecutionContext(SystemExecutionContext, RunWorkerExecutionC
         return self._executor
 
 
-class SystemStepExecutionContext(SystemExecutionContext, BaseStepExecutionContext):
+class UserCodeStepExecutionContext(UserCodePlanExecutionContext, BaseStepExecutionContext):
     __slots__ = ["_step", "_resources", "_required_resource_keys", "_step_launcher"]
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         step: ExecutionStep,
         output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
@@ -493,7 +493,7 @@ class SystemStepExecutionContext(SystemExecutionContext, BaseStepExecutionContex
         from dagster.core.execution.resources_init import get_required_resource_keys_for_step
 
         self._step = check.inst_param(step, "step", ExecutionStep)
-        super(SystemStepExecutionContext, self).__init__(execution_context_data, log_manager)
+        super(UserCodeStepExecutionContext, self).__init__(execution_context_data, log_manager)
         self._required_resource_keys = get_required_resource_keys_for_step(
             execution_context_data.pipeline.get_definition(),
             step,
@@ -522,8 +522,8 @@ class SystemStepExecutionContext(SystemExecutionContext, BaseStepExecutionContex
         self._log_manager = log_manager
         self._output_capture = output_capture
 
-    def for_compute(self) -> "SystemComputeExecutionContext":
-        return SystemComputeExecutionContext(self._execution_context_data, self.log, self.step)
+    def for_compute(self) -> "UserCodeComputeExecutionContext":
+        return UserCodeComputeExecutionContext(self._execution_context_data, self.log, self.step)
 
     @property
     def step(self) -> ExecutionStep:
@@ -639,14 +639,14 @@ class SystemStepExecutionContext(SystemExecutionContext, BaseStepExecutionContex
         return check.inst(output_manager, IOManager)
 
 
-class SystemComputeExecutionContext(SystemStepExecutionContext):
+class UserCodeComputeExecutionContext(UserCodeStepExecutionContext):
     @property
     def solid_config(self) -> Any:
         solid_config = self.environment_config.solids.get(str(self.solid_handle))
         return solid_config.config if solid_config else None
 
 
-class TypeCheckContext(SystemExecutionContext):
+class TypeCheckContext(UserCodePlanExecutionContext):
     """The ``context`` object available to a type check function on a DagsterType.
 
     Attributes:
@@ -657,7 +657,7 @@ class TypeCheckContext(SystemExecutionContext):
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         dagster_type: DagsterType,
     ):
@@ -672,7 +672,7 @@ class TypeCheckContext(SystemExecutionContext):
         return self._resources
 
 
-class HookContext(SystemExecutionContext):
+class HookContext(UserCodePlanExecutionContext):
     """The ``context`` object available to a hook function on an DagsterEvent.
 
     Attributes:
@@ -686,7 +686,7 @@ class HookContext(SystemExecutionContext):
 
     def __init__(
         self,
-        execution_context_data: SystemExecutionContextData,
+        execution_context_data: UserCodeExecutionContextData,
         log_manager: DagsterLogManager,
         hook_def: HookDefinition,
         step: ExecutionStep,
@@ -772,7 +772,7 @@ class OutputContext(
         log_manager: Optional[DagsterLogManager] = None,
         version: Optional[str] = None,
         # This is used internally by the intermediate storage adapter, we don't usually expect users to mock this.
-        step_context: Optional[SystemStepExecutionContext] = None,
+        step_context: Optional[UserCodeStepExecutionContext] = None,
         resource_config: Optional[Any] = None,
         resources: Optional["Resources"] = None,
     ):
@@ -793,7 +793,7 @@ class OutputContext(
             log=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
             version=check.opt_str_param(version, "version"),
             step_context=check.opt_inst_param(
-                step_context, "step_context", SystemStepExecutionContext
+                step_context, "step_context", UserCodeStepExecutionContext
             ),
             resource_config=resource_config,
             resources=resources,
@@ -860,7 +860,7 @@ class InputContext(
         dagster_type: Optional[DagsterType] = None,
         log_manager: Optional[DagsterLogManager] = None,
         # This is used internally by the intermediate storage adapter, we don't expect users to mock this.
-        step_context: Optional[SystemStepExecutionContext] = None,
+        step_context: Optional[UserCodeStepExecutionContext] = None,
         resource_config: Any = None,
         resources: Optional["Resources"] = None,
     ):
@@ -878,7 +878,7 @@ class InputContext(
             ),  # this allows the user to mock the context with unresolved dagster type
             log=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
             step_context=check.opt_inst_param(
-                step_context, "step_context", SystemStepExecutionContext
+                step_context, "step_context", UserCodeStepExecutionContext
             ),
             resource_config=resource_config,
             resources=resources,
@@ -910,7 +910,7 @@ def get_output_context(
     step_output_handle: StepOutputHandle,
     run_id: Optional[str] = None,
     log_manager: Optional[DagsterLogManager] = None,
-    step_context: Optional[SystemStepExecutionContext] = None,
+    step_context: Optional[UserCodeStepExecutionContext] = None,
 ) -> OutputContext:
     """
     Args:
