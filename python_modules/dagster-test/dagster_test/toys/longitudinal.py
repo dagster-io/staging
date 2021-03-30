@@ -93,6 +93,7 @@ def make_solid(
                 asset_key=asset_key,
                 metadata_entries=metadata_entries,
                 partition=context.solid_config.get("partition"),
+                tags={"pipeline": "longitudinal_pipeline"},
             )
 
     return made_solid
