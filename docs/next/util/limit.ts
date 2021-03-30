@@ -41,23 +41,23 @@ export const limitSnippetLines = (
   let elements = content.split(SPLIT_PATTERN);
 
   if (startAfter) {
-    let startIndex = elements.findIndex((l) => l.includes(startAfter));
+    const startIndex = elements.findIndex((l) => l.includes(startAfter));
     if (startIndex == -1)
       throw new Error(`No match for startAfter value "${startAfter}"`);
     elements = elements.slice(startIndex + 1);
   }
   if (endBefore) {
-    let endIndex = elements.findIndex((l) => l.includes(endBefore));
+    const endIndex = elements.findIndex((l) => l.includes(endBefore));
     if (endIndex == -1)
       throw new Error(`No match for endBefore value "${endBefore}"`);
     elements = elements.slice(0, endIndex);
   }
 
-  let dedentedElements = elements.map((x) => x.substring(dedentLevel));
+  const dedentedElements = elements.map((x) => x.substring(dedentLevel));
 
   let result = dedentedElements;
   if (fromTo) {
-    let desiredLineNumbers = parseLineNumbersToSet(
+    const desiredLineNumbers = parseLineNumbersToSet(
       fromTo,
       dedentedElements.length
     );
@@ -84,17 +84,17 @@ export const limitSnippetLines = (
  * @throws {Error} Will throw an error if `spec` is formatted incorrectly.
  */
 const parseLineNumbersToSet = function parseLineNumbersToSet(spec, total) {
-  let items = new Set();
-  let parts = spec.split(",");
+  const items = new Set();
+  const parts = spec.split(",");
   try {
     for (const part of parts) {
-      let begEnd = part.trim().split("-");
+      const begEnd = part.trim().split("-");
       if (begEnd.length == 1) {
         items.add(safeParseInt(begEnd[0]) - 1);
       } else if (begEnd.length == 2) {
         if (begEnd[0] === "" && begEnd[1] === "") throw new Error();
-        let start = safeParseInt(begEnd[0] !== "" ? begEnd[0] : 1);
-        let end = safeParseInt(
+        const start = safeParseInt(begEnd[0] !== "" ? begEnd[0] : 1);
+        const end = safeParseInt(
           begEnd[1] !== "" ? begEnd[1] : Math.max(start, total)
         );
         if (start > end) {
@@ -124,7 +124,7 @@ const parseLineNumbersToSet = function parseLineNumbersToSet(spec, total) {
  * @throws {Error} Will throw an error if the input string could not be parsed into an int.
  */
 const safeParseInt = function safeParseInt(int) {
-  let value = parseInt(int);
+  const value = parseInt(int);
   if (isNaN(int)) throw new Error(`Not an integer: ${int}`);
   return value;
 };

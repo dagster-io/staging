@@ -34,9 +34,7 @@ const Modal = () => {
         <span
           className="hidden sm:inline-block sm:align-middle sm:h-screen"
           aria-hidden="true"
-        >
-          ​
-        </span>
+        ></span>
         {/*
   Modal panel, show/hide based on modal state.
 
@@ -84,8 +82,8 @@ const Modal = () => {
               <div className="mt-2">
                 <p className="text-sm text-gray-500">
                   Try writing Dagster pipelines right in your browser using
-                  Gitpod. You'll get an environment where you can write code and
-                  interact with Dagit side-by-side.
+                  Gitpod. You&apos;ll get an environment where you can write
+                  code and interact with Dagit side-by-side.
                 </p>
                 <p className="mt-1 text-sm text-gray-500">
                   Note: You will need to login with Github to use the service.

@@ -12,7 +12,7 @@ import { parse as yaml } from "yaml";
 (async () => {
   const stream = fg.stream(["../content/**/*.mdx"]);
 
-  let stats: Stats = { totalSnapshots: 0, updatedSnapshots: [] };
+  const stats: Stats = { totalSnapshots: 0, updatedSnapshots: [] };
   const setStats = (newStats: Stats) => {
     const { totalSnapshots, updatedSnapshots } = newStats;
     stats.totalSnapshots += totalSnapshots;
