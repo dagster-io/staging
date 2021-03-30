@@ -6,7 +6,6 @@ import styled from 'styled-components/macro';
 import {ShortcutHandler} from '../app/ShortcutHandler';
 import navBarImage from '../images/nav-logo-icon.png';
 import navTitleImage from '../images/nav-title.png';
-import {SearchDialog} from '../search/SearchDialog';
 import {Box} from '../ui/Box';
 import {Group} from '../ui/Group';
 

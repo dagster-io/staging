@@ -140,8 +140,8 @@ export const SearchDialog: React.FC<{theme: 'dark' | 'light'; searchPlaceholder:
             <Group direction="row" alignItems="center" spacing={8}>
               <Icon icon="search" iconSize={16} color={Colors.GRAY3} style={{display: 'block'}} />
               <Placeholder>{searchPlaceholder}</Placeholder>
+              <SlashShortcut $theme={theme}>{'/'}</SlashShortcut>
             </Group>
-            <SlashShortcut $theme={theme}>{'/'}</SlashShortcut>
           </Box>
         </SearchTrigger>
       </ShortcutHandler>
