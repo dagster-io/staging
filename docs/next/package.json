@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "snapshot": "ts-node -O '{\"module\": \"commonjs\"}' scripts/snapshot.ts",
-    "test": "jest"
+    "test": "jest",
+    "prettier": "prettier --config ./.prettierrc.js --write \"../content/**/*.mdx\"",
+    "check-prettier": "prettier --config ./.prettierrc.js --list-different \"../content/**/*.mdx\""
   },
   "dependencies": {
     "@docsearch/react": "^3.0.0-alpha.34",
