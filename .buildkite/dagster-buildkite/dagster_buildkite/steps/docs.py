@@ -26,6 +26,10 @@ def docs_steps() -> List[dict]:
         )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
+        StepBuilder("docs prettier")
+        .run("pushd docs/next", "yarn check-prettier")
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
         # TODO: Yuhan to fix
         # StepBuilder("docs sphinx json build")
         # .run(
