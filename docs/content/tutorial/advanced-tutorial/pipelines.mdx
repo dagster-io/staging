@@ -18,9 +18,9 @@ resource implementations across different environments.
 ## Parametrizing Pipelines with Resources
 
 Dagster models interactions with features of the external environment as **resources**.
-Dagster's library modules such as [`dagster_aws`](/\_apidocs/libraries/dagster_aws),
-[`dagster_gcp`](/\_apidocs/libraries/dagster_gcp), and
-[`dagster_slack`](/\_apidocs/libraries/dagster_slack) provide out-of-the-box implementations for
+Dagster's library modules such as [`dagster_aws`](/_apidocs/libraries/dagster_aws),
+[`dagster_gcp`](/_apidocs/libraries/dagster_gcp), and
+[`dagster_slack`](/_apidocs/libraries/dagster_slack) provide out-of-the-box implementations for
 many common external services.
 
 Typically, your data processing pipelines will want to store their results in a data warehouse
@@ -74,7 +74,7 @@ object="resource" displayText="@resource" /> decorator. The decorated function s
 whatever object you wish to make available under the specific resource's slot in
 `context.resources`. Resource constructor functions have access to their own `context` argument,
 which gives access to resource-specific config. (Unlike the contexts we've seen so far, which are
-instances of <PyObject module="dagster" object="SystemComputeExecutionContext" />, this context is
+instances of <PyObject module="dagster" object="UserCodeComputeExecutionContext" />, this context is
 an instance of <PyObject module="dagster" object="InitResourceContext" />.)
 
 ```python file=/intro_tutorial/advanced/pipelines/resources.py startafter=start_resources_marker_0 endbefore=end_resources_marker_0

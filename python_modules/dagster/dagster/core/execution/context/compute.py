@@ -11,7 +11,7 @@ from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.utils.forked_pdb import ForkedPdb
 
 from .step import StepExecutionContext
-from .system import SystemComputeExecutionContext
+from .system import UserCodeComputeExecutionContext
 
 
 class AbstractComputeExecutionContext(ABC):  # pylint: disable=no-init
@@ -75,11 +75,11 @@ class SolidExecutionContext(StepExecutionContext, AbstractComputeExecutionContex
 
     __slots__ = ["_system_compute_execution_context"]
 
-    def __init__(self, system_compute_execution_context: SystemComputeExecutionContext):
+    def __init__(self, system_compute_execution_context: UserCodeComputeExecutionContext):
         self._system_compute_execution_context = check.inst_param(
             system_compute_execution_context,
             "system_compute_execution_context",
-            SystemComputeExecutionContext,
+            UserCodeComputeExecutionContext,
         )
         self._pdb: Optional[ForkedPdb] = None
         super(SolidExecutionContext, self).__init__(system_compute_execution_context)

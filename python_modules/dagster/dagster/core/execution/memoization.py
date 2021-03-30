@@ -1,11 +1,11 @@
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError, DagsterRunNotFoundError
-from dagster.core.execution.context.system import SystemExecutionContext
+from dagster.core.execution.context.system import UserCodePlanExecutionContext
 from dagster.core.execution.plan.plan import ExecutionPlan
 
 
 def validate_reexecution_memoization(pipeline_context, execution_plan):
-    check.inst_param(pipeline_context, "pipeline_context", SystemExecutionContext)
+    check.inst_param(pipeline_context, "pipeline_context", UserCodePlanExecutionContext)
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
 
     parent_run_id = pipeline_context.pipeline_run.parent_run_id

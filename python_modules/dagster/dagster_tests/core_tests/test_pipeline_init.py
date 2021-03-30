@@ -12,7 +12,7 @@ from dagster.core.definitions.intermediate_storage import IntermediateStorageDef
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterInvalidConfigError
 from dagster.core.execution.api import create_execution_plan
-from dagster.core.execution.context_creation_pipeline import PipelineExecutionContextManager
+from dagster.core.execution.context_creation_pipeline import UserCodeRunWorkerContextManager
 from dagster.core.execution.resources_init import (
     resource_initialization_event_generator,
     resource_initialization_manager,
@@ -113,7 +113,7 @@ def test_clean_event_generator_exit():
     next(generator)
     generator.close()
 
-    generator = PipelineExecutionContextManager(  # pylint: disable=protected-access
+    generator = UserCodeRunWorkerContextManager(  # pylint: disable=protected-access
         InMemoryPipeline(pipeline_def),
         execution_plan,
         {},

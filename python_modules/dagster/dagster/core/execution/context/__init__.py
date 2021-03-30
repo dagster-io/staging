@@ -11,14 +11,14 @@ The inheritance structure of contexts is currently as follows:
  construct_pipeline_execution_context()
  |
  V
-SystemPipelineExecutionContext                  (contains SystemExecutionContextData)
+UserCodeRunWorkerExecutionContext                  (contains UserCodeExecutionContextData)
  |
- |--> SystemStepExecutionContext                (produced by .for_step() on pipeline context)
+ |--> UserCodeStepExecutionContext                (produced by .for_step() on pipeline context)
        |
-       |--> SystemComputeExecutionContext     (produced by .for_transform() on step context)
+       |--> UserCodeComputeExecutionContext     (produced by .for_transform() on step context)
 
 ====================================================================================================
-In the system contexts, immutable state is stored in SystemPipelineExecutionContextData, and any
+In the system contexts, immutable state is stored in UserCodeExecutionContextData, and any
 additional mutable fields are stored alongside that state as fields in the context object.
 
 The below contexts are provisioned to wrap the corresponding system instance:

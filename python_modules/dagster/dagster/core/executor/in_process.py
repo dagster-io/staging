@@ -2,7 +2,7 @@ import os
 
 from dagster import check
 from dagster.core.events import DagsterEvent, EngineEventData
-from dagster.core.execution.context.system import SystemPipelineExecutionContext
+from dagster.core.execution.context.system import UserCodeRunWorkerExecutionContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
@@ -21,7 +21,7 @@ class InProcessExecutor(Executor):
         return self._retries
 
     def execute(self, pipeline_context, execution_plan):
-        check.inst_param(pipeline_context, "pipeline_context", SystemPipelineExecutionContext)
+        check.inst_param(pipeline_context, "pipeline_context", UserCodeRunWorkerExecutionContext)
         check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
 
         step_keys_to_execute = execution_plan.step_keys_to_execute

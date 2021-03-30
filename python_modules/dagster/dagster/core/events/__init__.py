@@ -18,7 +18,7 @@ from dagster.core.execution.context.system import (
     BaseStepExecutionContext,
     HookContext,
     PipelineExecutionContext,
-    SystemExecutionContext,
+    UserCodePlanExecutionContext,
 )
 from dagster.core.execution.plan.handle import ResolvedFromDynamicStepHandle, StepHandle
 from dagster.core.execution.plan.outputs import StepOutputData

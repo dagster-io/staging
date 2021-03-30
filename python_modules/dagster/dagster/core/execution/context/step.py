@@ -9,7 +9,7 @@ from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvalidPropertyError
 from dagster.core.log_manager import DagsterLogManager
 
-from .system import SystemStepExecutionContext
+from .system import UserCodeStepExecutionContext
 
 
 class StepExecutionContext:
@@ -19,7 +19,7 @@ class StepExecutionContext:
         self._system_step_execution_context = check.inst_param(
             system_step_execution_context,
             "system_step_execution_context",
-            SystemStepExecutionContext,
+            UserCodeStepExecutionContext,
         )
 
     @property
@@ -119,13 +119,13 @@ class StepExecutionContext:
         """
         return self._system_step_execution_context.get_tag(key)
 
-    def get_system_context(self) -> SystemStepExecutionContext:
+    def get_system_context(self) -> UserCodeStepExecutionContext:
         """Allows advanced users (e.g. framework authors) to punch through to the underlying
         system context.
 
         :meta private:
 
         Returns:
-            SystemStepExecutionContext: The underlying system context.
+            UserCodeStepExecutionContext: The underlying system context.
         """
         return self._system_step_execution_context
