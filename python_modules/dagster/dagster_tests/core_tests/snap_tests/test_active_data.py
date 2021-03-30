@@ -35,7 +35,7 @@ def a_pipeline():
     end_date=datetime(year=2019, month=2, day=1),
     execution_timezone="US/Central",
 )
-def a_schedule():
+def a_schedule():  # type: ignore
     return {}
 
 
