@@ -93,9 +93,6 @@ export const LeftNavSimple = React.memo(() => {
               <VersionNumber />
             </Group>
           </Group>
-          <Box padding={{right: 4}}>
-            <SearchDialog theme="light" />
-          </Box>
         </Group>
         {items}
       </Group>
