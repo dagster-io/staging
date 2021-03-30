@@ -290,7 +290,7 @@ export class SVGFlowLayoutFiller extends React.PureComponent {
   }
 }
 
-export interface SVGLabeledRectProps {
+interface SVGLabeledRectProps {
   x: number;
   y: number;
   minified: boolean;
