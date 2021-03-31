@@ -15,6 +15,7 @@ interface RepositoryContentListProps {
   selector?: string;
   tab?: string;
   repos: DagsterRepoOption[];
+  repoPath?: string;
 }
 
 type Item = {
@@ -25,6 +26,7 @@ type Item = {
 export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
   tab,
   repos,
+  repoPath,
   selector,
 }) => {
   const client = useApolloClient();
@@ -63,6 +65,7 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
               return solids.map((solid) => ({
                 to: workspacePath(name, location, `/solids/${solid.definition.name}`),
                 label: solid.definition.name,
+                repoPath: `${name}@${location}`,
               }));
             }
             return [];
@@ -92,6 +95,7 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
                 `/pipelines/${p}/${tab === 'partitions' ? 'overview' : pipelineTab.pathComponent}`,
               ),
               label: p,
+              repoPath: `${repo.repository.name}@${repo.repositoryLocation.name}`,
             })),
         ],
         [],
@@ -132,7 +136,7 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
             key={p.to}
             data-tooltip={p.label}
             data-tooltip-style={p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle}
-            className={`${p.label === selector ? 'selected' : ''}`}
+            className={`${p.label === selector && p.repoPath === repoPath ? 'selected' : ''}`}
             to={p.to}
           >
             {p.label}

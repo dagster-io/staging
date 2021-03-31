@@ -16,6 +16,7 @@ import {JobsListQuery} from './types/JobsListQuery';
 type Item = {
   to: string;
   label: string;
+  repoPath: string;
   jobType: JobType;
   status: JobStatus;
 };
@@ -23,9 +24,10 @@ type Item = {
 interface JobsListProps {
   selector?: string;
   repos: DagsterRepoOption[];
+  repoPath?: string;
 }
 
-export const JobsList: React.FunctionComponent<JobsListProps> = ({repos, selector}) => {
+export const JobsList: React.FunctionComponent<JobsListProps> = ({repos, repoPath, selector}) => {
   const client = useApolloClient();
   const [jobs, setJobs] = React.useState<{
     schedules: {[key: string]: Item};
@@ -64,6 +66,7 @@ export const JobsList: React.FunctionComponent<JobsListProps> = ({repos, selecto
                   scheduleUpdates[to] = {
                     to,
                     label: name,
+                    repoPath: `${scheduleState.repositoryOrigin.repositoryName}@${scheduleState.repositoryOrigin.repositoryLocationName}`,
                     jobType: JobType.SCHEDULE,
                     status: scheduleState.status,
                   };
@@ -82,6 +85,7 @@ export const JobsList: React.FunctionComponent<JobsListProps> = ({repos, selecto
                   sensorUpdates[to] = {
                     to,
                     label: name,
+                    repoPath: `${sensorState.repositoryOrigin.repositoryName}@${sensorState.repositoryOrigin.repositoryLocationName}`,
                     jobType: JobType.SENSOR,
                     status: sensorState.status,
                   };
@@ -162,7 +166,7 @@ export const JobsList: React.FunctionComponent<JobsListProps> = ({repos, selecto
       </Box>
       <Items>
         {items.map((p) => {
-          const isSelected = p.label === selector;
+          const isSelected = p.label === selector && p.repoPath === repoPath;
           const border: BorderSetting | null = isSelected
             ? {side: 'left', width: 4, color: isSelected ? Colors.COBALT3 : Colors.GRAY3}
             : null;
