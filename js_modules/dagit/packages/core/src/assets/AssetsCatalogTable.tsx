@@ -9,6 +9,7 @@ import {
   NonIdealState,
   Tooltip,
   Colors,
+  Tag as BlueprintTag,
 } from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
@@ -25,7 +26,7 @@ import {Table} from '../ui/Table';
 import {Tag} from '../ui/Tag';
 
 import {AssetWipeDialog} from './AssetWipeDialog';
-import {AssetsFilter, filterAssets} from './AssetsFilter';
+import {AssetsFilter, filterAssets, TagFilter} from './AssetsFilter';
 import {
   AssetsTableQuery,
   AssetsTableQuery_assetsOrError_AssetConnection_nodes,
@@ -53,7 +54,8 @@ export const AssetsCatalogTable: React.FunctionComponent<{prefixPath?: string[]}
   prefixPath,
 }) => {
   const queryResult = useQuery<AssetsTableQuery>(ASSETS_TABLE_QUERY);
-  const [q, setQ] = React.useState<string>('');
+  const [tagFilters, setTagFilters] = React.useState<TagFilter[]>([]);
+  const [queryFilters, setQueryFilters] = React.useState<string[]>([]);
 
   return (
     <div style={{flexGrow: 1}}>
@@ -77,9 +79,23 @@ export const AssetsCatalogTable: React.FunctionComponent<{prefixPath?: string[]}
             : assetsOrError.nodes;
           const isFlattened = !featureEnabled(FeatureFlag.DirectoryAssetCatalog);
           const matching = isFlattened
-            ? filterAssets(assets, q)
-            : assets.filter((asset) => !q || matches(asset.key.path.join('/'), q));
+            ? filterAssets(assets, queryFilters, tagFilters)
+            : assets.filter((asset) =>
+                queryFilters.every((q) => matches(asset.key.path.join('/'), q)),
+              );
 
+          const removeTag = (key: string) => {
+            const index = tagFilters.findIndex((filter) => filter.key === key);
+            if (index >= 0) {
+              setTagFilters([...tagFilters.slice(0, index), ...tagFilters.slice(index + 1)]);
+            }
+          };
+          const removeQuery = (query: string) => {
+            const index = queryFilters.findIndex((q) => q === query);
+            if (index >= 0) {
+              setQueryFilters([...queryFilters.slice(0, index), ...queryFilters.slice(index + 1)]);
+            }
+          };
           if (!assets.length) {
             return (
               <Wrapper>
@@ -109,14 +125,53 @@ export const AssetsCatalogTable: React.FunctionComponent<{prefixPath?: string[]}
             );
           }
 
+          const addTagFilter = (tag: AssetTag) => {
+            const index = tagFilters.findIndex((filter) => filter.key === tag.key);
+            if (index < 0) {
+              setTagFilters([...tagFilters, tag]);
+            } else if (tagFilters[index].value !== tag.value) {
+              setTagFilters([...tagFilters.slice(0, index), tag, ...tagFilters.slice(index + 1)]);
+            }
+          };
+
+          const addQueryFilter = (query: string) => {
+            setQueryFilters([...queryFilters, query]);
+          };
+
           return (
             <Wrapper>
               {isFlattened ? (
-                <AssetsFilter assets={assets} query={q} onSetQuery={setQ} />
+                <>
+                  <Group direction="row" spacing={8} margin={{bottom: 8, left: 4}}>
+                    {tagFilters.map(({key, value}) => (
+                      <BlueprintTag
+                        minimal
+                        key={key}
+                        onRemove={() => removeTag(key)}
+                      >{`${key}=${value}`}</BlueprintTag>
+                    ))}
+                    {queryFilters.map((q) => (
+                      <BlueprintTag minimal key={q} onRemove={() => removeQuery(q)}>
+                        Text filter: &quot;{q}&quot;
+                      </BlueprintTag>
+                    ))}
+                  </Group>
+                  <AssetsFilter
+                    assets={assets}
+                    queryFilters={queryFilters}
+                    tagFilters={tagFilters}
+                    onAddQueryFilter={addQueryFilter}
+                    onAddTagFilter={addTagFilter}
+                  />
+                </>
               ) : (
                 <AssetSearch assets={allAssets} />
               )}
-              <AssetsTable assets={matching} currentPath={prefixPath || []} setQuery={setQ} />
+              <AssetsTable
+                assets={matching}
+                currentPath={prefixPath || []}
+                addTagFilter={addTagFilter}
+              />
             </Wrapper>
           );
         }}
@@ -232,11 +287,11 @@ const AssetSearch = ({assets}: {assets: Asset[]}) => {
 const AssetsTable = ({
   assets,
   currentPath,
-  setQuery,
+  addTagFilter,
 }: {
   assets: Asset[];
   currentPath: string[];
-  setQuery: (q: string) => void;
+  addTagFilter: (tag: AssetTag) => void;
 }) => {
   useDocumentTitle(currentPath.length ? `Assets: ${currentPath.join(' \u203A ')}` : 'Assets');
   const [toWipe, setToWipe] = React.useState<AssetKey | undefined>();
@@ -297,10 +352,6 @@ const AssetsTable = ({
     );
   }
 
-  const onClick = (tag: AssetTag) => {
-    setQuery(`tag:${tag.key}=${tag.value}`);
-  };
-
   return (
     <Box margin={{top: 20}}>
       <Table>
@@ -349,7 +400,7 @@ const AssetsTable = ({
                     {asset.tags.length ? (
                       <Box flex={{direction: 'row', wrap: 'wrap'}}>
                         {asset.tags.map((tag, idx) => (
-                          <Tag tag={tag} key={idx} onClick={() => onClick(tag)} />
+                          <Tag tag={tag} key={idx} onClick={addTagFilter} />
                         ))}
                       </Box>
                     ) : null}
