@@ -37,6 +37,12 @@ dagit:
     port: 80
     annotations: {}
 
+  # Defines a workspace for Dagit. This should only be set if user deployments are enabled, but
+  # the subchart is diabled to manage user deployments in a separate Helm release.
+  workspace:
+    enabled: false
+    servers: []
+
   # Additional environment variables to set.
   # A Kubernetes ConfigMap will be created with these environment variables. See:
   # https://kubernetes.io/docs/concepts/configuration/configmap/
