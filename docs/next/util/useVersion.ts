@@ -39,11 +39,14 @@ export function normalizeVersionPath(
     asPathWithoutAnchor = asPath.substring(0, asPath.indexOf("#"));
   }
 
+  // sort release versions by latest
+  const sortedVersions = ALL_VERSIONS.slice(0, 1).concat(ALL_VERSIONS.slice(1).reverse())
+
   return {
     asPath,
     asPathWithoutAnchor,
     version: detectedVersion,
-    versions: ALL_VERSIONS,
+    versions: sortedVersions,
     defaultVersion,
     latestVersion,
   };
