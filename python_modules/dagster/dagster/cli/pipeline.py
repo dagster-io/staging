@@ -84,12 +84,10 @@ def apply_click_params(command, *click_params):
 )
 @repository_target_argument
 def pipeline_list_command(**kwargs):
-    with DagsterInstance.get() as instance:
-        return execute_list_command(kwargs, click.echo, instance)
+    return execute_list_command(kwargs, click.echo)
 
 
-def execute_list_command(cli_args, print_fn, instance):
-    check.inst_param(instance, "instance", DagsterInstance)
+def execute_list_command(cli_args, print_fn):
     with get_external_repository_from_kwargs(cli_args) as external_repository:
         title = "Repository {name}".format(name=external_repository.name)
         print_fn(title)

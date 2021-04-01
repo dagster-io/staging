@@ -30,7 +30,7 @@ from dagster.serdes import ConfigurableClass
 from dagster.seven import get_current_datetime_in_utc
 from dagster.utils.error import serializable_error_info_from_exc_info
 
-from .config import DAGSTER_CONFIG_YAML_FILENAME
+from .config import DAGSTER_CONFIG_YAML_FILENAME, is_dagster_home_set
 from .ref import InstanceRef
 
 # 'airflow_execution_date' and 'is_airflow_ingest_pipeline' are hardcoded tags used in the
@@ -47,10 +47,6 @@ if TYPE_CHECKING:
     from dagster.core.host_representation import HistoricalPipeline
     from dagster.core.snap import PipelineSnapshot
     from dagster.daemon.types import DaemonHeartbeat
-
-
-def _is_dagster_home_set():
-    return bool(os.getenv("DAGSTER_HOME"))
 
 
 def is_memoized_run(tags):
@@ -347,28 +343,11 @@ class DagsterInstance:
         )
 
     @staticmethod
-    def get(fallback_storage=None):
-        # 1. Use $DAGSTER_HOME to determine instance if set.
-        if _is_dagster_home_set():
-            return DagsterInstance.from_config(_dagster_home())
-
-        # 2. If that is not set use the fallback storage directory if provided.
-        # This allows us to have a nice out of the box dagit experience where runs are persisted
-        # across restarts in a tempdir that gets cleaned up when the dagit watchdog process exits.
-        elif fallback_storage is not None:
-            return DagsterInstance.from_config(fallback_storage)
-
-        # 3. If all else fails create an ephemeral in memory instance.
-        else:
-            return DagsterInstance.ephemeral(fallback_storage)
+    def get():
+        return DagsterInstance.from_config(_dagster_home())
 
     @staticmethod
     def local_temp(tempdir=None, overrides=None):
-        warnings.warn(
-            "To create a local DagsterInstance for a test, use the instance_for_test "
-            "context manager instead, which ensures that resoures are cleaned up afterwards"
-        )
-
         if tempdir is None:
             tempdir = DagsterInstance.temp_storage()
 
