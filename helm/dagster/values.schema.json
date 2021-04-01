@@ -1,5 +1,5 @@
 {
-    "title": "DagsterHelmValues",
+    "title": "DagsterHelmValues test edit",
     "description": "Schema for Helm values.",
     "type": "object",
     "properties": {
