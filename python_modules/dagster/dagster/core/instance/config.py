@@ -12,6 +12,10 @@ from dagster.utils.yaml_utils import load_yaml_from_globs
 DAGSTER_CONFIG_YAML_FILENAME = "dagster.yaml"
 
 
+def is_dagster_home_set():
+    return bool(os.getenv("DAGSTER_HOME"))
+
+
 def dagster_instance_config(
     base_dir,
     config_filename=DAGSTER_CONFIG_YAML_FILENAME,
@@ -23,7 +27,7 @@ def dagster_instance_config(
 
     config_yaml_path = os.path.join(base_dir, config_filename)
 
-    if not os.path.exists(config_yaml_path):
+    if not os.path.exists(config_yaml_path) and is_dagster_home_set():
         warnings.warn(
             (
                 "The dagster instance configuration file ({config_filename}) is not present at "
