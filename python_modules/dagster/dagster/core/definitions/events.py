@@ -146,6 +146,16 @@ class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions pat
             cls, asset_key=asset_key, partitions=partitions, path=path
         )
 
+    @staticmethod
+    def from_fns(context, asset_key_fn, asset_partitions_fn):
+        asset_key = asset_key_fn(context)
+        if not asset_key:
+            return None
+        return AssetLineageInfo(
+            asset_key=asset_key,
+            partitions=asset_partitions_fn(context),
+        )
+
 
 @whitelist_for_serdes
 class EventMetadataEntry(namedtuple("_EventMetadataEntry", "label description entry_data")):

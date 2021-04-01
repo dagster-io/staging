@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, NamedTuple, Tuple
+from typing import Dict, List, NamedTuple
 
 from dagster import check
 from dagster.core.events import AssetLineageInfo
@@ -18,7 +18,7 @@ class KnownExecutionState(
             # step_key -> output_name -> mapping_keys
             ("dynamic_mappings", Dict[str, Dict[str, List[str]]]),
             # step_key -> output_name -> (mapping_key, asset_lineage)
-            ("asset_output_mappings", Dict[str, Dict[str, Tuple[str, List[AssetLineageInfo]]]]),
+            ("asset_output_mappings", Dict[str, Dict[str, Dict[str, List[AssetLineageInfo]]]]),
         ],
     )
 ):

@@ -35,9 +35,16 @@ class IOManagerDefinition(ResourceDefinition, IInputManagerDefinition, IOutputMa
         version=None,
         input_config_schema=None,
         output_config_schema=None,
+        output_asset_key=None,
     ):
         self._input_config_schema = input_config_schema
         self._output_config_schema = output_config_schema
+        self._output_asset_key = output_asset_key
+        if callable(output_asset_key):
+            self._output_asset_key_fn = output_asset_key
+        else:
+            asset_key = check.opt_inst_param(output_asset_key, "output_asset_key", AssetKey)
+            self._output_asset_key_fn = lambda _: output_asset_key
         super(IOManagerDefinition, self).__init__(
             resource_fn=resource_fn,
             config_schema=config_schema,
@@ -54,6 +61,9 @@ class IOManagerDefinition(ResourceDefinition, IInputManagerDefinition, IOutputMa
     def output_config_schema(self):
         return self._output_config_schema
 
+    def output_asset_key(self, context):
+        return self._output_asset_key_fn(context)
+
     def copy_for_configured(self, description, config_schema, _):
         return IOManagerDefinition(
             config_schema=config_schema,
@@ -62,6 +72,7 @@ class IOManagerDefinition(ResourceDefinition, IInputManagerDefinition, IOutputMa
             required_resource_keys=self.required_resource_keys,
             input_config_schema=self.input_config_schema,
             output_config_schema=self.output_config_schema,
+            output_asset_key=self._output_asset_key_fn,
         )
 
     @staticmethod
@@ -128,7 +139,7 @@ class IOManager(InputManager, OutputManager):
         """
         return set()
 
-    def get_input_asset_key(self, _context) -> Optional[AssetKey]:
+    def get_input_asset_key(self, context) -> Optional[AssetKey]:
         """User-defined method that associates inputs loaded by this IOManager with a particular
         AssetKey.
 
@@ -136,9 +147,9 @@ class IOManager(InputManager, OutputManager):
             context (InputContext): The input context, which describes the input that's being loaded
                 and the upstream output that's being loaded from.
         """
-        return None
+        return self.get_output_asset_key(context.upstream_output)
 
-    def get_input_asset_partitions(self, _context) -> Set[str]:
+    def get_input_asset_partitions(self, context) -> Set[str]:
         """User-defined method that associates inputs loaded by this IOManager with a set of
         partitions of an AssetKey.
 
@@ -146,7 +157,7 @@ class IOManager(InputManager, OutputManager):
             context (InputContext): The input context, which describes the input that's being loaded
                 and the upstream output that's being loaded from.
         """
-        return set()
+        return self.get_output_asset_partitions(context.upstream_output)
 
 
 def io_manager(
@@ -156,6 +167,7 @@ def io_manager(
     input_config_schema=None,
     required_resource_keys=None,
     version=None,
+    output_asset_key=None,
 ):
     """
     Define an IO manager.
@@ -215,6 +227,7 @@ def io_manager(
             version=version,
             output_config_schema=output_config_schema,
             input_config_schema=input_config_schema,
+            output_asset_key=output_asset_key,
         )(resource_fn)
 
     return _wrap
@@ -229,6 +242,7 @@ class _IOManagerDecoratorCallable:
         version=None,
         output_config_schema=None,
         input_config_schema=None,
+        output_asset_key=None,
     ):
         self.config_schema = convert_user_facing_definition_config_schema(config_schema)
         self.description = check.opt_str_param(description, "description")
@@ -240,6 +254,7 @@ class _IOManagerDecoratorCallable:
             output_config_schema
         )
         self.input_config_schema = convert_user_facing_definition_config_schema(input_config_schema)
+        self.output_asset_key = output_asset_key
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
@@ -252,6 +267,7 @@ class _IOManagerDecoratorCallable:
             version=self.version,
             output_config_schema=self.output_config_schema,
             input_config_schema=self.input_config_schema,
+            output_asset_key=self.output_asset_key,
         )
 
         update_wrapper(io_manager_def, wrapped=fn)
