@@ -1,5 +1,5 @@
 {
-    "title": "DagsterUserDeploymentsHelmValues",
+    "title": "DagsterUserDeploymentsHelmValues test",
     "type": "object",
     "properties": {
         "deployments": {
