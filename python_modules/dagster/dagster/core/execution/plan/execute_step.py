@@ -261,18 +261,6 @@ def _type_check_output(
         )
 
 
-def _get_asset_lineage_from_fns(
-    context, asset_key_fn, asset_partitions_fn
-) -> Optional[AssetLineageInfo]:
-    asset_key = asset_key_fn(context)
-    if not asset_key:
-        return None
-    return AssetLineageInfo(
-        asset_key=asset_key,
-        partitions=asset_partitions_fn(context),
-    )
-
-
 def core_dagster_event_sequence_for_step(
     step_context: SystemStepExecutionContext, prior_attempt_count: int
 ) -> Iterator[DagsterEvent]:
@@ -465,23 +453,13 @@ def _store_output(
     for materialization in manager_materializations:
         yield DagsterEvent.asset_materialization(step_context, materialization, [])
 
-    def _get_asset_lineage_from_fns(
-        context, asset_key_fn, asset_partitions_fn
-    ) -> Optional[AssetLineageInfo]:
-        asset_key = asset_key_fn(context)
-        if not asset_key:
-            return None
-        return AssetLineageInfo(
-            asset_key=asset_key,
-            partitions=asset_partitions_fn(context),
-        )
-
-    io_lineage_info = _get_asset_lineage_from_fns(
+    """
+    io_lineage_info = AssetLineageInfo.from_fns(
         output_context,
         output_manager.get_output_asset_key,
         output_manager.get_output_asset_partitions,
     )
-    output_lineage_info = _get_asset_lineage_from_fns(
+    output_lineage_info = AssetLineageInfo.from_fns(
         output_context, output_def.get_asset_key, output_def.get_asset_partitions
     )
     if io_lineage_info and output_lineage_info:
@@ -492,26 +470,30 @@ def _store_output(
             "specify an AssetKey in its get_output_asset_key() function."
         )
     produced_lineage_info = io_lineage_info or output_lineage_info
-    produced_lineage = [produced_lineage_info] if produced_lineage_info else []
-    mapping_key = output.mapping_key if isinstance(output, DynamicOutput) else None
     step_context.asset_dependency_graph.add_step_output(
         step_context.step.key, output_def.name, mapping_key, produced_lineage
     )
-    lineage = step_context.asset_dependency_graph.output_lineage(
-        step_context.step.key, output_def.name, mapping_key
-    )
+    produced_lineage = [produced_lineage_info] if produced_lineage_info else []
     propagated_lineage = step_context.asset_dependency_graph.propagated_output_lineage(
         step_context.step.key, output_def.name, mapping_key
     )
-    if produced_lineage_info:
+    """
+    mapping_key = output.mapping_key if isinstance(output, DynamicOutput) else None
+    parent_lineage = step_context.asset_dependency_graph.output_lineage(
+        step_context.step, step_context.step.step_output_named(output_def.name), mapping_key
+    )
+    produced_lineage = step_context.asset_dependency_graph.produced_output_lineage(
+        step_context.step, step_context.step.step_output_named(output_def.name), mapping_key
+    )
+    for lineage_info in produced_lineage:
         for materialization in _get_output_asset_materializations(
-            produced_lineage_info.asset_key,
-            produced_lineage_info.partitions,
+            lineage_info.asset_key,
+            lineage_info.partitions,
             output,
             output_def,
             manager_metadata_entries,
         ):
-            yield DagsterEvent.asset_materialization(step_context, materialization, lineage)
+            yield DagsterEvent.asset_materialization(step_context, materialization, parent_lineage)
 
     yield DagsterEvent.handled_output(
         step_context,
@@ -523,8 +505,8 @@ def _store_output(
         metadata_entries=[
             entry for entry in manager_metadata_entries if isinstance(entry, EventMetadataEntry)
         ],
-        lineage=propagated_lineage,
-        mapping_key=mapping_key,
+        # lineage=propagated_lineage,
+        # mapping_key=mapping_key,
     )
 
 

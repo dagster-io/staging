@@ -1,5 +1,5 @@
 import time
-from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, cast
+from typing import Callable, Dict, Iterator, List, Optional, Set, cast
 
 from dagster import check
 from dagster.core.errors import (
@@ -62,7 +62,7 @@ class ActiveExecution:
         self._new_dynamic_mappings: bool = False
 
         # track which outputs have produced an asset
-        self._asset_outputs: Dict[str, Dict[str, Tuple[str, List[AssetLineageInfo]]]] = {}
+        self._asset_outputs: Dict[str, Dict[str, Dict[str, List[AssetLineageInfo]]]] = {}
 
         # steps move in to these buckets as a result of _update calls
         self._executable: List[str] = []
