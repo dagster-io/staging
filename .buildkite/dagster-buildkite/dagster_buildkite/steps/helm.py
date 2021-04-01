@@ -30,6 +30,12 @@ def helm_lint_steps() -> List[dict]:
         .on_integration_image(SupportedPython.V3_7)
         .with_retry(1)
         .build(),
+        StepBuilder(":helm: dagster dependency build")
+        .run(
+            "helm dependency build helm/dagster",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
     ]
 
 
