@@ -9,7 +9,7 @@ from . import subschema
 
 class DagsterHelmValues(BaseModel):
     """
-    Schema for Helm values.
+    @generated
     """
 
     dagit: subschema.Dagit

@@ -6,4 +6,8 @@ from .subschema.user_deployments import UserDeployment
 
 
 class DagsterUserDeploymentsHelmValues(BaseModel):
+    """
+    @generated
+    """
+
     deployments: List[UserDeployment]
