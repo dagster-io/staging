@@ -1,6 +1,7 @@
 import pendulum
 import pytest
 from dagster.core.host_representation.grpc_server_registry import ProcessGrpcServerRegistry
+from dagster.core.host_representation.location_manager import RepositoryLocationManager
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler.job import JobTickStatus
 from dagster.core.storage.pipeline_run import PipelineRunStatus
@@ -23,16 +24,17 @@ def _test_launch_scheduled_runs_in_subprocess(instance_ref, execution_datetime, 
     with DagsterInstance.from_ref(instance_ref) as instance:
         try:
             with ProcessGrpcServerRegistry() as grpc_server_registry:
-                with pendulum.test(execution_datetime):
-                    list(
-                        launch_scheduled_runs(
-                            instance,
-                            grpc_server_registry,
-                            logger(),
-                            pendulum.now("UTC"),
-                            debug_crash_flags=debug_crash_flags,
+                with RepositoryLocationManager(grpc_server_registry) as workspace:
+                    with pendulum.test(execution_datetime):
+                        list(
+                            launch_scheduled_runs(
+                                instance,
+                                workspace,
+                                logger(),
+                                pendulum.now("UTC"),
+                                debug_crash_flags=debug_crash_flags,
+                            )
                         )
-                    )
         finally:
             cleanup_test_instance(instance)
 

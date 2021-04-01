@@ -2,6 +2,7 @@ import pendulum
 import pytest
 from dagster.core.execution.backfill import BulkActionStatus, PartitionBackfill
 from dagster.core.host_representation.grpc_server_registry import ProcessGrpcServerRegistry
+from dagster.core.host_representation.location_manager import RepositoryLocationManager
 from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import cleanup_test_instance, get_crash_signals
 from dagster.daemon import get_default_daemon_logger
@@ -25,14 +26,15 @@ def _test_backfill_in_subprocess(instance_ref, debug_crash_flags):
             with pendulum.test(
                 execution_datetime
             ), ProcessGrpcServerRegistry() as grpc_server_registry:
-                list(
-                    execute_backfill_iteration(
-                        instance,
-                        grpc_server_registry,
-                        get_default_daemon_logger("BackfillDaemon"),
-                        debug_crash_flags=debug_crash_flags,
+                with RepositoryLocationManager(grpc_server_registry) as workspace:
+                    list(
+                        execute_backfill_iteration(
+                            instance,
+                            workspace,
+                            get_default_daemon_logger("BackfillDaemon"),
+                            debug_crash_flags=debug_crash_flags,
+                        )
                     )
-                )
         finally:
             cleanup_test_instance(instance)
 
