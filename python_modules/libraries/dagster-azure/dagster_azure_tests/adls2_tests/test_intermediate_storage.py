@@ -115,6 +115,7 @@ def get_blob_client(storage_account):
     return create_blob_client(storage_account, creds)
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_using_adls2_for_subplan(storage_account, file_system):
     pipeline_def = define_inty_pipeline()
@@ -225,6 +226,7 @@ class FancyStringS3TypeStoragePlugin(TypeStoragePlugin):  # pylint:disable=no-in
         return next(res).name.split("/")[-1]
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_intermediate_storage_with_type_storage_plugin(storage_account, file_system):
     run_id = make_new_run_id()
@@ -257,6 +259,7 @@ def test_adls2_intermediate_storage_with_type_storage_plugin(storage_account, fi
             intermediate_storage.rm_intermediate(context, StepOutputHandle("obj_name"))
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_intermediate_storage_with_composite_type_storage_plugin(
     storage_account, file_system
@@ -279,6 +282,7 @@ def test_adls2_intermediate_storage_with_composite_type_storage_plugin(
             )
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_intermediate_storage_composite_types_with_custom_serializer_for_inner_type(
     storage_account, file_system
@@ -311,6 +315,7 @@ def test_adls2_intermediate_storage_composite_types_with_custom_serializer_for_i
             intermediate_storage.rm_intermediate(context, StepOutputHandle(obj_name))
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_intermediate_storage_with_custom_serializer(storage_account, file_system):
     run_id = make_new_run_id()
@@ -349,6 +354,7 @@ def test_adls2_intermediate_storage_with_custom_serializer(storage_account, file
             intermediate_storage.rm_intermediate(context, StepOutputHandle("foo"))
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_pipeline_with_custom_prefix(storage_account, file_system):
     adls2_prefix = "custom_prefix"
@@ -401,6 +407,7 @@ def test_adls2_pipeline_with_custom_prefix(storage_account, file_system):
         )
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_intermediate_storage_with_custom_prefix(storage_account, file_system):
     run_id = make_new_run_id()
@@ -432,6 +439,7 @@ def test_adls2_intermediate_storage_with_custom_prefix(storage_account, file_sys
         intermediate_storage.rm_intermediate(context, StepOutputHandle("true"))
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_intermediate_storage(storage_account, file_system):
     run_id = make_new_run_id()
