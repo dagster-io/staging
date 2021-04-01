@@ -73,6 +73,7 @@ def define_inty_pipeline():
 nettest = pytest.mark.nettest
 
 
+@pytest.mark.skip(reason="Azure account no longer active")
 @nettest
 def test_adls2_pickle_io_manager_execution(storage_account, file_system, credential):
     pipeline_def = define_inty_pipeline()
