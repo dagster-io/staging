@@ -3,15 +3,19 @@ import zipfile
 import boto3
 from airline_demo.unzip_file_handle import unzip_file_handle
 from dagster import (
+    InputDefinition,
     LocalFileHandle,
     ModeDefinition,
     OutputDefinition,
     ResourceDefinition,
+    composite_solid,
     execute_pipeline,
     local_file_manager,
     pipeline,
     solid,
 )
+from dagster.core.execution.build_resources import build_resources
+from dagster.core.execution.execute_in_process import execute_in_process
 from dagster.utils.test import get_temp_file_name
 from dagster_aws.s3 import S3FileHandle, S3FileManager, s3_intermediate_storage
 from moto import mock_s3
@@ -34,19 +38,14 @@ def test_unzip_file_handle():
         def to_zip_file_handle(_):
             return LocalFileHandle(zip_file_name)
 
-        @pipeline(mode_defs=[ModeDefinition(resource_defs={"file_manager": local_file_manager})])
-        def do_test_unzip_file_handle():
-            return unzip_file_handle(to_zip_file_handle())
+        @composite_solid(input_defs=[InputDefinition("archive_member", dagster_type=str)])
+        def do_test_unzip_file_handle(archive_member):
+            return unzip_file_handle(to_zip_file_handle(), archive_member)
 
-        result = execute_pipeline(
+        result = execute_in_process(
             do_test_unzip_file_handle,
-            run_config={
-                "solids": {
-                    "unzip_file_handle": {
-                        "inputs": {"archive_member": {"value": "some_archive_member"}}
-                    }
-                }
-            },
+            resources={"file_manager": local_file_manager},
+            input_values={"archive_member": "some_archive_member"},
         )
         assert result.success
 

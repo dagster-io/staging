@@ -5,13 +5,14 @@ from airline_demo.solids import ingest_csv_file_handle_to_spark
 from dagster import (
     LocalFileHandle,
     ModeDefinition,
-    execute_pipeline,
     fs_io_manager,
     local_file_manager,
     pipeline,
     solid,
 )
 from dagster.core.definitions.no_step_launcher import no_step_launcher
+from dagster.core.execution.build_resources import build_resources
+from dagster.core.execution.execute_in_process import execute_in_process
 from dagster.utils import file_relative_path
 from dagster_pyspark import pyspark_resource
 from pyspark.sql import Row
@@ -47,20 +48,21 @@ def test_ingest_csv_file_handle_to_spark(spark_config):
         return collect_df(ingest_csv_file_handle_to_spark(emit_num_csv_local_file()))
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        result = execute_pipeline(
-            ingest_csv_file_test,
+        with build_resources(
+            ingest_csv_file_test.get_mode_definition("default").resource_defs,
             run_config={
-                "resources": {
-                    "pyspark": {"config": {"spark_conf": spark_config}},
-                    "pyspark_io_manager": {"config": {"base_dir": temp_dir}},
-                    "io_manager": {"config": {"base_dir": temp_dir}},
-                }
+                "pyspark": {"config": {"spark_conf": spark_config}},
+                "pyspark_io_manager": {"config": {"base_dir": temp_dir}},
+                "io_manager": {"config": {"base_dir": temp_dir}},
             },
-        )
-        assert result.success
+        ) as resources:
+            result = execute_in_process(
+                ingest_csv_file_test.as_composite_solid(), resources=resources
+            )
+            assert result.success
 
-        df = result.result_for_solid("collect_df").output_value()
-        assert df == [Row(num1="1", num2="2")]
+            df = result.result_for_node("collect_df").output_values["result"]
+            assert df == [Row(num1="1", num2="2")]
 
 
 def test_ingest_csv_file_with_special_handle_to_spark(spark_config):
@@ -85,18 +87,20 @@ def test_ingest_csv_file_with_special_handle_to_spark(spark_config):
         return collect_df(ingest_csv_file_handle_to_spark(emit_num_special_csv_local_file()))
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        result = execute_pipeline(
-            ingest_csv_file_test,
+        with build_resources(
+            ingest_csv_file_test.get_mode_definition("default").resource_defs,
             run_config={
-                "resources": {
-                    "pyspark": {"config": {"spark_conf": spark_config}},
-                    "pyspark_io_manager": {"config": {"base_dir": temp_dir}},
-                    "io_manager": {"config": {"base_dir": temp_dir}},
-                }
+                "pyspark": {"config": {"spark_conf": spark_config}},
+                "pyspark_io_manager": {"config": {"base_dir": temp_dir}},
+                "io_manager": {"config": {"base_dir": temp_dir}},
             },
-        )
-        assert result.success
+        ) as resources:
+            result = execute_in_process(
+                ingest_csv_file_test,
+                resources=resources,
+            )
+            assert result.success
 
-        df = result.result_for_solid("collect_df").output_value()
+            df = result.result_for_node("collect_df").output_values["result"]
 
-        assert df == [Row(num1="1", num2="2")]
+            assert df == [Row(num1="1", num2="2")]
