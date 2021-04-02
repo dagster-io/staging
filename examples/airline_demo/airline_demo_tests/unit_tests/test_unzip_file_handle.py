@@ -3,15 +3,18 @@ import zipfile
 import boto3
 from airline_demo.unzip_file_handle import unzip_file_handle
 from dagster import (
+    InputDefinition,
     LocalFileHandle,
     ModeDefinition,
     OutputDefinition,
     ResourceDefinition,
+    composite_solid,
     execute_pipeline,
     local_file_manager,
     pipeline,
     solid,
 )
+from dagster.core.execution.execute_in_process import execute_in_process
 from dagster.utils.test import get_temp_file_name
 from dagster_aws.s3 import S3FileHandle, S3FileManager, s3_intermediate_storage
 from moto import mock_s3
@@ -34,19 +37,14 @@ def test_unzip_file_handle():
         def to_zip_file_handle(_):
             return LocalFileHandle(zip_file_name)
 
-        @pipeline(mode_defs=[ModeDefinition(resource_defs={"file_manager": local_file_manager})])
-        def do_test_unzip_file_handle():
-            return unzip_file_handle(to_zip_file_handle())
+        @composite_solid(input_defs=[InputDefinition("archive_member", dagster_type=str)])
+        def do_test_unzip_file_handle(archive_member):
+            return unzip_file_handle(to_zip_file_handle(), archive_member)
 
-        result = execute_pipeline(
+        result = execute_in_process(
             do_test_unzip_file_handle,
-            run_config={
-                "solids": {
-                    "unzip_file_handle": {
-                        "inputs": {"archive_member": {"value": "some_archive_member"}}
-                    }
-                }
-            },
+            resources={"file_manager": local_file_manager},
+            input_values={"archive_member": "some_archive_member"},
         )
         assert result.success
 
@@ -58,16 +56,19 @@ def test_unzip_file_handle_on_fake_s3():
     @solid(required_resource_keys={"file_manager"}, output_defs=[OutputDefinition(S3FileHandle)])
     def write_zipped_file_to_s3_store(context):
         with get_temp_file_name() as zip_file_name:
-            write_zip_file_to_disk(zip_file_name, "an_archive_member", foo_bytes)
+            write_zip_file_to_disk(
+                zip_file_name, "an_archive_member", foo_bytes)
             with open(zip_file_name, "rb") as ff:
-                s3_file_handle = context.resources.file_manager.write_data(ff.read())
+                s3_file_handle = context.resources.file_manager.write_data(
+                    ff.read())
                 return s3_file_handle
 
     # Uses mock S3
     # https://github.com/spulec/moto/issues/3292
     s3 = boto3.client("s3", region_name="us-east-1")
     s3.create_bucket(Bucket="some-bucket")
-    file_manager = S3FileManager(s3_session=s3, s3_bucket="some-bucket", s3_base_key="dagster")
+    file_manager = S3FileManager(
+        s3_session=s3, s3_bucket="some-bucket", s3_base_key="dagster")
 
     @pipeline(
         mode_defs=[
@@ -95,9 +96,12 @@ def test_unzip_file_handle_on_fake_s3():
 
     assert result.success
 
-    zipped_s3_file = result.result_for_solid("write_zipped_file_to_s3_store").output_value()
-    unzipped_s3_file = result.result_for_solid("unzip_file_handle").output_value()
-    bucket_keys = [obj["Key"] for obj in s3.list_objects(Bucket="some-bucket")["Contents"]]
+    zipped_s3_file = result.result_for_solid(
+        "write_zipped_file_to_s3_store").output_value()
+    unzipped_s3_file = result.result_for_solid(
+        "unzip_file_handle").output_value()
+    bucket_keys = [obj["Key"]
+                   for obj in s3.list_objects(Bucket="some-bucket")["Contents"]]
 
     assert zipped_s3_file.s3_key in bucket_keys
     assert unzipped_s3_file.s3_key in bucket_keys
