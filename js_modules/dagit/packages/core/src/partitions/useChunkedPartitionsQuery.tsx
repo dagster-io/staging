@@ -9,6 +9,7 @@ import {repoAddressToSelector} from '../workspace/repoAddressToSelector';
 import {RepoAddress} from '../workspace/types';
 
 import {PARTITION_GRAPH_SET_RUN_FRAGMENT} from './PartitionGraphSet';
+import {PARTITION_GRAPH_FRAGMENT} from './PartitionGraphUtils';
 import {PARTITION_RUN_MATRIX_RUN_FRAGMENT} from './PartitionRunMatrix';
 import {
   PartitionSetLoaderQuery,
@@ -269,6 +270,7 @@ const PARTITION_SET_LOADER_RUN_FRAGMENT = gql`
   }
   ${PARTITION_RUN_MATRIX_RUN_FRAGMENT}
   ${PARTITION_GRAPH_SET_RUN_FRAGMENT}
+  ${PARTITION_GRAPH_FRAGMENT}
 `;
 
 const PARTITION_SET_LOADER_QUERY = gql`
