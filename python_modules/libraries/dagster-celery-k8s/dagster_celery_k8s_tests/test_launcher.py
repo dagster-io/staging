@@ -5,6 +5,7 @@ import pytest
 from dagster import pipeline, reconstructable
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import InProcessRepositoryLocationOrigin, RepositoryHandle
+from dagster.core.storage.tags import DOCKER_IMAGE_TAG
 from dagster.core.test_utils import create_run_for_test, environ, instance_for_test
 from dagster.utils.hosted_user_process import external_pipeline_from_recon_pipeline
 from dagster_celery_k8s.config import get_celery_engine_config
@@ -176,6 +177,9 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
                 tags=tags,
             )
             celery_k8s_run_launcher.launch_run(run, fake_external_pipeline)
+
+            updated_run = instance.get_run_by_id(run.run_id)
+            assert updated_run.tags[DOCKER_IMAGE_TAG] == "fake_job_image"
 
         # Check that user defined k8s config was passed down to the k8s job.
         mock_method_calls = mock_k8s_client_batch_api.method_calls
