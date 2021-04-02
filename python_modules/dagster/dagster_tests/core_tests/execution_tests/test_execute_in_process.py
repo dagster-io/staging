@@ -1,8 +1,7 @@
 import re
 
 import pytest
-from dagster import DagsterInvalidDefinitionError, solid
-from dagster.core.definitions.decorators.graph import graph
+from dagster import DagsterInvalidDefinitionError, composite_solid, solid
 from dagster.core.execution.execute import execute_in_process
 from dagster.experimental import DynamicOutput, DynamicOutputDefinition
 
@@ -31,11 +30,11 @@ def test_execute_solid():
 def test_execute_graph():
     emit_one, add = get_solids()
 
-    @graph
+    @composite_solid
     def emit_two():
         return add(emit_one(), emit_one())
 
-    @graph
+    @composite_solid
     def emit_three():
         return add(emit_two(), emit_one())
 
@@ -70,7 +69,7 @@ def test_execute_solid_with_inputs():
 def test_execute_graph_with_inputs():
     emit_one, add = get_solids()
 
-    @graph
+    @composite_solid
     def add_one(x):
         return add(x, emit_one())
 
@@ -83,7 +82,7 @@ def test_execute_graph_with_inputs():
 def test_execute_graph_nonexistent_inputs():
     emit_one, add = get_solids()
 
-    @graph
+    @composite_solid
     def get_two():
         return add(emit_one(), emit_one())
 
@@ -95,7 +94,7 @@ def test_execute_graph_nonexistent_inputs():
     ):
         execute_in_process(get_two, input_values={"x": 5})
 
-    @graph
+    @composite_solid
     def add_one(x):
         return add(x, emit_one())
 
