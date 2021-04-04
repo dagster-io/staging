@@ -20,6 +20,7 @@ from dagster import (
     lambda_solid,
     solid,
 )
+from dagster.core.definitions.input import InputDef
 from dagster.core.execution.api import create_execution_plan
 
 
@@ -113,6 +114,8 @@ def test_result_type_check():
         execute_pipeline(pipeline)
 
 
+
+
 def test_nothing_inputs():
     @lambda_solid(input_defs=[InputDefinition("never_defined", Nothing)])
     def emit_one():
@@ -131,14 +134,14 @@ def test_nothing_inputs():
         pass
 
     @solid(
-        input_defs=[
-            InputDefinition("_one", Nothing),
-            InputDefinition("one", Int),
-            InputDefinition("_two", Nothing),
-            InputDefinition("two", Int),
-            InputDefinition("_three", Nothing),
-            InputDefinition("three", Int),
-        ]
+        input_defs={
+            "_one": Nothing,
+            "one": InputDef(Int),
+            "_two": InputDef(Nothing),
+            "two": InputDef(Int),
+            "_three": InputDef(Nothing),
+            "three": InputDef(Int),
+        }
     )
     def adder(_context, one, two, three):
         assert one == 1

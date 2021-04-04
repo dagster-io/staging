@@ -37,7 +37,6 @@ make_python_type_usable_as_dagster_type(
     python_type=DataFrame, dagster_type=dagster_pyspark.DataFrame
 )
 
-
 PARQUET_SPECIAL_CHARACTERS = r"[ ,;{}()\n\t=]"
 
 

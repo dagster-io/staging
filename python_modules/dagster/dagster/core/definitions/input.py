@@ -46,6 +46,26 @@ def _check_default_value(input_name, dagster_type, default_value):
     return default_value
 
 
+class InputDef:
+    def __init__(
+        self,
+        dagster_type=None,
+        description=None,
+        default_value=_NoValueSentinel,
+        root_manager_key=None,
+        metadata=None,
+        asset_key=None,
+        asset_partitions=None,
+    ):
+        self.dagster_type = dagster_type
+        self.description = description
+        self.default_value = default_value
+        self.root_manager_key = root_manager_key
+        self.metadata = metadata
+        self.asset_key = asset_key
+        self.asset_partitions = asset_partitions
+
+
 class InputDefinition:
     """Defines an argument to a solid's compute function.
 

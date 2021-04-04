@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Generator, List, Optional
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
-from dagster.core.types.dagster_type import DagsterTypeKind
+from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind, resolve_dagster_type
 
 from ...decorator_utils import (
     InvalidDecoratedFunctionInfo,
@@ -15,12 +15,48 @@ from ...decorator_utils import (
 )
 from ..events import AssetMaterialization, ExpectationResult, Materialization, Output
 from ..inference import infer_input_definitions_for_solid, infer_output_definitions
-from ..input import InputDefinition
+from ..input import InputDef, InputDefinition
 from ..output import OutputDefinition
 from ..solid import SolidDefinition
 
 if TYPE_CHECKING:
     from dagster.core.execution.context.system import SystemComputeExecutionContext
+
+
+def condensed_def_to_def(name, condensed_input_def, type_override=None):
+    return InputDefinition(
+        name=name,
+        dagster_type=type_override if type_override else condensed_input_def.dagster_type,
+        description=condensed_input_def.description,
+        default_value=condensed_input_def.default_value,
+        root_manager_key=condensed_input_def.root_manager_key,
+        metadata=condensed_input_def.metadata,
+        asset_key=condensed_input_def.asset_key,
+        asset_partitions=condensed_input_def.asset_partitions,
+    )
+
+
+def input_def_ish_to_input_definition(name, input_def_ish):
+    if isinstance(input_def_ish, InputDef):
+        return condensed_def_to_def(name, input_def_ish)
+    elif isinstance(input_def_ish, DagsterType):
+        return InputDefinition(name=name, dagster_type=input_def_ish)
+    else:
+        # attempt to coerce to Dagster type
+        return InputDefinition(name=name, dagster_type=resolve_dagster_type(input_def_ish))
+
+
+def coerce_input_defs(input_defs):
+    if isinstance(input_defs, list) or input_defs is None:
+        return input_defs
+
+    if isinstance(input_defs, dict):
+        return [
+            input_def_ish_to_input_definition(name, input_def_ish)
+            for name, input_def_ish in input_defs.items()
+        ]
+
+    raise Exception("invalid input_defs")
 
 
 class _Solid:
@@ -36,7 +72,10 @@ class _Solid:
         version: Optional[str] = None,
     ):
         self.name = check.opt_str_param(name, "name")
-        self.input_defs = check.opt_nullable_list_param(input_defs, "input_defs", InputDefinition)
+        self.input_defs = input_defs
+        # self.input_defs = check.opt_nullable_list_param(
+        #     coerce_input_defs(input_defs), "input_defs", InputDefinition
+        # )
         self.output_defs = check.opt_nullable_list_param(
             output_defs, "output_defs", OutputDefinition
         )
@@ -59,8 +98,8 @@ class _Solid:
 
         input_defs = (
             self.input_defs
-            if self.input_defs is not None
-            else infer_input_definitions_for_solid(self.name, fn)
+            if isinstance(self.input_defs, list)
+            else infer_input_definitions_for_solid(self.name, fn, self.input_defs)
         )
         output_defs = (
             self.output_defs
