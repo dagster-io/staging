@@ -131,16 +131,13 @@ def test_nothing_inputs():
         pass
 
     @solid(
-        input_defs=[
-            InputDefinition("_one", Nothing),
-            InputDefinition("one", Int),
-            InputDefinition("_two", Nothing),
-            InputDefinition("two", Int),
-            InputDefinition("_three", Nothing),
-            InputDefinition("three", Int),
-        ]
+        input_defs={
+            "_one": Nothing,
+            "_two": Nothing,
+            "_three": Nothing,
+        }
     )
-    def adder(_context, one, two, three):
+    def adder(_context, one: int, two: int, three: int):
         assert one == 1
         assert two == 2
         assert three == 3

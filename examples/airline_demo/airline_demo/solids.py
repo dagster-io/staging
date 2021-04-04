@@ -37,7 +37,6 @@ make_python_type_usable_as_dagster_type(
     python_type=DataFrame, dagster_type=dagster_pyspark.DataFrame
 )
 
-
 PARQUET_SPECIAL_CHARACTERS = r"[ ,;{}()\n\t=]"
 
 
@@ -206,10 +205,9 @@ def do_prefix_column_names(df, prefix):
 
 @solid(
     required_resource_keys={"pyspark_step_launcher"},
-    input_defs=[InputDefinition(name="data_frame", dagster_type=DataFrame)],
     output_defs=[OutputDefinition(DataFrame, io_manager_key="pyspark_io_manager")],
 )
-def canonicalize_column_names(_context, data_frame):
+def canonicalize_column_names(_context, data_frame: DataFrame):
     return rename_spark_dataframe_columns(data_frame, lambda c: c.lower())
 
 
@@ -219,22 +217,20 @@ def replace_values_spark(data_frame, old, new):
 
 @solid(
     required_resource_keys={"pyspark_step_launcher"},
-    input_defs=[InputDefinition(name="sfo_weather_data", dagster_type=DataFrame)],
     output_defs=[OutputDefinition(DataFrame, io_manager_key="pyspark_io_manager")],
 )
-def process_sfo_weather_data(_context, sfo_weather_data):
+def process_sfo_weather_data(_context, sfo_weather_data: DataFrame):
     normalized_sfo_weather_data = replace_values_spark(sfo_weather_data, "M", None)
     return rename_spark_dataframe_columns(normalized_sfo_weather_data, lambda c: c.lower())
 
 
 # start_solids_marker_0
 @solid(
-    input_defs=[InputDefinition(name="data_frame", dagster_type=DataFrame)],
     output_defs=[OutputDefinition(name="table_name", dagster_type=String)],
     config_schema={"table_name": String},
     required_resource_keys={"db_info", "pyspark_step_launcher"},
 )
-def load_data_to_database_from_spark(context, data_frame):
+def load_data_to_database_from_spark(context, data_frame: DataFrame):
     context.resources.db_info.load_table(data_frame, context.solid_config["table_name"])
 
     table_name = context.solid_config["table_name"]
@@ -263,10 +259,9 @@ def load_data_to_database_from_spark(context, data_frame):
             description="The integer percentage of rows to sample from the input dataset.",
         )
     },
-    input_defs=[InputDefinition(name="data_frame", dagster_type=DataFrame)],
     output_defs=[OutputDefinition(DataFrame, io_manager_key="pyspark_io_manager")],
 )
-def subsample_spark_dataset(context, data_frame):
+def subsample_spark_dataset(context, data_frame: DataFrame):
     return data_frame.sample(
         withReplacement=False, fraction=context.solid_config["subsample_pct"] / 100.0
     )
@@ -544,20 +539,14 @@ sfo_delays_by_destination = notebook_solid(
         "It then joins the that origin and destination airport with the data in the "
         "master_cord_data."
     ),
-    input_defs=[
-        InputDefinition(name="april_data", dagster_type=DataFrame),
-        InputDefinition(name="may_data", dagster_type=DataFrame),
-        InputDefinition(name="june_data", dagster_type=DataFrame),
-        InputDefinition(name="master_cord_data", dagster_type=DataFrame),
-    ],
     output_defs=[OutputDefinition(DataFrame, io_manager_key="pyspark_io_manager")],
 )
 def join_q2_data(
     context,
-    april_data,
-    may_data,
-    june_data,
-    master_cord_data,
+    april_data: DataFrame,
+    may_data: DataFrame,
+    june_data: DataFrame,
+    master_cord_data: DataFrame,
 ):
 
     dfs = {"april": april_data, "may": may_data, "june": june_data}
