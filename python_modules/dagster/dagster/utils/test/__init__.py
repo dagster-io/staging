@@ -67,7 +67,9 @@ def create_test_pipeline_execution_context(logger_defs=None):
     run_config = {"loggers": {key: {} for key in loggers}}
     pipeline_run = PipelineRun(pipeline_name="test_legacy_context", run_config=run_config)
     instance = DagsterInstance.ephemeral()
-    execution_plan = create_execution_plan(pipeline=pipeline_def, run_config=run_config)
+    execution_plan = create_execution_plan(
+        pipeline=pipeline_def, instance=instance, run_config=run_config
+    )
     creation_data = create_context_creation_data(
         InMemoryPipeline(pipeline_def), execution_plan, run_config, pipeline_run, instance
     )
@@ -241,7 +243,7 @@ def yield_empty_pipeline_context(run_id=None, instance=None):
         instance, "instance", DagsterInstance, default=DagsterInstance.ephemeral()
     )
 
-    execution_plan = create_execution_plan(pipeline)
+    execution_plan = create_execution_plan(pipeline, instance)
 
     pipeline_run = instance.create_run(
         pipeline_name="<empty>",

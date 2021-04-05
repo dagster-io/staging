@@ -218,7 +218,6 @@ def multiprocess_executor(init_context):
     check_cross_process_constraints(init_context)
 
     return MultiprocessExecutor(
-        pipeline=init_context.pipeline,
         max_concurrent=init_context.executor_config["max_concurrent"],
         retries=RetryMode.from_config(init_context.executor_config["retries"]),
     )
@@ -232,16 +231,10 @@ def check_cross_process_constraints(init_context):
 
     check.inst_param(init_context, "init_context", InitExecutorContext)
 
-    _check_intra_process_pipeline(init_context.pipeline)
     _check_non_ephemeral_instance(init_context.instance)
-    _check_persistent_storage_requirement(
-        init_context.pipeline.get_definition(),
-        init_context.mode_def,
-        init_context.intermediate_storage_def,
-    )
 
 
-def _check_intra_process_pipeline(pipeline):
+def check_intra_process_pipeline(pipeline):
     if not isinstance(pipeline, ReconstructablePipeline):
         raise DagsterUnmetExecutorRequirementsError(
             'You have attempted to use an executor that uses multiple processes with the pipeline "{name}" '
@@ -251,46 +244,6 @@ def _check_intra_process_pipeline(pipeline):
             "  * loading the pipeline through the reconstructable() function\n".format(
                 name=pipeline.get_definition().name
             )
-        )
-
-
-def _all_outputs_non_mem_io_managers(pipeline_def, mode_def):
-    """Returns true if every output definition in the pipeline uses an IO manager that's not
-    the mem_io_manager.
-
-    If true, this indicates that it's OK to execute steps in their own processes, because their
-    outputs will be available to other processes.
-    """
-    # pylint: disable=comparison-with-callable
-    from dagster.core.storage.mem_io_manager import mem_io_manager
-
-    output_defs = [
-        output_def
-        for solid_def in pipeline_def.all_solid_defs
-        for output_def in solid_def.output_defs
-    ]
-    for output_def in output_defs:
-        if mode_def.resource_defs[output_def.io_manager_key] == mem_io_manager:
-            return False
-
-    return True
-
-
-def _check_persistent_storage_requirement(pipeline_def, mode_def, intermediate_storage_def):
-    """We prefer to store outputs with IO managers, but will fall back to intermediate storage
-    if an IO manager isn't set.
-    """
-    if not (
-        _all_outputs_non_mem_io_managers(pipeline_def, mode_def)
-        or (intermediate_storage_def and intermediate_storage_def.is_persistent)
-    ):
-        raise DagsterUnmetExecutorRequirementsError(
-            "You have attempted to use an executor that uses multiple processes, but your pipeline "
-            "includes solid outputs that will not be stored somewhere where other processes can"
-            "retrieve them. "
-            "Please make sure that your pipeline definition includes a ModeDefinition whose "
-            'resource_keys assign the "io_manager" key to an IOManager resource '
-            "that stores outputs outside of the process, such as the fs_io_manager."
         )
 
 

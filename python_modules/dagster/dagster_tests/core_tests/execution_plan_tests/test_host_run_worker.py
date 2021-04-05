@@ -75,6 +75,7 @@ def test_host_run_worker():
         }
         execution_plan = create_execution_plan(
             pipeline_with_mode,
+            instance,
             run_config,
         )
 
@@ -91,7 +92,6 @@ def test_host_run_worker():
             pipeline_run,
             instance,
             executor=MultiprocessExecutor(
-                pipeline=recon_pipeline,
                 max_concurrent=4,
                 retries=RetryMode.DISABLED,
             ),

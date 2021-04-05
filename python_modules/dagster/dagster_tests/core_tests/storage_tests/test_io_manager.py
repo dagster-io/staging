@@ -145,13 +145,16 @@ def test_fs_io_manager_reexecution():
 
 def test_can_reexecute():
     pipeline_def = define_pipeline(fs_io_manager, {})
-    plan = create_execution_plan(pipeline_def)
+    plan = create_execution_plan(pipeline_def, DagsterInstance.ephemeral())
     assert plan.artifacts_persisted
 
 
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
-    plan = create_execution_plan(pipeline_def, step_keys_to_execute=step_keys_to_execute)
     with DagsterInstance.ephemeral() as instance:
+        plan = create_execution_plan(
+            pipeline_def, instance=instance, step_keys_to_execute=step_keys_to_execute
+        )
+
         pipeline_run = instance.create_run_for_pipeline(
             pipeline_def=pipeline_def,
             step_keys_to_execute=step_keys_to_execute,

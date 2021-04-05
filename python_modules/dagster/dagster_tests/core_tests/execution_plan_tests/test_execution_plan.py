@@ -28,7 +28,7 @@ from ..engine_tests.test_multiprocessing import define_diamond_pipeline
 
 
 def test_topological_sort():
-    plan = create_execution_plan(define_diamond_pipeline())
+    plan = create_execution_plan(define_diamond_pipeline(), DagsterInstance.ephemeral())
 
     levels = plan.get_steps_to_execute_by_level()
 
@@ -43,12 +43,13 @@ def test_create_execution_plan_with_bad_inputs():
     with pytest.raises(DagsterInvalidConfigError):
         create_execution_plan(
             define_diamond_pipeline(),
+            DagsterInstance.ephemeral(),
             run_config={"solids": {"add_three": {"inputs": {"num": 3}}}},
         )
 
 
 def test_active_execution_plan():
-    plan = create_execution_plan(define_diamond_pipeline())
+    plan = create_execution_plan(define_diamond_pipeline(), DagsterInstance.ephemeral())
 
     with plan.start(retry_mode=(RetryMode.DISABLED)) as active_execution:
 
@@ -100,7 +101,7 @@ def test_active_execution_plan():
 
 def test_failing_execution_plan():
     pipeline_def = define_diamond_pipeline()
-    plan = create_execution_plan(pipeline_def)
+    plan = create_execution_plan(pipeline_def, DagsterInstance.ephemeral())
 
     with plan.start(retry_mode=(RetryMode.DISABLED)) as active_execution:
 
@@ -153,7 +154,7 @@ def test_failing_execution_plan():
 
 def test_retries_active_execution():
     pipeline_def = define_diamond_pipeline()
-    plan = create_execution_plan(pipeline_def)
+    plan = create_execution_plan(pipeline_def, DagsterInstance.ephemeral())
 
     with plan.start(retry_mode=(RetryMode.ENABLED)) as active_execution:
 
@@ -217,7 +218,7 @@ def test_retries_active_execution():
 
 def test_retries_disabled_active_execution():
     pipeline_def = define_diamond_pipeline()
-    plan = create_execution_plan(pipeline_def)
+    plan = create_execution_plan(pipeline_def, DagsterInstance.ephemeral())
 
     with pytest.raises(check.CheckError):
         with plan.start(retry_mode=(RetryMode.DISABLED)) as active_execution:
@@ -236,7 +237,7 @@ def test_retries_disabled_active_execution():
 
 def test_retries_deferred_active_execution():
     pipeline_def = define_diamond_pipeline()
-    plan = create_execution_plan(pipeline_def)
+    plan = create_execution_plan(pipeline_def, DagsterInstance.ephemeral())
 
     with plan.start(retry_mode=(RetryMode.DEFERRED)) as active_execution:
 
@@ -306,7 +307,7 @@ def test_priorities():
 
     sort_key_fn = lambda step: int(step.tags.get("priority", 0)) * -1
 
-    plan = create_execution_plan(priorities)
+    plan = create_execution_plan(priorities, DagsterInstance.ephemeral())
     with plan.start(RetryMode.DISABLED, sort_key_fn) as active_execution:
         steps = active_execution.get_steps_to_execute()
         assert steps[0].key == "pri_5"
@@ -321,7 +322,7 @@ def test_priorities():
 def test_executor_not_created_for_execute_plan():
     instance = DagsterInstance.ephemeral()
     pipe = define_diamond_pipeline()
-    plan = create_execution_plan(pipe)
+    plan = create_execution_plan(pipe, instance)
     pipeline_run = instance.create_run_for_pipeline(pipe, plan)
 
     results = execute_plan(
@@ -336,7 +337,7 @@ def test_executor_not_created_for_execute_plan():
 
 
 def test_incomplete_execution_plan():
-    plan = create_execution_plan(define_diamond_pipeline())
+    plan = create_execution_plan(define_diamond_pipeline(), DagsterInstance.ephemeral())
 
     with pytest.raises(
         DagsterInvariantViolationError,
@@ -353,7 +354,7 @@ def test_incomplete_execution_plan():
 
 
 def test_lost_steps():
-    plan = create_execution_plan(define_diamond_pipeline())
+    plan = create_execution_plan(define_diamond_pipeline(), DagsterInstance.ephemeral())
 
     # run to completion - but step was in unknown state so exception thrown
     with pytest.raises(DagsterUnknownStepStateError):
@@ -401,24 +402,24 @@ def test_fan_out_should_skip_step():
     instance = DagsterInstance.ephemeral()
     pipeline_run = PipelineRun(pipeline_name="optional_outputs", run_id=make_new_run_id())
     execute_plan(
-        create_execution_plan(optional_outputs, step_keys_to_execute=["foo"]),
+        create_execution_plan(optional_outputs, instance=instance, step_keys_to_execute=["foo"]),
         InMemoryPipeline(optional_outputs),
         instance,
         pipeline_run,
     )
 
     assert not should_skip_step(
-        create_execution_plan(optional_outputs, step_keys_to_execute=["bar_1"]),
+        create_execution_plan(optional_outputs, instance=instance, step_keys_to_execute=["bar_1"]),
         instance,
         pipeline_run.run_id,
     )
     assert should_skip_step(
-        create_execution_plan(optional_outputs, step_keys_to_execute=["bar_2"]),
+        create_execution_plan(optional_outputs, instance=instance, step_keys_to_execute=["bar_2"]),
         instance,
         pipeline_run.run_id,
     )
     assert should_skip_step(
-        create_execution_plan(optional_outputs, step_keys_to_execute=["bar_3"]),
+        create_execution_plan(optional_outputs, instance=instance, step_keys_to_execute=["bar_3"]),
         instance,
         pipeline_run.run_id,
     )
@@ -456,6 +457,7 @@ def test_fan_in_should_skip_step():
     execute_plan(
         create_execution_plan(
             optional_outputs_composite,
+            instance=instance,
             step_keys_to_execute=[
                 "composite_all_upstream_skip.skip",
                 "composite_all_upstream_skip.skip_2",
@@ -469,6 +471,7 @@ def test_fan_in_should_skip_step():
     assert should_skip_step(
         create_execution_plan(
             optional_outputs_composite,
+            instance=instance,
             step_keys_to_execute=["composite_all_upstream_skip.fan_in"],
         ),
         instance,
@@ -478,6 +481,7 @@ def test_fan_in_should_skip_step():
     execute_plan(
         create_execution_plan(
             optional_outputs_composite,
+            instance=instance,
             step_keys_to_execute=[
                 "composite_one_upstream_skip.one",
                 "composite_one_upstream_skip.skip",
@@ -491,6 +495,7 @@ def test_fan_in_should_skip_step():
     assert not should_skip_step(
         create_execution_plan(
             optional_outputs_composite,
+            instance=instance,
             step_keys_to_execute=["composite_one_upstream_skip.fan_in"],
         ),
         instance,
@@ -523,6 +528,7 @@ def test_configured_input_should_skip_step():
     execute_plan(
         create_execution_plan(
             my_pipeline,
+            instance=instance,
             step_keys_to_execute=["one"],
             run_config=run_config,
         ),
@@ -534,6 +540,7 @@ def test_configured_input_should_skip_step():
     assert not should_skip_step(
         create_execution_plan(
             my_pipeline,
+            instance=instance,
             step_keys_to_execute=["solid_should_not_skip"],
             run_config=run_config,
         ),

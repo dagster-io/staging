@@ -208,6 +208,7 @@ def execute_step_command(input_json):
 
             execution_plan = create_execution_plan(
                 recon_pipeline,
+                instance=instance,
                 run_config=pipeline_run.run_config,
                 step_keys_to_execute=args.step_keys_to_execute,
                 mode=pipeline_run.mode,
@@ -572,6 +573,7 @@ def _launch_run(
     try:
         external_execution_plan = repo_location.get_external_execution_plan(
             external_pipeline,
+            instance,
             run_config,
             external_schedule.mode,
             step_keys_to_execute=None,
