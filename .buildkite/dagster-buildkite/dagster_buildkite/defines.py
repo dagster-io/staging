@@ -5,7 +5,8 @@ class SupportedPython:
 
 
 SupportedPythons = [
-    SupportedPython.V3_6,
+    # temporary disable
+    # SupportedPython.V3_6,
     SupportedPython.V3_7,
     SupportedPython.V3_8,
 ]
