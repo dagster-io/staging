@@ -10,6 +10,7 @@ from dagster.core.definitions import (
     DependencyDefinition,
     EventMetadataEntry,
     ExecutorDefinition,
+    ExecutorProcessSetting,
     ExpectationResult,
     Failure,
     FloatMetadataEntryData,

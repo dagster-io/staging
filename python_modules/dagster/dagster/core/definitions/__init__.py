@@ -46,6 +46,7 @@ from .events import (
 )
 from .executor import (
     ExecutorDefinition,
+    ExecutorProcessSetting,
     default_executors,
     executor,
     in_process_executor,

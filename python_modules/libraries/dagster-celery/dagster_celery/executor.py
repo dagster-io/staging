@@ -1,4 +1,13 @@
-from dagster import Executor, Field, Noneable, Permissive, StringSource, check, executor
+from dagster import (
+    Executor,
+    ExecutorProcessSetting,
+    Field,
+    Noneable,
+    Permissive,
+    StringSource,
+    check,
+    executor,
+)
 from dagster.core.definitions.executor import check_cross_process_constraints
 from dagster.core.execution.retries import RetryMode, get_retries_config
 from dagster.grpc.types import ExecuteStepArgs
@@ -35,7 +44,11 @@ CELERY_CONFIG = {
 }
 
 
-@executor(name="celery", config_schema=CELERY_CONFIG)
+@executor(
+    name="celery",
+    config_schema=CELERY_CONFIG,
+    process_setting=ExecutorProcessSetting.MULTIPLE_PROCESSES,
+)
 def celery_executor(init_context):
     """Celery-based executor.
 
