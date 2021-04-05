@@ -83,7 +83,7 @@ def test_create_execution_plan_snapshot():
         noop_solid()
 
     with instance_for_test() as instance:
-        execution_plan = create_execution_plan(noop_pipeline)
+        execution_plan = create_execution_plan(noop_pipeline, instance)
 
         ep_snapshot = snapshot_from_execution_plan(
             execution_plan, noop_pipeline.get_pipeline_snapshot_id()

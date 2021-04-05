@@ -4,12 +4,13 @@ import pytest
 from dagster.api.snapshot_execution_plan import sync_get_external_execution_plan_grpc
 from dagster.core.errors import DagsterUserCodeProcessError
 from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshot
+from dagster.core.test_utils import instance_for_test
 
 from .utils import get_foo_pipeline_handle
 
 
 def test_execution_plan_error_grpc():
-    with get_foo_pipeline_handle() as pipeline_handle:
+    with get_foo_pipeline_handle() as pipeline_handle, instance_for_test() as instance:
         api_client = pipeline_handle.repository_handle.repository_location.client
 
         with pytest.raises(
@@ -22,11 +23,12 @@ def test_execution_plan_error_grpc():
                 run_config={},
                 mode="made_up_mode",
                 pipeline_snapshot_id="12345",
+                instance=instance,
             )
 
 
 def test_execution_plan_snapshot_api_grpc():
-    with get_foo_pipeline_handle() as pipeline_handle:
+    with get_foo_pipeline_handle() as pipeline_handle, instance_for_test() as instance:
         api_client = pipeline_handle.repository_handle.repository_location.client
 
         execution_plan_snapshot = sync_get_external_execution_plan_grpc(
@@ -35,6 +37,7 @@ def test_execution_plan_snapshot_api_grpc():
             run_config={},
             mode="default",
             pipeline_snapshot_id="12345",
+            instance=instance,
         )
 
         assert isinstance(execution_plan_snapshot, ExecutionPlanSnapshot)
@@ -46,7 +49,7 @@ def test_execution_plan_snapshot_api_grpc():
 
 
 def test_execution_plan_with_step_keys_to_execute_snapshot_api_grpc():
-    with get_foo_pipeline_handle() as pipeline_handle:
+    with get_foo_pipeline_handle() as pipeline_handle, instance_for_test() as instance:
         api_client = pipeline_handle.repository_handle.repository_location.client
 
         execution_plan_snapshot = sync_get_external_execution_plan_grpc(
@@ -56,6 +59,7 @@ def test_execution_plan_with_step_keys_to_execute_snapshot_api_grpc():
             mode="default",
             pipeline_snapshot_id="12345",
             step_keys_to_execute=["do_something"],
+            instance=instance,
         )
 
         assert isinstance(execution_plan_snapshot, ExecutionPlanSnapshot)
@@ -66,7 +70,7 @@ def test_execution_plan_with_step_keys_to_execute_snapshot_api_grpc():
 
 
 def test_execution_plan_with_subset_snapshot_api_grpc():
-    with get_foo_pipeline_handle() as pipeline_handle:
+    with get_foo_pipeline_handle() as pipeline_handle, instance_for_test() as instance:
         api_client = pipeline_handle.repository_handle.repository_location.client
 
         execution_plan_snapshot = sync_get_external_execution_plan_grpc(
@@ -76,6 +80,7 @@ def test_execution_plan_with_subset_snapshot_api_grpc():
             mode="default",
             pipeline_snapshot_id="12345",
             solid_selection=["do_input"],
+            instance=instance,
         )
 
         assert isinstance(execution_plan_snapshot, ExecutionPlanSnapshot)

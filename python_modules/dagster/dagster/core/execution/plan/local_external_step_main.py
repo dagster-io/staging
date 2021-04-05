@@ -12,7 +12,7 @@ def main(step_run_ref_path: str) -> None:
     file_handle = LocalFileHandle(step_run_ref_path)
     step_run_ref = pickle.loads(file_manager.read_data(file_handle))
 
-    with DagsterInstance.ephemeral() as instance:
+    with DagsterInstance.get() as instance:
         events = list(run_step_from_ref(step_run_ref, instance))
         events_out_path = os.path.join(os.path.dirname(step_run_ref_path), PICKLED_EVENTS_FILE_NAME)
         with open(events_out_path, "wb") as events_file:

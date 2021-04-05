@@ -30,9 +30,12 @@ def my_repository():
 
 nonce_pipeline_snapshot = nonce_pipeline.get_pipeline_snapshot()
 
-nonce_execution_plan_snapshot = snapshot_from_execution_plan(
-    create_execution_plan(nonce_pipeline), nonce_pipeline.get_pipeline_snapshot_id()
-)
+
+def nonce_execution_plan_snapshot(instance):
+    return snapshot_from_execution_plan(
+        create_execution_plan(nonce_pipeline, instance), nonce_pipeline.get_pipeline_snapshot_id()
+    )
+
 
 recon_repo_for_tests = ReconstructableRepository.for_file(
     file_relative_path(__file__, "test_dagster_docker_operator.py"),
@@ -52,7 +55,7 @@ def test_init_modified_docker_operator(dagster_docker_image):
                 "api_version": "auto",
             },
             pipeline_snapshot=nonce_pipeline_snapshot,
-            execution_plan_snapshot=nonce_execution_plan_snapshot,
+            execution_plan_snapshot=nonce_execution_plan_snapshot(instance),
             instance_ref=instance.get_ref(),
             recon_repo=recon_repo_for_tests,
         )
@@ -74,7 +77,7 @@ def test_modified_docker_operator_bad_docker_conn(dagster_docker_image):
                 "command": "dagster-graphql --help",
             },
             pipeline_snapshot=nonce_pipeline_snapshot,
-            execution_plan_snapshot=nonce_execution_plan_snapshot,
+            execution_plan_snapshot=nonce_execution_plan_snapshot(instance),
             instance_ref=instance.get_ref(),
             recon_repo=recon_repo_for_tests,
         )
@@ -97,7 +100,7 @@ def test_modified_docker_operator_env(dagster_docker_image):
                 "command": "dagster-graphql --help",
             },
             pipeline_snapshot=nonce_pipeline_snapshot,
-            execution_plan_snapshot=nonce_execution_plan_snapshot,
+            execution_plan_snapshot=nonce_execution_plan_snapshot(instance),
             instance_ref=instance.get_ref(),
             recon_repo=recon_repo_for_tests,
         )
@@ -119,7 +122,7 @@ def test_modified_docker_operator_bad_command(dagster_docker_image):
                 "command": "dagster-graphql gargle bargle",
             },
             pipeline_snapshot=nonce_pipeline_snapshot,
-            execution_plan_snapshot=nonce_execution_plan_snapshot,
+            execution_plan_snapshot=nonce_execution_plan_snapshot(instance),
             instance_ref=instance.get_ref(),
             recon_repo=recon_repo_for_tests,
         )
@@ -153,7 +156,7 @@ def test_modified_docker_operator_url(dagster_docker_image):
                     "command": "dagster-graphql --help",
                 },
                 pipeline_snapshot=nonce_pipeline_snapshot,
-                execution_plan_snapshot=nonce_execution_plan_snapshot,
+                execution_plan_snapshot=nonce_execution_plan_snapshot(instance),
                 instance_ref=instance.get_ref(),
                 recon_repo=recon_repo_for_tests,
             )

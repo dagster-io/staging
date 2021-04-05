@@ -2,6 +2,7 @@ from dagster import check
 from dagster.core.errors import DagsterUserCodeProcessError
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.host_representation.origin import ExternalPipelineOrigin
+from dagster.core.instance import DagsterInstance
 from dagster.core.snap.execution_plan_snapshot import (
     ExecutionPlanSnapshot,
     ExecutionPlanSnapshotErrorData,
@@ -15,6 +16,7 @@ def sync_get_external_execution_plan_grpc(
     run_config,
     mode,
     pipeline_snapshot_id,
+    instance,
     solid_selection=None,
     step_keys_to_execute=None,
     known_state=None,
@@ -28,6 +30,7 @@ def sync_get_external_execution_plan_grpc(
     check.str_param(mode, "mode")
     check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
     check.str_param(pipeline_snapshot_id, "pipeline_snapshot_id")
+    check.inst_param(instance, "instance", DagsterInstance)
     check.opt_inst_param(known_state, "known_state", KnownExecutionState)
 
     result = check.inst(
@@ -40,6 +43,7 @@ def sync_get_external_execution_plan_grpc(
                 step_keys_to_execute=step_keys_to_execute,
                 pipeline_snapshot_id=pipeline_snapshot_id,
                 known_state=known_state,
+                instance_ref=instance.get_ref(),
             )
         ),
         (ExecutionPlanSnapshot, ExecutionPlanSnapshotErrorData),

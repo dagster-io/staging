@@ -156,6 +156,7 @@ class Manager:
         execution_plan = ExecutionPlan.build(
             self.pipeline,
             environment_config,
+            instance,
             step_keys_to_execute=pipeline_run.step_keys_to_execute,
         )
 
@@ -249,14 +250,17 @@ class Manager:
         environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode_def.name)
 
         pipeline = InMemoryPipeline(pipeline_def)
-        execution_plan = ExecutionPlan.build(pipeline, environment_config)
+
+        instance = DagsterInstance.ephemeral()
+
+        execution_plan = ExecutionPlan.build(pipeline, environment_config, instance)
 
         with scoped_pipeline_context(
             execution_plan,
             pipeline,
             run_config,
             pipeline_run,
-            DagsterInstance.ephemeral(),
+            instance,
             scoped_resources_builder_cm=self._setup_resources,
         ) as pipeline_context:
 

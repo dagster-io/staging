@@ -3,6 +3,7 @@ from collections import defaultdict
 import pytest
 from dagster import (
     AssetMaterialization,
+    DagsterInstance,
     DagsterInvalidDefinitionError,
     DagsterTypeCheckDidNotPass,
     DependencyDefinition,
@@ -302,7 +303,7 @@ def test_execution_plan():
         solid_defs=[emit_nothing, consume_nothing],
         dependencies={"consume_nothing": {"ready": DependencyDefinition("emit_nothing")}},
     )
-    plan = create_execution_plan(pipe)
+    plan = create_execution_plan(pipe, DagsterInstance.ephemeral())
 
     levels = plan.get_steps_to_execute_by_level()
 

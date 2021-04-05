@@ -73,13 +73,16 @@ def test_s3_pickle_io_manager_execution(mock_s3_bucket):
 
     run_id = make_new_run_id()
 
+    instance = DagsterInstance.ephemeral()
+
     environment_config = EnvironmentConfig.build(pipeline_def, run_config=run_config)
-    execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline_def), environment_config)
+    execution_plan = ExecutionPlan.build(
+        InMemoryPipeline(pipeline_def), environment_config, instance
+    )
 
     assert execution_plan.get_step_by_key("return_one")
 
     step_keys = ["return_one"]
-    instance = DagsterInstance.ephemeral()
     pipeline_run = PipelineRun(
         pipeline_name=pipeline_def.name, run_id=run_id, run_config=run_config
     )

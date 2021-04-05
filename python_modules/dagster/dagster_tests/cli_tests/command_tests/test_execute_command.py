@@ -6,7 +6,10 @@ import pytest
 from click import UsageError
 from click.testing import CliRunner
 from dagster.cli.pipeline import execute_execute_command, pipeline_execute_command
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import (
+    DagsterInvariantViolationError,
+    DagsterUnmetExecutorRequirementsError,
+)
 from dagster.core.test_utils import instance_for_test, new_cwd
 from dagster.utils import file_relative_path, merge_dicts
 
@@ -425,7 +428,7 @@ def test_multiproc_invalid():
     )
     # which is invalid for multiproc
     assert add_result.exit_code != 0
-    assert "DagsterUnmetExecutorRequirementsError" in add_result.output
+    assert isinstance(add_result.exception, DagsterUnmetExecutorRequirementsError)
 
 
 def test_tags_pipeline():

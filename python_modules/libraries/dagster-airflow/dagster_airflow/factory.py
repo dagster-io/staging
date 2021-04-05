@@ -190,7 +190,7 @@ def _make_airflow_dag(
     if mode is None:
         mode = pipeline.get_default_mode_name()
 
-    execution_plan = create_execution_plan(pipeline, run_config, mode=mode)
+    execution_plan = create_execution_plan(pipeline, instance, run_config, mode=mode)
 
     tasks = {}
 
