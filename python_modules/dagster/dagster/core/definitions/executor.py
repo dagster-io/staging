@@ -1,3 +1,4 @@
+from enum import Enum
 from functools import update_wrapper
 from typing import Any, Dict, Optional
 
@@ -15,10 +16,18 @@ from dagster.core.execution.retries import RetryMode, get_retries_config
 from .definition_config_schema import convert_user_facing_definition_config_schema
 
 
+class ExecutorProcessSetting(Enum):
+    SINGLE_PROCESS = "SINGLE_PROCESS"
+    MULTIPLE_PROCESSES = "MULTIPLE_PROCESSES"
+
+
 class ExecutorDefinition(NamedConfigurableDefinition):
     """
     Args:
         name (str): The name of the executor.
+        process_setting (ExecutorProcessSetting): Whether the executor operates in a single
+            process or not, which determines whether or not it requires the pipeline to persist
+            step outputs.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data
             available in `init_context.executor_config`.
         executor_creation_fn(Optional[Callable]): Should accept an :py:class:`InitExecutorContext`
@@ -30,11 +39,15 @@ class ExecutorDefinition(NamedConfigurableDefinition):
     def __init__(
         self,
         name,
+        process_setting,
         config_schema=None,
         executor_creation_fn=None,
         description=None,
     ):
         self._name = check.str_param(name, "name")
+        self._process_setting = check.inst_param(
+            process_setting, "process_setting", ExecutorProcessSetting
+        )
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
         self._executor_creation_fn = check.opt_callable_param(
             executor_creation_fn, "executor_creation_fn"
@@ -54,6 +67,10 @@ class ExecutorDefinition(NamedConfigurableDefinition):
         return self._config_schema
 
     @property
+    def process_setting(self):
+        return self._process_setting
+
+    @property
     def executor_creation_fn(self):
         return self._executor_creation_fn
 
@@ -63,6 +80,7 @@ class ExecutorDefinition(NamedConfigurableDefinition):
             config_schema=config_schema,
             executor_creation_fn=self.executor_creation_fn,
             description=description or self.description,
+            process_setting=self.process_setting,
         )
 
     # Backcompat: Overrides configured method to provide name as a keyword argument.
@@ -106,7 +124,9 @@ class ExecutorDefinition(NamedConfigurableDefinition):
         )
 
 
-def executor(name=None, config_schema=None):
+def executor(
+    name=None, config_schema=None, process_setting=ExecutorProcessSetting.MULTIPLE_PROCESSES
+):
     """Define an executor.
 
     The decorated function should accept an :py:class:`InitExecutorContext` and return an instance
@@ -119,15 +139,19 @@ def executor(name=None, config_schema=None):
     """
     if callable(name):
         check.invariant(config_schema is None)
+        check.invariant(process_setting is None)
         return _ExecutorDecoratorCallable()(name)
 
-    return _ExecutorDecoratorCallable(name=name, config_schema=config_schema)
+    return _ExecutorDecoratorCallable(
+        name=name, config_schema=config_schema, process_setting=process_setting
+    )
 
 
 class _ExecutorDecoratorCallable:
-    def __init__(self, name=None, config_schema=None):
+    def __init__(self, name=None, config_schema=None, process_setting=None):
         self.name = check.opt_str_param(name, "name")
         self.config_schema = config_schema  # type check in definition
+        self.process_setting = process_setting
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
@@ -139,6 +163,7 @@ class _ExecutorDecoratorCallable:
             name=self.name,
             config_schema=self.config_schema,
             executor_creation_fn=fn,
+            process_setting=self.process_setting,
         )
 
         update_wrapper(executor_def, wrapped=fn)
@@ -152,6 +177,7 @@ class _ExecutorDecoratorCallable:
         "retries": get_retries_config(),
         "marker_to_close": Field(str, is_required=False),
     },
+    process_setting=ExecutorProcessSetting.SINGLE_PROCESS,
 )
 def in_process_executor(init_context):
     """The default in-process executor.
@@ -187,6 +213,7 @@ def in_process_executor(init_context):
         "max_concurrent": Field(Int, is_required=False, default_value=0),
         "retries": get_retries_config(),
     },
+    process_setting=ExecutorProcessSetting.MULTIPLE_PROCESSES,
 )
 def multiprocess_executor(init_context):
     """The default multiprocess executor.
@@ -218,7 +245,6 @@ def multiprocess_executor(init_context):
     check_cross_process_constraints(init_context)
 
     return MultiprocessExecutor(
-        pipeline=init_context.pipeline,
         max_concurrent=init_context.executor_config["max_concurrent"],
         retries=RetryMode.from_config(init_context.executor_config["retries"]),
     )
@@ -234,11 +260,6 @@ def check_cross_process_constraints(init_context):
 
     _check_intra_process_pipeline(init_context.pipeline)
     _check_non_ephemeral_instance(init_context.instance)
-    _check_persistent_storage_requirement(
-        init_context.pipeline.get_definition(),
-        init_context.mode_def,
-        init_context.intermediate_storage_def,
-    )
 
 
 def _check_intra_process_pipeline(pipeline):
@@ -251,46 +272,6 @@ def _check_intra_process_pipeline(pipeline):
             "  * loading the pipeline through the reconstructable() function\n".format(
                 name=pipeline.get_definition().name
             )
-        )
-
-
-def _all_outputs_non_mem_io_managers(pipeline_def, mode_def):
-    """Returns true if every output definition in the pipeline uses an IO manager that's not
-    the mem_io_manager.
-
-    If true, this indicates that it's OK to execute steps in their own processes, because their
-    outputs will be available to other processes.
-    """
-    # pylint: disable=comparison-with-callable
-    from dagster.core.storage.mem_io_manager import mem_io_manager
-
-    output_defs = [
-        output_def
-        for solid_def in pipeline_def.all_solid_defs
-        for output_def in solid_def.output_defs
-    ]
-    for output_def in output_defs:
-        if mode_def.resource_defs[output_def.io_manager_key] == mem_io_manager:
-            return False
-
-    return True
-
-
-def _check_persistent_storage_requirement(pipeline_def, mode_def, intermediate_storage_def):
-    """We prefer to store outputs with IO managers, but will fall back to intermediate storage
-    if an IO manager isn't set.
-    """
-    if not (
-        _all_outputs_non_mem_io_managers(pipeline_def, mode_def)
-        or (intermediate_storage_def and intermediate_storage_def.is_persistent)
-    ):
-        raise DagsterUnmetExecutorRequirementsError(
-            "You have attempted to use an executor that uses multiple processes, but your pipeline "
-            "includes solid outputs that will not be stored somewhere where other processes can"
-            "retrieve them. "
-            "Please make sure that your pipeline definition includes a ModeDefinition whose "
-            'resource_keys assign the "io_manager" key to an IOManager resource '
-            "that stores outputs outside of the process, such as the fs_io_manager."
         )
 
 
