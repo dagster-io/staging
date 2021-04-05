@@ -7,8 +7,12 @@ from dagster.core.errors import (
     DagsterInvariantViolationError,
     DagsterUnknownStepStateError,
 )
-from dagster.core.events import AssetLineageInfo, DagsterEvent
-from dagster.core.execution.context.system import SystemPipelineExecutionContext
+from dagster.core.events import AssetKey, DagsterEvent
+from dagster.core.execution.context.system import (
+    AssetNodeHandle,
+    AssetOutputHandle,
+    SystemPipelineExecutionContext,
+)
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.retries import RetryMode, RetryState
 from dagster.core.storage.tags import PRIORITY_TAG
@@ -62,7 +66,7 @@ class ActiveExecution:
         self._new_dynamic_mappings: bool = False
 
         # track which outputs have produced an asset
-        self._asset_outputs: Dict[str, Dict[str, Dict[str, List[AssetLineageInfo]]]] = {}
+        self._asset_partitions_map: Dict[AssetNodeHandle, Dict[AssetKey, Set[str]]] = {}
 
         # steps move in to these buckets as a result of _update calls
         self._executable: List[str] = []
@@ -408,12 +412,25 @@ class ActiveExecution:
                 self._successful_dynamic_outputs[dagster_event.step_key][
                     dagster_event.step_output_data.step_output_handle.output_name
                 ].append(dagster_event.step_output_data.step_output_handle.mapping_key)
-        elif dagster_event.is_handled_output:
-            self._asset_outputs[dagster_event.step_key][
-                dagster_event.event_specific_data.output_name
-            ][
-                dagster_event.event_specific_data.mapping_key
-            ] = dagster_event.event_specific_data.lineage
+        elif dagster_event.is_step_materialization:
+            # if associated with an output
+            if dagster_event.event_specific_data.output_name:
+                node_handle = AssetOutputHandle(
+                    dagster_event.step_key,
+                    dagster_event.event_specific_data.output_name,
+                    dagster_event.event_specific_data.output_mapping_key,
+                )
+                asset_key = dagster_event.event_specific_data.materialization.asset_key
+                partition = dagster_event.event_specific_data.materialization.partition
+                if not partition:
+                    return
+                if (
+                    node_handle in self._asset_partitions_map
+                    and asset_key in self._asset_partitions_map[node_handle]
+                ):
+                    self._asset_partitions_map[node_handle][asset_key].add(partition)
+                else:
+                    self._asset_partitions_map[node_handle] = {asset_key: set([partition])}
 
     def verify_complete(
         self, pipeline_context: SystemPipelineExecutionContext, step_key: str
@@ -458,12 +475,10 @@ class ActiveExecution:
         return KnownExecutionState(
             previous_retry_attempts=self._retry_state.snapshot_attempts(),
             dynamic_mappings=dict(self._successful_dynamic_outputs),
-            asset_output_mappings=dict(self._asset_outputs),
+            asset_partitions_map=dict(self._asset_partitions_map),
         )
 
     def _prep_for_dynamic_outputs(self, step: ExecutionStep):
-        # TODO: move this away
-        self._asset_outputs[step.key] = {out.name: {} for out in step.step_outputs}
         dyn_outputs = [step_out for step_out in step.step_outputs if step_out.is_dynamic]
 
         if dyn_outputs:

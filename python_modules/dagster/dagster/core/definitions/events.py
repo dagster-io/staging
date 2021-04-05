@@ -3,6 +3,7 @@ import re
 import warnings
 from collections import namedtuple
 from enum import Enum
+from typing import List
 
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
@@ -493,24 +494,31 @@ EntryDataUnion = (
 )
 
 
-class PartitionMetadataEntry(namedtuple("_PartitionMetadataEntry", "partition entry")):
-    """Event containing an :py:class:`EventMetdataEntry` and the name of a partition that the entry
-    applies to.
+class AssetPartitionMaterialization(
+    namedtuple("_AssetPartitionMaterialization", "partition metadata_entries")
+):
+    """TODO"""
 
-    This can be yielded or returned in place of EventMetadataEntries for cases where you are trying
-    to associate metadata more precisely.
-    """
-
-    def __new__(cls, partition: str, entry: EventMetadataEntry):
-        experimental_class_warning("PartitionMetadataEntry")
-        return super(PartitionMetadataEntry, cls).__new__(
+    def __new__(cls, partition: str, metadata_entries: List[EventMetadataEntry] = None):
+        experimental_class_warning("AssetPartitionMaterialization")
+        return super(AssetPartitionMaterialization, cls).__new__(
             cls,
             check.str_param(partition, "partition"),
-            check.inst_param(entry, "entry", EventMetadataEntry),
+            check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
         )
 
 
-class Output(namedtuple("_Output", "value output_name metadata_entries")):
+class AssetPartitionRead(namedtuple("_AssetPartitionRead", "partition metadata_entries")):
+    def __new__(cls, partition: str, metadata_entries: List[EventMetadataEntry] = None):
+        experimental_class_warning("AssetPartitionRead")
+        return super(AssetPartitionRead, cls).__new__(
+            cls,
+            check.str_param(partition, "partition"),
+            check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
+        )
+
+
+class Output(namedtuple("_Output", "value output_name metadata_entries asset_partitions")):
     """Event corresponding to one of a solid's outputs.
 
     Solid compute functions must explicitly yield events of this type when they have more than
@@ -525,11 +533,13 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
         value (Any): The value returned by the compute function.
         output_name (Optional[str]): Name of the corresponding output definition. (default:
             "result")
-        metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
+        metadata_entries (Optional[EventMetadataEntry]):
             (Experimental) A set of metadata entries to attach to events related to this Output.
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+    def __new__(
+        cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None, asset_partitions=None
+    ):
         if metadata_entries:
             experimental_arg_warning("metadata_entries", "Output.__new__")
         return super(Output, cls).__new__(
@@ -539,12 +549,15 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
             check.opt_list_param(
                 metadata_entries,
                 "metadata_entries",
-                (EventMetadataEntry, PartitionMetadataEntry),
+                EventMetadataEntry,
             ),
+            check.opt_list_param(asset_partitions, "asset_partitions"),
         )
 
 
-class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name metadata_entries")):
+class DynamicOutput(
+    namedtuple("_DynamicOutput", "value mapping_key output_name metadata_entries asset_partitions")
+):
     """
     (Experimental) Variant of :py:class:`Output <dagster.Output>` used to support
     dynamic mapping & collect. Each ``DynamicOutput`` produced by a solid represents
@@ -561,13 +574,26 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             This key will be used to identify the downstream solids when mapped, ie
             ``mapped_solid[example_mapping_key]``
         output_name (Optional[str]):
+<<<<<<< HEAD
             Name of the corresponding :py:class:`DynamicOutputDefinition` defined on the solid.
             (default: "result")
         metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
             (Experimental) A set of metadata entries to attach to events related to this output.
+=======
+            Name of the corresponding output definition. (default: "result")
+        metadata_entries (Optional[List[EventMetadataEntry]]):
+            (Experimental) A set of metadata entries to attach to events related to this Output.
+>>>>>>> wip
     """
 
-    def __new__(cls, value, mapping_key, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+    def __new__(
+        cls,
+        value,
+        mapping_key,
+        output_name=DEFAULT_OUTPUT,
+        metadata_entries=None,
+        asset_partitions=None,
+    ):
         if metadata_entries:
             experimental_arg_warning("metadata_entries", "DynamicOutput.__new__")
         return super(DynamicOutput, cls).__new__(
@@ -578,7 +604,10 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             check.opt_list_param(
                 metadata_entries,
                 "metadata_entries",
-                (EventMetadataEntry, PartitionMetadataEntry),
+                EventMetadataEntry,
+            ),
+            check.opt_list_param(
+                asset_partitions, "asset_partitions", AssetPartitionMaterialization
             ),
         )
 
@@ -629,7 +658,7 @@ class AssetMaterialization(
             asset_key=asset_key,
             description=check.opt_str_param(description, "description"),
             metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
+                metadata_entries, "metadata_entries", of_type=EventMetadataEntry
             ),
             partition=check.opt_str_param(partition, "partition"),
             tags=check.opt_dict_param(tags, "tags", key_type=str, value_type=str),
@@ -654,6 +683,30 @@ class AssetMaterialization(
             asset_key=asset_key,
             description=description,
             metadata_entries=[EventMetadataEntry.fspath(path)],
+        )
+
+
+@whitelist_for_serdes
+class AssetRead(namedtuple("_AssetRead", "asset_key metadata_entries partition")):
+    def __new__(cls, asset_key, metadata_entries=None, partition=None):
+        if isinstance(asset_key, AssetKey):
+            check.inst_param(asset_key, "asset_key", AssetKey)
+        elif isinstance(asset_key, str):
+            asset_key = AssetKey(parse_asset_key_string(asset_key))
+        elif isinstance(asset_key, list):
+            check.is_list(asset_key, of_type=str)
+            asset_key = AssetKey(asset_key)
+        else:
+            check.is_tuple(asset_key, of_type=str)
+            asset_key = AssetKey(asset_key)
+
+        return super(AssetRead, cls).__new__(
+            cls,
+            asset_key=asset_key,
+            metadata_entries=check.opt_list_param(
+                metadata_entries, "metadata_entries", of_type=EventMetadataEntry
+            ),
+            partition=check.opt_str_param(partition, "partition"),
         )
 
 

@@ -20,7 +20,6 @@ class StepOutputProperties(
         [
             ("is_required", bool),
             ("is_dynamic", bool),
-            ("is_asset", bool),
             ("should_materialize", bool),
         ],
     )
@@ -29,14 +28,12 @@ class StepOutputProperties(
         cls,
         is_required: bool,
         is_dynamic: bool,
-        is_asset: bool,
         should_materialize: bool,
     ):
         return super(StepOutputProperties, cls).__new__(
             cls,
             check.bool_param(is_required, "is_required"),
             check.bool_param(is_dynamic, "is_dynamic"),
-            check.bool_param(is_asset, "is_asset"),
             check.bool_param(should_materialize, "should_materialize"),
         )
 

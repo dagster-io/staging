@@ -592,7 +592,7 @@ class ExecutionPlan(
         for step in self.step_dict.values():
             if isinstance(step, ExecutionStep):
                 deps[step.key] = step.get_execution_dependency_keys()
-            elif isinstance(step, UnresolvedMappedExecutionStep):
+            elif isinstance(step, (UnresolvedMappedExecutionStep, UnresolvedCollectExecutionStep)):
                 deps[step.key] = step.get_all_dependency_keys()
             else:
                 check.failed(f"Unexpected execution step type {step}")

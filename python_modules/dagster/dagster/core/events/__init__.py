@@ -13,7 +13,7 @@ from dagster.core.definitions import (
     Materialization,
     SolidHandle,
 )
-from dagster.core.definitions.events import AssetLineageInfo, ObjectStoreOperationType
+from dagster.core.definitions.events import AssetLineageInfo, AssetRead, ObjectStoreOperationType
 from dagster.core.execution.context.system import (
     BaseStepExecutionContext,
     HookContext,
@@ -42,6 +42,7 @@ class DagsterEventType(Enum):
     STEP_RESTARTED = "STEP_RESTARTED"
 
     ASSET_MATERIALIZATION = "ASSET_MATERIALIZATION"
+    ASSET_READ = "ASSET_READ"
     STEP_EXPECTATION_RESULT = "STEP_EXPECTATION_RESULT"
 
     PIPELINE_INIT_FAILURE = "PIPELINE_INIT_FAILURE"
@@ -77,6 +78,7 @@ STEP_EVENTS = {
     DagsterEventType.STEP_SUCCESS,
     DagsterEventType.STEP_SKIPPED,
     DagsterEventType.ASSET_MATERIALIZATION,
+    DagsterEventType.ASSET_READ,
     DagsterEventType.STEP_EXPECTATION_RESULT,
     DagsterEventType.OBJECT_STORE_OPERATION,
     DagsterEventType.HANDLED_OUTPUT,
@@ -132,6 +134,8 @@ def _validate_event_specific_data(event_type, event_specific_data):
         check.inst_param(event_specific_data, "event_specific_data", StepSuccessData)
     elif event_type == DagsterEventType.ASSET_MATERIALIZATION:
         check.inst_param(event_specific_data, "event_specific_data", StepMaterializationData)
+    elif event_type == DagsterEventType.ASSET_READ:
+        check.inst_param(event_specific_data, "event_specific_data", StepReadData)
     elif event_type == DagsterEventType.STEP_EXPECTATION_RESULT:
         check.inst_param(event_specific_data, "event_specific_data", StepExpectationResultData)
     elif event_type == DagsterEventType.STEP_INPUT:
@@ -609,18 +613,19 @@ class DagsterEvent(
 
     @staticmethod
     def asset_materialization(
-        step_context, materialization, asset_lineage=None, associated_output=None
+        step_context, materialization, asset_lineage=None, output_name=None, output_mapping_key=None
     ):
         check.inst_param(
             materialization, "materialization", (AssetMaterialization, Materialization)
         )
         check.opt_list_param(asset_lineage, "asset_lineage", AssetLineageInfo)
-        check.opt_str_param(associated_output, "associated_output")
+        check.opt_str_param(output_name, "output_name")
+        check.opt_str_param(output_mapping_key, "output_mapping_key")
         return DagsterEvent.from_step(
             event_type=DagsterEventType.ASSET_MATERIALIZATION,
             step_context=step_context,
             event_specific_data=StepMaterializationData(
-                materialization, asset_lineage, associated_output
+                materialization, asset_lineage, output_name, output_mapping_key
             ),
             message=materialization.description
             if materialization.description
@@ -629,6 +634,20 @@ class DagsterEvent(
                 if materialization.label
                 else ""
             ),
+        )
+
+    @staticmethod
+    def asset_read(
+        step_context,
+        read_event,
+        input_name=None,
+    ):
+        check.inst_param(read_event, "read_event", AssetRead)
+        return DagsterEvent.from_step(
+            event_type=DagsterEventType.ASSET_READ,
+            step_context=step_context,
+            event_specific_data=StepReadData(read_event, input_name),
+            message="Read value.",
         )
 
     @staticmethod
@@ -898,8 +917,6 @@ class DagsterEvent(
         manager_key,
         message_override=None,
         metadata_entries=None,
-        lineage=None,
-        mapping_key=None,
     ):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
@@ -911,8 +928,6 @@ class DagsterEvent(
                 output_name=output_name,
                 manager_key=manager_key,
                 metadata_entries=metadata_entries if metadata_entries else [],
-                lineage=lineage,
-                mapping_key=mapping_key,
             ),
             message=message_override or message,
         )
@@ -1044,14 +1059,29 @@ def get_step_output_event(events, step_key, output_name="result"):
 
 @whitelist_for_serdes
 class StepMaterializationData(
-    namedtuple("_StepMaterializationData", "materialization asset_lineage associated_output")
+    namedtuple(
+        "_StepMaterializationData", "materialization asset_lineage output_name output_mapping_key"
+    )
 ):
-    def __new__(cls, materialization, asset_lineage=None, associated_output=None):
+    def __new__(
+        cls, materialization, asset_lineage=None, output_name=None, output_mapping_key=None
+    ):
         return super(StepMaterializationData, cls).__new__(
             cls,
             materialization=materialization,
             asset_lineage=check.opt_list_param(asset_lineage, "asset_lineage", AssetLineageInfo),
-            associated_output=check.opt_str_param(associated_output, "associated_output"),
+            output_name=check.opt_str_param(output_name, "output_name"),
+            output_mapping_key=check.opt_str_param(output_mapping_key, "output_mapping_key"),
+        )
+
+
+@whitelist_for_serdes
+class StepReadData(namedtuple("_StepReadData", "read_event input_name")):
+    def __new__(cls, read_event, input_name=None):
+        return super(StepReadData, cls).__new__(
+            cls,
+            read_event=read_event,
+            input_name=check.opt_str_param(input_name, "input_name"),
         )
 
 
@@ -1175,11 +1205,9 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
 
 @whitelist_for_serdes
 class HandledOutputData(
-    namedtuple("_HandledOutputData", "output_name manager_key metadata_entries lineage mapping_key")
+    namedtuple("_HandledOutputData", "output_name manager_key metadata_entries")
 ):
-    def __new__(
-        cls, output_name, manager_key, metadata_entries=None, lineage=None, mapping_key=None
-    ):
+    def __new__(cls, output_name, manager_key, metadata_entries=None):
         return super(HandledOutputData, cls).__new__(
             cls,
             output_name=check.str_param(output_name, "output_name"),
@@ -1187,8 +1215,6 @@ class HandledOutputData(
             metadata_entries=check.opt_list_param(
                 metadata_entries, "metadata_entries", EventMetadataEntry
             ),
-            lineage=check.opt_list_param(lineage, "lineage", AssetLineageInfo),
-            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
         )
 
 

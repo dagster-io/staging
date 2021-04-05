@@ -11,11 +11,7 @@ from dagster import (
     solid,
 )
 from dagster.check import CheckError
-from dagster.core.definitions.events import (
-    AssetLineageInfo,
-    EventMetadataEntry,
-    PartitionMetadataEntry,
-)
+from dagster.core.definitions.events import AssetLineageInfo, EventMetadataEntry
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.storage.io_manager import IOManager
 
@@ -85,23 +81,13 @@ def test_output_definition_multiple_partition_materialization():
 
     partition_entries = [EventMetadataEntry.int(123 * i * i, "partition count") for i in range(3)]
 
-    @solid(
-        output_defs=[
-            OutputDefinition(
-                name="output1", asset_key=AssetKey("table1"), asset_partitions=set(["0", "1", "2"])
-            )
-        ]
-    )
+    @solid(output_defs=[OutputDefinition(name="output1", asset_key=AssetKey("table1"))])
     def solid1(_):
         return Output(
             None,
             "output1",
             metadata_entries=[
                 entry1,
-                *[
-                    PartitionMetadataEntry(str(i), entry)
-                    for i, entry in enumerate(partition_entries)
-                ],
             ],
         )
 
@@ -197,14 +183,9 @@ def test_io_manager_single_partition_materialization():
 
 
 def test_partition_specific_fails_on_na_partitions():
-    @solid(
-        output_defs=[OutputDefinition(asset_key=AssetKey("key"), asset_partitions=set(["1", "2"]))]
-    )
+    @solid(output_defs=[OutputDefinition(asset_key=AssetKey("key"))])
     def fail_solid(_):
-        yield Output(
-            None,
-            metadata_entries=[PartitionMetadataEntry("3", EventMetadataEntry.int(1, "x"))],
-        )
+        yield Output(None)
 
     @pipeline
     def my_pipeline():
@@ -217,10 +198,7 @@ def test_partition_specific_fails_on_na_partitions():
 def test_partition_specific_fails_on_zero_partitions():
     @solid(output_defs=[OutputDefinition(asset_key=AssetKey("key"))])
     def fail_solid(_):
-        yield Output(
-            None,
-            metadata_entries=[PartitionMetadataEntry("3", EventMetadataEntry.int(1, "x"))],
-        )
+        yield Output(None)
 
     @pipeline
     def my_pipeline():
@@ -244,14 +222,3 @@ def test_fail_fast_with_nonesense_metadata():
 
     with pytest.raises(CheckError):
         execute_pipeline(my_pipeline)
-
-
-def test_def_only_asset_partitions_fails():
-
-    with pytest.raises(CheckError):
-
-        OutputDefinition(asset_partitions=set(["1"]))
-
-    with pytest.raises(CheckError):
-
-        InputDefinition("name", asset_partitions=set(["1"]))

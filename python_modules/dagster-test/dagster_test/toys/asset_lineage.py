@@ -17,6 +17,7 @@ from dagster import (
     pipeline,
     solid,
 )
+from dagster.core.definitions.events import AssetPartitionMaterialization
 from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 from dagster.core.storage.io_manager import io_manager
 
@@ -68,27 +69,20 @@ def metadata_for_actions(df):
 class MyDatabaseIOManager(PickledObjectFilesystemIOManager):
     def _get_path(self, context):
         keys = context.get_run_scoped_output_identifier()
-
         return os.path.join("/tmp", *keys)
 
     def handle_output(self, context, obj):
         super().handle_output(context, obj)
         # can pretend this actually came from a library call
         yield EventMetadataEntry.int(len(obj), "num rows written to db")
-
-    def get_output_asset_key(self, context):
-        return AssetKey(
-            [
-                "my_database",
-                context.metadata["table_name"],
-            ]
-        )
-
-    def get_output_asset_partitions(self, context):
-        return set(context.config.get("partitions", []))
+        for partition in context.config.get("partitions", []):
+            yield AssetPartitionMaterialization(partition)
 
 
-@io_manager(output_config_schema={"partitions": Field(Array(str), is_required=False)})
+@io_manager(
+    output_config_schema={"partitions": Field(Array(str), is_required=False)},
+    output_asset_key=lambda context: AssetKey(["my_database", context.metadata["table_name"]]),
+)
 def my_db_io_manager(_):
     return MyDatabaseIOManager()
 

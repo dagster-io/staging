@@ -10,6 +10,7 @@ from dagster.core.definitions.pipeline_base import IPipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.errors import DagsterError
 from dagster.core.events import DagsterEvent, PipelineInitFailureData
+from dagster.core.execution.context.system import AssetDependencyGraph
 from dagster.core.execution.memoization import validate_reexecution_memoization
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.resources_init import (
@@ -75,7 +76,7 @@ class ContextCreationData(
         "_ContextCreationData",
         "pipeline environment_config pipeline_run mode_def "
         "intermediate_storage_def executor_def instance resource_keys_to_init "
-        "execution_plan",
+        "execution_plan asset_dependency_graph",
     )
 ):
     @property
@@ -109,6 +110,7 @@ def create_context_creation_data(
             execution_plan, pipeline_def, environment_config, intermediate_storage_def
         ),
         execution_plan=execution_plan,
+        asset_dependency_graph=AssetDependencyGraph(execution_plan, pipeline_def, mode_def),
     )
 
 
@@ -445,6 +447,7 @@ def construct_execution_context_data(
         raise_on_error=raise_on_error,
         retry_mode=retry_mode,
         execution_plan=context_creation_data.execution_plan,
+        asset_dependency_graph=context_creation_data.asset_dependency_graph,
     )
 
 

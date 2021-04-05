@@ -1,9 +1,10 @@
 from collections import defaultdict
-from typing import Dict, List, NamedTuple
+from typing import Dict, List, NamedTuple, Set
 
 from dagster import check
-from dagster.core.events import AssetLineageInfo
+from dagster.core.events import AssetKey
 from dagster.core.events.log import EventRecord
+from dagster.core.execution.context.system import AssetNodeHandle
 from dagster.core.execution.retries import RetryState
 from dagster.serdes import whitelist_for_serdes
 
@@ -17,8 +18,8 @@ class KnownExecutionState(
             ("previous_retry_attempts", Dict[str, int]),
             # step_key -> output_name -> mapping_keys
             ("dynamic_mappings", Dict[str, Dict[str, List[str]]]),
-            # step_key -> output_name -> (mapping_key, asset_lineage)
-            ("asset_output_mappings", Dict[str, Dict[str, Dict[str, List[AssetLineageInfo]]]]),
+            # asset_node_handle -> asset_key -> partitions
+            ("asset_partitions_map", Dict[AssetNodeHandle, Dict[AssetKey, Set[str]]]),
         ],
     )
 ):
@@ -28,7 +29,7 @@ class KnownExecutionState(
     resolved dynamic outputs.
     """
 
-    def __new__(cls, previous_retry_attempts, dynamic_mappings, asset_output_mappings=None):
+    def __new__(cls, previous_retry_attempts, dynamic_mappings, asset_partitions_map):
 
         return super(KnownExecutionState, cls).__new__(
             cls,
@@ -37,7 +38,10 @@ class KnownExecutionState(
             ),
             check.dict_param(dynamic_mappings, "dynamic_mappings", key_type=str, value_type=dict),
             check.dict_param(
-                asset_output_mappings, "asset_output_mappings", key_type=str, value_type=dict
+                asset_partitions_map,
+                "asset_partitions_map",
+                key_type=AssetNodeHandle,
+                value_type=dict,
             ),
         )
 
@@ -82,6 +86,7 @@ class KnownExecutionState(
         return KnownExecutionState(
             dict(previous_retry_attempts),
             successful_dynamic_mappings,
+            dict({}),  # TODO: implement this
         )
 
     @staticmethod
@@ -97,4 +102,4 @@ class KnownExecutionState(
             for step_key in parent_state.dynamic_mappings.keys()
             if step_key not in step_keys_to_execute
         }
-        return KnownExecutionState({}, dynamic_mappings_to_use)
+        return KnownExecutionState({}, dynamic_mappings_to_use, {})
