@@ -60,7 +60,7 @@ def test_using_file_system_for_subplan():
     instance = DagsterInstance.ephemeral()
 
     environment_config = EnvironmentConfig.build(pipeline, run_config=run_config)
-    execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline), environment_config)
+    execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline), environment_config, instance)
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline, execution_plan=execution_plan
     )
@@ -104,6 +104,7 @@ def test_using_intermediates_file_system_is_persistent():
     run_config = {"intermediate_storage": {"filesystem": {}}}
     execution_plan = create_execution_plan(
         pipeline,
+        instance=DagsterInstance.ephemeral(),
         run_config=run_config,
     )
 
@@ -124,6 +125,7 @@ def test_using_intermediates_file_system_for_subplan():
     execution_plan = ExecutionPlan.build(
         InMemoryPipeline(pipeline),
         environment_config,
+        instance,
     )
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline, execution_plan=execution_plan
@@ -175,6 +177,7 @@ def test_using_intermediates_to_override():
     execution_plan = ExecutionPlan.build(
         InMemoryPipeline(pipeline),
         environment_config,
+        instance,
     )
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline, execution_plan=execution_plan
@@ -211,6 +214,7 @@ def test_using_file_system_for_subplan_multiprocessing():
         execution_plan = ExecutionPlan.build(
             pipeline,
             environment_config,
+            instance,
         )
         pipeline_run = instance.create_run_for_pipeline(
             pipeline_def=pipeline.get_definition(), execution_plan=execution_plan
@@ -274,6 +278,7 @@ def test_using_intermediate_file_system_for_subplan_multiprocessing():
         execution_plan = ExecutionPlan.build(
             pipeline,
             environment_config,
+            instance,
         )
         pipeline_run = instance.create_run_for_pipeline(
             pipeline_def=pipeline.get_definition(), execution_plan=execution_plan
@@ -333,6 +338,7 @@ def test_execute_step_wrong_step_key():
     execution_plan = ExecutionPlan.build(
         InMemoryPipeline(pipeline),
         environment_config,
+        instance,
     )
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline, execution_plan=execution_plan
@@ -380,6 +386,7 @@ def test_using_file_system_for_subplan_missing_input():
     execution_plan = ExecutionPlan.build(
         InMemoryPipeline(pipeline),
         environment_config,
+        instance,
     )
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline, execution_plan=execution_plan
@@ -412,6 +419,7 @@ def test_using_file_system_for_subplan_invalid_step():
     execution_plan = ExecutionPlan.build(
         InMemoryPipeline(pipeline),
         environment_config,
+        instance,
     )
 
     pipeline_run = instance.create_run_for_pipeline(

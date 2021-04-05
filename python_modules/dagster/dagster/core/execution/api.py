@@ -362,6 +362,11 @@ def execute_pipeline_iterator(
             solid_selection=solid_selection,
         )
 
+        environment_config = EnvironmentConfig.build(pipeline.get_definition(), run_config, mode)
+        execution_plan = ExecutionPlan.build(
+            pipeline, environment_config, instance=execute_instance
+        )
+
         pipeline_run = execute_instance.create_run_for_pipeline(
             pipeline_def=pipeline.get_definition(),
             run_config=run_config,
@@ -369,6 +374,7 @@ def execute_pipeline_iterator(
             solid_selection=solid_selection,
             solids_to_execute=solids_to_execute,
             tags=tags,
+            execution_plan=execution_plan,
         )
 
         return execute_run_iterator(pipeline, pipeline_run, execute_instance)
@@ -473,6 +479,9 @@ def _logged_execute_pipeline(
 
     log_repo_stats(instance=instance, pipeline=pipeline, source="execute_pipeline")
 
+    environment_config = EnvironmentConfig.build(pipeline.get_definition(), run_config, mode)
+    execution_plan = ExecutionPlan.build(pipeline, environment_config, instance=instance)
+
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline.get_definition(),
         run_config=run_config,
@@ -480,6 +489,7 @@ def _logged_execute_pipeline(
         solid_selection=solid_selection,
         solids_to_execute=solids_to_execute,
         tags=tags,
+        execution_plan=execution_plan,
     )
 
     return execute_run(pipeline, pipeline_run, instance, raise_on_error=raise_on_error)
@@ -774,6 +784,7 @@ def _get_execution_plan_from_run(
             )
     return create_execution_plan(
         pipeline,
+        instance=instance,
         run_config=pipeline_run.run_config,
         mode=pipeline_run.mode,
         step_keys_to_execute=pipeline_run.step_keys_to_execute,
@@ -782,6 +793,7 @@ def _get_execution_plan_from_run(
 
 def create_execution_plan(
     pipeline: Union[IPipeline, PipelineDefinition],
+    instance: DagsterInstance,
     run_config: Optional[dict] = None,
     mode: Optional[str] = None,
     step_keys_to_execute: Optional[List[str]] = None,
@@ -799,6 +811,7 @@ def create_execution_plan(
     return ExecutionPlan.build(
         pipeline,
         environment_config,
+        check.inst_param(instance, "instance", DagsterInstance),
         step_keys_to_execute=step_keys_to_execute,
         known_state=known_state,
     )
@@ -1035,6 +1048,7 @@ def _resolve_reexecute_step_selection(
     parent_logs = instance.all_logs(parent_pipeline_run.run_id)
     parent_plan = create_execution_plan(
         pipeline,
+        instance,
         parent_pipeline_run.run_config,
         mode,
         known_state=KnownExecutionState.derive_from_logs(parent_logs),
@@ -1042,6 +1056,7 @@ def _resolve_reexecute_step_selection(
     step_keys_to_execute = parse_step_selection(parent_plan.get_all_step_deps(), step_selection)
     execution_plan = create_execution_plan(
         pipeline,
+        instance,
         run_config,
         mode,
         known_state=KnownExecutionState.for_reexecution(parent_logs, step_keys_to_execute),

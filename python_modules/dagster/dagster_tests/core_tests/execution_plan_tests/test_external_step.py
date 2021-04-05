@@ -148,7 +148,9 @@ def initialize_step_context(scratch_dir, instance):
 
     recon_pipeline = reconstructable(define_basic_pipeline)
 
-    plan = create_execution_plan(recon_pipeline, pipeline_run.run_config, mode="external")
+    plan = create_execution_plan(
+        recon_pipeline, DagsterInstance.ephemeral(), pipeline_run.run_config, mode="external"
+    )
 
     initialization_manager = PipelineExecutionContextManager(
         recon_pipeline,

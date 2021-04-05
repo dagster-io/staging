@@ -102,6 +102,7 @@ class WorkspaceRequestContext(
             external_pipeline.handle.location_name
         ].get_external_execution_plan(
             external_pipeline=external_pipeline,
+            instance=self.instance,
             run_config=run_config,
             mode=mode,
             step_keys_to_execute=step_keys_to_execute,

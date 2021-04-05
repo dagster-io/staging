@@ -328,16 +328,18 @@ def get_external_execution_plan_snapshot(recon_pipeline, args):
             else recon_pipeline
         )
 
-        return snapshot_from_execution_plan(
-            create_execution_plan(
-                pipeline=pipeline,
-                run_config=args.run_config,
-                mode=args.mode,
-                step_keys_to_execute=args.step_keys_to_execute,
-                known_state=args.known_state,
-            ),
-            args.pipeline_snapshot_id,
-        )
+        with DagsterInstance.from_ref(args.instance_ref) as instance:
+            return snapshot_from_execution_plan(
+                create_execution_plan(
+                    pipeline=pipeline,
+                    instance=instance,
+                    run_config=args.run_config,
+                    mode=args.mode,
+                    step_keys_to_execute=args.step_keys_to_execute,
+                    known_state=args.known_state,
+                ),
+                args.pipeline_snapshot_id,
+            )
     except:  # pylint: disable=bare-except
         return ExecutionPlanSnapshotErrorData(
             error=serializable_error_info_from_exc_info(sys.exc_info())
