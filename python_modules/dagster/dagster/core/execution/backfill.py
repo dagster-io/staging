@@ -174,6 +174,7 @@ def create_backfill_run(
 
     full_external_execution_plan = repo_location.get_external_execution_plan(
         external_pipeline,
+        instance,
         partition_data.run_config,
         external_partition_set.mode,
         step_keys_to_execute=None,
@@ -220,6 +221,7 @@ def create_backfill_run(
     if step_keys_to_execute:
         external_execution_plan = repo_location.get_external_execution_plan(
             external_pipeline,
+            instance,
             partition_data.run_config,
             external_partition_set.mode,
             step_keys_to_execute=step_keys_to_execute,

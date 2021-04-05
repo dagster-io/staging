@@ -30,6 +30,7 @@ from dagster.core.execution.plan.external_step import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.core.test_utils import instance_for_test_tempdir
 from dagster.utils import safe_tempfile_path, send_interrupt
 from dagster.utils.merger import deep_merge_dicts
 
@@ -148,7 +149,9 @@ def initialize_step_context(scratch_dir, instance):
 
     recon_pipeline = reconstructable(define_basic_pipeline)
 
-    plan = create_execution_plan(recon_pipeline, pipeline_run.run_config, mode="external")
+    plan = create_execution_plan(
+        recon_pipeline, DagsterInstance.ephemeral(), pipeline_run.run_config, mode="external"
+    )
 
     initialization_manager = PipelineExecutionContextManager(
         recon_pipeline,
@@ -273,19 +276,20 @@ def test_interrupt_step_launcher(mode):
 def test_multiproc_launcher_requests_retry():
     mode = "request_retry"
     with tempfile.TemporaryDirectory() as tmpdir:
-        run_config = make_run_config(tmpdir, mode)
-        run_config["execution"] = {"multiprocess": {}}
-        result = execute_pipeline(
-            instance=DagsterInstance.local_temp(tmpdir),
-            pipeline=reconstructable(define_basic_pipeline),
-            mode=mode,
-            run_config=run_config,
-        )
-        assert result.success
-        assert result.result_for_solid("return_two").output_value() == 2
-        assert result.result_for_solid("add_one").output_value() == 3
-        for step_key, events in result.events_by_step_key.items():
-            if step_key:
-                event_types = [event.event_type for event in events]
-                assert DagsterEventType.STEP_UP_FOR_RETRY in event_types
-                assert DagsterEventType.STEP_RESTARTED in event_types
+        with instance_for_test_tempdir(tmpdir) as instance:
+            run_config = make_run_config(tmpdir, mode)
+            run_config["execution"] = {"multiprocess": {}}
+            result = execute_pipeline(
+                instance=instance,
+                pipeline=reconstructable(define_basic_pipeline),
+                mode=mode,
+                run_config=run_config,
+            )
+            assert result.success
+            assert result.result_for_solid("return_two").output_value() == 2
+            assert result.result_for_solid("add_one").output_value() == 3
+            for step_key, events in result.events_by_step_key.items():
+                if step_key:
+                    event_types = [event.event_type for event in events]
+                    assert DagsterEventType.STEP_UP_FOR_RETRY in event_types
+                    assert DagsterEventType.STEP_RESTARTED in event_types

@@ -1,5 +1,5 @@
 import pytest
-from dagster import pipeline, solid
+from dagster import DagsterInstance, pipeline, solid
 from dagster.core.errors import DagsterInvalidConfigError
 from dagster.core.execution.api import create_execution_plan
 from dagster_k8s.job import (
@@ -104,7 +104,7 @@ def test_tags_to_plan():
             }
         )()
 
-    plan = create_execution_plan(k8s_ready)
+    plan = create_execution_plan(k8s_ready, DagsterInstance.ephemeral())
     step = list(plan.step_dict.values())[0]
 
     user_defined_k8s_config = get_user_defined_k8s_config(step.tags)

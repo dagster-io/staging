@@ -80,6 +80,7 @@ def test_execution_plan_reexecution():
     execution_plan = ExecutionPlan.build(
         InMemoryPipeline(pipeline_def),
         environment_config,
+        instance,
     )
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline_def,
@@ -115,7 +116,7 @@ def test_execution_plan_wrong_run_id():
 
     instance = DagsterInstance.ephemeral()
 
-    execution_plan = create_execution_plan(pipeline_def, run_config=run_config)
+    execution_plan = create_execution_plan(pipeline_def, instance=instance, run_config=run_config)
 
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline_def,
@@ -152,7 +153,9 @@ def test_execution_plan_reexecution_with_in_memory():
     ## re-execute add_two
 
     environment_config = EnvironmentConfig.build(pipeline_def, run_config=run_config)
-    execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline_def), environment_config)
+    execution_plan = ExecutionPlan.build(
+        InMemoryPipeline(pipeline_def), environment_config, instance
+    )
 
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline_def,

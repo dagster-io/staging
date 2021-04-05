@@ -360,6 +360,7 @@ def _create_scheduler_run(
     try:
         external_execution_plan = repo_location.get_external_execution_plan(
             external_pipeline,
+            instance,
             run_config,
             external_schedule.mode,
             step_keys_to_execute=None,

@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 from dagster import check
 from dagster.core.definitions import PipelineDefinition
+from dagster.core.definitions.executor import check_intra_process_pipeline
 from dagster.core.definitions.pipeline_base import IPipeline
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
@@ -18,6 +19,7 @@ from dagster.core.execution.resources_init import (
 )
 from dagster.core.execution.retries import RetryMode
 from dagster.core.executor.base import Executor
+from dagster.core.executor.in_process import InProcessExecutor
 from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
@@ -523,18 +525,17 @@ def create_intermediate_storage(
 
 def create_executor(context_creation_data):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
-    return context_creation_data.executor_def.executor_creation_fn(
+    executor = context_creation_data.executor_def.executor_creation_fn(
         InitExecutorContext(
-            pipeline=context_creation_data.pipeline,
-            mode_def=context_creation_data.mode_def,
-            executor_def=context_creation_data.executor_def,
-            pipeline_run=context_creation_data.pipeline_run,
-            environment_config=context_creation_data.environment_config,
             executor_config=context_creation_data.environment_config.execution.execution_engine_config,
-            intermediate_storage_def=context_creation_data.intermediate_storage_def,
             instance=context_creation_data.instance,
         )
     )
+
+    if not isinstance(executor, InProcessExecutor):
+        check_intra_process_pipeline(context_creation_data.pipeline)
+
+    return executor
 
 
 def construct_execution_context_data(

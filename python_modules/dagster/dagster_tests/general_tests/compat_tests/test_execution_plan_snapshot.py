@@ -200,7 +200,9 @@ def test_execution_plan_snapshot_backcompat():
                 the_pipeline = InMemoryPipeline(dynamic_pipeline)
 
                 # First create a brand new plan from the pipeline and validate it
-                new_plan = create_execution_plan(the_pipeline, run_config=run.run_config)
+                new_plan = create_execution_plan(
+                    the_pipeline, instance=instance, run_config=run.run_config
+                )
                 _validate_execution_plan(new_plan)
 
                 # Create a snapshot and rebuild it, validate the rebuilt plan

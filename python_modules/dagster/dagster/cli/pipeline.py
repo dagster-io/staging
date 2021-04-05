@@ -257,7 +257,7 @@ def execute_list_versions_command(instance, kwargs):
     run_config = get_run_config_from_file_list(config)
 
     environment_config = EnvironmentConfig.build(pipeline.get_definition(), run_config, mode=mode)
-    execution_plan = ExecutionPlan.build(pipeline, environment_config)
+    execution_plan = ExecutionPlan.build(pipeline, environment_config, instance)
 
     step_output_versions = resolve_step_output_versions(
         pipeline.get_definition(), execution_plan, environment_config
@@ -491,6 +491,7 @@ def _create_external_pipeline_run(
 
     external_execution_plan = repo_location.get_external_execution_plan(
         external_pipeline_subset,
+        instance,
         run_config,
         pipeline_mode,
         step_keys_to_execute=None,

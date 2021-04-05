@@ -156,6 +156,7 @@ def step_run_ref_to_step_context(
 
     execution_plan = create_execution_plan(
         pipeline,
+        instance,
         step_run_ref.run_config,
         mode=step_run_ref.pipeline_run.mode,
         step_keys_to_execute=[step_run_ref.step_key],

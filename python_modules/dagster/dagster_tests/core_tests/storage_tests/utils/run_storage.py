@@ -2,6 +2,7 @@ import sys
 
 import pendulum
 import pytest
+from dagster import DagsterInstance
 from dagster.core.definitions import PipelineDefinition
 from dagster.core.errors import DagsterRunAlreadyExists, DagsterSnapshotDoesNotExist
 from dagster.core.events import DagsterEvent, DagsterEventType
@@ -715,7 +716,7 @@ class TestRunStorage:
         from dagster.core.snap import snapshot_from_execution_plan
 
         pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
-        execution_plan = create_execution_plan(pipeline_def)
+        execution_plan = create_execution_plan(pipeline_def, DagsterInstance.ephemeral())
         ep_snapshot = snapshot_from_execution_plan(
             execution_plan, pipeline_def.get_pipeline_snapshot_id()
         )

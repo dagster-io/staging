@@ -680,7 +680,9 @@ class DagsterInstance:
         else:
             environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode)
             full_execution_plan = ExecutionPlan.build(
-                InMemoryPipeline(pipeline_def), environment_config
+                InMemoryPipeline(pipeline_def),
+                environment_config,
+                instance=self,
             )
 
         if is_memoized_run(tags):
