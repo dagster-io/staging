@@ -44,5 +44,6 @@ if __name__ == "__main__":
         install_requires=[
             "dagster",
             "pandas<=1.1.4",
+            'numpy<1.20.0; python_version < "3.7.0"',
         ],
     )
