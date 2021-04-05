@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Optional, Set
+from typing import Optional
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
@@ -36,9 +36,6 @@ class OutputDefinition:
         asset_key (Optional[Union[AssetKey, OutputContext -> AssetKey]]): (Experimental) An AssetKey
             (or function that produces an AssetKey from the OutputContext) which should be associated
             with this OutputDefinition. Used for tracking lineage information through Dagster.
-        asset_partitions (Optional[Union[Set[str], OutputContext -> Set[str]]]): (Experimental) A
-            set of partitions of the given asset_key (or a function that produces this list of
-            partitions from the OutputContext) which should be associated with this OutputDefinition.
     """
 
     def __init__(
@@ -50,7 +47,6 @@ class OutputDefinition:
         io_manager_key=None,
         metadata=None,
         asset_key=None,
-        asset_partitions=None,
     ):
         self._name = check_valid_name(check.opt_str_param(name, "name", DEFAULT_OUTPUT))
         self._dagster_type = resolve_dagster_type(dagster_type)
@@ -66,26 +62,11 @@ class OutputDefinition:
         if asset_key:
             experimental_arg_warning("asset_key", "OutputDefinition.__init__")
 
-        self._is_asset = asset_key is not None
-
         if callable(asset_key):
             self._asset_key_fn = asset_key
         else:
             asset_key = check.opt_inst_param(asset_key, "asset_key", AssetKey)
             self._asset_key_fn = lambda _: asset_key
-
-        if asset_partitions:
-            experimental_arg_warning("asset_partitions", "OutputDefinition.__init__")
-            check.param_invariant(
-                asset_key is not None,
-                "asset_partitions",
-                'Cannot specify "asset_partitions" argument without also specifying "asset_key"',
-            )
-        if callable(asset_partitions):
-            self._asset_partitions_fn = asset_partitions
-        else:
-            asset_partitions = check.opt_set_param(asset_partitions, "asset_partitions", str)
-            self._asset_partitions_fn = lambda _: asset_partitions
 
     @property
     def name(self):
@@ -119,10 +100,6 @@ class OutputDefinition:
     def is_dynamic(self):
         return False
 
-    @property
-    def is_asset(self):
-        return self._is_asset
-
     def get_asset_key(self, context) -> Optional[AssetKey]:
         """Get the AssetKey associated with this OutputDefinition for the given
         :py:class:`OutputContext` (if any).
@@ -132,16 +109,6 @@ class OutputDefinition:
             in
         """
         return self._asset_key_fn(context)
-
-    def get_asset_partitions(self, context) -> Optional[Set[str]]:
-        """Get the set of partitions associated with this OutputDefinition for the given
-        :py:class:`OutputContext` (if any).
-
-        Args:
-            context (OutputContext): The OutputContext that this OutputDefinition is being evaluated
-            in
-        """
-        return self._asset_partitions_fn(context)
 
     def mapping_from(self, solid_name, output_name=None):
         """Create an output mapping from an output of a child solid.

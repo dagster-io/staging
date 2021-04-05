@@ -15,8 +15,8 @@ from dagster import (
 )
 from dagster.core.definitions.events import (
     AssetLineageInfo,
+    AssetPartitionMaterialization,
     EventMetadataEntry,
-    PartitionMetadataEntry,
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.system import AssetInputHandle, AssetOutputHandle
@@ -49,20 +49,28 @@ def simple_asset_io_manager(_):
 
 
 def check_materialization(
-    materialization, asset_key, parent_assets=None, metadata_entries=None, ignore_asset_path=True
+    materialization,
+    asset_key,
+    asset_partition=None,
+    parent_assets=None,
+    metadata_entries=None,
+    ignore_asset_path=True,
 ):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
+    assert event_data.materialization.partition == asset_partition
+    # make test deterministic by sorting
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
+    event_asset_lineage = sorted(event_data.asset_lineage, key=lambda x: tuple(x.partitions))
     if ignore_asset_path:
-        assert len(event_data.asset_lineage) == len(parent_assets or [])
-        for i in range(len(event_data.asset_lineage)):
-            event_asset = event_data.asset_lineage[i]
+        assert len(event_asset_lineage) == len(parent_assets or [])
+        for i in range(len(event_asset_lineage)):
+            event_asset = event_asset_lineage[i]
             expected_asset = parent_assets[i]
             assert event_asset.asset_key == expected_asset.asset_key
             assert event_asset.partitions == expected_asset.partitions
     else:
-        assert event_data.asset_lineage == (parent_assets or [])
+        assert event_asset_lineage == (parent_assets or [])
 
 
 def test_io_manager_diamond_lineage():
@@ -142,12 +150,12 @@ def test_io_manager_transitive_lineage():
         event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
     ]
 
-    expected_path = [AssetOutputHandle("solid_produce", "result", None)]
+    expected_path = [AssetOutputHandle("solid_produce", "result")]
     for i in range(10):
         expected_path.extend(
             [
                 AssetInputHandle(f"passthrough_{i}", "inp"),
-                AssetOutputHandle(f"passthrough_{i}", "result", None),
+                AssetOutputHandle(f"passthrough_{i}", "result"),
             ]
         )
     expected_path.append(AssetInputHandle("solid_transform", "inp"))
@@ -158,7 +166,7 @@ def test_io_manager_transitive_lineage():
         materializations[1],
         AssetKey(["solid_transform", "result"]),
         parent_assets=[AssetLineageInfo(AssetKey(["solid_produce", "result"]), path=expected_path)],
-        ignore_asset_path=False,
+        # ignore_asset_path=False,
     )
 
 
@@ -193,7 +201,6 @@ def test_input_definition_multiple_partition_lineage():
             OutputDefinition(
                 name="output1",
                 asset_key=AssetKey("table1"),
-                asset_partitions=set([str(i) for i in range(3)]),
             )
         ],
     )
@@ -203,18 +210,16 @@ def test_input_definition_multiple_partition_lineage():
             "output1",
             metadata_entries=[
                 entry1,
-                *[
-                    PartitionMetadataEntry(str(i), entry)
-                    for i, entry in enumerate(partition_entries)
-                ],
             ],
+            asset_partitions=[AssetPartitionMaterialization(str(i)) for i in range(3)],
         )
 
     @solid(
         input_defs=[
             # here, only take 1 of the asset keys specified by the output
             InputDefinition(
-                name="_input1", asset_key=AssetKey("table1"), asset_partitions=set(["0"])
+                name="_input1",
+                asset_key=AssetKey("table1"),
             )
         ],
         output_defs=[OutputDefinition(name="output2", asset_key=lambda _: AssetKey("table2"))],
@@ -325,7 +330,8 @@ def test_dynamic_output_definition_single_partition_materialization():
     @solid(
         output_defs=[
             DynamicOutputDefinition(
-                name="output2", asset_key=lambda context: AssetKey(context.mapping_key)
+                name="output2",
+                asset_key=AssetKey("dynamic_asset"),
             )
         ]
     )
@@ -336,6 +342,9 @@ def test_dynamic_output_definition_single_partition_materialization():
                 mapping_key=str(i),
                 output_name="output2",
                 metadata_entries=[entry2],
+                asset_partitions=[
+                    AssetPartitionMaterialization(str(i), [EventMetadataEntry.int(i, "x")])
+                ],
             )
 
     @solid
@@ -354,51 +363,22 @@ def test_dynamic_output_definition_single_partition_materialization():
     assert len(materializations) == 5
 
     check_materialization(materializations[0], AssetKey(["table1"]), metadata_entries=[entry1])
-    seen_paths = set()
+    expected_partitions = set(str(i) for i in range(4))
+    seen_partitions = set()
     for i in range(1, 5):
-        path = materializations[i].asset_key.path
-        seen_paths.add(tuple(path))
+        partition = materializations[i].partition
+        seen_partitions.add(partition)
         check_materialization(
             materializations[i],
-            AssetKey(path),
-            metadata_entries=[entry2],
+            asset_key=AssetKey("dynamic_asset"),
+            asset_partition=partition,
+            metadata_entries=[
+                entry2,
+                EventMetadataEntry.int(int(partition), "x"),
+            ],
             parent_assets=[AssetLineageInfo(AssetKey(["table1"]))],
         )
-    assert len(seen_paths) == 4
-
-
-"""
-def test_subset_boundary_lineage():
-    @solid(output_defs=[OutputDefinition(io_manager_key="asset_io_manager")])
-    def solid1(_):
-        return 1
-
-    @solid(
-        input_defs=[InputDefinition(name="_in", root_manager_key="asset_io_manager")],
-        output_defs=[OutputDefinition(io_manager_key="asset_io_manager")],
-    )
-    def solid2(_, _in):
-        return 1
-
-    @pipeline(
-        mode_defs=[ModeDefinition(resource_defs={"asset_io_manager": simple_asset_io_manager})]
-    )
-    def my_pipeline():
-        solid2(solid1())
-
-    result = execute_pipeline(my_pipeline, solid_selection=["solid2"])
-    events = result.step_event_list
-    materializations = [
-        event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
-    ]
-    assert len(materializations) == 1
-
-    check_materialization(
-        materializations[0],
-        AssetKey(["solid2", "result"]),
-        parent_assets=[AssetLineageInfo(AssetKey(["solid1", "result"]))],
-    )
-"""
+    assert seen_partitions == expected_partitions
 
 
 # ========================================
@@ -428,16 +408,27 @@ def my_loading_solid(_):
     return 1
 
 
-@solid(output_defs=[OutputDefinition(name=f"out_{i}") for i in range(NSPLIT)])
+@solid(
+    output_defs=[
+        OutputDefinition(name=f"out_{i}", asset_key=AssetKey("split_asset")) for i in range(NSPLIT)
+    ]
+)
 def my_splitting_solid(_, inp):
     for i in range(NSPLIT):
-        yield Output(inp, f"out_{i}")
+        yield Output(
+            (inp, str(i)), f"out_{i}", asset_partitions=[AssetPartitionMaterialization(str(i))]
+        )
 
 
-@solid(output_defs=[DynamicOutputDefinition(name="out")])
+@solid(output_defs=[DynamicOutputDefinition(name="out", asset_key=AssetKey("split_asset"))])
 def my_dynamic_splitting_solid(_, inp):
     for i in range(NSPLIT):
-        yield DynamicOutput(inp, mapping_key=str(i), output_name="out")
+        yield DynamicOutput(
+            (inp, str(i)),
+            mapping_key=str(i),
+            output_name="out",
+            asset_partitions=[AssetPartitionMaterialization(str(i))],
+        )
 
 
 @solid
@@ -454,7 +445,13 @@ def my_passthrough_solid(_, inp):
     ]
 )
 def my_transforming_solid(_, inp):
-    return inp + 1
+    (val, path) = inp
+    return Output(val + 1, asset_partitions=[AssetPartitionMaterialization(path)])
+
+
+@solid(output_defs=[OutputDefinition(asset_key=AssetKey("collected_asset"))])
+def my_collect_solid(_, inp):
+    return sum(inp)
 
 
 @composite_solid
@@ -500,25 +497,114 @@ def my_dynamic_complex_pipeline():
     split_vals.map(my_composite_transforming_solid)
 
 
-def test_multiproc_pipelines():
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            resource_defs={
+                "io_manager": fs_io_manager,
+                "fancy1": my_fancy_io_manager_1,
+                "fancy2": my_fancy_io_manager_2,
+            }
+        )
+    ]
+)
+def my_dynamic_collect_pipeline():
+    split_vals = my_dynamic_splitting_solid(my_loading_solid())
+    transformed_vals = split_vals.map(my_composite_transforming_solid)
+    my_collect_solid(transformed_vals.collect())
 
-    for test_pipeline in [my_complex_pipeline]:  # , my_dynamic_complex_pipeline]:
-        with instance_for_test() as instance:
-            result = execute_pipeline(
-                reconstructable(test_pipeline),
-                run_config={"execution": {"multiprocess": {"config": {"max_concurrent": 4}}}},
-                instance=instance,
+
+@pytest.mark.parametrize("test_pipeline", [my_complex_pipeline, my_dynamic_complex_pipeline])
+def test_multiproc_pipeline(test_pipeline):
+
+    with instance_for_test() as instance:
+        result = execute_pipeline(
+            reconstructable(test_pipeline),
+            run_config={"execution": {"multiprocess": {"config": {"max_concurrent": 4}}}},
+            instance=instance,
+        )
+        expected_partitions = set(str(i) for i in range(NSPLIT))
+        events = result.step_event_list
+        materializations = [
+            event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
+        ]
+        assert len(materializations) == 1 + 2 * NSPLIT
+
+        check_materialization(materializations[0], AssetKey(["load"]))
+        partition = 0
+        for materialization in sorted(materializations[1 : NSPLIT + 1], key=lambda x: x.partition):
+            check_materialization(
+                materialization,
+                asset_key=AssetKey(["split_asset"]),
+                asset_partition=str(partition),
+                parent_assets=[AssetLineageInfo(AssetKey("load"))],
             )
-            events = result.step_event_list
-            materializations = [
-                event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
-            ]
-            assert len(materializations) == 1 + NSPLIT
+            partition += 1
 
-            check_materialization(materializations[0], AssetKey(["load"]))
-            for i in range(NSPLIT):
-                check_materialization(
-                    materializations[i + 1],
-                    AssetKey(["transform"]),
-                    parent_assets=[AssetLineageInfo(AssetKey("load"))],
-                )
+        seen_partitions = set()
+        for materialization in sorted(materializations[NSPLIT + 1 :], key=lambda x: x.partition):
+            seen_partitions.add(materialization.partition)
+            check_materialization(
+                materialization,
+                asset_key=AssetKey("transform"),
+                asset_partition=materialization.partition,
+                parent_assets=[
+                    AssetLineageInfo(
+                        AssetKey("split_asset"), partitions=set([materialization.partition])
+                    )
+                ],
+            )
+        assert seen_partitions == expected_partitions
+
+
+@pytest.mark.parametrize(
+    "run_config", [{}, {"execution": {"multiprocess": {"config": {"max_concurrent": 4}}}}]
+)
+def test_dynamic_collect_multiproc_pipeline(run_config):
+    with instance_for_test() as instance:
+        result = execute_pipeline(
+            reconstructable(my_dynamic_collect_pipeline),
+            run_config=run_config,
+            instance=instance,
+        )
+        expected_partitions = set(str(i) for i in range(NSPLIT))
+        events = result.step_event_list
+        materializations = [
+            event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
+        ]
+        assert len(materializations) == 1 + 2 * NSPLIT + 1
+
+        check_materialization(materializations[0], AssetKey(["load"]))
+        partition = 0
+        for materialization in sorted(materializations[1 : NSPLIT + 1], key=lambda x: x.partition):
+            check_materialization(
+                materialization,
+                asset_key=AssetKey(["split_asset"]),
+                asset_partition=str(partition),
+                parent_assets=[AssetLineageInfo(AssetKey("load"))],
+            )
+            partition += 1
+
+        seen_partitions = set()
+        for materialization in sorted(materializations[NSPLIT + 1 : -1], key=lambda x: x.partition):
+            seen_partitions.add(materialization.partition)
+            check_materialization(
+                materialization,
+                asset_key=AssetKey("transform"),
+                asset_partition=materialization.partition,
+                parent_assets=[
+                    AssetLineageInfo(
+                        AssetKey("split_asset"), partitions=set([materialization.partition])
+                    )
+                ],
+            )
+        assert seen_partitions == expected_partitions
+
+        check_materialization(
+            materializations[-1],
+            asset_key=AssetKey("collected_asset"),
+            parent_assets=[
+                AssetLineageInfo(AssetKey("transform"), partitions=set(str(i)))
+                for i in range(NSPLIT)
+            ],
+        )

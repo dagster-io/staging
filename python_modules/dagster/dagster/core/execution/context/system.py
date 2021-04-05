@@ -6,9 +6,9 @@ in the user_context module
 """
 from abc import ABC, abstractmethod, abstractproperty
 from collections import namedtuple
-from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
+from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Sequence, Set, Union
 
-from dagster import check, OutputDefinition
+from dagster import InputDefinition, OutputDefinition, check
 from dagster.core.definitions.hook import HookDefinition
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
@@ -18,18 +18,17 @@ from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvalidPropertyError, DagsterInvariantViolationError
-from dagster.core.events import AssetLineageInfo
-from dagster.core.execution.plan.outputs import StepOutputHandle, StepOutput
+from dagster.core.events import AssetKey, AssetLineageInfo
+from dagster.core.execution.plan.inputs import (
+    StepInput,
+    UnresolvedCollectStepInput,
+    UnresolvedMappedStepInput,
+)
+from dagster.core.execution.plan.outputs import StepOutput, StepOutputHandle
 from dagster.core.execution.plan.step import (
     ExecutionStep,
     UnresolvedCollectExecutionStep,
     UnresolvedMappedExecutionStep,
-)
-from dagster.core.execution.plan.inputs import (
-    StepInput,
-    FromStepOutput,
-    UnresolvedCollectStepInput,
-    UnresolvedMappedStepInput,
 )
 from dagster.core.execution.plan.utils import build_resources_for_manager
 from dagster.core.execution.retries import RetryMode
@@ -284,359 +283,287 @@ class HostModeStepExecutionContext(HostModeExecutionContext, BaseStepExecutionCo
         return self._step
 
 
-class OutputInitContext(
+class OutputDefinitionContext(
     namedtuple(
-        "_OutputInitContext",
-        "step_key name pipeline_name mode metadata mapping_key output_config solid_config io_manager_config solid_def dagster_type",
+        "_OutputDefinitionContext",
+        "mode step_key name metadata",
     )
 ):
     def __new__(
         cls,
+        mode: str,
         step_key: str,
         name: str,
-        pipeline_name: Optional[str] = None,
-        mode: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        mapping_key: Optional[str] = None,
-        output_config: Any = None,
-        solid_config: Any = None,
-        io_manager_config: Any = None,
-        solid_def: Optional[SolidDefinition] = None,
-        dagster_type: Optional[DagsterType] = None,
     ):
-        return super(OutputInitContext, cls).__new__(
+        return super(OutputDefinitionContext, cls).__new__(
             cls,
+            mode=check.opt_str_param(mode, "mode"),
             step_key=check.str_param(step_key, "step_key"),
             name=check.str_param(name, "name"),
-            pipeline_name=check.opt_str_param(pipeline_name, "pipeline_name"),
-            mode=check.opt_str_param(mode, "mode"),
             metadata=check.opt_dict_param(metadata, "metadata"),
-            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
-            output_config=output_config,
-            solid_config=solid_config,
-            io_manager_config=io_manager_config,
-            solid_def=check.opt_inst_param(solid_def, "solid_def", SolidDefinition),
-            dagster_type=check.inst_param(
-                resolve_dagster_type(dagster_type), "dagster_type", DagsterType
-            ),
         )
 
 
-class InputInitContext(
+class InputDefinitionContext(
     namedtuple(
-        "_InputInitContext",
-        "step_key name upstream_output pipeline_name mode metadata mapping_key input_config solid_config io_manager_config solid_def dagster_type",
+        "_InputDefinitionContext",
+        "mode step_key name metadata upstream_output",
     )
 ):
     def __new__(
         cls,
+        mode: str,
         step_key: str,
         name: str,
-        upstream_output: Optional[OutputInitContext] = None,
-        pipeline_name: Optional[str] = None,
-        mode: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
-        mapping_key: Optional[str] = None,
-        input_config: Any = None,
-        solid_config: Any = None,
-        io_manager_config: Any = None,
-        solid_def: Optional[SolidDefinition] = None,
-        dagster_type: Optional[DagsterType] = None,
+        upstream_output: Optional[OutputDefinitionContext] = None,
     ):
-        return super(InputInitContext, cls).__new__(
+        return super(InputDefinitionContext, cls).__new__(
             cls,
+            mode=check.opt_str_param(mode, "mode"),
             step_key=check.str_param(step_key, "step_key"),
             name=check.str_param(name, "name"),
+            metadata=check.opt_dict_param(metadata, "metadata"),
             upstream_output=check.opt_inst_param(
-                upstream_output, "upstream_output", OutputInitContext
-            ),
-            pipeline_name=check.opt_str_param(pipeline_name, "pipeline_name"),
-            mode=check.opt_str_param(mode, "mode"),
-            metadata=check.opt_dict_param(metadata, "metadata"),
-            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
-            input_config=input_config,
-            solid_config=solid_config,
-            io_manager_config=io_manager_config,
-            solid_def=check.opt_inst_param(solid_def, "solid_def", SolidDefinition),
-            dagster_type=check.inst_param(
-                resolve_dagster_type(dagster_type), "dagster_type", DagsterType
+                upstream_output, "upstream_output", OutputDefinitionContext
             ),
         )
 
 
-class UnresolvedAssetLineageInfo(AssetLineageInfo):
-    pass
+class AssetNodeHandle(ABC):
+    @abstractmethod
+    def normalized(self):
+        pass
 
 
 @whitelist_for_serdes
-class AssetNodeHandle(namedtuple("_AssetNodeHandle", "step_key name mapping_key")):
-    pass
+class AssetOutputHandle(
+    NamedTuple(
+        "_AssetOutputHandle", [("step_key", str), ("name", str), ("mapping_key", Optional[str])]
+    ),
+    AssetNodeHandle,
+):
+    def __new__(cls, step_key: str, name: str, mapping_key: str = None):
+        return super(AssetOutputHandle, cls).__new__(cls, step_key, name, mapping_key)
+
+    def normalized(self):
+        return AssetOutputHandle(self.step_key, self.name)
 
 
 @whitelist_for_serdes
-class AssetOutputHandle(AssetNodeHandle):
-    pass
+class AssetInputHandle(
+    NamedTuple("_AssetOutputHandle", [("step_key", str), ("name", str)]),
+    AssetNodeHandle,
+):
+    def __new__(cls, step_key: str, name: str):
+        return super(AssetInputHandle, cls).__new__(cls, step_key, name)
 
-
-@whitelist_for_serdes
-class AssetInputHandle(AssetNodeHandle):
-    def __new__(cls, step_key, name, mapping_key=None):
-        return super(AssetInputHandle, cls).__new__(cls, step_key, name, mapping_key)
+    def normalized(self):
+        return self
 
 
 class AssetDependencyGraph:
     def __init__(
         self,
         execution_plan: "ExecutionPlan",
-        environment_config: EnvironmentConfig,
+        pipeline_def: "PipelineDefintion",
+        mode_def: ModeDefinition,
     ):
         self.execution_plan = execution_plan
-        self.environment_config = environment_config
-        self.resource_defs = execution_plan.pipeline_def.get_mode_definition(
-            environment_config.mode
-        ).resource_defs
-        self._lineage_in: Dict[AssetNodeHandle, List[AssetLineageInfo]] = defaultdict(list)
-        self._lineage_produced: Dict[AssetNodeHandle, List[AssetLineageInfo]] = {}
+        self.pipeline_def = pipeline_def
+        self.mode_def = mode_def
+        self._unresolved_solid_handles = set()
+        self._asset_key_map: Dict[AssetNodeHandle, List[AssetKey]] = {}
+        self._asset_partitions_map: Dict[AssetNodeHandle, Dict[Set[str]]] = (
+            self.execution_plan.known_state.asset_partitions_map
+            if self.execution_plan.known_state
+            else {}
+        )
+        self._asset_parents_map: Dict[AssetNodeHandle, List[AssetNodeHandle]] = {}
         self._build()
-        self._debug()
 
-    def _debug(self):
-        print("*" * 100)
-        print("LINEAGE IN: ")
-        for handle, lineage in self._lineage_in.items():
-            print(handle, lineage)
-            print("---")
-        print("")
-        print("LINEAGE PRODUCED: ")
-        for handle, lineage in self._lineage_produced.items():
-            print(handle, lineage)
-            print("---")
-
-    def _output_init_context_for(
-        self, step: ExecutionStep, step_output: StepOutput, mapping_key: str = None
-    ) -> OutputInitContext:
-
-        solid_config = self.environment_config.solids.get(step.solid_handle.to_string())
-        outputs_config = solid_config.outputs
-
-        output_def = self.execution_plan.pipeline_def.get_solid(step.solid_handle).output_def_named(
-            step_output.name
+    def _get_output_def_context(
+        self, step_key, output_def: OutputDefinition
+    ) -> OutputDefinitionContext:
+        return OutputDefinitionContext(
+            mode=self.mode_def.name,
+            step_key=step_key,
+            name=output_def.name,
+            metadata=output_def.metadata,
         )
 
-        if outputs_config:
-            output_config = outputs_config.get_output_manager_config(output_def.name)
-        else:
-            output_config = None
-
-        io_manager_key = output_def.io_manager_key
-        resource_config = self.environment_config.resources[io_manager_key].config
-
-        return OutputInitContext(
-            step.key,
-            output_def.name,
-            self.execution_plan.pipeline_def.name,
-            self.environment_config.mode,
-            output_def.metadata,
-            mapping_key,
-            output_config,
-            solid_config,
-            resource_config,
-            self.execution_plan.pipeline_def.get_solid(step.solid_handle).definition,
-            output_def.dagster_type,
-        )
-
-    def _input_init_context_for(
-        self, step: ExecutionStep, step_input: StepInput
-    ) -> InputInitContext:
-
-        mapping_key = step.get_mapping_key()
-
-        input_def = self.execution_plan.pipeline_def.get_solid(step.solid_handle).input_def_named(
-            step_input.name
-        )
-
-        solid_config = self.environment_config.solids.get(step.solid_handle.to_string())
-
-        upstream_output_context = None
-        if isinstance(step_input.source, FromStepOutput):
-            upstream_output_handle = step_input.source.step_output_handle
-            upstream_step = check.inst(
-                self.execution_plan.get_step_by_key(upstream_output_handle.step_key), ExecutionStep
-            )
-            upstream_output = upstream_step.step_output_named(upstream_output_handle.output_name)
-            upstream_output_context = self._output_init_context_for(upstream_step, upstream_output)
-
-        return InputInitContext(
-            step_key=step.key,
+    def _get_input_def_context(
+        self, step_key, input_def: InputDefinition
+    ) -> InputDefinitionContext:
+        return InputDefinitionContext(
+            mode=self.mode_def.name,
+            step_key=step_key,
             name=input_def.name,
-            upstream_output=upstream_output_context,
-            pipeline_name=self.execution_plan.pipeline_def.name,
-            mode=self.environment_config.mode,
             metadata=input_def.metadata,
-            mapping_key=mapping_key,
-            input_config=None,
-            solid_config=solid_config,
-            io_manager_config=None,
-            solid_def=None,
-            dagster_type=input_def.dagster_type,
+            upstream_output=None,  # TODO
         )
 
     def _build(self):
-        self._lineage_in = defaultdict(list)
-        self._lineage_produced = {}
         for step in self.execution_plan.get_all_steps_in_topo_order():
             if isinstance(step, ExecutionStep):
-                self._add_execution_step(step)
+                self._add_step(step)
             elif isinstance(step, (UnresolvedCollectExecutionStep, UnresolvedMappedExecutionStep)):
-                self._add_unresolved_execution_step(step)
+                self._unresolved_solid_handles.add(step.solid_handle)
+                self._add_step(step)
             else:
                 check.failed("weird step thing")
 
-    def _resolve_input_lineage(
-        self, step: ExecutionStep, step_input: StepInput
-    ) -> List[AssetLineageInfo]:
-        input_init_context = self._input_init_context_for(step, step_input)
-        return step_input.source.get_asset_lineage(input_init_context, self.execution_plan)
+    def _add_step(
+        self,
+        step: Union[ExecutionStep, UnresolvedCollectExecutionStep, UnresolvedMappedExecutionStep],
+    ):
+        for step_input in step.step_inputs:
+            self._add_input(step, step_input)
+        for step_output in step.step_outputs:
+            self._add_output(step, step_output)
 
-    def _resolve_output_lineage(
-        self, step: ExecutionStep, step_output: StepOutput, mapping_key: str = None
-    ) -> List[AssetLineageInfo]:
+    def update_step(self, step: ExecutionStep):
+        if step.solid_handle in self._unresolved_solid_handles:
+            self._add_step(step)
 
-        output_init_context = self._output_init_context_for(step, step_output, mapping_key)
-        output_def = self.execution_plan.pipeline_def.get_solid(step.solid_handle).output_def_named(
+    def _add_output(
+        self,
+        step: Union[ExecutionStep, UnresolvedCollectExecutionStep, UnresolvedMappedExecutionStep],
+        step_output: StepOutput,
+        mapping_key: Optional[str] = None,
+    ):
+        parent_node_handles = [
+            AssetInputHandle(step.key, step_input.name) for step_input in step.step_inputs
+        ]
+        node_handle = AssetOutputHandle(step.key, step_output.name, mapping_key)
+
+        output_def = self.pipeline_def.get_solid(step.solid_handle).output_def_named(
             step_output.name
         )
+        output_def_context = self._get_output_def_context(step.key, output_def)
+        output_def_asset_key = output_def.get_asset_key(output_def_context)
 
-        io_manager_def = self.resource_defs[output_def.io_manager_key]
+        io_manager_def = self.mode_def.resource_defs[output_def.io_manager_key]
+        io_manager_asset_key = io_manager_def.get_output_asset_key(output_def_context)
 
-        output_lineage_info = AssetLineageInfo.from_fns(
-            output_init_context, output_def.get_asset_key, output_def.get_asset_partitions
+        if output_def_asset_key and io_manager_asset_key:
+            raise DagsterInvariantViolationError("TODO: message")
+
+        output_asset_key = output_def_asset_key or io_manager_asset_key
+
+        # an output can have at most one direct asset key produced
+        self._add_node(
+            node_handle,
+            parent_node_handles,
+            direct_asset_keys=[output_asset_key] if output_asset_key else [],
         )
 
-        io_lineage_info = AssetLineageInfo.from_fns(
-            output_init_context, io_manager_def.output_asset_key, lambda _: None
-        )
+    def _add_input(
+        self,
+        step: Union[ExecutionStep, UnresolvedCollectExecutionStep, UnresolvedMappedExecutionStep],
+        step_input: Union[StepInput, UnresolvedMappedStepInput, UnresolvedCollectStepInput],
+    ):
+        node_handle = AssetInputHandle(step.key, step_input.name)
+        if isinstance(step_input, StepInput):
+            upstream_output_handles = step_input.get_step_output_handle_dependencies()
+        elif isinstance(step_input, (UnresolvedCollectStepInput, UnresolvedMappedStepInput)):
+            upstream_output_handles = step_input.get_step_output_handle_deps_with_placeholders()
+        else:
+            check.failed("TODO - weird thing happened")
 
-        if io_lineage_info and output_lineage_info:
-            raise DagsterInvariantViolationError(
-                f'Both the OutputDefinition and the IOManager of output "{output_def.name}" on '
-                f'solid "TODO" associate it with an asset. Either remove '
-                "the asset_key parameter on the OutputDefinition or use an IOManager that does not "
-                "specify an AssetKey in its get_output_asset_key() function."
-            )
-
-        produced_lineage_info = output_lineage_info or io_lineage_info
-
-        return [produced_lineage_info] if produced_lineage_info else []
-
-    def _add_step_input(self, step: ExecutionStep, step_input: StepInput):
-        produced_lineage = self._resolve_input_lineage(step, step_input)
-        upstream_output_handles = step_input.source.step_output_handle_dependencies
-        parent_handles = [
+        parent_node_handles = [
             AssetOutputHandle(
                 output_handle.step_key, output_handle.output_name, output_handle.mapping_key
             )
             for output_handle in upstream_output_handles
         ]
-        node_handle = AssetInputHandle(step.key, step_input.name)
-        self._add_node(node_handle, parent_handles, produced_lineage)
 
-    def _add_step_output(self, step: ExecutionStep, step_output: StepOutput):
-        produced_lineage = self._resolve_output_lineage(step, step_output)
-
-        # still assuming all inputs are parents of all outputs
-        parent_handles = [
-            AssetInputHandle(step.key, step_input.name) for step_input in step.step_inputs
-        ]
-        node_handle = AssetOutputHandle(step.key, step_output.name, step.get_mapping_key())
-        self._add_node(node_handle, parent_handles, produced_lineage)
-
-    def _add_unresolved_step_input(
-        self,
-        step: Union[UnresolvedCollectExecutionStep, UnresolvedMappedExecutionStep],
-        step_input: Union[UnresolvedCollectStepInput, UnresolvedMappedStepInput],
-    ):
-        pass
-
-    def _add_unresolved_step_output(
-        self,
-        step: Union[ExecutionStep, UnresolvedCollectExecutionStep, UnresolvedMappedExecutionStep],
-        step_output: StepOutput,
-    ):
-        produced_lineage = None
-        parent_handles = [
-            AssetInputHandle(step.key, step_input.name) for step_input in step.step_inputs
-        ]
-        node_handle = AssetOutputHandle(step.key, step_output.name, None)
-        self._add_node(node_handle, parent_handles, produced_lineage)
-
-    def _add_unresolved_execution_step(
-        self, step: Union[UnresolvedCollectExecutionStep, UnresolvedMappedExecutionStep]
-    ):
-        pass  # TODO
-
-    def _add_execution_step(self, step: ExecutionStep):
-        for step_input in step.step_inputs:
-            self._add_step_input(step, step_input)
-
-        for step_output in step.step_outputs:
-            if step_output.is_dynamic:
-                self._add_unresolved_step_output(step, step_output)
-            else:
-                self._add_step_output(step, step_output)
+        self._add_node(node_handle, parent_node_handles, [])
 
     def _add_node(
         self,
         node_handle: AssetNodeHandle,
         parent_handles: Sequence[AssetNodeHandle],
-        produced_lineage: Optional[List[AssetLineageInfo]],
+        direct_asset_keys: List[AssetKey],
     ):
-        produced_lineage = check.opt_list_param(
-            produced_lineage, "produced_lineage", AssetLineageInfo
+        asset_parents = []
+
+        for parent in parent_handles:
+            # check if the parent directly reads/writes any asset key
+            if self._asset_key_map[parent.normalized()]:
+                asset_parents.append(parent)
+            # otherwise just inherit the parents
+            else:
+                asset_parents.extend(self._asset_parents_map[parent])
+
+        self._asset_parents_map[node_handle] = asset_parents
+        self._asset_key_map[node_handle] = direct_asset_keys
+
+    def _get_parent_assets(self, node_handle: AssetNodeHandle) -> List[AssetKey]:
+
+        parent_assets = []
+        for asset_node_handle in self._asset_parents_map[node_handle]:
+            parent_assets.extend(self._asset_key_map[asset_node_handle])
+        return parent_assets
+
+    def _get_parent_lineage(self, node_handle: AssetNodeHandle) -> List[AssetLineageInfo]:
+        parent_lineage = []
+        for asset_node_handle in self._asset_parents_map[node_handle]:
+            asset_keys = self._asset_key_map[asset_node_handle.normalized()]
+            for asset_key in asset_keys:
+                parent_lineage.append(
+                    AssetLineageInfo(
+                        asset_key,
+                        self._asset_partitions_map.get(asset_node_handle, {}).get(asset_key),
+                    )
+                )
+        return parent_lineage
+
+    def _add_asset_partition(
+        self, node_handle: AssetNodeHandle, asset_key: AssetKey, partition: str
+    ):
+        if not partition:
+            return
+        if (
+            node_handle in self._asset_partitions_map
+            and asset_key in self._asset_partitions_map[node_handle]
+        ):
+            self._asset_partitions_map[node_handle][asset_key].add(partition)
+        else:
+            self._asset_partitions_map[node_handle] = {asset_key: set([partition])}
+
+    def add_output_asset_partition(
+        self,
+        step_key: str,
+        output_name: str,
+        mapping_key: Optional[str],
+        asset_key: AssetKey,
+        partition: str,
+    ):
+        self._add_asset_partition(
+            AssetOutputHandle(step_key, output_name, mapping_key), asset_key, partition
         )
-        for handle in parent_handles:
-            self._lineage_in[node_handle] += [
-                lineage_info._replace(path=lineage_info.path + [handle])
-                for lineage_info in self._propagated_lineage(handle)
-            ]
-        self._lineage_produced[node_handle] = produced_lineage
 
-    def _propagated_lineage(self, node_handle):
-        produced_lineage = self._produced_lineage(node_handle)
-        # if a node produces or directly reads an asset, use that as the propagated information
-        if produced_lineage:
-            return produced_lineage
-        return self._lineage_in[node_handle]
+    def get_output_asset(self, step_key: str, output_name: str) -> Optional[AssetKey]:
+        assets = self._asset_key_map[AssetOutputHandle(step_key, output_name)]
+        if len(assets) > 1:
+            check.failed("TODO")
+        elif len(assets) == 1:
+            return assets[0]
+        return None
 
-    def _produced_lineage(self, node_handle):
-        """
-        Return the asset that will be directly read/created while processing this node (if any)
-        """
-        return self._lineage_produced[node_handle]
+    def get_output_parent_assets(self, step_key: str, output_name: str) -> List[AssetKey]:
+        return self._get_parent_assets(AssetOutputHandle(step_key, output_name))
 
-    def produced_output_lineage(
-        self, step: ExecutionStep, step_output: StepOutput, mapping_key: str
-    ) -> List[AssetLineageInfo]:
-        node_handle = AssetOutputHandle(step.key, step_output.name, mapping_key)
-        if node_handle not in self._lineage_produced:
-            self._build()
-            self._debug()
-        return self._produced_lineage(node_handle)
+    def get_output_asset_lineage(self, step_key: str, output_name: str) -> List[AssetLineageInfo]:
+        return self._get_parent_lineage(AssetOutputHandle(step_key, output_name))
 
-    def propagated_output_lineage(self, step_key: str, output_name: str, mapping_key: str):
-        return self._propagated_lineage(AssetOutputHandle(step_key, output_name, mapping_key))
+    def get_input_assets(self, step_key: str, input_name: str) -> List[AssetKey]:
+        return self._asset_key_map[AssetInputHandle(step_key, input_name)]
 
-    def output_lineage(self, step: ExecutionStep, step_output: StepOutput, mapping_key: str):
-        return self._lineage(AssetOutputHandle(step.key, step_output.name, mapping_key))
-
-    def input_lineage(self, step_key: str, input_name: str):
-        return self._lineage(AssetInputHandle(step_key, input_name))
-
-    def _lineage(self, node_handle):
-        """
-        Return the set of lineage information for this node
-        """
-        return self._lineage_in[node_handle]
+    def get_input_parent_assets(self, step_key: str, input_name: str) -> List[AssetKey]:
+        return self._get_parent_assets(AssetInputHandle(step_key, input_name))
 
 
 class SystemExecutionContextData(
@@ -667,13 +594,12 @@ class SystemExecutionContextData(
         raise_on_error: bool,
         retry_mode: RetryMode,
         execution_plan: "ExecutionPlan",
+        asset_dependency_graph: AssetDependencyGraph,
     ):
         from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
         from dagster.core.storage.intermediate_storage import IntermediateStorage
         from dagster.core.instance import DagsterInstance
         from dagster.core.execution.plan.plan import ExecutionPlan
-
-        asset_dependency_graph = AssetDependencyGraph(execution_plan, environment_config)
 
         return super(SystemExecutionContextData, cls).__new__(
             cls,
@@ -696,7 +622,9 @@ class SystemExecutionContextData(
             raise_on_error=check.bool_param(raise_on_error, "raise_on_error"),
             retry_mode=check.inst_param(retry_mode, "retry_mode", RetryMode),
             execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
-            asset_dependency_graph=asset_dependency_graph,
+            asset_dependency_graph=check.inst_param(
+                asset_dependency_graph, "asset_dependency_graph", AssetDependencyGraph
+            ),
         )
 
     @property

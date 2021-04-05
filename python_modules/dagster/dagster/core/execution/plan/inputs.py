@@ -32,8 +32,7 @@ if TYPE_CHECKING:
     from dagster.core.execution.context.system import (
         SystemStepExecutionContext,
         InputContext,
-        InputInitContext,
-        OutputInitContext,
+        InputDefinitionContext,
     )
 
 
@@ -124,11 +123,6 @@ class StepInputSource(ABC):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
-    def get_asset_lineage(
-        self, _init_context: "InputInitContext", _execution_plan: "ExecutionPlan"
-    ) -> List[AssetLineageInfo]:
-        return []
-
 
 @whitelist_for_serdes
 class FromRootInputManager(
@@ -212,7 +206,7 @@ class FromStepOutput(
         return [self.step_output_handle]
 
     def get_asset_lineage(
-        self, init_context: "InputInitContext", execution_plan: "ExecutionPlan"
+        self, init_context: "InputDefinitionContext", execution_plan: "ExecutionPlan"
     ) -> List[AssetLineageInfo]:
 
         input_def = self.get_input_def(execution_plan.pipeline_def)
