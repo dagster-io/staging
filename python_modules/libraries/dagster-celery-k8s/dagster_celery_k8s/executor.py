@@ -10,6 +10,7 @@ from dagster import (
     DagsterInstance,
     EventMetadataEntry,
     Executor,
+    ExecutorProcessSetting,
     check,
     executor,
 )
@@ -51,7 +52,11 @@ from .config import CELERY_K8S_CONFIG_KEY, celery_k8s_config
 from .launcher import CeleryK8sRunLauncher
 
 
-@executor(name=CELERY_K8S_CONFIG_KEY, config_schema=celery_k8s_config())
+@executor(
+    name=CELERY_K8S_CONFIG_KEY,
+    config_schema=celery_k8s_config(),
+    process_setting=ExecutorProcessSetting.MULTIPLE_PROCESSES,
+)
 def celery_k8s_job_executor(init_context):
     """Celery-based executor which launches tasks as Kubernetes Jobs.
 

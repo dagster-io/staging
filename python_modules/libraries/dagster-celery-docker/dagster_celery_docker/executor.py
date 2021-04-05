@@ -6,6 +6,7 @@ from dagster import (
     DagsterInstance,
     EventMetadataEntry,
     Executor,
+    ExecutorProcessSetting,
     Field,
     StringSource,
     check,
@@ -64,7 +65,11 @@ def celery_docker_config():
     return cfg
 
 
-@executor(name=CELERY_DOCKER_CONFIG_KEY, config_schema=celery_docker_config())
+@executor(
+    name=CELERY_DOCKER_CONFIG_KEY,
+    config_schema=celery_docker_config(),
+    process_setting=ExecutorProcessSetting.MULTIPLE_PROCESSES,
+)
 def celery_docker_executor(init_context):
     """Celery-based executor which launches tasks in docker containers.
 

@@ -1,6 +1,15 @@
 import dask
 import dask.distributed
-from dagster import Executor, Field, Permissive, Selector, StringSource, check, seven
+from dagster import (
+    Executor,
+    ExecutorProcessSetting,
+    Field,
+    Permissive,
+    Selector,
+    StringSource,
+    check,
+    seven,
+)
 from dagster.core.definitions.executor import check_cross_process_constraints, executor
 from dagster.core.errors import raise_execution_interrupts
 from dagster.core.events import DagsterEvent
@@ -17,6 +26,7 @@ DASK_RESOURCE_REQUIREMENTS_KEY = "dagster-dask/resource_requirements"
 
 @executor(
     name="dask",
+    process_setting=ExecutorProcessSetting.MULTIPLE_PROCESSES,
     config_schema={
         "cluster": Field(
             Selector(
