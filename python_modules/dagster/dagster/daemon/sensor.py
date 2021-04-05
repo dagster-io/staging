@@ -393,6 +393,7 @@ def _get_or_create_sensor_run(
 def _create_sensor_run(instance, repo_location, external_sensor, external_pipeline, run_request):
     external_execution_plan = repo_location.get_external_execution_plan(
         external_pipeline,
+        instance,
         run_request.run_config,
         external_sensor.mode,
         step_keys_to_execute=None,

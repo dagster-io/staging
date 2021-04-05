@@ -1,5 +1,6 @@
 import pytest
 from dagster import (
+    DagsterInstance,
     DependencyDefinition,
     InputDefinition,
     Int,
@@ -873,7 +874,7 @@ def test_tags():
     def tag():
         emit.tag({"invoke": "2"})()
 
-    plan = create_execution_plan(tag)
+    plan = create_execution_plan(tag, DagsterInstance.ephemeral())
     step = list(plan.step_dict.values())[0]
     assert step.tags == {"def": "1", "invoke": "2"}
 

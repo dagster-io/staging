@@ -80,15 +80,18 @@ def execute_in_process(
 
     pipeline = InMemoryPipeline(pipeline_def)
 
-    execution_plan = create_execution_plan(pipeline, run_config=run_config, mode=mode_def.name)
-
     recorder: Dict[StepOutputHandle, Any] = {}
 
     with ephemeral_instance_if_missing(instance) as execute_instance:
+        execution_plan = create_execution_plan(
+            pipeline, execute_instance, run_config=run_config, mode=mode_def.name
+        )
+
         pipeline_run = execute_instance.create_run_for_pipeline(
             pipeline_def=pipeline_def,
             run_config=run_config,
             mode=mode_def.name,
+            execution_plan=execution_plan,
         )
 
         _execute_run_iterable = ExecuteRunWithPlanIterable(

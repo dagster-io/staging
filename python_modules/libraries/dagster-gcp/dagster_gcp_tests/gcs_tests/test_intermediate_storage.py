@@ -103,13 +103,16 @@ def test_using_gcs_for_subplan(gcs_bucket):
 
     run_id = make_new_run_id()
 
+    instance = DagsterInstance.ephemeral()
+
     environment_config = EnvironmentConfig.build(pipeline_def, run_config=run_config)
-    execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline_def), environment_config)
+    execution_plan = ExecutionPlan.build(
+        InMemoryPipeline(pipeline_def), environment_config, instance
+    )
 
     assert execution_plan.get_step_by_key("return_one")
 
     step_keys = ["return_one"]
-    instance = DagsterInstance.ephemeral()
     pipeline_run = PipelineRun(
         pipeline_name=pipeline_def.name, run_id=run_id, run_config=run_config
     )
@@ -345,7 +348,7 @@ def test_gcs_pipeline_with_custom_prefix(gcs_bucket):
     )
     assert result.success
 
-    execution_plan = create_execution_plan(pipe, run_config)
+    execution_plan = create_execution_plan(pipe, instance, run_config)
     with scoped_pipeline_context(
         execution_plan,
         InMemoryPipeline(pipe),

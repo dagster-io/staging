@@ -95,7 +95,7 @@ class RepositoryLocation(AbstractContextManager):
 
     @abstractmethod
     def get_external_execution_plan(
-        self, external_pipeline, run_config, mode, step_keys_to_execute, known_state
+        self, external_pipeline, instance, run_config, mode, step_keys_to_execute, known_state
     ):
         pass
 
@@ -261,12 +261,14 @@ class InProcessRepositoryLocation(RepositoryLocation):
     def get_external_execution_plan(
         self,
         external_pipeline,
+        instance,
         run_config,
         mode,
         step_keys_to_execute,
         known_state,
     ):
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+        check.inst_param(instance, "instance", DagsterInstance)
         check.dict_param(run_config, "run_config")
         check.str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
@@ -280,6 +282,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
                     ).subset_for_execution_from_existing_pipeline(
                         external_pipeline.solids_to_execute
                     ),
+                    instance=instance,
                     run_config=run_config,
                     mode=mode,
                     step_keys_to_execute=step_keys_to_execute,
@@ -571,12 +574,14 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
     def get_external_execution_plan(
         self,
         external_pipeline,
+        instance,
         run_config,
         mode,
         step_keys_to_execute,
         known_state,
     ):
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+        check.inst_param(instance, "instance", DagsterInstance)
         check.dict_param(run_config, "run_config")
         check.str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
@@ -591,6 +596,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             solid_selection=external_pipeline.solid_selection,
             step_keys_to_execute=step_keys_to_execute,
             known_state=known_state,
+            instance=instance,
         )
 
         return ExternalExecutionPlan(

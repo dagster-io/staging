@@ -125,6 +125,7 @@ def query_on_dask_worker(
 
         execution_plan = create_execution_plan(
             subset_pipeline,
+            instance,
             run_config=run_config,
             step_keys_to_execute=step_keys,
             mode=mode,

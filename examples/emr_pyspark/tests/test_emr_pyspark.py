@@ -1,7 +1,7 @@
 """Launching in EMR is prohibitively time consuming, so we just verify that the plan compiles"""
 import os
 
-from dagster import execute_pipeline
+from dagster import DagsterInstance, execute_pipeline
 from dagster.core.execution.api import create_execution_plan
 
 from ..repo import my_pipeline
@@ -9,7 +9,7 @@ from ..repo import my_pipeline
 
 def test_emr_pyspark_execution_plan():
     os.environ["EMR_CLUSTER_ID"] = "some_cluster_id"
-    create_execution_plan(my_pipeline, mode="emr")
+    create_execution_plan(my_pipeline, mode="emr", instance=DagsterInstance.ephemeral())
 
 
 def test_emr_pyspark_local_mode():

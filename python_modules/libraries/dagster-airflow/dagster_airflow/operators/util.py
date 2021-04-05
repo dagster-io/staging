@@ -134,6 +134,7 @@ def invoke_steps_within_python_operator(
 
             execution_plan = create_execution_plan(
                 recon_pipeline,
+                instance=instance,
                 run_config=run_config,
                 step_keys_to_execute=step_keys,
                 mode=mode,
