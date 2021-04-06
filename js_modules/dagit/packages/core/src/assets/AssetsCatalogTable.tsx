@@ -495,26 +495,25 @@ export const AssetActionsMenu: React.FunctionComponent<{
   clearSelection: () => void;
 }> = React.memo(({selected, clearSelection}) => {
   const [showBulkWipeDialog, setShowBulkWipeDialog] = React.useState<boolean>(false);
-  const selectedIDs = selected.map((asset) => asset.id);
+  const disabled = selected.length === 0;
+  const prompt = disabled
+    ? 'Select assets to wipe'
+    : selected.length === 1
+    ? 'Wipe 1 asset'
+    : `Wipe ${selected.length} assets`;
+
   return (
     <>
-      <Popover
-        content={
-          <Menu>
-            <MenuItem
-              icon="trash"
-              text={`Wipe ${selectedIDs.length} ${selectedIDs.length === 1 ? 'asset' : 'assets'}`}
-              disabled={selectedIDs.length === 0}
-              onClick={() => {
-                setShowBulkWipeDialog(true);
-              }}
-            />
-          </Menu>
-        }
-        position={'bottom'}
-      >
-        <Button disabled={selected.length === 0} text="Actions" rightIcon="caret-down" small />
-      </Popover>
+      <Tooltip position="right" content={prompt}>
+        <Button
+          disabled={disabled}
+          icon="trash"
+          intent={disabled ? undefined : 'danger'}
+          onClick={() => setShowBulkWipeDialog(true)}
+        >
+          {disabled ? null : selected.length}
+        </Button>
+      </Tooltip>
       <AssetWipeDialog
         assetKeys={selected.map((asset) => asset.key)}
         isOpen={showBulkWipeDialog}
