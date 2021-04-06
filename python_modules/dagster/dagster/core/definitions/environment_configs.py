@@ -12,7 +12,7 @@ from dagster.core.storage.output_manager import IOutputManagerDefinition
 from dagster.core.storage.root_input_manager import IInputManagerDefinition
 from dagster.core.storage.system_storage import default_intermediate_storage_defs
 from dagster.core.types.dagster_type import ALL_RUNTIME_BUILTINS, construct_dagster_type_dictionary
-from dagster.utils import check, ensure_single_item
+from dagster.utils import check
 
 from .configurable import ConfigurableDefinition
 from .definition_config_schema import IDefinitionConfigSchema
@@ -24,19 +24,18 @@ from .resource import ResourceDefinition
 from .solid import NodeDefinition, SolidDefinition
 
 
-def _is_selector_field_optional(config_type: Selector) -> bool:
-    if len(config_type.fields) > 1:
-        return False
-    else:
-        _name, field = ensure_single_item(config_type.fields)
-        return not field.is_required
-
-
-def define_resource_dictionary_cls(resource_defs: Dict[str, ResourceDefinition]) -> Shape:
+def define_resource_dictionary_cls(
+    resource_defs: Dict[str, ResourceDefinition],
+    required_resources: Set[str],
+) -> Shape:
     fields = {}
     for resource_name, resource_def in resource_defs.items():
         if resource_def.config_schema:
-            fields[resource_name] = def_config_field(resource_def)
+            fields[resource_name] = def_config_field(
+                resource_def,
+                # only require config for resource used in this mode
+                is_required=resource_name in required_resources,
+            )
 
     return Shape(fields=fields)
 
@@ -61,6 +60,7 @@ class EnvironmentClassCreationData(NamedTuple):
     mode_definition: ModeDefinition
     logger_defs: Dict[str, LoggerDefinition]
     ignored_solids: List[Solid]
+    required_resources: Set[str]
 
 
 def define_logger_dictionary_cls(creation_data: EnvironmentClassCreationData) -> Shape:
@@ -134,7 +134,10 @@ def define_environment_cls(creation_data: EnvironmentClassCreationData):
                 "execution": define_execution_field(creation_data.mode_definition.executor_defs),
                 "loggers": Field(define_logger_dictionary_cls(creation_data)),
                 "resources": Field(
-                    define_resource_dictionary_cls(creation_data.mode_definition.resource_defs)
+                    define_resource_dictionary_cls(
+                        creation_data.mode_definition.resource_defs,
+                        creation_data.required_resources,
+                    )
                 ),
             }
         ),

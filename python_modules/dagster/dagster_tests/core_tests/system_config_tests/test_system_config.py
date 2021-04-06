@@ -38,6 +38,7 @@ def create_creation_data(pipeline_def):
         pipeline_def.mode_definition,
         logger_defs=default_loggers(),
         ignored_solids=[],
+        required_resources=set(),
     )
 
 
