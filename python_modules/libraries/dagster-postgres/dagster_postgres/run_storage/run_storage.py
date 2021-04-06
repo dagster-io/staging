@@ -1,6 +1,6 @@
 import sqlalchemy as db
 from dagster import check
-from dagster.core.storage.runs import DaemonHeartbeatsTable, RunStorageSqlMetadata, SqlRunStorage
+from dagster.core.storage.runs import RunStorageSqlMetadata, SqlRunStorage
 from dagster.core.storage.sql import create_engine, run_alembic_upgrade, stamp_alembic_rev
 from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
 from dagster.utils import utc_datetime_from_timestamp
@@ -39,6 +39,8 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self.postgres_url = postgres_url
 
+        super().__init__()
+
         # Default to not holding any connections open to prevent accumulating connections per DagsterInstance
         self._engine = create_engine(
             self.postgres_url,
@@ -53,15 +55,13 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
         # doesn't exist (since we used to not stamp postgres storage when it was first created)
         if "runs" not in table_names:
             with self.connect() as conn:
-                retry_pg_creation_fn(lambda: RunStorageSqlMetadata.create_all(conn))
+                retry_pg_creation_fn(lambda: self._metadata.create_all(conn))
 
                 # This revision may be shared by any other dagster storage classes using the same DB
                 stamp_alembic_rev(pg_alembic_config(__file__), conn)
 
             # mark all secondary indexes as built
             self.build_missing_indexes()
-
-        super().__init__()
 
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold 1 open connection and set statement_timeout
@@ -125,7 +125,7 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
 
             # insert or update if already present, using postgres specific on_conflict
             conn.execute(
-                db.dialects.postgresql.insert(DaemonHeartbeatsTable)
+                db.dialects.postgresql.insert(self.DaemonHeartbeatsTable)
                 .values(  # pylint: disable=no-value-for-parameter
                     timestamp=utc_datetime_from_timestamp(daemon_heartbeat.timestamp),
                     daemon_type=daemon_heartbeat.daemon_type,
@@ -133,7 +133,7 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
                     body=serialize_dagster_namedtuple(daemon_heartbeat),
                 )
                 .on_conflict_do_update(
-                    index_elements=[DaemonHeartbeatsTable.c.daemon_type],
+                    index_elements=[self.DaemonHeartbeatsTable.c.daemon_type],
                     set_={
                         "timestamp": utc_datetime_from_timestamp(daemon_heartbeat.timestamp),
                         "daemon_id": daemon_heartbeat.daemon_id,

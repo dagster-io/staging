@@ -18,7 +18,7 @@ from dagster.serdes import ConfigurableClass, ConfigurableClassData
 from dagster.utils import mkdir_p
 from sqlalchemy.pool import NullPool
 
-from ..schema import RunStorageSqlMetadata, RunTagsTable, RunsTable
+from ..schema import RunStorageSqlMetadata
 from ..sql_run_storage import SqlRunStorage
 
 
@@ -49,7 +49,6 @@ class SqliteRunStorage(SqlRunStorage, ConfigurableClass):
         check.str_param(conn_string, "conn_string")
         self._conn_string = conn_string
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
-
         super().__init__()
 
     @property
@@ -138,8 +137,8 @@ class SqliteRunStorage(SqlRunStorage, ConfigurableClass):
         """Override the default sql delete run implementation until we can get full
         support on cascading deletes"""
         check.str_param(run_id, "run_id")
-        remove_tags = db.delete(RunTagsTable).where(RunTagsTable.c.run_id == run_id)
-        remove_run = db.delete(RunsTable).where(RunsTable.c.run_id == run_id)
+        remove_tags = db.delete(self.RunTagsTable).where(self.RunTagsTable.c.run_id == run_id)
+        remove_run = db.delete(self.RunsTable).where(self.RunsTable.c.run_id == run_id)
         with self.connect() as conn:
             conn.execute(remove_tags)
             conn.execute(remove_run)

@@ -1,6 +1,6 @@
 import sqlalchemy as db
 from dagster import check
-from dagster.core.storage.runs import DaemonHeartbeatsTable, RunStorageSqlMetadata, SqlRunStorage
+from dagster.core.storage.runs import RunStorageSqlMetadata, SqlRunStorage
 from dagster.core.storage.sql import stamp_alembic_rev  # pylint: disable=unused-import
 from dagster.core.storage.sql import create_engine, run_alembic_upgrade
 from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
@@ -40,6 +40,8 @@ class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self.mysql_url = mysql_url
 
+        super().__init__()
+
         # Default to not holding any connections open to prevent accumulating connections per DagsterInstance
         self._engine = create_engine(
             self.mysql_url,
@@ -53,11 +55,9 @@ class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
         if "runs" not in table_names:
             with self.connect() as conn:
                 alembic_config = mysql_alembic_config(__file__)
-                retry_mysql_creation_fn(lambda: RunStorageSqlMetadata.create_all(conn))
+                retry_mysql_creation_fn(lambda: self._metadata.create_all(conn))
                 stamp_alembic_rev(alembic_config, conn)
             self.build_missing_indexes()
-
-        super().__init__()
 
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold 1 open connection
@@ -108,7 +108,7 @@ class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
     def add_daemon_heartbeat(self, daemon_heartbeat):
         with self.connect() as conn:
             conn.execute(
-                db.dialects.mysql.insert(DaemonHeartbeatsTable)
+                db.dialects.mysql.insert(self.DaemonHeartbeatsTable)
                 .values(
                     timestamp=utc_datetime_from_timestamp(daemon_heartbeat.timestamp),
                     daemon_type=daemon_heartbeat.daemon_type,

@@ -1,3 +1,4 @@
+import sqlalchemy as db
 from dagster.core.storage.event_log import schema as event_log_schema
 from dagster.core.storage.runs import schema as run_schema
 
@@ -11,9 +12,13 @@ def assert_cols_equal(a_cols, b_cols, attr_name):
 
 
 def test_secondary_index_schema():
+
+    run_metadata = db.MetaData()
+    run_secondary_index_table = run_schema.get_secondary_index_migration_table(run_metadata)
+
     for col_attr in ["name", "type", "nullable", "primary_key", "foreign_keys", "unique"]:
         assert_cols_equal(
             event_log_schema.SecondaryIndexMigrationTable.columns,
-            run_schema.SecondaryIndexMigrationTable.columns,
+            run_secondary_index_table.columns,
             col_attr,
         )
