@@ -11,7 +11,8 @@ CLI_HELP = """This CLI is used for generating Buildkite YAML.
 
 
 def dagster():
-    all_steps = dagit_steps()
+    # all_steps = dagit_steps()
+    all_steps = []
     dagit_only = is_phab_and_dagit_only()
 
     # If we're in a Phabricator diff and are only making dagit changes, skip the
@@ -25,13 +26,13 @@ def dagster():
             all_steps += [coverage_step()]
 
         # Trigger builds of the internal pipeline for builds on master
-        all_steps += [
-            trigger_step(
-                pipeline="internal",
-                async_step=True,
-                if_condition="build.branch=='master' && build.creator.email =~ /elementl.com$$/",
-            ),
-        ]
+        # all_steps += [
+        #     trigger_step(
+        #         pipeline="internal",
+        #         async_step=True,
+        #         if_condition="build.branch=='master' && build.creator.email =~ /elementl.com$$/",
+        #     ),
+        # ]
 
     buildkite_yaml = buildkite_yaml_for_steps(all_steps)
     print(buildkite_yaml)  # pylint: disable=print-call

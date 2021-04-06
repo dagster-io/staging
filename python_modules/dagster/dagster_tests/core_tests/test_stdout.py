@@ -249,6 +249,8 @@ def test_single(capfd):
             for step_key in step_keys:
                 inner_step(instance, pipeline_run, step_key)
 
+        print("outer 4")  # pylint: disable=print-call
+
         for step_key in step_keys:
             stdout = instance.compute_log_manager.read_logs_file(
                 pipeline_run.run_id, step_key, ComputeIOType.STDOUT
@@ -264,6 +266,7 @@ def test_single(capfd):
         assert "outer 1" in captured.out
         assert "outer 2" in captured.out
         assert "outer 3" in captured.out
+        assert "outer 4" in captured.out
 
 
 @pytest.mark.skipif(
@@ -294,6 +297,7 @@ def test_compute_log_base_with_spaces(capfd):
                 for step_key in step_keys:
                     inner_step(instance, pipeline_run, step_key)
 
+            print("outer 4")  # pylint: disable=print-call
             for step_key in step_keys:
                 stdout = instance.compute_log_manager.read_logs_file(
                     pipeline_run.run_id, step_key, ComputeIOType.STDOUT
@@ -309,6 +313,7 @@ def test_compute_log_base_with_spaces(capfd):
             assert "outer 1" in captured.out
             assert "outer 2" in captured.out
             assert "outer 3" in captured.out
+            assert "outer 4" in captured.out
 
 
 @pytest.mark.skipif(

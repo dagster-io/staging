@@ -127,24 +127,24 @@ class ModuleBuildSpec(
 
         # We expect the tox file to define a pylint testenv, and we'll construct a separate
         # buildkite build step for the pylint testenv.
-        tests.append(
-            StepBuilder(f":lint-roller: {package}")
-            .run(f"cd {self.directory}", "tox -vv -e pylint")
-            .on_integration_image(SupportedPython.V3_7)
-            .build()
-        )
+        # tests.append(
+        #     StepBuilder(f":lint-roller: {package}")
+        #     .run(f"cd {self.directory}", "tox -vv -e pylint")
+        #     .on_integration_image(SupportedPython.V3_7)
+        #     .build()
+        # )
 
         # We expect the tox file to define a mypy testenv, and we'll construct a separate
         # buildkite build step for the mypy testenv.
-        if self.directory not in MYPY_EXCLUDES:
-            tests.append(
-                StepBuilder(f":mypy: {package}")
-                .run(
-                    "pip install mypy==0.790",
-                    f"mypy --config-file mypy/config {self.directory}",
-                )
-                .on_integration_image(SupportedPython.V3_7)
-                .build()
-            )
+        # if self.directory not in MYPY_EXCLUDES:
+        #     tests.append(
+        #         StepBuilder(f":mypy: {package}")
+        #         .run(
+        #             "pip install mypy==0.790",
+        #             f"mypy --config-file mypy/config {self.directory}",
+        #         )
+        #         .on_integration_image(SupportedPython.V3_7)
+        #         .build()
+        #     )
 
         return tests
