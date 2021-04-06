@@ -284,7 +284,6 @@ def _schedule_tick_context(instance, stream, tick_data):
     "-h",
     type=click.STRING,
     required=False,
-    default="localhost",
     help="Hostname at which to serve. Default is localhost.",
 )
 @click.option(
@@ -344,7 +343,7 @@ def _schedule_tick_context(instance, stream, tick_data):
 def grpc_command(
     port=None,
     socket=None,
-    host="localhost",
+    host=None,
     max_workers=None,
     heartbeat=False,
     heartbeat_timeout=30,
@@ -354,6 +353,17 @@ def grpc_command(
     override_system_timezone=None,
     **kwargs,
 ):
+
+    if not host:
+        host = os.getenv("DAGSTER_GRPC_HOST", "localhost")
+
+    if not port:
+        port_env = os.getenv("DAGSTER_GRPC_PORT")
+        if port_env:
+            port = int(port_env)
+
+    lazy_load_user_code = lazy_load_user_code or bool(os.getenv("DAGSTER_LAZY_LOAD_USER_CODE"))
+
     if seven.IS_WINDOWS and port is None:
         raise click.UsageError(
             "You must pass a valid --port/-p on Windows: --socket/-s not supported."
