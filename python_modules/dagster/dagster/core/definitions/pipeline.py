@@ -1,4 +1,5 @@
 from functools import update_wrapper
+from typing import TYPE_CHECKING, Dict, Set
 
 from dagster import check
 from dagster.core.definitions.solid import NodeDefinition
@@ -26,6 +27,9 @@ from .mode import ModeDefinition
 from .preset import PresetDefinition
 from .solid import NodeDefinition
 from .utils import validate_tags
+
+if TYPE_CHECKING:
+    from .run_config_schema import RunConfigSchema
 
 
 class PipelineDefinition(GraphDefinition):
@@ -200,7 +204,8 @@ class PipelineDefinition(GraphDefinition):
             self._preset_dict[preset.name] = preset
 
         # Validate solid resource dependencies
-        _validate_resource_dependencies(
+
+        self._resource_requirements: Dict[str, Set[str]] = _validate_resource_dependencies(
             self._mode_definitions,
             self._current_level_node_defs,
             self._dagster_type_dict,
@@ -252,7 +257,9 @@ class PipelineDefinition(GraphDefinition):
         if mode_def.name in self._cached_run_config_schemas:
             return self._cached_run_config_schemas[mode_def.name]
 
-        self._cached_run_config_schemas[mode_def.name] = _create_run_config_schema(self, mode_def)
+        self._cached_run_config_schemas[mode_def.name] = _create_run_config_schema(
+            self, mode_def, self._resource_requirements[mode_def.name]
+        )
         return self._cached_run_config_schemas[mode_def.name]
 
     @property
@@ -565,7 +572,7 @@ def _get_pipeline_subset_def(pipeline_def, solids_to_execute):
 
 def _validate_resource_dependencies(
     mode_definitions, node_defs, dagster_type_dict, solid_dict, pipeline_hook_defs
-):
+) -> Dict[str, Set[str]]:
     """This validation ensures that each pipeline context provides the resources that are required
     by each solid.
     """
@@ -575,10 +582,14 @@ def _validate_resource_dependencies(
     check.dict_param(solid_dict, "solid_dict")
     check.set_param(pipeline_hook_defs, "pipeline_hook_defs", of_type=HookDefinition)
 
+    resource_reqs: Dict[str, Set[str]] = {}
+
     for mode_def in mode_definitions:
+        resource_reqs[mode_def.name] = set()
         mode_resources = set(mode_def.resource_defs.keys())
         for node_def in node_defs:
             for required_resource in node_def.required_resource_keys:
+                resource_reqs[mode_def.name].add(required_resource)
                 if required_resource not in mode_resources:
                     raise DagsterInvalidDefinitionError(
                         (
@@ -592,6 +603,7 @@ def _validate_resource_dependencies(
                     )
 
             for output_def in node_def.output_defs:
+                resource_reqs[mode_def.name].add(output_def.io_manager_key)
                 if output_def.io_manager_key not in mode_resources:
                     raise DagsterInvalidDefinitionError(
                         f'IO manager "{output_def.io_manager_key}" is required by output '
@@ -599,10 +611,13 @@ def _validate_resource_dependencies(
                         f'provided by mode "{mode_def.name}".'
                     )
 
-        _validate_type_resource_deps_for_mode(mode_def, mode_resources, dagster_type_dict)
+        _validate_type_resource_deps_for_mode(
+            mode_def, mode_resources, dagster_type_dict, resource_reqs
+        )
 
         for intermediate_storage in mode_def.intermediate_storage_defs or []:
             for required_resource in intermediate_storage.required_resource_keys:
+                resource_reqs[mode_def.name].add(required_resource)
                 if required_resource not in mode_resources:
                     raise DagsterInvalidDefinitionError(
                         (
@@ -617,6 +632,7 @@ def _validate_resource_dependencies(
         for solid in solid_dict.values():
             for hook_def in solid.hook_defs:
                 for required_resource in hook_def.required_resource_keys:
+                    resource_reqs[mode_def.name].add(required_resource)
                     if required_resource not in mode_resources:
                         raise DagsterInvalidDefinitionError(
                             (
@@ -631,6 +647,7 @@ def _validate_resource_dependencies(
 
         for hook_def in pipeline_hook_defs:
             for required_resource in hook_def.required_resource_keys:
+                resource_reqs[mode_def.name].add(required_resource)
                 if required_resource not in mode_resources:
                     raise DagsterInvalidDefinitionError(
                         (
@@ -645,16 +662,22 @@ def _validate_resource_dependencies(
 
         for resource_key, resource in mode_def.resource_defs.items():
             for required_resource in resource.required_resource_keys:
+                resource_reqs[mode_def.name].add(required_resource)
                 if required_resource not in mode_resources:
                     raise DagsterInvalidDefinitionError(
                         f'Resource "{required_resource}" is required by resource at key "{resource_key}", '
                         f'but is not provided by mode "{mode_def.name}"'
                     )
 
+    return resource_reqs
 
-def _validate_type_resource_deps_for_mode(mode_def, mode_resources, dagster_type_dict):
+
+def _validate_type_resource_deps_for_mode(
+    mode_def, mode_resources, dagster_type_dict, resource_reqs
+):
     for dagster_type in dagster_type_dict.values():
         for required_resource in dagster_type.required_resource_keys:
+            resource_reqs[mode_def.name].add(required_resource)
             if required_resource not in mode_resources:
                 raise DagsterInvalidDefinitionError(
                     (
@@ -668,6 +691,7 @@ def _validate_type_resource_deps_for_mode(mode_def, mode_resources, dagster_type
                 )
         if dagster_type.loader:
             for required_resource in dagster_type.loader.required_resource_keys():
+                resource_reqs[mode_def.name].add(required_resource)
                 if required_resource not in mode_resources:
                     raise DagsterInvalidDefinitionError(
                         (
@@ -681,6 +705,7 @@ def _validate_type_resource_deps_for_mode(mode_def, mode_resources, dagster_type
                     )
         if dagster_type.materializer:
             for required_resource in dagster_type.materializer.required_resource_keys():
+                resource_reqs[mode_def.name].add(required_resource)
                 if required_resource not in mode_resources:
                     raise DagsterInvalidDefinitionError(
                         (
@@ -704,6 +729,7 @@ def _validate_type_resource_deps_for_mode(mode_def, mode_resources, dagster_type
 
             if used_by_storage:
                 for required_resource in plugin.required_resource_keys():
+                    resource_reqs[mode_def.name].add(required_resource)
                     if required_resource not in mode_resources:
                         raise DagsterInvalidDefinitionError(
                             (
@@ -790,7 +816,11 @@ def _build_all_node_defs(node_defs):
     return all_defs
 
 
-def _create_run_config_schema(pipeline_def, mode_definition):
+def _create_run_config_schema(
+    pipeline_def: PipelineDefinition,
+    mode_definition: ModeDefinition,
+    required_resources: Set[str],
+) -> "RunConfigSchema":
     from .environment_configs import (
         EnvironmentClassCreationData,
         construct_config_type_dictionary,
@@ -818,6 +848,7 @@ def _create_run_config_schema(pipeline_def, mode_definition):
             mode_definition=mode_definition,
             logger_defs=mode_definition.loggers,
             ignored_solids=ignored_solids,
+            required_resources=required_resources,
         )
     )
 
