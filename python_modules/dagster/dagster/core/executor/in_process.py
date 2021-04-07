@@ -2,8 +2,8 @@ import os
 
 from dagster import check
 from dagster.core.events import DagsterEvent, EngineEventData
-from dagster.core.execution.context.system import SystemPipelineExecutionContext
-from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
+from dagster.core.execution.api import execute_plan_iterator
+from dagster.core.execution.context.system import PlanOrchestrationContext
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
 from dagster.utils.timing import format_duration, time_execution_scope
@@ -21,7 +21,7 @@ class InProcessExecutor(Executor):
         return self._retries
 
     def execute(self, pipeline_context, execution_plan):
-        check.inst_param(pipeline_context, "pipeline_context", SystemPipelineExecutionContext)
+        check.inst_param(pipeline_context, "pipeline_context", PlanOrchestrationContext)
         check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
 
         step_keys_to_execute = execution_plan.step_keys_to_execute
@@ -33,7 +33,16 @@ class InProcessExecutor(Executor):
         )
 
         with time_execution_scope() as timer_result:
-            yield from inner_plan_execution_iterator(pipeline_context, execution_plan)
+            yield from execute_plan_iterator(
+                execution_plan=pipeline_context.execution_plan,
+                pipeline=pipeline_context.pipeline,
+                pipeline_run=pipeline_context.pipeline_run,
+                instance=pipeline_context.instance,
+                retry_mode=pipeline_context.retry_mode,
+                run_config=pipeline_context.run_config,
+                raise_on_error=pipeline_context.raise_on_error,
+                output_capture=pipeline_context.output_capture,
+            )
 
         yield DagsterEvent.engine_event(
             pipeline_context,
