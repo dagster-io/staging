@@ -511,8 +511,6 @@ def test_engine_events(get_external_pipeline, run_config):  # pylint: disable=re
             if _is_multiprocess(run_config):
                 messages = [
                     "Started process for pipeline",
-                    "Starting initialization of resources",
-                    "Finished initialization of resources",
                     "Executing steps using multiprocess executor",
                     "Launching subprocess for return_one",
                     "Executing step return_one in subprocess",
@@ -537,9 +535,9 @@ def test_engine_events(get_external_pipeline, run_config):  # pylint: disable=re
             else:
                 messages = [
                     "Started process for pipeline",
+                    "Executing steps in process",
                     "Starting initialization of resources",
                     "Finished initialization of resources",
-                    "Executing steps in process",
                     "Finished steps in process",
                     "Process for pipeline exited",
                 ]

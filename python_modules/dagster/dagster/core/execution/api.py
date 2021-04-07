@@ -1,6 +1,6 @@
 import sys
 from contextlib import contextmanager
-from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple, Union, cast
 
 from dagster import check
 from dagster.core.definitions import IPipeline, PipelineDefinition
@@ -8,13 +8,14 @@ from dagster.core.definitions.pipeline import PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.context.system import RunWorkerExecutionContext
+from dagster.core.execution.context.system import PlanOrchestrationContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
 from dagster.core.execution.retries import RetryMode
+from dagster.core.executor.base import Executor
 from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.selector import parse_step_selection
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
@@ -27,8 +28,9 @@ from dagster.utils.interrupts import capture_interrupts
 
 from .context_creation_pipeline import (
     ExecutionContextManager,
-    PipelineExecutionContextManager,
     PlanExecutionContextManager,
+    PlanOrchestrationContextManager,
+    orchestration_context_event_generator,
     scoped_pipeline_context,
 )
 from .results import PipelineExecutionResult
@@ -103,13 +105,16 @@ def execute_run_iterator(
         ExecuteRunWithPlanIterable(
             execution_plan=execution_plan,
             iterator=pipeline_execution_iterator,
-            execution_context_manager=PipelineExecutionContextManager(
+            execution_context_manager=PlanOrchestrationContextManager(
+                context_event_generator=orchestration_context_event_generator,
                 pipeline=pipeline,
                 execution_plan=execution_plan,
                 pipeline_run=pipeline_run,
                 instance=instance,
                 run_config=pipeline_run.run_config,
                 raise_on_error=False,
+                get_executor_def_fn=None,
+                output_capture=None,
             ),
         )
     )
@@ -201,18 +206,19 @@ def execute_run(
     _execute_run_iterable = ExecuteRunWithPlanIterable(
         execution_plan=execution_plan,
         iterator=pipeline_execution_iterator,
-        execution_context_manager=PipelineExecutionContextManager(
+        execution_context_manager=PlanOrchestrationContextManager(
+            context_event_generator=orchestration_context_event_generator,
             pipeline=pipeline,
             execution_plan=execution_plan,
             pipeline_run=pipeline_run,
             instance=instance,
             run_config=pipeline_run.run_config,
             raise_on_error=raise_on_error,
+            get_executor_def_fn=None,
             output_capture=output_capture,
         ),
     )
     event_list = list(_execute_run_iterable)
-    pipeline_context = _execute_run_iterable.pipeline_context
 
     return PipelineExecutionResult(
         pipeline.get_definition(),
@@ -224,7 +230,6 @@ def execute_run(
             pipeline_run.run_config,
             pipeline_run,
             instance,
-            intermediate_storage=pipeline_context.intermediate_storage,
         ),
         output_capture=output_capture,
     )
@@ -629,7 +634,9 @@ def execute_plan_iterator(
     pipeline_run: PipelineRun,
     instance: DagsterInstance,
     retry_mode: Optional[RetryMode] = None,
+    raise_on_error: Optional[bool] = False,
     run_config: Optional[dict] = None,
+    output_capture: Optional[Dict[StepOutputHandle, Any]] = None,
 ) -> Iterator[DagsterEvent]:
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
     check.inst_param(pipeline, "pipeline", IPipeline)
@@ -649,7 +656,8 @@ def execute_plan_iterator(
                 run_config=run_config,
                 pipeline_run=pipeline_run,
                 instance=instance,
-                raise_on_error=False,
+                raise_on_error=raise_on_error,
+                output_capture=output_capture,
             ),
         )
     )
@@ -739,16 +747,16 @@ def create_execution_plan(
 
 
 def pipeline_execution_iterator(
-    pipeline_context: RunWorkerExecutionContext, execution_plan: ExecutionPlan
+    pipeline_context: PlanOrchestrationContext, execution_plan: ExecutionPlan
 ) -> Iterator[DagsterEvent]:
     """A complete execution of a pipeline. Yields pipeline start, success,
     and failure events.
 
     Args:
-        pipeline_context (RunWorkerExecutionContext):
+        pipeline_context (IOrchestrationContext):
         execution_plan (ExecutionPlan):
     """
-    check.inst_param(pipeline_context, "pipeline_context", RunWorkerExecutionContext)
+    check.inst_param(pipeline_context, "pipeline_context", PlanOrchestrationContext)
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
 
     yield DagsterEvent.pipeline_start(pipeline_context)
@@ -758,7 +766,8 @@ def pipeline_execution_iterator(
     failed_steps = []
     generator_closed = False
     try:
-        for event in pipeline_context.executor.execute(pipeline_context, execution_plan):
+        executor = cast(Executor, pipeline_context.executor)
+        for event in executor.execute(pipeline_context, execution_plan):
             if event.is_step_failure:
                 failed_steps.append(event.step_key)
 
