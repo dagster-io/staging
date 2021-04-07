@@ -219,6 +219,28 @@ subscription subscribeTest($runId: ID!) {
 """
 )
 
+
+RELOAD_REPOSITORY_LOCATION_MUTATION = """
+mutation ($repositoryLocationName: String!) {
+   reloadRepositoryLocation(repositoryLocationName: $repositoryLocationName) {
+      __typename
+      ... on RepositoryLocation {
+        name
+        repositories {
+            name
+        }
+        isReloadSupported
+      }
+      ... on RepositoryLocationLoadFailure {
+          name
+          error {
+              message
+          }
+      }
+   }
+}
+"""
+
 LAUNCH_PIPELINE_EXECUTION_MUTATION = (
     ERROR_FRAGMENT
     + """
@@ -362,6 +384,26 @@ mutation($backfillParams: LaunchBackfillParams!) {
     ... on LaunchBackfillSuccess {
       backfillId
       launchedRunIds
+    }
+  }
+}
+"""
+)
+
+GET_PIPELINE_STATUS_QUERY = (
+    ERROR_FRAGMENT
+    + """
+query GetStatusQuery($runId: ID!) {
+  pipelineRunOrError(runId: $runId) {
+    __typename
+    ... on PipelineRun {
+        status
+    }
+    ... on PipelineRunNotFoundError {
+      message
+    }
+    ... on PythonError {
+      message
     }
   }
 }
