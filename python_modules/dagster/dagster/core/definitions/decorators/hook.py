@@ -227,7 +227,9 @@ def failure_hook(
         ) -> HookExecutionResult:
             for event in event_list:
                 if event.is_step_failure:
-                    fn(context)
+                    # provide the access to the failure event via context
+                    failure_hook_context = context.for_failure_hook(event)
+                    fn(failure_hook_context)
                     return HookExecutionResult(hook_name=_name, is_skipped=False)
 
             # hook is skipped when fn didn't run

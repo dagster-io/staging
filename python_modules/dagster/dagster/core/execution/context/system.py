@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from dagster.core.instance import DagsterInstance
     from dagster.core.execution.plan.plan import ExecutionPlan
     from dagster.core.definitions.resource import Resources
+    from dagster.core.events import DagsterEvent
 
 
 class PipelineExecutionContext(ABC):
@@ -690,6 +691,7 @@ class HookContext(SystemExecutionContext):
         log_manager: DagsterLogManager,
         hook_def: HookDefinition,
         step: ExecutionStep,
+        failure_event: "DagsterEvent" = None,
     ):
 
         super(HookContext, self).__init__(execution_context_data, log_manager)
@@ -701,6 +703,9 @@ class HookContext(SystemExecutionContext):
         self._resources = self._execution_context_data.scoped_resources_builder.build(
             self._required_resource_keys
         )
+        from dagster.core.events import DagsterEvent
+
+        self._failure_event = check.opt_inst_param(failure_event, "failure_event", DagsterEvent)
 
     @property
     def hook_def(self) -> HookDefinition:
@@ -730,6 +735,22 @@ class HookContext(SystemExecutionContext):
     def solid_config(self) -> Any:
         solid_config = self.environment_config.solids.get(str(self._step.solid_handle))
         return solid_config.config if solid_config else None
+
+    @property
+    def failure_event(self) -> "DagsterEvent":
+        # only available via failure_hook
+        if self._failure_event:
+            return self._failure_event
+
+        raise DagsterInvalidPropertyError(
+            "You have attempted to access the failure event inside a non failure hook. "
+            "`context.failure_event` is only available for failure_hook."
+        )
+
+    def for_failure_hook(self, failure_event) -> "HookContext":
+        return HookContext(
+            self._execution_context_data, self.log, self.hook_def, self.step, failure_event
+        )
 
 
 class OutputContext(
