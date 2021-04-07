@@ -10,8 +10,8 @@ from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.utils.forked_pdb import ForkedPdb
 
-from .step import StepExecutionContext
-from .system import SystemComputeExecutionContext
+from .step import UserStepExecutionContext
+from .system import ComputeStepExecutionContext
 
 
 class AbstractComputeExecutionContext(ABC):  # pylint: disable=no-init
@@ -58,7 +58,7 @@ class AbstractComputeExecutionContext(ABC):  # pylint: disable=no-init
         """The parsed config specific to this solid."""
 
 
-class SolidExecutionContext(StepExecutionContext, AbstractComputeExecutionContext):
+class SolidExecutionContext(UserStepExecutionContext, AbstractComputeExecutionContext):
     """The ``context`` object available as the first argument to every solid's compute function.
 
     Users should not instantiate this object directly.
@@ -75,11 +75,11 @@ class SolidExecutionContext(StepExecutionContext, AbstractComputeExecutionContex
 
     __slots__ = ["_system_compute_execution_context"]
 
-    def __init__(self, system_compute_execution_context: SystemComputeExecutionContext):
+    def __init__(self, system_compute_execution_context: ComputeStepExecutionContext):
         self._system_compute_execution_context = check.inst_param(
             system_compute_execution_context,
             "system_compute_execution_context",
-            SystemComputeExecutionContext,
+            ComputeStepExecutionContext,
         )
         self._pdb: Optional[ForkedPdb] = None
         super(SolidExecutionContext, self).__init__(system_compute_execution_context)
