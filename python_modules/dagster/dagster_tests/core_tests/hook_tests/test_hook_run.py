@@ -1,3 +1,4 @@
+# pylint: disable=protected-access
 from collections import defaultdict
 
 import pytest
@@ -254,7 +255,9 @@ def test_hook_on_pipeline_def_with_composite_solids():
 
     @event_list_hook
     def hook_a_generic(context, _):
-        called_hook_to_step_keys[context.hook_def.name].add(context.step.key)
+        called_hook_to_step_keys[context.hook_def.name].add(
+            context._step_execution_context.step.key
+        )
         return HookExecutionResult("hook_a_generic")
 
     @solid

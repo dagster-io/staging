@@ -24,8 +24,7 @@ from dagster.core.definitions import pipeline
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterConfigMappingFunctionError, DagsterInvalidDefinitionError
 from dagster.core.events.log import EventRecord, construct_event_logger
-from dagster.core.execution.api import create_execution_plan, execute_plan, execute_run
-from dagster.core.instance import DagsterInstance
+from dagster.core.execution.api import execute_run
 from dagster.core.log_manager import coerce_valid_log_level
 from dagster.core.test_utils import instance_for_test
 
@@ -619,32 +618,11 @@ def test_resource_init_failure():
         mode_defs=[ModeDefinition(resource_defs={"failing_resource": failing_resource})],
     )
 
-    res = execute_pipeline(the_pipeline, raise_on_error=False)
-
-    event_types = [event.event_type_value for event in res.event_list]
-    assert DagsterEventType.PIPELINE_INIT_FAILURE.value in event_types
-
-    instance = DagsterInstance.ephemeral()
-    execution_plan = create_execution_plan(the_pipeline)
-    pipeline_run = instance.create_run_for_pipeline(the_pipeline, execution_plan=execution_plan)
-
-    step_events = execute_plan(
-        execution_plan, InMemoryPipeline(the_pipeline), pipeline_run=pipeline_run, instance=instance
-    )
-
-    event_types = [event.event_type_value for event in step_events]
-    assert DagsterEventType.PIPELINE_INIT_FAILURE.value in event_types
-
-    # Test the pipeline init failure event fires even if we are raising errors
-    events = []
-    try:
-        for event in execute_pipeline_iterator(the_pipeline):
-            events.append(event)
-    except DagsterResourceFunctionError:
-        pass
-
-    event_types = [event.event_type_value for event in events]
-    assert DagsterEventType.PIPELINE_INIT_FAILURE.value in event_types
+    with pytest.raises(
+        DagsterResourceFunctionError,
+        match="Error executing resource_fn on ResourceDefinition failing_resource",
+    ):
+        execute_pipeline(the_pipeline, raise_on_error=False)
 
 
 def test_dagster_type_resource_decorator_config():
@@ -692,9 +670,10 @@ def test_resource_init_failure_with_teardown():
         mode_defs=[ModeDefinition(resource_defs={"a": resource_a, "b": resource_b})],
     )
 
-    res = execute_pipeline(the_pipeline, raise_on_error=False)
-    event_types = [event.event_type_value for event in res.event_list]
-    assert DagsterEventType.PIPELINE_INIT_FAILURE.value in event_types
+    with pytest.raises(
+        DagsterResourceFunctionError, match="Error executing resource_fn on ResourceDefinition b"
+    ):
+        execute_pipeline(the_pipeline, raise_on_error=False)
 
     assert called == ["A", "B"]
     assert cleaned == ["B", "A"]
@@ -710,7 +689,7 @@ def test_resource_init_failure_with_teardown():
         pass
 
     event_types = [event.event_type_value for event in events]
-    assert DagsterEventType.PIPELINE_INIT_FAILURE.value in event_types
+    assert DagsterEventType.PIPELINE_FAILURE.value in event_types
     assert called == ["A", "B"]
     assert cleaned == ["B", "A"]
 
@@ -906,7 +885,7 @@ def test_multiprocessing_resource_teardown_failure():
             for event in result.event_list
             if event.is_engine_event and event.event_specific_data.error
         ]
-        assert len(error_events) > 1
+        assert len(error_events) == 1
 
 
 def test_single_step_resource_event_logs():
