@@ -16,7 +16,7 @@ from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvalidPropertyError, DagsterInvariantViolationError
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.step import ExecutionStep
 from dagster.core.execution.retries import RetryMode
@@ -26,6 +26,7 @@ from dagster.core.storage.io_manager import IOManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterType
+from dagster.utils.error import SerializableErrorInfo
 
 from .input import InputContext
 from .output import OutputContext, get_output_context
@@ -37,6 +38,7 @@ if TYPE_CHECKING:
     from dagster.core.instance import DagsterInstance
     from dagster.core.execution.plan.plan import ExecutionPlan
     from dagster.core.definitions.resource import Resources
+    from dagster.core.events import DagsterEvent
 
 
 class IPlanContext(ABC):
@@ -508,6 +510,7 @@ class HookContext:
         self,
         step_execution_context: StepExecutionContext,
         hook_def: HookDefinition,
+        failure_event: "DagsterEvent" = None,
     ):
         self._step_execution_context = step_execution_context
         self._hook_def = check.inst_param(hook_def, "hook_def", HookDefinition)
@@ -515,6 +518,9 @@ class HookContext:
         self._resources = step_execution_context.scoped_resources_builder.build(
             self._required_resource_keys
         )
+        from dagster.core.events import DagsterEvent
+
+        self._failure_event = check.opt_inst_param(failure_event, "failure_event", DagsterEvent)
 
     @property
     def pipeline_name(self) -> str:
@@ -557,3 +563,17 @@ class HookContext:
     @property
     def log(self) -> DagsterLogManager:
         return self._step_execution_context.log
+
+    @property
+    def error_info(self) -> SerializableErrorInfo:
+        # only available via failure_hook
+        if self._failure_event:
+            return self._failure_event.event_specific_data.error
+
+        raise DagsterInvalidPropertyError(
+            "You have attempted to access the error info inside a non failure hook. "
+            "`context.failure_event` is only available for failure_hook."
+        )
+
+    def for_failure_hook(self, failure_event) -> "HookContext":
+        return HookContext(self._step_execution_context, self.hook_def, failure_event)
