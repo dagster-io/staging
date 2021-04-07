@@ -276,7 +276,6 @@ mutation($executionParams: ExecutionParams!) {
 """
 )
 
-
 LAUNCH_PIPELINE_REEXECUTION_MUTATION = (
     ERROR_FRAGMENT
     + """
