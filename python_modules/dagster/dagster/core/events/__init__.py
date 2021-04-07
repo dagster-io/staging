@@ -15,10 +15,11 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.events import AssetLineageInfo, ObjectStoreOperationType
 from dagster.core.execution.context.system import (
-    BaseStepExecutionContext,
     HookContext,
-    PipelineExecutionContext,
-    SystemExecutionContext,
+    IStepContext,
+    PlanExecutionContext,
+    PlanOrchestrationContext,
+    StepExecutionContext,
 )
 from dagster.core.execution.plan.handle import ResolvedFromDynamicStepHandle, StepHandle
 from dagster.core.execution.plan.outputs import StepOutputData
@@ -145,7 +146,7 @@ def _validate_event_specific_data(event_type, event_specific_data):
 
 
 def log_step_event(step_context, event):
-    check.inst_param(step_context, "step_context", BaseStepExecutionContext)
+    check.inst_param(step_context, "step_context", IStepContext)
     check.inst_param(event, "event", DagsterEvent)
 
     event_type = DagsterEventType(event.event_type_value)
@@ -216,7 +217,7 @@ class DagsterEvent(
     @staticmethod
     def from_step(event_type, step_context, event_specific_data=None, message=None):
 
-        check.inst_param(step_context, "step_context", BaseStepExecutionContext)
+        check.inst_param(step_context, "step_context", IStepContext)
 
         event = DagsterEvent(
             event_type_value=check.inst_param(event_type, "event_type", DagsterEventType).value,
@@ -236,17 +237,19 @@ class DagsterEvent(
 
     @staticmethod
     def from_pipeline(
-        event_type, pipeline_context, message=None, event_specific_data=None, step_handle=None
+        event_type,
+        pipeline_context,
+        message=None,
+        event_specific_data=None,
+        step_handle=None,
     ):
-        check.inst_param(pipeline_context, "pipeline_context", PipelineExecutionContext)
         check.opt_inst_param(
             step_handle, "step_handle", (StepHandle, ResolvedFromDynamicStepHandle)
         )
-        pipeline_name = pipeline_context.pipeline_name
 
         event = DagsterEvent(
             event_type_value=check.inst_param(event_type, "event_type", DagsterEventType).value,
-            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+            pipeline_name=pipeline_context.pipeline_name,
             message=check.opt_str_param(message, "message"),
             event_specific_data=_validate_event_specific_data(event_type, event_specific_data),
             step_handle=step_handle,
@@ -771,7 +774,7 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def pipeline_init_failure(pipeline_name, failure_data, log_manager):
+    def orchestration_context_init_failure(pipeline_name, failure_data, log_manager):
         check.inst_param(failure_data, "failure_data", PipelineInitFailureData)
         check.inst_param(log_manager, "log_manager", DagsterLogManager)
         # this failure happens trying to bring up context so can't use from_pipeline
@@ -781,8 +784,8 @@ class DagsterEvent(
             pipeline_name=pipeline_name,
             event_specific_data=failure_data,
             message=(
-                'Pipeline failure during initialization of pipeline "{pipeline_name}". '
-                "This may be due to a failure in initializing a resource or logger."
+                'Pipeline failure during initialization for pipeline "{pipeline_name}". '
+                "This may be due to a failure in initializing the executor or one of the loggers."
             ).format(pipeline_name=pipeline_name),
             pid=os.getpid(),
         )
@@ -790,6 +793,32 @@ class DagsterEvent(
             event.message
             or "{event_type} for pipeline {pipeline_name}".format(
                 event_type=DagsterEventType.PIPELINE_INIT_FAILURE, pipeline_name=pipeline_name
+            ),
+            dagster_event=event,
+            pipeline_name=pipeline_name,
+        )
+        return event
+
+    @staticmethod
+    def execution_context_init_failure(pipeline_name, failure_data, log_manager):
+        check.inst_param(failure_data, "failure_data", PipelineFailureData)
+        check.inst_param(log_manager, "log_manager", DagsterLogManager)
+        # this failure happens trying to bring up context so can't use from_pipeline
+
+        event = DagsterEvent(
+            event_type_value=DagsterEventType.PIPELINE_FAILURE.value,
+            pipeline_name=pipeline_name,
+            event_specific_data=failure_data,
+            message=(
+                'Pipeline failure during execution of pipeline "{pipeline_name}". '
+                "This may be due to a failure in initializing a resource or logger."
+            ).format(pipeline_name=pipeline_name),
+            pid=os.getpid(),
+        )
+        log_manager.error(
+            event.message
+            or "{event_type} for pipeline {pipeline_name}".format(
+                event_type=DagsterEventType.PIPELINE_FAILURE, pipeline_name=pipeline_name
             ),
             dagster_event=event,
             pipeline_name=pipeline_name,

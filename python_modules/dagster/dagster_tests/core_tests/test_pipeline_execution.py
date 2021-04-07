@@ -30,7 +30,11 @@ from dagster.cli.workspace.load import location_origin_from_python_file
 from dagster.core.definitions import Solid
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.definitions.graph import _create_adjacency_lists
-from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
+from dagster.core.errors import (
+    DagsterExecutionStepNotFoundError,
+    DagsterInvariantViolationError,
+    DagsterResourceFunctionError,
+)
 from dagster.core.execution.results import SolidExecutionResult
 from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import instance_for_test, step_output_event_filter
@@ -684,31 +688,16 @@ def test_pipeline_init_failure():
         stub_solid()
 
     mem_instance = DagsterInstance.ephemeral()
-    result = execute_pipeline(
-        failing_init_pipeline,
-        run_config=dict(env_config),
-        raise_on_error=False,
-        instance=mem_instance,
-    )
-
-    assert result.success is False
-    event = result.event_list[-1]
-    assert event.event_type_value == "PIPELINE_INIT_FAILURE"
-    assert event.pipeline_init_failure_data
-    assert mem_instance.get_run_by_id(result.run_id).is_failure
-
-    with instance_for_test() as fs_instance:
-        result = execute_pipeline(
+    with pytest.raises(
+        DagsterResourceFunctionError,
+        match="Error executing resource_fn on ResourceDefinition failing",
+    ):
+        execute_pipeline(
             failing_init_pipeline,
             run_config=dict(env_config),
             raise_on_error=False,
-            instance=fs_instance,
+            instance=mem_instance,
         )
-        assert result.success is False
-        event = result.event_list[-1]
-        assert event.event_type_value == "PIPELINE_INIT_FAILURE"
-        assert event.pipeline_init_failure_data
-        assert fs_instance.get_run_by_id(result.run_id).is_failure
 
 
 def test_reexecution_fs_storage():
