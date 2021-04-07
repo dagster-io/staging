@@ -15,10 +15,11 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.events import AssetLineageInfo, ObjectStoreOperationType
 from dagster.core.execution.context.system import (
-    BaseStepExecutionContext,
     HookContext,
-    PipelineExecutionContext,
-    SystemExecutionContext,
+    PlanExecutionContext,
+    PlanOrchestrationContext,
+    StepExecutionContext,
+    StepOrchestrationContext,
 )
 from dagster.core.execution.plan.handle import ResolvedFromDynamicStepHandle, StepHandle
 from dagster.core.execution.plan.outputs import StepOutputData
@@ -145,7 +146,7 @@ def _validate_event_specific_data(event_type, event_specific_data):
 
 
 def log_step_event(step_context, event):
-    check.inst_param(step_context, "step_context", BaseStepExecutionContext)
+    check.inst_param(step_context, "step_context", (StepOrchestrationContext, StepExecutionContext))
     check.inst_param(event, "event", DagsterEvent)
 
     event_type = DagsterEventType(event.event_type_value)
@@ -158,23 +159,22 @@ def log_step_event(step_context, event):
         ),
         dagster_event=event,
         pipeline_name=step_context.pipeline_name,
+        step_key=step_context.step.key,
     )
 
 
-def log_pipeline_event(pipeline_context, event, step_key):
+def log_pipeline_event(pipeline_name, log_manager, event, step_key):
     event_type = DagsterEventType(event.event_type_value)
 
-    log_fn = (
-        pipeline_context.log.error if event_type in FAILURE_EVENTS else pipeline_context.log.debug
-    )
+    log_fn = log_manager.error if event_type in FAILURE_EVENTS else log_manager.debug
 
     log_fn(
         event.message
         or "{event_type} for pipeline {pipeline_name}".format(
-            event_type=event_type, pipeline_name=pipeline_context.pipeline_name
+            event_type=event_type, pipeline_name=pipeline_name
         ),
         dagster_event=event,
-        pipeline_name=pipeline_context.pipeline_name,
+        pipeline_name=pipeline_name,
         step_key=step_key,
     )
 
@@ -216,7 +216,9 @@ class DagsterEvent(
     @staticmethod
     def from_step(event_type, step_context, event_specific_data=None, message=None):
 
-        check.inst_param(step_context, "step_context", BaseStepExecutionContext)
+        check.inst_param(
+            step_context, "step_context", (StepOrchestrationContext, StepExecutionContext)
+        )
 
         event = DagsterEvent(
             event_type_value=check.inst_param(event_type, "event_type", DagsterEventType).value,
@@ -236,13 +238,16 @@ class DagsterEvent(
 
     @staticmethod
     def from_pipeline(
-        event_type, pipeline_context, message=None, event_specific_data=None, step_handle=None
+        event_type,
+        pipeline_name,
+        log_manager,
+        message=None,
+        event_specific_data=None,
+        step_handle=None,
     ):
-        check.inst_param(pipeline_context, "pipeline_context", PipelineExecutionContext)
         check.opt_inst_param(
             step_handle, "step_handle", (StepHandle, ResolvedFromDynamicStepHandle)
         )
-        pipeline_name = pipeline_context.pipeline_name
 
         event = DagsterEvent(
             event_type_value=check.inst_param(event_type, "event_type", DagsterEventType).value,
@@ -253,7 +258,7 @@ class DagsterEvent(
             pid=os.getpid(),
         )
         step_key = step_handle.to_key() if step_handle else None
-        log_pipeline_event(pipeline_context, event, step_key)
+        log_pipeline_event(pipeline_name, log_manager, event, step_key)
 
         return event
 
@@ -650,7 +655,8 @@ class DagsterEvent(
     def pipeline_start(pipeline_context):
         return DagsterEvent.from_pipeline(
             DagsterEventType.PIPELINE_START,
-            pipeline_context,
+            pipeline_context.pipeline_name,
+            pipeline_context.log,
             message='Started execution of pipeline "{pipeline_name}".'.format(
                 pipeline_name=pipeline_context.pipeline_name
             ),
@@ -660,20 +666,22 @@ class DagsterEvent(
     def pipeline_success(pipeline_context):
         return DagsterEvent.from_pipeline(
             DagsterEventType.PIPELINE_SUCCESS,
-            pipeline_context,
+            pipeline_context.pipeline_name,
+            pipeline_context.log,
             message='Finished execution of pipeline "{pipeline_name}".'.format(
                 pipeline_name=pipeline_context.pipeline_name
             ),
         )
 
     @staticmethod
-    def pipeline_failure(pipeline_context, context_msg, error_info=None):
+    def pipeline_failure(pipeline_name, log_manager, context_msg, error_info=None):
 
         return DagsterEvent.from_pipeline(
             DagsterEventType.PIPELINE_FAILURE,
-            pipeline_context,
+            pipeline_name,
+            log_manager,
             message='Execution of pipeline "{pipeline_name}" failed. {context_msg}'.format(
-                pipeline_name=pipeline_context.pipeline_name,
+                pipeline_name=pipeline_name,
                 context_msg=check.str_param(context_msg, "context_msg"),
             ),
             event_specific_data=PipelineFailureData(
@@ -682,12 +690,13 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def pipeline_canceled(pipeline_context, error_info=None):
+    def pipeline_canceled(pipeline_name, log_manager, error_info=None):
         return DagsterEvent.from_pipeline(
             DagsterEventType.PIPELINE_CANCELED,
-            pipeline_context,
+            pipeline_name,
+            log_manager,
             message='Execution of pipeline "{pipeline_name}" canceled.'.format(
-                pipeline_name=pipeline_context.pipeline_name
+                pipeline_name=pipeline_name
             ),
             event_specific_data=PipelineCanceledData(
                 check.opt_inst_param(error_info, "error_info", SerializableErrorInfo)
@@ -800,7 +809,8 @@ class DagsterEvent(
     def engine_event(pipeline_context, message, event_specific_data=None, step_handle=None):
         return DagsterEvent.from_pipeline(
             DagsterEventType.ENGINE_EVENT,
-            pipeline_context,
+            pipeline_context.pipeline_name,
+            pipeline_context.log,
             message,
             event_specific_data=event_specific_data,
             step_handle=step_handle,

@@ -9,17 +9,17 @@ from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvalidPropertyError
 from dagster.core.log_manager import DagsterLogManager
 
-from .system import SystemStepExecutionContext
+from .system import StepExecutionContext
 
 
-class StepExecutionContext:
-    __slots__ = ["_system_step_execution_context"]
+class UserStepExecutionContext:
+    __slots__ = ["_step_execution_context"]
 
     def __init__(self, system_step_execution_context):
-        self._system_step_execution_context = check.inst_param(
+        self._step_execution_context = check.inst_param(
             system_step_execution_context,
             "system_step_execution_context",
-            SystemStepExecutionContext,
+            StepExecutionContext,
         )
 
     @property
@@ -36,42 +36,42 @@ class StepExecutionContext:
     @property
     def resources(self) -> NamedTuple:
         """NamedTuple: The currently available resources."""
-        return self._system_step_execution_context.resources
+        return self._step_execution_context.resources
 
     @property
     def step_launcher(self) -> Optional[StepLauncher]:
         """Optional[StepLauncher]: The current step launcher, if any."""
-        return self._system_step_execution_context.step_launcher
+        return self._step_execution_context.step_launcher
 
     @property
     def run_id(self) -> str:
         """str: The id of the current execution's run."""
-        return self._system_step_execution_context.run_id
+        return self._step_execution_context.run_id
 
     @property
     def run_config(self) -> dict:
         """dict: The run config for the current execution."""
-        return self._system_step_execution_context.run_config
+        return self._step_execution_context.run_config
 
     @property
     def pipeline_def(self) -> PipelineDefinition:
         """PipelineDefinition: The currently executing pipeline."""
-        return self._system_step_execution_context.pipeline_def
+        return self._step_execution_context.pipeline_def
 
     @property
     def pipeline_name(self) -> str:
         """str: The name of the currently executing pipeline."""
-        return self._system_step_execution_context.pipeline_name
+        return self._step_execution_context.pipeline_name
 
     @property
     def mode_def(self) -> ModeDefinition:
         """ModeDefinition: The mode of the current execution."""
-        return self._system_step_execution_context.mode_def
+        return self._step_execution_context.mode_def
 
     @property
     def log(self) -> DagsterLogManager:
         """DagsterLogManager: The log manager available in the execution context."""
-        return self._system_step_execution_context.log
+        return self._step_execution_context.log
 
     @property
     def solid_handle(self) -> SolidHandle:
@@ -79,7 +79,7 @@ class StepExecutionContext:
 
         :meta private:
         """
-        return self._system_step_execution_context.solid_handle
+        return self._step_execution_context.solid_handle
 
     @property
     def solid(self) -> Solid:
@@ -88,14 +88,12 @@ class StepExecutionContext:
         :meta private:
 
         """
-        return self._system_step_execution_context.pipeline_def.get_solid(self.solid_handle)
+        return self._step_execution_context.pipeline_def.get_solid(self.solid_handle)
 
     @property
     def solid_def(self) -> SolidDefinition:
         """SolidDefinition: The current solid definition."""
-        return self._system_step_execution_context.pipeline_def.get_solid(
-            self.solid_handle
-        ).definition
+        return self._step_execution_context.pipeline_def.get_solid(self.solid_handle).definition
 
     def has_tag(self, key: str) -> bool:
         """Check if a logging tag is set.
@@ -106,7 +104,7 @@ class StepExecutionContext:
         Returns:
             bool: Whether the tag is set.
         """
-        return self._system_step_execution_context.has_tag(key)
+        return self._step_execution_context.has_tag(key)
 
     def get_tag(self, key: str) -> str:
         """Get a logging tag.
@@ -117,15 +115,15 @@ class StepExecutionContext:
         Returns:
             str: The value of the tag.
         """
-        return self._system_step_execution_context.get_tag(key)
+        return self._step_execution_context.get_tag(key)
 
-    def get_system_context(self) -> SystemStepExecutionContext:
+    def get_system_context(self) -> StepExecutionContext:
         """Allows advanced users (e.g. framework authors) to punch through to the underlying
         system context.
 
         :meta private:
 
         Returns:
-            SystemStepExecutionContext: The underlying system context.
+            StepExecutionContext: The underlying system context.
         """
-        return self._system_step_execution_context
+        return self._step_execution_context
