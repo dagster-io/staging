@@ -17,7 +17,7 @@ from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvalidPropertyError, DagsterInvariantViolationError
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.step import ExecutionStep
 from dagster.core.execution.retries import RetryMode
@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from dagster.core.instance import DagsterInstance
     from dagster.core.execution.plan.plan import ExecutionPlan
     from dagster.core.definitions.resource import Resources
+    from dagster.core.events import DagsterEvent
 
 
 class IPlanContext(ABC):
@@ -343,6 +344,8 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
         elif len(step_launcher_resources) == 1:
             self._step_launcher = step_launcher_resources[0]
 
+        self._step_exception = None
+
     @property
     def step(self) -> ExecutionStep:
         return self._step
@@ -458,6 +461,13 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
         else:
             return self.pipeline_run.run_id
 
+    def capture_step_exception(self, exception):
+        self._step_exception = check.inst_param(exception, "exception", Exception)
+
+    @property
+    def step_exception(self):
+        return self._step_exception
+
 
 class TypeCheckContext:
     """The ``context`` object available to a type check function on a DagsterType.
@@ -571,3 +581,21 @@ class HookContext:
     @property
     def log(self) -> DagsterLogManager:
         return self._step_execution_context.log
+
+    @property
+    def error(self) -> Exception:
+        """The thrown error in a failed solid.
+
+        Raises:
+            DagsterInvalidPropertyError: ``context.error`` is only available inside ``@failure_hook``
+
+        Returns:
+            Exception: the exception object
+        """
+        if self._step_execution_context.step_exception is None:
+            raise DagsterInvalidPropertyError(
+                "You have attempted to access the error info inside a non failure hook. "
+                "`context.error` is only available inside `@failure_hook`."
+            )
+        else:
+            return self._step_execution_context.step_exception
