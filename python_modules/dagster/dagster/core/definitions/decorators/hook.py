@@ -118,12 +118,12 @@ def success_hook(
         .. code-block:: python
 
             @success_hook(required_resource_keys={'slack'})
-            def slack_message_on_success(context):
+            def slack_message_on_success(context, event):
                 message = 'solid {} succeeded'.format(context.solid.name)
                 context.resources.slack.send_message(message)
 
             @success_hook
-            def do_something_on_success(context):
+            def do_something_on_success(context, event):
                 do_something()
 
 
@@ -156,7 +156,7 @@ def success_hook(
         ) -> HookExecutionResult:
             for event in event_list:
                 if event.is_step_success:
-                    fn(context)
+                    fn(context, event)
                     return HookExecutionResult(hook_name=_name, is_skipped=False)
 
             # hook is skipped when fn didn't run
@@ -189,14 +189,15 @@ def failure_hook(
 
         .. code-block:: python
 
-            @failure_hook(required_resource_keys={'slack'})
-            def slack_message_on_failure(context):
-                message = 'solid {} failed'.format(context.solid.name)
+            @failure_hook(required_resource_keys={"slack"})
+            def slack_message_on_failure(context, event):
+                error = event.event_specific_data.error
+                message = f"solid {context.solid.name} failed. error: {error.to_string()}"
                 context.resources.slack.send_message(message)
 
             @failure_hook
-            def do_something_on_failure(context):
-                do_something()
+            def do_something_on_failure(context, event):
+                do_something(event)
 
 
     """
@@ -207,6 +208,8 @@ def failure_hook(
         expected_positionals = ["context"]
         fn_positionals, _ = split_function_parameters(fn, expected_positionals)
         missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
+
+        # TODO: handle the new arg
         if missing_positional:
             raise DagsterInvalidDefinitionError(
                 "@failure_hook '{hook_name}' decorated function does not have required positional "
@@ -227,7 +230,7 @@ def failure_hook(
         ) -> HookExecutionResult:
             for event in event_list:
                 if event.is_step_failure:
-                    fn(context)
+                    fn(context, event)
                     return HookExecutionResult(hook_name=_name, is_skipped=False)
 
             # hook is skipped when fn didn't run
