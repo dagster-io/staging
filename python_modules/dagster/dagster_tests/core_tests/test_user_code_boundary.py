@@ -12,6 +12,7 @@ from dagster import (
     solid,
     usable_as_dagster_type,
 )
+from dagster.core.errors import DagsterResourceFunctionError
 from dagster.core.storage.type_storage import TypeStoragePlugin
 from dagster.core.types.dagster_type import create_any_type
 
@@ -95,8 +96,10 @@ def test_user_error_boundary_resource_init():
     def resource_pipeline():
         resource_solid()
 
-    pipeline_result = execute_pipeline(resource_pipeline, raise_on_error=False)
-    assert not pipeline_result.success
+    with pytest.raises(
+        DagsterResourceFunctionError, match="Error executing resource_fn on ResourceDefinition a"
+    ):
+        execute_pipeline(resource_pipeline, raise_on_error=False)
 
 
 @pytest.mark.skip("not implemented")
