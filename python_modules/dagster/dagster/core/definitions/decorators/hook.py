@@ -43,9 +43,7 @@ class _Hook:
             )
 
         hook_def = HookDefinition(
-            name=self.name,
-            hook_fn=fn,
-            required_resource_keys=self.required_resource_keys,
+            name=self.name, hook_fn=fn, required_resource_keys=self.required_resource_keys,
         )
         update_wrapper(cast(Callable[..., Any], hook_def), fn)
         return hook_def
@@ -189,14 +187,14 @@ def failure_hook(
 
         .. code-block:: python
 
-            @failure_hook(required_resource_keys={'slack'})
-            def slack_message_on_failure(context):
-                message = 'solid {} failed'.format(context.solid.name)
+            @failure_hook(required_resource_keys={"slack"})
+            def slack_message_on_failure(context, error):
+                message = f"solid {context.solid.name} failed. error: {error.to_string()}"
                 context.resources.slack.send_message(message)
 
             @failure_hook
-            def do_something_on_failure(context):
-                do_something()
+            def do_something_on_failure(context, error):
+                do_something(error)
 
 
     """
@@ -207,6 +205,8 @@ def failure_hook(
         expected_positionals = ["context"]
         fn_positionals, _ = split_function_parameters(fn, expected_positionals)
         missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
+
+        # TODO: handle the new arg
         if missing_positional:
             raise DagsterInvalidDefinitionError(
                 "@failure_hook '{hook_name}' decorated function does not have required positional "
@@ -227,7 +227,7 @@ def failure_hook(
         ) -> HookExecutionResult:
             for event in event_list:
                 if event.is_step_failure:
-                    fn(context)
+                    fn(context, event.event_specific_data.error)
                     return HookExecutionResult(hook_name=_name, is_skipped=False)
 
             # hook is skipped when fn didn't run
