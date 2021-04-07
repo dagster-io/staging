@@ -35,7 +35,7 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
     :py:class:`~dagster.IntSource` and can be configured from environment variables.
     """
 
-    def __init__(self, postgres_url, inst_data=None):
+    def __init__(self, postgres_url, autocreate_tables, inst_data=None):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self.postgres_url = postgres_url
 
@@ -51,7 +51,7 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
 
         # Stamp and create tables if there's no previously stamped revision and the main table
         # doesn't exist (since we used to not stamp postgres storage when it was first created)
-        if "runs" not in table_names:
+        if autocreate_tables and "runs" not in table_names:
             with self.connect() as conn:
                 retry_pg_creation_fn(lambda: RunStorageSqlMetadata.create_all(conn))
 
@@ -83,11 +83,13 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
     @staticmethod
     def from_config_value(inst_data, config_value):
         return PostgresRunStorage(
-            inst_data=inst_data, postgres_url=pg_url_from_config(config_value)
+            inst_data=inst_data,
+            postgres_url=pg_url_from_config(config_value),
+            autocreate_tables=config_value.get("autocreate_tables", True),
         )
 
     @staticmethod
-    def create_clean_storage(postgres_url):
+    def create_clean_storage(postgres_url, autocreate_tables=True):
         engine = create_engine(
             postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
         )
@@ -95,7 +97,7 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
             RunStorageSqlMetadata.drop_all(engine)
         finally:
             engine.dispose()
-        return PostgresRunStorage(postgres_url)
+        return PostgresRunStorage(postgres_url, autocreate_tables)
 
     def connect(self):
         return create_pg_connection(
