@@ -187,3 +187,23 @@ def test_extra_config_ignored_composites():
     assert execute_pipeline(
         my_pipeline, run_config=run_config, solid_selection=["composite1"]
     ).success
+
+
+def test_extra_config_unsatisfied_input():
+    @solid
+    def solid1(_):
+        return "public.table_1"
+
+    @solid(config_schema={"some_config": str})
+    def solid2(_, input_table):
+        return input_table
+
+    @pipeline
+    def my_pipeline():
+        solid2(solid1())
+
+    run_config = {"solids": {"solid2": {"config": {"some_config": "a"}}}}
+    assert execute_pipeline(my_pipeline, run_config=run_config).success
+
+    # same run config is valid even though solid1 not in subset
+    assert execute_pipeline(my_pipeline, run_config=run_config, solid_selection=["solid1"]).success
