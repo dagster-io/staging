@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List, NamedTuple
+from typing import Dict, List, NamedTuple, Set
 
 from dagster import check
 from dagster.core.events.log import EventRecord
@@ -16,6 +16,7 @@ class KnownExecutionState(
             ("previous_retry_attempts", Dict[str, int]),
             # step_key -> output_name -> mapping_keys
             ("dynamic_mappings", Dict[str, Dict[str, List[str]]]),
+            ("step_keys_to_execute", Set[str]),
         ],
     )
 ):
@@ -25,14 +26,14 @@ class KnownExecutionState(
     resolved dynamic outputs.
     """
 
-    def __new__(cls, previous_retry_attempts, dynamic_mappings):
-
+    def __new__(cls, previous_retry_attempts, dynamic_mappings, step_keys_to_execute):
         return super(KnownExecutionState, cls).__new__(
             cls,
             check.dict_param(
                 previous_retry_attempts, "previous_retry_attempts", key_type=str, value_type=int
             ),
             check.dict_param(dynamic_mappings, "dynamic_mappings", key_type=str, value_type=dict),
+            check.set_param(step_keys_to_execute, "step_keys_to_execute", of_type=str),
         )
 
     def get_retry_state(self):
@@ -47,6 +48,7 @@ class KnownExecutionState(
         previous_retry_attempts: Dict[str, int] = defaultdict(int)
         dynamic_outputs: Dict[str, Dict[str, List[str]]] = defaultdict(lambda: defaultdict(list))
         successful_dynamic_mappings: Dict[str, Dict[str, List[str]]] = {}
+        step_keys_to_execute: Set[str] = set()
 
         for log in logs:
             if not log.is_dagster_event:
@@ -69,13 +71,17 @@ class KnownExecutionState(
                     for mapping_list in dynamic_outputs[event.step_key].values():
                         mapping_list.clear()
 
-            # commit the set of dynamic outputs once the step is successful
-            if event.is_step_success and event.step_key in dynamic_outputs:
-                successful_dynamic_mappings[event.step_key] = dict(dynamic_outputs[event.step_key])
+            if event.is_step_success:
+                step_keys_to_execute.add(event.step_key)
+
+                # commit the set of dynamic outputs once the step is successful
+                if event.step_key in dynamic_outputs:
+                    successful_dynamic_mappings[event.step_key] = dict(
+                        dynamic_outputs[event.step_key]
+                    )
 
         return KnownExecutionState(
-            dict(previous_retry_attempts),
-            successful_dynamic_mappings,
+            dict(previous_retry_attempts), successful_dynamic_mappings, step_keys_to_execute
         )
 
     @staticmethod
@@ -91,4 +97,4 @@ class KnownExecutionState(
             for step_key in parent_state.dynamic_mappings.keys()
             if step_key not in step_keys_to_execute
         }
-        return KnownExecutionState({}, dynamic_mappings_to_use)
+        return KnownExecutionState({}, dynamic_mappings_to_use, set(step_keys_to_execute))
