@@ -87,7 +87,7 @@ class _PlanBuilder:
         pipeline: IPipeline,
         environment_config: EnvironmentConfig,
         step_keys_to_execute: Optional[List[str]],
-        known_state,
+        known_state: Optional[KnownExecutionState],
     ):
         self.pipeline = check.inst_param(pipeline, "pipeline", IPipeline)
         self.environment_config = check.inst_param(
@@ -104,7 +104,7 @@ class _PlanBuilder:
         self.step_output_map: Dict[
             SolidOutputHandle, Union[StepOutputHandle, UnresolvedStepOutputHandle]
         ] = dict()
-        self.known_state = known_state
+        self.known_state = check.opt_inst_param(known_state, "known_state", KnownExecutionState)
         self._seen_handles: Set[StepHandleUnion] = set()
 
     @property
@@ -835,7 +835,11 @@ class ExecutionPlan(
         """
         Will or did this ExecutionPlan execute the step with the corresponding key
         """
-        return step_key in self.executable_map
+        return (
+            step_key in self.executable_map
+            if not self.known_state
+            else step_key in self.known_state.all_executable_steps
+        )
 
 
 def _update_from_resolved_dynamic_outputs(

@@ -449,6 +449,7 @@ class ActiveExecution:
         return KnownExecutionState(
             previous_retry_attempts=self._retry_state.snapshot_attempts(),
             dynamic_mappings=dict(self._successful_dynamic_outputs),
+            all_executable_steps=set(self._plan.executable_map.keys()),
         )
 
     def _prep_for_dynamic_outputs(self, step: ExecutionStep):
