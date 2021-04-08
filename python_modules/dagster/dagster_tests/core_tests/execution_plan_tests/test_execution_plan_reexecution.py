@@ -104,7 +104,9 @@ def test_execution_plan_reexecution():
     assert intermediate_storage.get_intermediate(None, Int, StepOutputHandle("add_two")).obj == 6
 
     assert not get_step_output_event(step_events, "add_one")
-    assert get_step_output_event(step_events, "add_two")
+
+    # This step is not re-executed since we have its upstream output cached
+    assert not get_step_output_event(step_events, "add_two")
 
 
 def test_execution_plan_wrong_run_id():
