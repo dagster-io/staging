@@ -135,7 +135,7 @@ RUN pip install -U pip setuptools wheel \
         awscli \
         pipenv \
     && pip --no-cache-dir install pyspark==$PYSPARK_VERSION \
-    # This instigates some package downloads required by the airline-demo
+    # This instigates some package downloads required for spark
     && python trigger_maven.py \
     && rm trigger_maven.py
 

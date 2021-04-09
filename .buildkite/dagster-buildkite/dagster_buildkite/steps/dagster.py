@@ -34,22 +34,6 @@ def airflow_extra_cmds_fn(version):
     ]
 
 
-def airline_demo_extra_cmds_fn(_):
-    return [
-        "pushd examples/airline_demo",
-        # Run the postgres db. We are in docker running docker
-        # so this will be a sibling container.
-        "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit
-        # Can't use host networking on buildkite and communicate via localhost
-        # between these sibling containers, so pass along the ip.
-        network_buildkite_container("postgres"),
-        connect_sibling_docker_container(
-            "postgres", "test-postgres-db-airline", "POSTGRES_TEST_DB_HOST"
-        ),
-        "popd",
-    ]
-
-
 def dbt_example_extra_cmds_fn(_):
     return [
         "pushd examples/dbt_example",
@@ -251,12 +235,6 @@ def graphql_pg_extra_cmds_fn(_):
 # Some Dagster packages have more involved test configs or support only certain Python version;
 # special-case those here
 DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
-    # Examples: Airline Demo
-    ModuleBuildSpec(
-        "examples/airline_demo",
-        extra_cmds_fn=airline_demo_extra_cmds_fn,
-        buildkite_label="airline-demo",
-    ),
     ModuleBuildSpec(
         "examples/dbt_example",
         extra_cmds_fn=dbt_example_extra_cmds_fn,
@@ -436,7 +414,6 @@ def examples_tests():
         # Skip these folders because they need custom build config
         "docs_snippets",
         "legacy_examples",
-        "airline_demo",
         "dbt_example",
         "deploy_docker",
     ]
