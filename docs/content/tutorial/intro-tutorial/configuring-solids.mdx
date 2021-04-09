@@ -20,7 +20,7 @@ def load_cereals(context):
     return cereals
 ```
 
-In many situations, we'd like to be able to configure solids at run time. For example, we may want whomever is running the pipeline to decide what dataset it operates on. Appropriately parameterized solids are more testable and reusable. Consider the following more generic solid:
+In many situations, we'd like to be able to configure solids at run time. For example, we may want whomever is running the pipeline to decide what dataset it operates on. Consider the following more generic solid:
 
 ```python file=/intro_tutorial/basics/configuring_solids/read_csv.py startafter=start_read_csv_marker endbefore=end_read_csv_marker
 @solid(config_schema={"csv_name": str})
