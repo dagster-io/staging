@@ -9,6 +9,7 @@ import pendulum
 from dagster import check
 from dagster.core.errors import DagsterUserCodeProcessError
 from dagster.core.host_representation.origin import ManagedGrpcPythonEnvRepositoryLocationOrigin
+from dagster.core.instance import MayHaveInstanceWeakref
 from dagster.grpc.client import DagsterGrpcClient
 from dagster.grpc.server import GrpcServerProcess
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
@@ -30,7 +31,7 @@ class GrpcServerEndpoint(namedtuple("_GrpcServerEndpoint", "server_id host port 
 
 # Daemons in different threads can use a shared GrpcServerRegistry to ensure that
 # a single GrpcServerProcess is created for each origin
-class GrpcServerRegistry(AbstractContextManager):
+class GrpcServerRegistry(AbstractContextManager, MayHaveInstanceWeakref):
     @abstractmethod
     def supports_origin(self, repository_location_origin):
         pass

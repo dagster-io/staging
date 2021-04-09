@@ -7,6 +7,8 @@ from dagster.cli.workspace.dynamic_workspace import DynamicWorkspace
 from dagster.core.host_representation.grpc_server_registry import ProcessGrpcServerRegistry
 from dagster.core.host_representation.origin import ManagedGrpcPythonEnvRepositoryLocationOrigin
 from dagster.core.host_representation.repository_location import GrpcServerRepositoryLocation
+from dagster.core.instance import DagsterInstance
+from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 
 
@@ -143,3 +145,12 @@ def test_registry_multithreading():
 
     registry.wait_for_processes()
     assert not _can_connect(origin, endpoint)
+
+
+def test_registry_instance_ref():
+    with instance_for_test() as inst:
+        with ProcessGrpcServerRegistry(reload_interval=300, heartbeat_ttl=600) as registry:
+            registry.register_instance(inst)
+            assert isinstance(
+                registry._instance, DagsterInstance  # pylint: disable=protected-access
+            )
