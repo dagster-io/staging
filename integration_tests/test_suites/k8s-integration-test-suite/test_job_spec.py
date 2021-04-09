@@ -338,7 +338,7 @@ def test_k8s_run_launcher(
         mode="default",
     )
 
-    with get_test_project_external_pipeline(pipeline_name) as external_pipeline:
+    with get_test_project_external_pipeline(pipeline_name) as (_, external_pipeline):
 
         dagster_instance_for_k8s_run_launcher.launch_run(
             run.run_id,
@@ -359,7 +359,7 @@ def test_failing_k8s_run_launcher(
     run = create_run_for_test(
         dagster_instance_for_k8s_run_launcher, pipeline_name=pipeline_name, run_config=run_config
     )
-    with get_test_project_external_pipeline(pipeline_name) as external_pipeline:
+    with get_test_project_external_pipeline(pipeline_name) as (_, external_pipeline):
 
         dagster_instance_for_k8s_run_launcher.launch_run(
             run.run_id,
