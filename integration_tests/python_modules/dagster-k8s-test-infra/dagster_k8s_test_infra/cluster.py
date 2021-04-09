@@ -2,6 +2,7 @@
 import os
 import subprocess
 import time
+import uuid
 from collections import namedtuple
 from contextlib import contextmanager
 
@@ -10,6 +11,7 @@ import kubernetes
 import psycopg2
 import pytest
 from dagster import check
+from dagster.cli.debug import export_run
 from dagster.core.instance import DagsterInstance, InstanceType
 from dagster.core.run_coordinator import DefaultRunCoordinator, QueuedRunCoordinator
 from dagster.core.scheduler import DagsterDaemonScheduler
@@ -195,6 +197,8 @@ def dagster_instance_with_k8s_scheduler(
     ) as instance:
         yield instance
 
+        check_export_runs(instance)
+
 
 @pytest.fixture(scope="session")
 def helm_postgres_url_for_user_deployments(
@@ -241,6 +245,8 @@ def dagster_instance_for_user_deployments(
     ) as instance:
         yield instance
 
+        check_export_runs(instance)
+
 
 @pytest.fixture(scope="function")
 def dagster_instance_for_user_deployments_subchart_disabled(
@@ -260,6 +266,8 @@ def dagster_instance_for_user_deployments_subchart_disabled(
         run_launcher=run_launcher,
     ) as instance:
         yield instance
+
+        check_export_runs(instance)
 
 
 @pytest.fixture(scope="session")
@@ -291,6 +299,8 @@ def dagster_instance_for_daemon(
     ) as instance:
         yield instance
 
+        check_export_runs(instance)
+
 
 @pytest.fixture(scope="function")
 def dagster_instance_for_k8s_run_launcher(
@@ -309,6 +319,8 @@ def dagster_instance_for_k8s_run_launcher(
         run_launcher=run_launcher,
     ) as instance:
         yield instance
+
+        check_export_runs(instance)
 
 
 @pytest.fixture(scope="session")
@@ -335,3 +347,30 @@ def dagster_instance(helm_postgres_url, run_launcher):  # pylint: disable=redefi
         run_launcher=run_launcher,
     ) as instance:
         yield instance
+
+        check_export_runs(instance)
+
+
+def check_export_runs(instance):
+    if not IS_BUILDKITE:
+        return
+
+    current_test = os.environ.get("PYTEST_CURRENT_TEST").split()[0].replace(":", "-")
+
+    for run in instance.get_runs():
+        output_file = f"{current_test}-{run.run_id}.dump"
+        export_run(instance, run, output_file)
+        p = subprocess.Popen(
+            [
+                "buildkite-agent",
+                "artifact",
+                "upload",
+                output_file,
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        stdout, stderr = p.communicate()
+        print("Buildkite artifact added with stdout: ", stdout)
+        print("Buildkite artifact added with stderr: ", stderr)
+        assert p.returncode == 0
