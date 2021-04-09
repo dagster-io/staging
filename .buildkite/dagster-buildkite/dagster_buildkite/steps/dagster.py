@@ -257,6 +257,11 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         buildkite_label="deploy_docker_example",
         upload_coverage=False,
     ),
+    ModuleBuildSpec(
+        "examples/hacker_news",
+        env_vars=["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"],
+        upload_coverage=False,
+    ),
     ModuleBuildSpec("python_modules/dagit", extra_cmds_fn=dagit_extra_cmds_fn),
     ModuleBuildSpec("python_modules/automation"),
     ModuleBuildSpec(
