@@ -237,7 +237,7 @@ class DagsterK8sJobConfig(
             ),
             service_account_name=check.opt_str_param(service_account_name, "service_account_name"),
             instance_config_map=check.str_param(instance_config_map, "instance_config_map"),
-            postgres_password_secret=check.str_param(
+            postgres_password_secret=check.opt_str_param(
                 postgres_password_secret, "postgres_password_secret"
             ),
             env_config_maps=check.opt_list_param(env_config_maps, "env_config_maps", of_type=str),
@@ -421,6 +421,19 @@ def construct_dagster_k8s_job(
     if component:
         dagster_labels["app.kubernetes.io/component"] = component
 
+    env = [kubernetes.client.V1EnvVar(name="DAGSTER_HOME", value=job_config.dagster_home)]
+    if job_config.postgres_password_secret:
+        env.append(
+            kubernetes.client.V1EnvVar(
+                name=DAGSTER_PG_PASSWORD_ENV_VAR,
+                value_from=kubernetes.client.V1EnvVarSource(
+                    secret_key_ref=kubernetes.client.V1SecretKeySelector(
+                        name=job_config.postgres_password_secret, key=DAGSTER_PG_PASSWORD_SECRET_KEY
+                    )
+                ),
+            )
+        )
+
     additional_k8s_env_vars = []
     if env_vars:
         for key, value in env_vars.items():
@@ -431,18 +444,7 @@ def construct_dagster_k8s_job(
         image=job_config.job_image,
         args=args,
         image_pull_policy=job_config.image_pull_policy,
-        env=[
-            kubernetes.client.V1EnvVar(name="DAGSTER_HOME", value=job_config.dagster_home),
-            kubernetes.client.V1EnvVar(
-                name=DAGSTER_PG_PASSWORD_ENV_VAR,
-                value_from=kubernetes.client.V1EnvVarSource(
-                    secret_key_ref=kubernetes.client.V1SecretKeySelector(
-                        name=job_config.postgres_password_secret, key=DAGSTER_PG_PASSWORD_SECRET_KEY
-                    )
-                ),
-            ),
-        ]
-        + additional_k8s_env_vars,
+        env=env + additional_k8s_env_vars,
         env_from=job_config.env_from_sources,
         volume_mounts=[
             kubernetes.client.V1VolumeMount(
