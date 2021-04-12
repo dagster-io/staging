@@ -13,7 +13,7 @@ from dagster.core.definitions import (
     Materialization,
     SolidHandle,
 )
-from dagster.core.definitions.events import AssetLineageInfo, AssetRead, ObjectStoreOperationType
+from dagster.core.definitions.events import AssetLineageInfo, ObjectStoreOperationType
 from dagster.core.execution.context.system import (
     BaseStepExecutionContext,
     HookContext,
@@ -634,20 +634,6 @@ class DagsterEvent(
                 if materialization.label
                 else ""
             ),
-        )
-
-    @staticmethod
-    def asset_read(
-        step_context,
-        read_event,
-        input_name=None,
-    ):
-        check.inst_param(read_event, "read_event", AssetRead)
-        return DagsterEvent.from_step(
-            event_type=DagsterEventType.ASSET_READ,
-            step_context=step_context,
-            event_specific_data=StepReadData(read_event, input_name),
-            message="Read value.",
         )
 
     @staticmethod

@@ -17,7 +17,7 @@ from dagster import (
     pipeline,
     solid,
 )
-from dagster.core.definitions.events import AssetPartitionMaterialization
+from dagster.core.definitions.events import AssetPartition
 from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 from dagster.core.storage.io_manager import io_manager
 
@@ -76,7 +76,7 @@ class MyDatabaseIOManager(PickledObjectFilesystemIOManager):
         # can pretend this actually came from a library call
         yield EventMetadataEntry.int(len(obj), "num rows written to db")
         for partition in context.config.get("partitions", []):
-            yield AssetPartitionMaterialization(partition)
+            yield AssetPartition(partition)
 
 
 @io_manager(
