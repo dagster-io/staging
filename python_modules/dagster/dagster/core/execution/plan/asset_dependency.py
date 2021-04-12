@@ -89,7 +89,7 @@ class AssetDependencyGraph:
     def __init__(
         self,
         execution_plan: "ExecutionPlan",
-        pipeline_def: "PipelineDefintion",
+        pipeline_def: "PipelineDefinition",
         mode_def: ModeDefinition,
     ):
         self.execution_plan = execution_plan
