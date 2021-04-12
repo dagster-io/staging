@@ -138,24 +138,11 @@ class AssetKey(namedtuple("_AssetKey", "path")):
 
 
 @whitelist_for_serdes
-class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions path")):
-    def __new__(cls, asset_key, partitions=None, path=None):
+class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions")):
+    def __new__(cls, asset_key, partitions=None):
         asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
         partitions = check.opt_set_param(partitions, "partitions", str)
-        path = path or []  # TODO: check opt list param once I move asset stuff out to its own file
-        return super(AssetLineageInfo, cls).__new__(
-            cls, asset_key=asset_key, partitions=partitions, path=path
-        )
-
-    @staticmethod
-    def from_fns(context, asset_key_fn, asset_partitions_fn):
-        asset_key = asset_key_fn(context)
-        if not asset_key:
-            return None
-        return AssetLineageInfo(
-            asset_key=asset_key,
-            partitions=asset_partitions_fn(context),
-        )
+        return super(AssetLineageInfo, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
 
 
 @whitelist_for_serdes
@@ -494,24 +481,12 @@ EntryDataUnion = (
 )
 
 
-class AssetPartitionMaterialization(
-    namedtuple("_AssetPartitionMaterialization", "partition metadata_entries")
-):
+class AssetPartition(namedtuple("_AssetPartition", "partition metadata_entries")):
     """TODO"""
 
     def __new__(cls, partition: str, metadata_entries: List[EventMetadataEntry] = None):
-        experimental_class_warning("AssetPartitionMaterialization")
-        return super(AssetPartitionMaterialization, cls).__new__(
-            cls,
-            check.str_param(partition, "partition"),
-            check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
-        )
-
-
-class AssetPartitionRead(namedtuple("_AssetPartitionRead", "partition metadata_entries")):
-    def __new__(cls, partition: str, metadata_entries: List[EventMetadataEntry] = None):
-        experimental_class_warning("AssetPartitionRead")
-        return super(AssetPartitionRead, cls).__new__(
+        experimental_class_warning("AssetPartition")
+        return super(AssetPartition, cls).__new__(
             cls,
             check.str_param(partition, "partition"),
             check.opt_list_param(metadata_entries, "metadata_entries", EventMetadataEntry),
@@ -594,15 +569,16 @@ class DynamicOutput(
                 "metadata_entries",
                 EventMetadataEntry,
             ),
-            check.opt_list_param(
-                asset_partitions, "asset_partitions", AssetPartitionMaterialization
-            ),
+            check.opt_list_param(asset_partitions, "asset_partitions", AssetPartition),
         )
 
 
 @whitelist_for_serdes
 class AssetMaterialization(
-    namedtuple("_AssetMaterialization", "asset_key description metadata_entries partition tags")
+    namedtuple(
+        "_AssetMaterialization",
+        "asset_key description metadata_entries partition tags",
+    )
 ):
     """Event indicating that a solid has materialized an asset.
 
@@ -671,30 +647,6 @@ class AssetMaterialization(
             asset_key=asset_key,
             description=description,
             metadata_entries=[EventMetadataEntry.fspath(path)],
-        )
-
-
-@whitelist_for_serdes
-class AssetRead(namedtuple("_AssetRead", "asset_key metadata_entries partition")):
-    def __new__(cls, asset_key, metadata_entries=None, partition=None):
-        if isinstance(asset_key, AssetKey):
-            check.inst_param(asset_key, "asset_key", AssetKey)
-        elif isinstance(asset_key, str):
-            asset_key = AssetKey(parse_asset_key_string(asset_key))
-        elif isinstance(asset_key, list):
-            check.is_list(asset_key, of_type=str)
-            asset_key = AssetKey(asset_key)
-        else:
-            check.is_tuple(asset_key, of_type=str)
-            asset_key = AssetKey(asset_key)
-
-        return super(AssetRead, cls).__new__(
-            cls,
-            asset_key=asset_key,
-            metadata_entries=check.opt_list_param(
-                metadata_entries, "metadata_entries", of_type=EventMetadataEntry
-            ),
-            partition=check.opt_str_param(partition, "partition"),
         )
 
 

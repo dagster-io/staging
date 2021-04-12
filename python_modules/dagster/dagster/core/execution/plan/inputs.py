@@ -32,7 +32,6 @@ if TYPE_CHECKING:
     from dagster.core.execution.context.system import (
         SystemStepExecutionContext,
         InputContext,
-        InputDefinitionContext,
     )
 
 
@@ -204,30 +203,6 @@ class FromStepOutput(
     @property
     def step_output_handle_dependencies(self) -> List[StepOutputHandle]:
         return [self.step_output_handle]
-
-    def get_asset_lineage(
-        self, init_context: "InputDefinitionContext", execution_plan: "ExecutionPlan"
-    ) -> List[AssetLineageInfo]:
-
-        input_def = self.get_input_def(execution_plan.pipeline_def)
-
-        # check input_def
-        if input_def.is_asset:
-            lineage_info = AssetLineageInfo.from_fns(
-                init_context, input_def.get_asset_key, input_def.get_asset_partitions
-            )
-            return [lineage_info] if lineage_info else []
-
-        # TODO: get input manager
-        io_lineage_info = AssetLineageInfo.from_fns(
-            init_context,
-            lambda _: None,
-            lambda _: None,
-        )
-        if io_lineage_info is not None:
-            return [io_lineage_info]
-
-        return []
 
     def get_load_context(self, step_context: "SystemStepExecutionContext") -> "InputContext":
         io_manager_key = step_context.execution_plan.get_manager_key(

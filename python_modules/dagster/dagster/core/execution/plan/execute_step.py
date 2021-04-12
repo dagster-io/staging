@@ -15,7 +15,7 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.events import (
     AssetLineageInfo,
-    AssetPartitionMaterialization,
+    AssetPartition,
     DynamicOutput,
     EventMetadataEntry,
 )
@@ -31,7 +31,6 @@ from dagster.core.errors import (
 )
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import (
-    AssetOutputHandle,
     OutputContext,
     SystemStepExecutionContext,
     TypeCheckContext,
@@ -399,7 +398,7 @@ def _store_output(
         for elt in ensure_gen(handle_output_res):
             if isinstance(elt, AssetMaterialization):
                 manager_materializations.append(elt)
-            elif isinstance(elt, AssetPartitionMaterialization):
+            elif isinstance(elt, AssetPartition):
                 manager_asset_partitions.append(elt)
             elif isinstance(elt, EventMetadataEntry):
                 experimental_functionality_warning(

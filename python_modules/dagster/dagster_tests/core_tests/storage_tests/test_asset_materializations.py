@@ -11,7 +11,7 @@ from dagster import (
     solid,
 )
 from dagster.check import CheckError
-from dagster.core.definitions.events import AssetLineageInfo, EventMetadataEntry
+from dagster.core.definitions.events import AssetLineageInfo, AssetPartition, EventMetadataEntry
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.storage.io_manager import IOManager
 
@@ -89,6 +89,7 @@ def test_output_definition_multiple_partition_materialization():
             metadata_entries=[
                 entry1,
             ],
+            asset_partitions=[AssetPartition(str(i), [partition_entries[i]]) for i in range(3)],
         )
 
     @solid(output_defs=[OutputDefinition(name="output2", asset_key=AssetKey("table2"))])
@@ -143,10 +144,7 @@ def test_io_manager_single_partition_materialization():
         def load_input(self, context):
             return None
 
-        def get_output_asset_key(self, context):
-            return AssetKey([context.step_key])
-
-    @io_manager
+    @io_manager(output_asset_key=lambda context: AssetKey([context.step_key]))
     def my_io_manager(_):
         return MyIOManager()
 
@@ -180,32 +178,6 @@ def test_io_manager_single_partition_materialization():
         metadata_entries=[entry1, entry2],
         parent_assets=[AssetLineageInfo(AssetKey(["solid1"]))],
     )
-
-
-def test_partition_specific_fails_on_na_partitions():
-    @solid(output_defs=[OutputDefinition(asset_key=AssetKey("key"))])
-    def fail_solid(_):
-        yield Output(None)
-
-    @pipeline
-    def my_pipeline():
-        fail_solid()
-
-    with pytest.raises(DagsterInvariantViolationError):
-        execute_pipeline(my_pipeline)
-
-
-def test_partition_specific_fails_on_zero_partitions():
-    @solid(output_defs=[OutputDefinition(asset_key=AssetKey("key"))])
-    def fail_solid(_):
-        yield Output(None)
-
-    @pipeline
-    def my_pipeline():
-        fail_solid()
-
-    with pytest.raises(DagsterInvariantViolationError):
-        execute_pipeline(my_pipeline)
 
 
 def test_fail_fast_with_nonesense_metadata():

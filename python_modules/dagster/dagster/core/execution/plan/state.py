@@ -4,7 +4,7 @@ from typing import Dict, List, NamedTuple, Set
 from dagster import check
 from dagster.core.events import AssetKey
 from dagster.core.events.log import EventRecord
-from dagster.core.execution.context.system import AssetNodeHandle
+from dagster.core.execution.plan.asset_dependency import AssetNodeHandle
 from dagster.core.execution.retries import RetryState
 from dagster.serdes import whitelist_for_serdes
 

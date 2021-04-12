@@ -1,6 +1,7 @@
 import pytest
 from dagster import (
     AssetKey,
+    AssetMaterialization,
     InputDefinition,
     ModeDefinition,
     Output,
@@ -13,13 +14,8 @@ from dagster import (
     reconstructable,
     solid,
 )
-from dagster.core.definitions.events import (
-    AssetLineageInfo,
-    AssetPartitionMaterialization,
-    EventMetadataEntry,
-)
+from dagster.core.definitions.events import AssetLineageInfo, AssetPartition, EventMetadataEntry
 from dagster.core.errors import DagsterInvariantViolationError
-from dagster.core.execution.context.system import AssetInputHandle, AssetOutputHandle
 from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 from dagster.core.storage.io_manager import IOManager
 from dagster.core.test_utils import instance_for_test
@@ -54,7 +50,6 @@ def check_materialization(
     asset_partition=None,
     parent_assets=None,
     metadata_entries=None,
-    ignore_asset_path=True,
 ):
     event_data = materialization.event_specific_data
     assert event_data.materialization.asset_key == asset_key
@@ -62,15 +57,7 @@ def check_materialization(
     # make test deterministic by sorting
     assert sorted(event_data.materialization.metadata_entries) == sorted(metadata_entries or [])
     event_asset_lineage = sorted(event_data.asset_lineage, key=lambda x: tuple(x.partitions))
-    if ignore_asset_path:
-        assert len(event_asset_lineage) == len(parent_assets or [])
-        for i in range(len(event_asset_lineage)):
-            event_asset = event_asset_lineage[i]
-            expected_asset = parent_assets[i]
-            assert event_asset.asset_key == expected_asset.asset_key
-            assert event_asset.partitions == expected_asset.partitions
-    else:
-        assert event_asset_lineage == (parent_assets or [])
+    assert event_asset_lineage == (parent_assets or [])
 
 
 def test_io_manager_diamond_lineage():
@@ -150,23 +137,13 @@ def test_io_manager_transitive_lineage():
         event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
     ]
 
-    expected_path = [AssetOutputHandle("solid_produce", "result")]
-    for i in range(10):
-        expected_path.extend(
-            [
-                AssetInputHandle(f"passthrough_{i}", "inp"),
-                AssetOutputHandle(f"passthrough_{i}", "result"),
-            ]
-        )
-    expected_path.append(AssetInputHandle("solid_transform", "inp"))
     assert len(materializations) == 2
 
     check_materialization(materializations[0], AssetKey(["solid_produce", "result"]))
     check_materialization(
         materializations[1],
         AssetKey(["solid_transform", "result"]),
-        parent_assets=[AssetLineageInfo(AssetKey(["solid_produce", "result"]), path=expected_path)],
-        # ignore_asset_path=False,
+        parent_assets=[AssetLineageInfo(AssetKey(["solid_produce", "result"]))],
     )
 
 
@@ -187,79 +164,6 @@ def test_multiple_definition_fails():
 
     with pytest.raises(DagsterInvariantViolationError):
         execute_pipeline(my_pipeline)
-
-
-def test_input_definition_multiple_partition_lineage():
-
-    entry1 = EventMetadataEntry.int(123, "nrows")
-    entry2 = EventMetadataEntry.float(3.21, "some value")
-
-    partition_entries = [EventMetadataEntry.int(123 * i * i, "partition count") for i in range(3)]
-
-    @solid(
-        output_defs=[
-            OutputDefinition(
-                name="output1",
-                asset_key=AssetKey("table1"),
-            )
-        ],
-    )
-    def solid1(_):
-        return Output(
-            None,
-            "output1",
-            metadata_entries=[
-                entry1,
-            ],
-            asset_partitions=[AssetPartitionMaterialization(str(i)) for i in range(3)],
-        )
-
-    @solid(
-        input_defs=[
-            # here, only take 1 of the asset keys specified by the output
-            InputDefinition(
-                name="_input1",
-                asset_key=AssetKey("table1"),
-            )
-        ],
-        output_defs=[OutputDefinition(name="output2", asset_key=lambda _: AssetKey("table2"))],
-    )
-    def solid2(_, _input1):
-        yield Output(
-            7,
-            "output2",
-            metadata_entries=[entry2],
-        )
-
-    @pipeline
-    def my_pipeline():
-        solid2(solid1())
-
-    result = execute_pipeline(my_pipeline)
-    events = result.step_event_list
-    materializations = [
-        event for event in events if event.event_type_value == "ASSET_MATERIALIZATION"
-    ]
-    assert len(materializations) == 4
-
-    seen_partitions = set()
-    for i in range(3):
-        partition = materializations[i].partition
-        seen_partitions.add(partition)
-        check_materialization(
-            materializations[i],
-            AssetKey(["table1"]),
-            metadata_entries=[entry1, partition_entries[int(partition)]],
-        )
-
-    assert len(seen_partitions) == 3
-
-    check_materialization(
-        materializations[-1],
-        AssetKey(["table2"]),
-        parent_assets=[n_asset_keys("table1", 1)],
-        metadata_entries=[entry2],
-    )
 
 
 def test_mixed_asset_definition_lineage():
@@ -342,9 +246,7 @@ def test_dynamic_output_definition_single_partition_materialization():
                 mapping_key=str(i),
                 output_name="output2",
                 metadata_entries=[entry2],
-                asset_partitions=[
-                    AssetPartitionMaterialization(str(i), [EventMetadataEntry.int(i, "x")])
-                ],
+                asset_partitions=[AssetPartition(str(i), [EventMetadataEntry.int(i, "x")])],
             )
 
     @solid
@@ -415,9 +317,7 @@ def my_loading_solid(_):
 )
 def my_splitting_solid(_, inp):
     for i in range(NSPLIT):
-        yield Output(
-            (inp, str(i)), f"out_{i}", asset_partitions=[AssetPartitionMaterialization(str(i))]
-        )
+        yield Output((inp, str(i)), f"out_{i}", asset_partitions=[AssetPartition(str(i))])
 
 
 @solid(output_defs=[DynamicOutputDefinition(name="out", asset_key=AssetKey("split_asset"))])
@@ -427,7 +327,7 @@ def my_dynamic_splitting_solid(_, inp):
             (inp, str(i)),
             mapping_key=str(i),
             output_name="out",
-            asset_partitions=[AssetPartitionMaterialization(str(i))],
+            asset_partitions=[AssetPartition(str(i))],
         )
 
 
@@ -446,7 +346,7 @@ def my_passthrough_solid(_, inp):
 )
 def my_transforming_solid(_, inp):
     (val, path) = inp
-    return Output(val + 1, asset_partitions=[AssetPartitionMaterialization(path)])
+    return Output(val + 1, asset_partitions=[AssetPartition(path)])
 
 
 @solid(output_defs=[OutputDefinition(asset_key=AssetKey("collected_asset"))])

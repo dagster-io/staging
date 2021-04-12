@@ -8,11 +8,8 @@ from dagster.core.errors import (
     DagsterUnknownStepStateError,
 )
 from dagster.core.events import AssetKey, DagsterEvent
-from dagster.core.execution.context.system import (
-    AssetNodeHandle,
-    AssetOutputHandle,
-    SystemPipelineExecutionContext,
-)
+from dagster.core.execution.context.system import SystemPipelineExecutionContext
+from dagster.core.execution.plan.asset_dependency import AssetNodeHandle, AssetOutputHandle
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.retries import RetryMode, RetryState
 from dagster.core.storage.tags import PRIORITY_TAG
