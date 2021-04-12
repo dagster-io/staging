@@ -489,26 +489,6 @@ def test_partitions_for_hourly_schedule_decorators_without_timezone():
                 ).isoformat()
             }
 
-            # time that's invalid since it corresponds to a partition before the start date
-            # should not execute and should yield a SkipReason if it tries to generate run config
-            execution_time_with_invalid_partition = create_pendulum_time(
-                year=2018, month=12, day=30, hour=3, minute=25, tz="UTC"
-            )
-            context_with_invalid_time = ScheduleExecutionContext(
-                instance.get_ref(), execution_time_with_invalid_partition
-            )
-
-            execution_data = hourly_foo_schedule.get_execution_data(context_with_invalid_time)
-
-            assert len(execution_data) == 1
-            skip_data = execution_data[0]
-            assert isinstance(skip_data, SkipReason)
-            assert (
-                "Partition selector did not return a partition. "
-                "Make sure that the timezone on your partition set matches your execution timezone."
-                in skip_data.skip_message
-            )
-
             valid_time = create_pendulum_time(
                 year=2019, month=1, day=27, hour=1, minute=25, tz="UTC"
             )
@@ -998,6 +978,36 @@ def test_partitions_for_monthly_schedule_decorators_with_timezone():
                 DEFAULT_MONTHLY_FORMAT,
                 relativedelta(months=1),
             )
+
+
+def test_partitions_outside_schedule_range():
+    with instance_for_test() as instance:
+        execution_time = datetime(year=2021, month=1, day=1)
+        context = ScheduleExecutionContext(instance.get_ref(), execution_time)
+
+        @monthly_schedule(pipeline_name="test", start_date=datetime(year=2021, month=2, day=1))
+        def too_early(monthly_time):
+            return {"monthly_time": monthly_time.isoformat()}
+
+        execution_data = too_early.get_execution_data(context)
+        assert len(execution_data) == 1
+        skip_data = execution_data[0]
+        assert isinstance(skip_data, SkipReason)
+        assert "Execution time is before the schedule's start_date." in skip_data.skip_message
+
+        @monthly_schedule(
+            pipeline_name="test",
+            start_date=datetime(year=2020, month=1, day=1),
+            end_date=datetime(year=2020, month=12, day=1),
+        )
+        def too_late(monthly_time):
+            return {"monthly_time": monthly_time.isoformat()}
+
+        execution_data = too_late.get_execution_data(context)
+        assert len(execution_data) == 1
+        skip_data = execution_data[0]
+        assert isinstance(skip_data, SkipReason)
+        assert "Execution time is after the schedule's end_date." in skip_data.skip_message
 
 
 def test_schedule_decorators_bad():
