@@ -19,6 +19,7 @@ from dagster.serdes import whitelist_for_serdes
 
 if TYPE_CHECKING:
     from dagster.core.execution.plan.plan import ExecutionPlan
+    from dagster.core.definitions.pipeline import PipelineDefinition
 
 
 class OutputDefinitionContext(
@@ -95,7 +96,7 @@ class AssetDependencyGraph:
         self.pipeline_def = pipeline_def
         self.mode_def = mode_def
         self._asset_key_map: Dict[AssetNodeHandle, List[AssetKey]] = {}
-        self._asset_partitions_map: Dict[AssetNodeHandle, Dict[Set[str]]] = (
+        self._asset_partitions_map: Dict[AssetNodeHandle, Set[str]] = (
             self.execution_plan.known_state.asset_partitions_map
             if self.execution_plan.known_state
             else {}
