@@ -43,9 +43,9 @@ export const App = () => {
 const Main = styled.div<{$navOpen: boolean}>`
   height: 100%;
   width: 100%;
+  margin-left: 280px;
 
   @media (max-width: 2560px) {
-    margin-left: 280px;
     width: calc(100% - 280px);
   }
 
