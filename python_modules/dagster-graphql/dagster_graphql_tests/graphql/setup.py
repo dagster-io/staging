@@ -50,6 +50,7 @@ from dagster import (
 )
 from dagster.cli.workspace.load import location_origin_from_python_file
 from dagster.core.definitions.decorators.sensor import sensor
+from dagster.core.definitions.events import AssetPartition
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.definitions.sensor import RunRequest, SkipReason
@@ -217,10 +218,10 @@ def tag_asset_solid(_):
 def lineage_solid_factory(solid_name_prefix, key, partitions=None):
     @solid(
         name=f"{solid_name_prefix}_{key}",
-        output_defs=[OutputDefinition(asset_key=AssetKey(key), asset_partitions=partitions)],
+        output_defs=[OutputDefinition(asset_key=AssetKey(key))],
     )
     def _solid(_, _in1):
-        yield Output(1)
+        yield Output(1, asset_partitions=[AssetPartition(p) for p in partitions])
 
     return _solid
 
