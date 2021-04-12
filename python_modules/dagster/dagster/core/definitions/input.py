@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Optional, Set
+from typing import Optional
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
@@ -99,8 +99,6 @@ class InputDefinition:
 
         if asset_key:
             experimental_arg_warning("asset_key", "InputDefinition.__init__")
-
-        self._is_asset = asset_key is not None
 
         if callable(asset_key):
             self._asset_key_fn = asset_key

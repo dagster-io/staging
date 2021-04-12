@@ -42,7 +42,6 @@ class DagsterEventType(Enum):
     STEP_RESTARTED = "STEP_RESTARTED"
 
     ASSET_MATERIALIZATION = "ASSET_MATERIALIZATION"
-    ASSET_READ = "ASSET_READ"
     STEP_EXPECTATION_RESULT = "STEP_EXPECTATION_RESULT"
 
     PIPELINE_INIT_FAILURE = "PIPELINE_INIT_FAILURE"
@@ -78,7 +77,6 @@ STEP_EVENTS = {
     DagsterEventType.STEP_SUCCESS,
     DagsterEventType.STEP_SKIPPED,
     DagsterEventType.ASSET_MATERIALIZATION,
-    DagsterEventType.ASSET_READ,
     DagsterEventType.STEP_EXPECTATION_RESULT,
     DagsterEventType.OBJECT_STORE_OPERATION,
     DagsterEventType.HANDLED_OUTPUT,
@@ -134,8 +132,6 @@ def _validate_event_specific_data(event_type, event_specific_data):
         check.inst_param(event_specific_data, "event_specific_data", StepSuccessData)
     elif event_type == DagsterEventType.ASSET_MATERIALIZATION:
         check.inst_param(event_specific_data, "event_specific_data", StepMaterializationData)
-    elif event_type == DagsterEventType.ASSET_READ:
-        check.inst_param(event_specific_data, "event_specific_data", StepReadData)
     elif event_type == DagsterEventType.STEP_EXPECTATION_RESULT:
         check.inst_param(event_specific_data, "event_specific_data", StepExpectationResultData)
     elif event_type == DagsterEventType.STEP_INPUT:
@@ -1058,16 +1054,6 @@ class StepMaterializationData(
             asset_lineage=check.opt_list_param(asset_lineage, "asset_lineage", AssetLineageInfo),
             output_name=check.opt_str_param(output_name, "output_name"),
             output_mapping_key=check.opt_str_param(output_mapping_key, "output_mapping_key"),
-        )
-
-
-@whitelist_for_serdes
-class StepReadData(namedtuple("_StepReadData", "read_event input_name")):
-    def __new__(cls, read_event, input_name=None):
-        return super(StepReadData, cls).__new__(
-            cls,
-            read_event=read_event,
-            input_name=check.opt_str_param(input_name, "input_name"),
         )
 
 

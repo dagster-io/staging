@@ -109,6 +109,7 @@ from dagster.core.execution.context.system import (
     SystemComputeExecutionContext,
     TypeCheckContext,
 )
+from dagster.core.execution.plan.asset_dependency import OutputDefinitionContext
 from dagster.core.execution.results import (
     CompositeSolidExecutionResult,
     PipelineExecutionResult,

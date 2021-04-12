@@ -75,10 +75,6 @@ class StepOutput(
         return self.properties.is_dynamic
 
     @property
-    def is_asset(self) -> bool:
-        return self.properties.is_asset
-
-    @property
     def should_materialize(self) -> bool:
         return self.properties.should_materialize
 

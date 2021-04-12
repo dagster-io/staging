@@ -534,31 +534,31 @@ class DynamicOutput(
     namedtuple("_DynamicOutput", "value mapping_key output_name metadata_entries asset_partitions")
 ):
     """
-    (Experimental) Variant of :py:class:`Output <dagster.Output>` used to support
-    dynamic mapping & collect. Each ``DynamicOutput`` produced by a solid represents
-    one item in a set that can be processed individually with ``map`` or gathered
-    with ``collect``.
+        (Experimental) Variant of :py:class:`Output <dagster.Output>` used to support
+        dynamic mapping & collect. Each ``DynamicOutput`` produced by a solid represents
+        one item in a set that can be processed individually with ``map`` or gathered
+        with ``collect``.
 
-    Each ``DynamicOutput`` must have a unique ``mapping_key`` to distinguish it with it's set.
+        Each ``DynamicOutput`` must have a unique ``mapping_key`` to distinguish it with it's set.
 
-    Args:
-        value (Any):
-            The value returned by the compute function.
-        mapping_key (str):
-            The key that uniquely identifies this dynamic value relative to its peers.
-            This key will be used to identify the downstream solids when mapped, ie
-            ``mapped_solid[example_mapping_key]``
-        output_name (Optional[str]):
-<<<<<<< HEAD
-            Name of the corresponding :py:class:`DynamicOutputDefinition` defined on the solid.
-            (default: "result")
-        metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
-            (Experimental) A set of metadata entries to attach to events related to this output.
-=======
-            Name of the corresponding output definition. (default: "result")
-        metadata_entries (Optional[List[EventMetadataEntry]]):
-            (Experimental) A set of metadata entries to attach to events related to this Output.
->>>>>>> wip
+        Args:
+            value (Any):
+                The value returned by the compute function.
+            mapping_key (str):
+                The key that uniquely identifies this dynamic value relative to its peers.
+                This key will be used to identify the downstream solids when mapped, ie
+                ``mapped_solid[example_mapping_key]``
+            output_name (Optional[str]):
+    <<<<<<< HEAD
+                Name of the corresponding :py:class:`DynamicOutputDefinition` defined on the solid.
+                (default: "result")
+            metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
+                (Experimental) A set of metadata entries to attach to events related to this output.
+    =======
+                Name of the corresponding output definition. (default: "result")
+            metadata_entries (Optional[List[EventMetadataEntry]]):
+                (Experimental) A set of metadata entries to attach to events related to this Output.
+    >>>>>>> wip
     """
 
     def __new__(

@@ -5,8 +5,8 @@ from dagster import (
     AssetMaterialization,
     EventMetadataEntry,
     Output,
-    OutputContext,
     OutputDefinition,
+    OutputDefinitionContext,
     pipeline,
     solid,
 )
@@ -77,9 +77,8 @@ def my_constant_asset_solid(context):
 # start_output_def_mat_solid_1
 
 
-def get_asset_key(context: OutputContext):
-    mode = context.step_context.mode_def.name
-    return AssetKey(f"my_dataset_{mode}")
+def get_asset_key(context: OutputDefinitionContext):
+    return AssetKey(f"my_dataset_{context.mode}")
 
 
 @solid(output_defs=[OutputDefinition(asset_key=get_asset_key)])

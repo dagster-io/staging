@@ -46,6 +46,10 @@ def is_executable_step(step: Union["ExecutionStep", "UnresolvedMappedExecutionSt
 
 class IExecutionStep:
     @abstractproperty
+    def handle(self):
+        pass
+
+    @abstractproperty
     def key(self):
         pass
 
