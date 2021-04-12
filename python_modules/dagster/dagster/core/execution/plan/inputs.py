@@ -10,7 +10,6 @@ from dagster.core.definitions import (
     RetryRequested,
     SolidHandle,
 )
-from dagster.core.definitions.events import AssetLineageInfo
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
     DagsterTypeLoadingError,
@@ -382,15 +381,6 @@ class FromMultipleSources(
         return super(FromMultipleSources, cls).__new__(
             cls, solid_handle=solid_handle, input_name=input_name, sources=sources
         )
-
-    def get_asset_lineage(
-        self, step_context: "SystemStepExecutionContext"
-    ) -> List[AssetLineageInfo]:
-        return [
-            lineage_info
-            for source in self.sources
-            for lineage_info in source.get_asset_lineage(step_context)
-        ]
 
     @property
     def step_key_dependencies(self):

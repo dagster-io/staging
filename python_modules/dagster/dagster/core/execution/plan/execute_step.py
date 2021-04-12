@@ -3,22 +3,15 @@ from typing import Any, Dict, Iterator, Optional, Set, Union
 
 from dagster import check
 from dagster.core.definitions import (
-    AssetKey,
     AssetMaterialization,
     ExpectationResult,
     Failure,
     Materialization,
     Output,
-    OutputDefinition,
     RetryRequested,
     TypeCheck,
 )
-from dagster.core.definitions.events import (
-    AssetLineageInfo,
-    AssetPartition,
-    DynamicOutput,
-    EventMetadataEntry,
-)
+from dagster.core.definitions.events import AssetPartition, DynamicOutput, EventMetadataEntry
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,
     DagsterExecutionStepExecutionError,
@@ -30,18 +23,13 @@ from dagster.core.errors import (
     user_code_error_boundary,
 )
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.context.system import (
-    OutputContext,
-    SystemStepExecutionContext,
-    TypeCheckContext,
-)
+from dagster.core.execution.context.system import SystemStepExecutionContext, TypeCheckContext
 from dagster.core.execution.plan.compute import execute_core_compute
 from dagster.core.execution.plan.inputs import StepInputData
 from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
 from dagster.core.execution.resolve_versions import resolve_step_output_versions
 from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter
-from dagster.core.storage.io_manager import IOManager
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind
 from dagster.utils import ensure_gen, iterate_with_context

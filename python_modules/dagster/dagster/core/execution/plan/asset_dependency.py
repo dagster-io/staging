@@ -89,7 +89,7 @@ class AssetDependencyGraph:
     def __init__(
         self,
         execution_plan: "ExecutionPlan",
-        pipeline_def: "PipelineDefintion",
+        pipeline_def: "PipelineDefinition",
         mode_def: ModeDefinition,
     ):
         self.execution_plan = execution_plan
@@ -212,7 +212,7 @@ class AssetDependencyGraph:
                 asset_parents.append(parent)
             # otherwise just inherit the parents
             else:
-                asset_parents.extend(self._asset_parents_map[parent])
+                asset_parents.extend(self._asset_parents_map[parent.normalized()])
 
         self._asset_parents_map[node_handle] = asset_parents
         self._asset_key_map[node_handle] = direct_asset_keys
