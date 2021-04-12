@@ -226,6 +226,10 @@ class PartitionSetDefinition(
                 )
                 return
 
+            if isinstance(selected_partition, SkipReason):
+                yield selected_partition
+                return
+
             if selected_partition.name not in self.get_partition_names(
                 context.scheduled_execution_time
             ):

@@ -2,6 +2,7 @@ import datetime
 
 import pendulum
 from dagster import check
+from dagster.core.definitions.job import SkipReason
 from dagster.core.definitions.partition import Partition, PartitionSetDefinition
 from dagster.core.definitions.schedule import ScheduleExecutionContext
 from dagster.core.errors import DagsterInvariantViolationError
@@ -241,13 +242,19 @@ def create_offset_partition_selector(execution_time_to_partition_fn):
         check.inst_param(context, "context", ScheduleExecutionContext)
         check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
 
+        partitions = partition_set_def.get_partitions()
         if not context.scheduled_execution_time:
-            partitions = partition_set_def.get_partitions()
             if not partitions:
                 return None
             return partitions[-1]
 
         partition_time = execution_time_to_partition_fn(context.scheduled_execution_time)
+
+        if partition_time < partitions[0].value:
+            return SkipReason("Execution time is before the schedule's start_date.")
+
+        if partition_time > partitions[-1].value:
+            return SkipReason("Execution time is after the schedule's end_date.")
 
         for partition in reversed(
             partition_set_def.get_partitions(context.scheduled_execution_time)
