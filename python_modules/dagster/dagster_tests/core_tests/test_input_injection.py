@@ -68,8 +68,9 @@ def test_string_missing_inputs():
 
     assert len(exc_info.value.errors) == 1
 
+    expected_suggested_config = {"solids": {"str_as_input": {"inputs": {"string_input": ""}}}}
     assert exc_info.value.errors[0].message == (
-        """Missing required config entry "solids" at the root."""
+        f"""Missing required config entry "solids" at the root. Minimal acceptable config for this entry: {expected_suggested_config}"""
     )
 
     assert "yup" not in called
