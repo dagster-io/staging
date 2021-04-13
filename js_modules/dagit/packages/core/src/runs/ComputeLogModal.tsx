@@ -8,14 +8,16 @@ import {DirectGraphQLSubscription} from '../app/DirectGraphQLSubscription';
 import {ComputeIOType} from '../types/globalTypes';
 import {Spinner} from '../ui/Spinner';
 
-import {ComputeLogContent, COMPUTE_LOG_CONTENT_FRAGMENT} from './ComputeLogContent';
+import {
+  ComputeLogStepContent,
+  COMPUTE_LOG_CONTENT_FRAGMENT,
+  MAX_STREAMING_LOG_BYTES,
+} from './ComputeLogContent';
 import {RunContext} from './RunContext';
 import {IStepState} from './RunMetadataProvider';
 import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
 import {ComputeLogsSubscription} from './types/ComputeLogsSubscription';
 import {ComputeLogsSubscriptionFragment} from './types/ComputeLogsSubscriptionFragment';
-
-const MAX_STREAMING_LOG_BYTES = 5242880; // 5 MB
 
 interface IComputeLogLink {
   children: React.ReactNode;
@@ -78,13 +80,8 @@ interface ComputeLogModalProps {
 const ComputeLogModal = ({runId, onRequestClose, stepKey, runState}: ComputeLogModalProps) => {
   const {rootServerURI, websocketURI} = React.useContext(AppContext);
   return (
-    <ComputeLogsProvider
-      websocketURI={websocketURI}
-      runId={runId}
-      stepKey={stepKey}
-      maxBytes={MAX_STREAMING_LOG_BYTES}
-    >
-      {({isLoading, stdout, stderr, maxBytes}) => {
+    <ComputeLogsProvider websocketURI={websocketURI} runId={runId} stepKey={stepKey}>
+      {({isLoading, stdout, stderr}) => {
         if (isLoading) {
           return (
             <LoadingContainer>
@@ -94,13 +91,12 @@ const ComputeLogModal = ({runId, onRequestClose, stepKey, runState}: ComputeLogM
         }
 
         return (
-          <ComputeLogContent
+          <ComputeLogStepContent
             rootServerURI={rootServerURI}
             runState={runState}
             onRequestClose={onRequestClose}
             stdout={stdout}
             stderr={stderr}
-            maxBytes={maxBytes}
           />
         );
       }}
@@ -113,11 +109,9 @@ interface IComputeLogsProviderProps {
     isLoading: boolean;
     stdout: ComputeLogsSubscriptionFragment | null;
     stderr: ComputeLogsSubscriptionFragment | null;
-    maxBytes: number;
   }) => React.ReactChild;
   runId: string;
   stepKey: string;
-  maxBytes: number;
   websocketURI: string;
 }
 interface IComputeLogsProviderState {
@@ -126,7 +120,7 @@ interface IComputeLogsProviderState {
   isLoading: boolean;
 }
 
-class ComputeLogsProvider extends React.Component<
+export class ComputeLogsProvider extends React.Component<
   IComputeLogsProviderProps,
   IComputeLogsProviderState
 > {
@@ -155,7 +149,7 @@ class ComputeLogsProvider extends React.Component<
 
   subscribe() {
     const {runId, stepKey} = this.props;
-    this.setState({isLoading: true});
+    this.setState({isLoading: true, stdout: null, stderr: null});
     this._stdout = new DirectGraphQLSubscription<ComputeLogsSubscription>(
       this.props.websocketURI,
       COMPUTE_LOGS_SUBSCRIPTION,
@@ -234,8 +228,7 @@ class ComputeLogsProvider extends React.Component<
 
   render() {
     const {isLoading, stdout, stderr} = this.state;
-    const {maxBytes} = this.props;
-    return this.props.children({isLoading, stdout, stderr, maxBytes});
+    return this.props.children({isLoading, stdout, stderr});
   }
 }
 

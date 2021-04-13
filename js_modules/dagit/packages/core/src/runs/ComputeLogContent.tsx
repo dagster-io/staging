@@ -5,6 +5,7 @@ import Ansi from 'ansi-to-react';
 import * as React from 'react';
 import styled, {createGlobalStyle} from 'styled-components/macro';
 
+import {Box} from '../ui/Box';
 import {Spinner} from '../ui/Spinner';
 import {FontFamily} from '../ui/styles';
 
@@ -15,68 +16,21 @@ import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragme
 interface IComputeLogContentProps {
   rootServerURI: string;
   runState: IStepState;
-  onRequestClose: () => void;
+  onRequestClose?: () => void;
   stdout: ComputeLogContentFileFragment | null;
   stderr: ComputeLogContentFileFragment | null;
-  maxBytes: number;
 }
 
 const TRUNCATE_PREFIX = '\u001b[33m...logs truncated...\u001b[39m\n';
 const SCROLLER_LINK_TIMEOUT_MS = 3000;
+export const MAX_STREAMING_LOG_BYTES = 5242880; // 5 MB
 
-export class ComputeLogContent extends React.Component<IComputeLogContentProps> {
-  private timeout: number;
-  private stdout = React.createRef<ScrollContainer>();
-  private stderr = React.createRef<ScrollContainer>();
-
-  state = {
-    selected: 'stderr',
-    showScrollToTop: false,
-  };
+export class ComputeLogStepContent extends React.Component<IComputeLogContentProps> {
+  state = {selected: 'stderr'};
 
   close = (e: React.SyntheticEvent) => {
     e.stopPropagation();
-    this.props.onRequestClose();
-  };
-
-  onScrollUp = (position: number) => {
-    this.cancelHide();
-
-    if (!position) {
-      this.hide();
-    } else {
-      this.setState({showScrollToTop: true});
-      this.scheduleHide();
-    }
-  };
-
-  onScrollDown = (_position: number) => {
-    this.hide();
-  };
-
-  hide = () => {
-    this.setState({showScrollToTop: false});
-    if (this.timeout) {
-      clearTimeout(this.timeout);
-      this.timeout = 0;
-    }
-  };
-
-  scheduleHide = () => {
-    this.timeout = window.setTimeout(this.hide, SCROLLER_LINK_TIMEOUT_MS);
-  };
-
-  cancelHide = () => {
-    if (this.timeout) {
-      clearTimeout(this.timeout);
-      this.timeout = 0;
-    }
-  };
-
-  scrollToTop = () => {
-    const {selected} = this.state;
-    const ref = selected === 'stdout' ? this.stdout : this.stderr;
-    ref.current && ref.current.scrollToTop();
+    this.props.onRequestClose && this.props.onRequestClose();
   };
 
   getDownloadUrl() {
@@ -89,27 +43,6 @@ export class ComputeLogContent extends React.Component<IComputeLogContentProps> 
     }
     const isRelativeUrl = (x?: string) => x && x.startsWith('/');
     return isRelativeUrl(downloadUrl) ? this.props.rootServerURI + downloadUrl : downloadUrl;
-  }
-
-  renderScrollToTop() {
-    const {showScrollToTop} = this.state;
-
-    if (!showScrollToTop) {
-      return null;
-    }
-
-    return (
-      <ScrollToast>
-        <ScrollToTop
-          onClick={() => this.scrollToTop()}
-          onMouseOver={this.cancelHide}
-          onMouseOut={this.scheduleHide}
-        >
-          <Icon icon={IconNames.ARROW_UP} style={{marginRight: 10}} />
-          Scroll to top
-        </ScrollToTop>
-      </ScrollToast>
-    );
   }
 
   renderStatus() {
@@ -125,8 +58,143 @@ export class ComputeLogContent extends React.Component<IComputeLogContentProps> 
     );
   }
 
-  renderContent(ioType: string, content: string | null | undefined) {
-    const isTruncated = content && Buffer.byteLength(content, 'utf8') >= this.props.maxBytes;
+  select = (selected: string) => {
+    this.setState({selected});
+  };
+
+  render() {
+    const {rootServerURI, stdout, stderr, onRequestClose} = this.props;
+    const {selected} = this.state;
+
+    const downloadUrl = this.getDownloadUrl();
+
+    return (
+      <Container>
+        <FileContainer>
+          <FileHeader>
+            <Box flex={{direction: 'row', alignItems: 'center'}}>
+              <Tab selected={selected === 'stderr'} onClick={() => this.select('stderr')}>
+                stderr
+              </Tab>
+              <Tab selected={selected === 'stdout'} onClick={() => this.select('stdout')}>
+                stdout
+              </Tab>
+            </Box>
+            <Box flex={{direction: 'row', alignItems: 'center'}}>
+              {this.renderStatus()}
+              {downloadUrl ? (
+                <Link
+                  aria-label="Download link"
+                  className="bp3-button bp3-minimal bp3-icon-download"
+                  href={downloadUrl}
+                  download
+                >
+                  <LinkText>Download {selected}</LinkText>
+                </Link>
+              ) : null}
+              {onRequestClose ? (
+                <button
+                  onClick={this.close}
+                  className="bp3-dialog-close-button bp3-button bp3-minimal bp3-icon-cross"
+                ></button>
+              ) : null}
+            </Box>
+          </FileHeader>
+          {selected === 'stdout' ? (
+            <ComputeLogContent rootServerURI={rootServerURI} logData={stdout} />
+          ) : (
+            <ComputeLogContent rootServerURI={rootServerURI} logData={stderr} />
+          )}
+        </FileContainer>
+      </Container>
+    );
+  }
+}
+
+export class ComputeLogContent extends React.Component<{
+  rootServerURI: string;
+  logData?: ComputeLogContentFileFragment | null;
+}> {
+  private timeout: number;
+  private contentContainer = React.createRef<ScrollContainer>();
+
+  state = {
+    showScrollToTop: false,
+  };
+
+  getDownloadUrl() {
+    const {logData, rootServerURI} = this.props;
+    const downloadUrl = logData?.downloadUrl;
+    if (!downloadUrl) {
+      return null;
+    }
+    const isRelativeUrl = (x?: string) => x && x.startsWith('/');
+    return isRelativeUrl(downloadUrl) ? rootServerURI + downloadUrl : downloadUrl;
+  }
+
+  hideWarning = () => {
+    this.setState({showScrollToTop: false});
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+      this.timeout = 0;
+    }
+  };
+
+  scheduleHideWarning = () => {
+    this.timeout = window.setTimeout(this.hideWarning, SCROLLER_LINK_TIMEOUT_MS);
+  };
+
+  cancelHideWarning = () => {
+    if (this.timeout) {
+      clearTimeout(this.timeout);
+      this.timeout = 0;
+    }
+  };
+
+  onScrollUp = (position: number) => {
+    this.cancelHideWarning();
+
+    if (!position) {
+      this.hideWarning();
+    } else {
+      this.setState({showScrollToTop: true});
+      this.scheduleHideWarning();
+    }
+  };
+
+  onScrollDown = (_position: number) => {
+    this.hideWarning();
+  };
+
+  scrollToTop = () => {
+    this.contentContainer.current && this.contentContainer.current.scrollToTop();
+  };
+
+  renderScrollToTop() {
+    const {showScrollToTop} = this.state;
+
+    if (!showScrollToTop) {
+      return null;
+    }
+
+    return (
+      <ScrollToast>
+        <ScrollToTop
+          onClick={() => this.scrollToTop()}
+          onMouseOver={this.cancelHideWarning}
+          onMouseOut={this.scheduleHideWarning}
+        >
+          <Icon icon={IconNames.ARROW_UP} style={{marginRight: 10}} />
+          Scroll to top
+        </ScrollToTop>
+      </ScrollToast>
+    );
+  }
+
+  render() {
+    const {logData} = this.props;
+    let content = logData?.data;
+    const isTruncated = content && Buffer.byteLength(content, 'utf8') >= MAX_STREAMING_LOG_BYTES;
 
     if (content && isTruncated) {
       const nextLine = content.indexOf('\n') + 1;
@@ -147,72 +215,25 @@ export class ComputeLogContent extends React.Component<IComputeLogContentProps> 
       </FileWarning>
     ) : null;
 
-    const ref = ioType === 'stdout' ? this.stdout : this.stderr;
-    const isSelected = this.state.selected === ioType;
     return (
-      <FileContent isSelected={isSelected}>
-        {warning}
-        <RelativeContainer>
-          <LogContent
-            isSelected={isSelected}
-            content={content}
-            onScrollUp={this.onScrollUp}
-            onScrollDown={this.onScrollDown}
-            ref={ref}
-          />
-        </RelativeContainer>
-      </FileContent>
-    );
-  }
-
-  select = (selected: string) => {
-    this.setState({selected});
-    this.hide();
-  };
-
-  render() {
-    const {stdout, stderr} = this.props;
-    const {selected} = this.state;
-
-    const logData = selected === 'stdout' ? stdout : stderr;
-    const downloadUrl = this.getDownloadUrl();
-
-    return (
-      <Container>
+      <>
         <FileContainer>
-          <FileHeader>
-            <Row>
-              <Tab selected={selected === 'stderr'} onClick={() => this.select('stderr')}>
-                stderr
-              </Tab>
-              <Tab selected={selected === 'stdout'} onClick={() => this.select('stdout')}>
-                stdout
-              </Tab>
-            </Row>
-            <Row>
-              {this.renderStatus()}
-              {downloadUrl ? (
-                <Link
-                  aria-label="Download link"
-                  className="bp3-button bp3-minimal bp3-icon-download"
-                  href={downloadUrl}
-                  download
-                >
-                  <LinkText>Download {selected}</LinkText>
-                </Link>
-              ) : null}
-              <button
-                onClick={this.close}
-                className="bp3-dialog-close-button bp3-button bp3-minimal bp3-icon-cross"
-              ></button>
-            </Row>
-          </FileHeader>
           {this.renderScrollToTop()}
-          {this.renderContent('stdout', stdout?.data)}
-          {this.renderContent('stderr', stderr?.data)}
-          <FileFooter>{logData?.path}</FileFooter>
+          <FileContent isSelected={true}>
+            {warning}
+            <RelativeContainer>
+              <LogContent
+                isSelected={true}
+                content={content}
+                onScrollUp={this.onScrollUp}
+                onScrollDown={this.onScrollDown}
+                ref={this.contentContainer}
+              />
+            </RelativeContainer>
+          </FileContent>
         </FileContainer>
-      </Container>
+        <FileFooter>{logData?.path}</FileFooter>
+      </>
     );
   }
 }
@@ -352,12 +373,6 @@ const LineNumbers = (props: IScrollContainerProps) => {
   );
 };
 
-const Row = styled.div`
-  display: flex;
-  flex-direction: row;
-  margin-left: 5px;
-  align-items: center;
-`;
 const LinkText = styled.span`
   height: 1px;
   width: 1px;
@@ -372,7 +387,7 @@ const Link = styled.a`
   }
 `;
 const Container = styled.div`
-  background-color: #333333;
+  background-color: ${Colors.DARK_GRAY2};
   position: relative;
   flex: 1;
   display: flex;
@@ -385,6 +400,8 @@ const FileContainer = styled.div`
   &:first-child {
     border-right: 0.5px solid #5c7080;
   }
+  display: flex;
+  flex-direction: column;
 `;
 const FileHeader = styled.div`
   display: flex;
@@ -392,37 +409,32 @@ const FileHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   height: 40px;
-  background-color: #444444;
+  background-color: ${Colors.DARK_GRAY3};
   border-bottom: 0.5px solid #5c7080;
   color: ${({color}) => color || '#ffffff'};
   font-weight: 600;
   padding: 0 10px;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
 `;
 const FileFooter = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
   height: 30px;
+  background-color: ${Colors.DARK_GRAY2};
   border-top: 0.5px solid #5c7080;
   color: #aaaaaa;
   padding: 2px 5px;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
   font-size: 0.85em;
 `;
 const ContentContainer = styled.div`
   display: flex;
   flex-direction: row;
   min-height: 100%;
+  background-color: ${Colors.DARK_GRAY2};
 `;
 const Content = styled.div`
   padding: 10px;
+  background-color: ${Colors.DARK_GRAY2};
 `;
 const LineNumberContainer = styled.div`
   display: flex;
@@ -431,7 +443,7 @@ const LineNumberContainer = styled.div`
   border-right: 1px solid #5c7080;
   padding: 10px 10px 10px 20px;
   margin-right: 5px;
-  background-color: #333333;
+  background-color: ${Colors.DARK_GRAY2};
   opacity: 0.8;
   color: #858585;
   min-height: 100%;
@@ -463,7 +475,8 @@ const SolarizedColors = createGlobalStyle`
   }
 `;
 const Tab = styled.div`
-  background-color: ${({selected}: {selected: boolean}) => (selected ? '#333333' : '#444444')};
+  background-color: ${({selected}: {selected: boolean}) =>
+    selected ? Colors.DARK_GRAY2 : Colors.DARK_GRAY3};
   cursor: pointer;
   height: 30px;
   display: flex;
@@ -489,11 +502,7 @@ const Tab = styled.div`
 `;
 
 const FileContent = styled.div`
-  position: absolute;
-  top: 40px;
-  bottom: 30px;
-  left: 0;
-  right: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   ${({isSelected}: {isSelected: boolean}) => (isSelected ? null : 'visibility: hidden;')}

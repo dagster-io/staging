@@ -14,6 +14,7 @@ import {useQueryPersistedState} from '../hooks/useQueryPersistedState';
 import {FirstOrSecondPanelToggle, SplitPanelContainer} from '../ui/SplitPanelContainer';
 import {useRepositoryForRun} from '../workspace/useRepositoryForRun';
 
+import {ComputeLogPanel} from './ComputeLogPanel';
 import {LogFilter, LogsProvider, LogsProviderLogs} from './LogsProvider';
 import {LogsScrollingTable} from './LogsScrollingTable';
 import {LogsToolbar} from './LogsToolbar';
@@ -144,13 +145,35 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
   const splitPanelContainer = React.createRef<SplitPanelContainer>();
 
   const {basePath} = React.useContext(AppContext);
+  const [logType, setLogType] = React.useState<'structured' | 'raw'>('structured');
+  const [computeLogStep, setComputeLogStep] = React.useState<string>();
+  const [computeLogType, onSetComputeLogType] = React.useState<'stdout' | 'stderr'>('stdout');
+  const stepKeys = Object.keys(metadata.steps);
 
   const runtimeStepKeys = Object.keys(metadata.steps);
   const runtimeGraph = run?.executionPlan && toGraphQueryItems(run?.executionPlan, runtimeStepKeys);
-  const selectionStepKeys =
-    runtimeGraph && selectionQuery && selectionQuery !== '*'
+  const selectionStepKeys = React.useMemo(() => {
+    return runtimeGraph && selectionQuery && selectionQuery !== '*'
       ? filterByQuery(runtimeGraph, selectionQuery).all.map((n) => n.name)
       : [];
+  }, [runtimeGraph, selectionQuery]);
+
+  React.useEffect(() => {
+    if (!stepKeys) {
+      return;
+    }
+    if (!computeLogStep || !stepKeys.includes(computeLogStep)) {
+      const stepKey = selectionStepKeys.length === 1 ? selectionStepKeys[0] : stepKeys[0];
+      setComputeLogStep(stepKey);
+    } else if (selectionStepKeys.length === 1 && computeLogStep !== selectionStepKeys[0]) {
+      setComputeLogStep(selectionStepKeys[0]);
+    }
+  }, [stepKeys, computeLogStep, selectionStepKeys]);
+
+  const onComputeLogStepSelect = (stepKey: string) => {
+    setComputeLogStep(stepKey);
+    onSetSelectionQuery(stepKey);
+  };
 
   const logsFilterStepKeys = runtimeGraph
     ? logsFilter.logQuery
@@ -249,7 +272,6 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
 
   return (
     <>
-      {/* <RunDetails loading={logs.loading} run={run} /> */}
       <SplitPanelContainer
         ref={splitPanelContainer}
         axis={'vertical'}
@@ -260,18 +282,33 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
         second={
           <LogsContainer>
             <LogsToolbar
+              logType={logType}
+              onSetLogType={setLogType}
               filter={logsFilter}
               onSetFilter={onSetLogsFilter}
               steps={Object.keys(metadata.steps)}
               metadata={metadata}
+              computeLogStep={computeLogStep}
+              onSetComputeLogStep={onComputeLogStepSelect}
+              computeLogType={computeLogType}
+              onSetComputeLogType={onSetComputeLogType}
             />
-            <LogsScrollingTable
-              logs={logs}
-              filter={logsFilter}
-              filterStepKeys={logsFilterStepKeys}
-              filterKey={`${JSON.stringify(logsFilter)}`}
-              metadata={metadata}
-            />
+            {logType === 'structured' ? (
+              <LogsScrollingTable
+                logs={logs}
+                filter={logsFilter}
+                filterStepKeys={logsFilterStepKeys}
+                filterKey={`${JSON.stringify(logsFilter)}`}
+                metadata={metadata}
+              />
+            ) : (
+              <ComputeLogPanel
+                runId={runId}
+                metadata={metadata}
+                selectedStepKey={computeLogStep}
+                ioType={computeLogType}
+              />
+            )}
           </LogsContainer>
         }
       />
