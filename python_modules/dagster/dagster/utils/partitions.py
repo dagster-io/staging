@@ -242,7 +242,7 @@ def create_offset_partition_selector(execution_time_to_partition_fn):
         check.inst_param(context, "context", ScheduleExecutionContext)
         check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
 
-        partitions = partition_set_def.get_partitions()
+        partitions = partition_set_def.get_partitions(context.scheduled_execution_time)
         if not context.scheduled_execution_time:
             if not partitions:
                 return None
@@ -250,15 +250,15 @@ def create_offset_partition_selector(execution_time_to_partition_fn):
 
         partition_time = execution_time_to_partition_fn(context.scheduled_execution_time)
 
-        if partition_time < partitions[0].value:
-            return SkipReason("Execution time is before the schedule's start_date.")
+        if not partitions:
+            return SkipReason(
+                "No partitions found in Partition Set. The most likely reason for this is because the start time hasn't occurred yet."
+            )
 
         if partition_time > partitions[-1].value:
-            return SkipReason("Execution time is after the schedule's end_date.")
+            return SkipReason("Execution time is after the Partition Set's end time.")
 
-        for partition in reversed(
-            partition_set_def.get_partitions(context.scheduled_execution_time)
-        ):
+        for partition in reversed(partitions):
             if partition.value.isoformat() == partition_time.isoformat():
                 return partition
 
