@@ -982,10 +982,13 @@ def test_partitions_for_monthly_schedule_decorators_with_timezone():
 
 def test_partitions_outside_schedule_range():
     with instance_for_test() as instance:
-        execution_time = datetime(year=2021, month=1, day=1)
+        execution_time = create_pendulum_time(year=2021, month=1, day=1, tz="UTC")
         context = ScheduleExecutionContext(instance.get_ref(), execution_time)
 
-        @monthly_schedule(pipeline_name="too early", start_date=datetime(year=2021, month=2, day=1))
+        @monthly_schedule(
+            pipeline_name="too early",
+            start_date=create_pendulum_time(year=2021, month=2, day=1, tz="UTC"),
+        )
         def too_early(monthly_time):
             return {"monthly_time": monthly_time.isoformat()}
 
@@ -993,15 +996,15 @@ def test_partitions_outside_schedule_range():
         assert len(execution_data) == 1
         skip_data = execution_data[0]
         assert isinstance(skip_data, SkipReason)
-        assert (
-            "No partitions found in Partition Set. The most likely reason for this is because the start time hasn't occurred yet."
-            in skip_data.skip_message
+        assert skip_data.skip_message == (
+            "The partition 2020-12-01T00:00:00+00:00 precedes the earliest schedule tick "
+            "2021-01-01T00:00:00+00:00. Verify your schedule's start_date is correct."
         )
 
         @monthly_schedule(
             pipeline_name="too late",
-            start_date=datetime(year=2020, month=1, day=1),
-            end_date=datetime(year=2020, month=12, day=1),
+            start_date=create_pendulum_time(year=2020, month=1, day=1, tz="UTC"),
+            end_date=create_pendulum_time(year=2020, month=12, day=1, tz="UTC"),
         )
         def too_late(monthly_time):
             return {"monthly_time": monthly_time.isoformat()}
@@ -1010,7 +1013,10 @@ def test_partitions_outside_schedule_range():
         assert len(execution_data) == 1
         skip_data = execution_data[0]
         assert isinstance(skip_data, SkipReason)
-        assert "Execution time is after the Partition Set's end time." in skip_data.skip_message
+        assert skip_data.skip_message == (
+            "The partition 2020-12-01T00:00:00+00:00 is after the last schedule tick "
+            "2021-01-01T00:00:00+00:00. Verify your schedule's end_date is correct."
+        )
 
 
 def test_schedule_decorators_bad():
