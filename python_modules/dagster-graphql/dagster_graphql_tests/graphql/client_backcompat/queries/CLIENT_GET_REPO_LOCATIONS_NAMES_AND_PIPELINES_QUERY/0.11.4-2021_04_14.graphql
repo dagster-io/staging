@@ -1,0 +1,20 @@
+
+query {
+  repositoriesOrError {
+    __typename
+    ... on RepositoryConnection {
+      nodes {
+        name
+        location {
+          name
+        }
+        pipelines {
+          name
+        }
+      }
+    }
+    ... on PythonError {
+      message
+    }
+  }
+}
