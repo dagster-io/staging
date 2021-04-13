@@ -219,16 +219,52 @@ def create_array_error(context, config_value):
     )
 
 
+def scaffold_type_snap(config_schema, config_type):
+
+    if ConfigTypeKind.has_fields(config_type.kind):
+        default_dict = {}
+        for field in config_type.fields:
+            if not field.is_required:
+                continue
+
+            default_dict[field.name] = scaffold_type_snap(
+                config_schema, config_schema.get_config_snap(field.type_key)
+            )
+        return default_dict
+    elif config_type.kind == ConfigTypeKind.ANY:
+        return "AnyType"
+    elif config_type.kind == ConfigTypeKind.SCALAR:
+        defaults = {"String": "", "Int": 0, "Bool": True}
+
+        return defaults[config_type.given_name]
+    elif config_type.kind == ConfigTypeKind.ARRAY:
+        return []
+    elif config_type.kind == ConfigTypeKind.ENUM:
+        return "|".join(sorted(map(lambda v: v.config_value, config_type.enum_values)))
+    elif False and config_type.kind == ConfigTypeKind.SCALAR_UNION:
+        return scaffold_type_snap(
+            config_schema, config_schema.get_config_snap(config_type.type_param_keys[0])
+        )
+    else:
+        return "?unknown?"
+
+
 def create_missing_required_field_error(context, expected_field):
+
     check.inst_param(context, "context", ContextData)
     check_config_type_in_context_has_fields(context, "context")
+
+    scaffold = scaffold_type_snap(context.config_schema_snapshot, context.config_type_snap)
 
     return EvaluationError(
         stack=context.stack,
         reason=DagsterEvaluationErrorReason.MISSING_REQUIRED_FIELD,
-        message=('Missing required config entry "{expected}" {path_msg}.').format(
+        message=(
+            'Missing required config entry "{expected}" {path_msg}. Minimal acceptable config for this entry: {scaffold}'
+        ).format(
             expected=expected_field,
             path_msg=get_friendly_path_msg(context.stack),
+            scaffold=scaffold,
         ),
         error_data=MissingFieldErrorData(
             field_name=expected_field, field_snap=context.config_type_snap.get_field(expected_field)
@@ -243,11 +279,15 @@ def create_missing_required_fields_error(context, missing_fields):
     missing_fields = sorted(missing_fields)
     missing_field_snaps = list(map(context.config_type_snap.get_field, missing_fields))
 
+    scaffold = scaffold_type_snap(context.config_schema_snapshot, context.config_type_snap)
+
     return EvaluationError(
         stack=context.stack,
         reason=DagsterEvaluationErrorReason.MISSING_REQUIRED_FIELDS,
-        message='Missing required config entries "{missing_fields}" {path_msg}".'.format(
-            missing_fields=missing_fields, path_msg=get_friendly_path_msg(context.stack)
+        message='Missing required config entries "{missing_fields}" {path_msg}". Minimum acceptable config for this path: {scaffold}'.format(
+            missing_fields=missing_fields,
+            path_msg=get_friendly_path_msg(context.stack),
+            scaffold=scaffold,
         ),
         error_data=MissingFieldsErrorData(
             field_names=missing_fields, field_snaps=missing_field_snaps
