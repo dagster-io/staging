@@ -5,7 +5,7 @@ from dagster import check
 from dagster.utils.error import SerializableErrorInfo
 
 from .config_type import ConfigTypeKind
-from .snap import ConfigFieldSnap, ConfigTypeSnap
+from .snap import ConfigFieldSnap, ConfigTypeSnap, scaffold_type_snap
 from .stack import EvaluationStack, get_friendly_path_info, get_friendly_path_msg
 from .traversal_context import ContextData
 from .type_printer import print_config_type_key_to_string
@@ -220,15 +220,21 @@ def create_array_error(context, config_value):
 
 
 def create_missing_required_field_error(context, expected_field):
+
     check.inst_param(context, "context", ContextData)
     check_config_type_in_context_has_fields(context, "context")
+
+    scaffold = scaffold_type_snap(context.config_schema_snapshot, context.config_type_snap)
 
     return EvaluationError(
         stack=context.stack,
         reason=DagsterEvaluationErrorReason.MISSING_REQUIRED_FIELD,
-        message=('Missing required config entry "{expected}" {path_msg}.').format(
+        message=(
+            'Missing required config entry "{expected}" {path_msg}. Minimal acceptable config for this path: {scaffold}'
+        ).format(
             expected=expected_field,
             path_msg=get_friendly_path_msg(context.stack),
+            scaffold=scaffold,
         ),
         error_data=MissingFieldErrorData(
             field_name=expected_field, field_snap=context.config_type_snap.get_field(expected_field)
@@ -243,11 +249,15 @@ def create_missing_required_fields_error(context, missing_fields):
     missing_fields = sorted(missing_fields)
     missing_field_snaps = list(map(context.config_type_snap.get_field, missing_fields))
 
+    scaffold = scaffold_type_snap(context.config_schema_snapshot, context.config_type_snap)
+
     return EvaluationError(
         stack=context.stack,
         reason=DagsterEvaluationErrorReason.MISSING_REQUIRED_FIELDS,
-        message='Missing required config entries "{missing_fields}" {path_msg}".'.format(
-            missing_fields=missing_fields, path_msg=get_friendly_path_msg(context.stack)
+        message='Missing required config entries "{missing_fields}" {path_msg}". Minimum acceptable config for this path: {scaffold}'.format(
+            missing_fields=missing_fields,
+            path_msg=get_friendly_path_msg(context.stack),
+            scaffold=scaffold,
         ),
         error_data=MissingFieldsErrorData(
             field_names=missing_fields, field_snaps=missing_field_snaps
