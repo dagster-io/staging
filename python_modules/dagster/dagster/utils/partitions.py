@@ -242,21 +242,32 @@ def create_offset_partition_selector(execution_time_to_partition_fn):
         check.inst_param(context, "context", ScheduleExecutionContext)
         check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
 
+        no_partitions_skip_reason = SkipReason(
+            "Partition selector did not return a partition. Make sure that the timezone "
+            "on your partition set matches your execution timezone."
+        )
+
         partitions = partition_set_def.get_partitions(context.scheduled_execution_time)
         if not context.scheduled_execution_time:
             if not partitions:
-                return None
+                return no_partitions_skip_reason
             return partitions[-1]
 
         partition_time = execution_time_to_partition_fn(context.scheduled_execution_time)
 
         if not partitions:
             return SkipReason(
-                "No partitions found in Partition Set. The most likely reason for this is because the start time hasn't occurred yet."
+                f"Your partition ({partition_time.isoformat()}) is before the beginning of "
+                f"the partition set ({context.scheduled_execution_time.isoformat()}). "
+                "Verify your schedule's start_date is correct."
             )
 
         if partition_time > partitions[-1].value:
-            return SkipReason("Execution time is after the Partition Set's end time.")
+            return SkipReason(
+                f"Your partition ({partition_time.isoformat()}) is after the end of "
+                f"the partition set ({partitions[-1].value.isoformat()}). "
+                "Verify your schedule's end_date is correct."
+            )
 
         for partition in reversed(partitions):
             if partition.value.isoformat() == partition_time.isoformat():
@@ -265,6 +276,6 @@ def create_offset_partition_selector(execution_time_to_partition_fn):
             if partition.value < partition_time:
                 break
 
-        return None
+        return no_partitions_skip_reason
 
     return offset_partition_selector
