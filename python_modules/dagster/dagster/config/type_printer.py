@@ -7,40 +7,56 @@ from .iterate_types import config_schema_snapshot_from_config_type
 from .snap import ConfigSchemaSnapshot
 
 
-def _print_type_from_config_type(config_type, print_fn=print, with_lines=True):
+def _print_type_from_config_type(
+    config_type, print_fn=print, with_lines=True, include_optional=True
+):
     check.inst_param(config_type, "config_type", ConfigType)
     return _print_type(
-        config_schema_snapshot_from_config_type(config_type), config_type.key, print_fn, with_lines
+        config_schema_snapshot_from_config_type(config_type),
+        config_type.key,
+        print_fn,
+        with_lines,
+        include_optional,
     )
 
 
-def _print_type(config_schema_snapshot, config_type_key, print_fn, with_lines):
+def _print_type(config_schema_snapshot, config_type_key, print_fn, with_lines, include_optional):
     check.inst_param(config_schema_snapshot, "config_schema_snapshot", ConfigSchemaSnapshot)
     check.str_param(config_type_key, "config_type_key")
     check.callable_param(print_fn, "print_fn")
     check.bool_param(with_lines, "with_lines")
+    check.bool_param(include_optional, "include_optional")
 
     if with_lines:
         printer = IndentingPrinter(printer=print_fn)
     else:
         printer = IndentingPrinter(printer=print_fn, indent_level=0)
-    _do_print(config_schema_snapshot, config_type_key, printer, with_lines=with_lines)
+    _do_print(
+        config_schema_snapshot,
+        config_type_key,
+        printer,
+        with_lines=with_lines,
+        include_optional=include_optional,
+    )
     printer.line("")
 
 
-def _do_print(config_schema_snapshot, config_type_key, printer, with_lines=True):
+def _do_print(
+    config_schema_snapshot, config_type_key, printer, with_lines=True, include_optional=True
+):
     line_break_fn = printer.line if with_lines else lambda string: printer.append(string + " ")
 
     config_type_snap = config_schema_snapshot.get_config_snap(config_type_key)
     kind = config_type_snap.kind
 
-    if kind == ConfigTypeKind.ARRAY:
+    if kind == ConfigTypeKind.NONEABLE:
+        if include_optional:
+            _do_print(config_schema_snapshot, config_type_snap.inner_type_key, printer)
+            printer.append("?")
+    elif kind == ConfigTypeKind.ARRAY:
         printer.append("[")
         _do_print(config_schema_snapshot, config_type_snap.inner_type_key, printer)
         printer.append("]")
-    elif kind == ConfigTypeKind.NONEABLE:
-        _do_print(config_schema_snapshot, config_type_snap.inner_type_key, printer)
-        printer.append("?")
     elif kind == ConfigTypeKind.SCALAR_UNION:
         printer.append("(")
         _do_print(config_schema_snapshot, config_type_snap.scalar_type_key, printer)
@@ -54,13 +70,17 @@ def _do_print(config_schema_snapshot, config_type_key, printer, with_lines=True)
                 name = field_snap.name
                 if field_snap.is_required:
                     printer.append(name + ": ")
-                else:
+                elif include_optional:
                     printer.append(name + "?: ")
+                else:
+                    continue
+
                 _do_print(
                     config_schema_snapshot,
                     field_snap.type_key,
                     printer,
                     with_lines=with_lines,
+                    include_optional=include_optional,
                 )
                 line_break_fn("")
 
@@ -71,13 +91,15 @@ def _do_print(config_schema_snapshot, config_type_key, printer, with_lines=True)
         check.failed("not supported")
 
 
-def print_config_type_key_to_string(config_schema_snapshot, config_type_key, with_lines=True):
+def print_config_type_key_to_string(
+    config_schema_snapshot, config_type_key, with_lines=True, include_optional=True
+):
     prints = []
 
     def _push(text):
         prints.append(text)
 
-    _print_type(config_schema_snapshot, config_type_key, _push, with_lines)
+    _print_type(config_schema_snapshot, config_type_key, _push, with_lines, include_optional)
 
     if with_lines:
         return "\n".join(prints)
@@ -85,13 +107,18 @@ def print_config_type_key_to_string(config_schema_snapshot, config_type_key, wit
         return " ".join(prints)
 
 
-def print_config_type_to_string(config_type, with_lines=True):
+def print_config_type_to_string(config_type, with_lines=True, include_optional=True):
     prints = []
 
     def _push(text):
         prints.append(text)
 
-    _print_type_from_config_type(resolve_to_config_type(config_type), _push, with_lines=with_lines)
+    _print_type_from_config_type(
+        resolve_to_config_type(config_type),
+        _push,
+        with_lines=with_lines,
+        include_optional=include_optional,
+    )
 
     if with_lines:
         return "\n".join(prints)
