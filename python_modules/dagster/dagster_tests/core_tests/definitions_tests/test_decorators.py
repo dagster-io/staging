@@ -985,7 +985,7 @@ def test_partitions_outside_schedule_range():
         execution_time = datetime(year=2021, month=1, day=1)
         context = ScheduleExecutionContext(instance.get_ref(), execution_time)
 
-        @monthly_schedule(pipeline_name="test", start_date=datetime(year=2021, month=2, day=1))
+        @monthly_schedule(pipeline_name="too early", start_date=datetime(year=2021, month=2, day=1))
         def too_early(monthly_time):
             return {"monthly_time": monthly_time.isoformat()}
 
@@ -993,10 +993,13 @@ def test_partitions_outside_schedule_range():
         assert len(execution_data) == 1
         skip_data = execution_data[0]
         assert isinstance(skip_data, SkipReason)
-        assert "Execution time is before the schedule's start_date." in skip_data.skip_message
+        assert (
+            "No partitions found in Partition Set. The most likely reason for this is because the start time hasn't occurred yet."
+            in skip_data.skip_message
+        )
 
         @monthly_schedule(
-            pipeline_name="test",
+            pipeline_name="too late",
             start_date=datetime(year=2020, month=1, day=1),
             end_date=datetime(year=2020, month=12, day=1),
         )
@@ -1007,7 +1010,7 @@ def test_partitions_outside_schedule_range():
         assert len(execution_data) == 1
         skip_data = execution_data[0]
         assert isinstance(skip_data, SkipReason)
-        assert "Execution time is after the schedule's end_date." in skip_data.skip_message
+        assert "Execution time is after the Partition Set's end time." in skip_data.skip_message
 
 
 def test_schedule_decorators_bad():
