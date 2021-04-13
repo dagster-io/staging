@@ -393,7 +393,7 @@ def test_next_tick_bad_schedule(graphql_context):
         assert tick["evaluationResult"]
         assert not tick["evaluationResult"]["runRequests"]
         assert not tick["evaluationResult"]["skipReason"]
-        assert tick["evaluationResult"]["error"]
+        assert "name 'asdf' is not define" in tick["evaluationResult"]["error"]["message"]
 
 
 def test_get_unloadable_job(graphql_context):

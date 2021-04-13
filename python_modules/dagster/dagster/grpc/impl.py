@@ -225,9 +225,9 @@ def get_external_schedule_execution(
                 return ExternalScheduleExecutionData.from_execution_data(
                     schedule_def.get_execution_data(schedule_context)
                 )
-        except ScheduleExecutionError:
+        except ScheduleExecutionError as e:
             return ExternalScheduleExecutionErrorData(
-                serializable_error_info_from_exc_info(sys.exc_info())
+                serializable_error_info_from_exc_info(e.original_exc_info)
             )
 
 
@@ -255,9 +255,9 @@ def get_external_sensor_execution(
                 return ExternalSensorExecutionData.from_execution_data(
                     sensor_def.get_execution_data(sensor_context)
                 )
-        except SensorExecutionError:
+        except SensorExecutionError as e:
             return ExternalSensorExecutionErrorData(
-                serializable_error_info_from_exc_info(sys.exc_info())
+                serializable_error_info_from_exc_info(e.original_exc_info)
             )
 
 
@@ -275,9 +275,9 @@ def get_partition_config(recon_repo, partition_set_name, partition_name):
         ):
             run_config = partition_set_def.run_config_for_partition(partition)
             return ExternalPartitionConfigData(name=partition.name, run_config=run_config)
-    except PartitionExecutionError:
+    except PartitionExecutionError as e:
         return ExternalPartitionExecutionErrorData(
-            serializable_error_info_from_exc_info(sys.exc_info())
+            serializable_error_info_from_exc_info(e.original_exc_info)
         )
 
 
@@ -293,9 +293,9 @@ def get_partition_names(recon_repo, partition_set_name):
             return ExternalPartitionNamesData(
                 partition_names=partition_set_def.get_partition_names()
             )
-    except PartitionExecutionError:
+    except PartitionExecutionError as e:
         return ExternalPartitionExecutionErrorData(
-            serializable_error_info_from_exc_info(sys.exc_info())
+            serializable_error_info_from_exc_info(e.original_exc_info)
         )
 
 
@@ -311,9 +311,9 @@ def get_partition_tags(recon_repo, partition_set_name, partition_name):
         ):
             tags = partition_set_def.tags_for_partition(partition)
             return ExternalPartitionTagsData(name=partition.name, tags=tags)
-    except PartitionExecutionError:
+    except PartitionExecutionError as e:
         return ExternalPartitionExecutionErrorData(
-            serializable_error_info_from_exc_info(sys.exc_info())
+            serializable_error_info_from_exc_info(e.original_exc_info)
         )
 
 
@@ -385,7 +385,7 @@ def get_partition_set_execution_param_data(recon_repo, partition_set_name, parti
 
         return ExternalPartitionSetExecutionParamData(partition_data=partition_data)
 
-    except PartitionExecutionError:
+    except PartitionExecutionError as e:
         return ExternalPartitionExecutionErrorData(
-            serializable_error_info_from_exc_info(sys.exc_info())
+            serializable_error_info_from_exc_info(e.original_exc_info)
         )
