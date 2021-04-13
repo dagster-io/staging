@@ -28,3 +28,6 @@ export const InstanceRoot = () => {
     </MainContent>
   );
 };
+
+// eslint-disable-next-line
+export default InstanceRoot;
