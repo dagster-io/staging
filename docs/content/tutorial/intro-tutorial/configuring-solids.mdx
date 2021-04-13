@@ -7,7 +7,10 @@ description: Solids can be parameterized with runtime configuration
 
 <CodeReferenceLink filePath="examples/docs_snippets/docs_snippets/intro_tutorial/basics/configuring_solids/" />
 
-So far, we've seen a solid whose behavior is the same every time it runs:
+In many situations, we'd like to be able to configure solids at run time. For example, we may want whomever is running the pipeline to decide what dataset it operates on.
+Configuration is useful when you want the person or system that is launching a pipeline to be able to make choices about what the pipeline does, without needing to modify the pipeline definition.
+
+We've seen a solid whose behavior is the same every time it runs:
 
 ```python file=/intro_tutorial/basics/configuring_solids/read_csv.py startafter=start_load_cereals_marker endbefore=end_load_cereals_marker
 @solid
@@ -20,7 +23,7 @@ def load_cereals(context):
     return cereals
 ```
 
-In many situations, we'd like to be able to configure solids at run time. For example, we may want whomever is running the pipeline to decide what dataset it operates on. Consider the following more generic solid:
+If we want the file to be determined by whomever is launching the pipeline, we might write a more generic version:
 
 ```python file=/intro_tutorial/basics/configuring_solids/read_csv.py startafter=start_read_csv_marker endbefore=end_read_csv_marker
 @solid(config_schema={"csv_name": str})
