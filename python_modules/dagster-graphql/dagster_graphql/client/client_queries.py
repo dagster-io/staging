@@ -39,6 +39,32 @@ mutation($executionParams: ExecutionParams!) {
 }
 """
 
+CLIENT_GET_REPO_LOCATIONS_AND_NAMES_QUERY = """
+query {
+  repositoryLocationsOrError {
+    __typename
+    ... on RepositoryLocationConnection {
+      nodes {
+        ... on RepositoryLocation {
+          __typename
+          name
+          repositories {
+            name
+          }
+        }
+        ... on RepositoryLocationLoadFailure {
+          __typename
+          name
+        }
+      }
+    }
+    ... on PythonError {
+      message
+    }
+  }
+}
+"""
+
 RELOAD_REPOSITORY_LOCATION_MUTATION = """
 mutation ($repositoryLocationName: String!) {
    reloadRepositoryLocation(repositoryLocationName: $repositoryLocationName) {
