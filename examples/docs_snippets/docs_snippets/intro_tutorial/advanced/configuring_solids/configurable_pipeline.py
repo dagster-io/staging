@@ -5,11 +5,9 @@ import os
 from dagster import execute_pipeline, pipeline, solid
 
 
-@solid(config_schema={"csv_name": str})
+@solid
 def read_csv(context):
-    csv_path = os.path.join(
-        os.path.dirname(__file__), context.solid_config["csv_name"]
-    )
+    csv_path = os.path.join(os.path.dirname(__file__), context.solid_config["csv_name"])
     with open(csv_path, "r") as fd:
         lines = [row for row in csv.DictReader(fd)]
 
@@ -19,9 +17,7 @@ def read_csv(context):
 
 @solid
 def sort_by_calories(context, cereals):
-    sorted_cereals = sorted(
-        cereals, key=lambda cereal: int(cereal["calories"])
-    )
+    sorted_cereals = sorted(cereals, key=lambda cereal: int(cereal["calories"]))
 
     context.log.info(f'Most caloric cereal: {sorted_cereals[-1]["name"]}')
 
@@ -35,9 +31,7 @@ def configurable_pipeline():
 
 if __name__ == "__main__":
     # start_run_config_marker
-    run_config = {
-        "solids": {"read_csv": {"config": {"csv_name": "cereal.csv"}}}
-    }
+    run_config = {"solids": {"read_csv": {"config": {"csv_name": "cereal.csv"}}}}
     # end_run_config_marker
     # start_execute_marker
     result = execute_pipeline(configurable_pipeline, run_config=run_config)
