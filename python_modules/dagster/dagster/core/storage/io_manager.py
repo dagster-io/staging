@@ -36,8 +36,19 @@ class IOManagerDefinition(ResourceDefinition, IInputManagerDefinition, IOutputMa
         input_config_schema=None,
         output_config_schema=None,
     ):
-        self._input_config_schema = input_config_schema
-        self._output_config_schema = output_config_schema
+        self._input_config_schema = convert_user_facing_definition_config_schema(
+            input_config_schema
+        )
+        # Unlike other configurable objects, whose config schemas default to Any, output_config_schema
+        # defaults to None. This the because IOManager input / output config shares config
+        # namespace with dagster type loaders and materializers. The absence of provided
+        # output_config_schema means that we should fall back to using the materializer that
+        # corresponds to the output dagster type.
+        self._output_config_schema = (
+            convert_user_facing_definition_config_schema(output_config_schema)
+            if output_config_schema
+            else None
+        )
         super(IOManagerDefinition, self).__init__(
             resource_fn=resource_fn,
             config_schema=config_schema,
@@ -230,16 +241,13 @@ class _IOManagerDecoratorCallable:
         output_config_schema=None,
         input_config_schema=None,
     ):
-        self.config_schema = convert_user_facing_definition_config_schema(config_schema)
-        self.description = check.opt_str_param(description, "description")
-        self.required_resource_keys = check.opt_set_param(
-            required_resource_keys, "required_resource_keys", of_type=str
-        )
-        self.version = check.opt_str_param(version, "version")
-        self.output_config_schema = convert_user_facing_definition_config_schema(
-            output_config_schema
-        )
-        self.input_config_schema = convert_user_facing_definition_config_schema(input_config_schema)
+        # type validation happens in IOManagerDefinition
+        self.config_schema = config_schema
+        self.description = description
+        self.required_resource_keys = required_resource_keys
+        self.version = version
+        self.output_config_schema = output_config_schema
+        self.input_config_schema = input_config_schema
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
