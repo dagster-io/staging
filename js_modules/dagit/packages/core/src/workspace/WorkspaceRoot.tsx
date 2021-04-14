@@ -118,3 +118,6 @@ export const WorkspaceRoot = () => (
     </Switch>
   </MainContent>
 );
+
+// eslint-disable-next-line import/no-default-export
+export default WorkspaceRoot;
