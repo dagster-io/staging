@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from dagster import check
+from dagster.config.config_type import ConfigAnyInstance
 from dagster.config.field import Field
 from dagster.config.field_utils import convert_potential_field
 from dagster.config.validate import process_config
@@ -8,13 +9,12 @@ from dagster.core.errors import DagsterConfigMappingFunctionError, user_code_err
 
 
 def convert_user_facing_definition_config_schema(potential_schema):
-    return (
-        None
-        if potential_schema is None
-        else potential_schema
-        if isinstance(potential_schema, IDefinitionConfigSchema)
-        else DefinitionConfigSchema(convert_potential_field(potential_schema))
-    )
+    if potential_schema is None:
+        return DefinitionConfigSchema(Field(ConfigAnyInstance, is_required=False))
+    elif isinstance(potential_schema, IDefinitionConfigSchema):
+        return potential_schema
+    else:
+        return DefinitionConfigSchema(convert_potential_field(potential_schema))
 
 
 # This structure is used to represent the config schema attached to a definition
