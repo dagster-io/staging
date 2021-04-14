@@ -36,3 +36,6 @@ export const FeatureFlagsRoot = () => {
     </div>
   );
 };
+
+// eslint-disable-next-line import/no-default-export
+export default FeatureFlagsRoot;

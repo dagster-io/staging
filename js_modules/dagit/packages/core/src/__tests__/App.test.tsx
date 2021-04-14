@@ -96,15 +96,13 @@ describe('App', () => {
     await waitFor(() => {
       const instanceHeader = screen.getByText(/instance/i);
       expect(instanceHeader).toBeVisible();
-
       const [runsLink] = screen.getAllByText('Runs');
       expect(runsLink.closest('a')).toHaveAttribute('href', '/instance/runs');
       expect(screen.getByText('Assets').closest('a')).toHaveAttribute('href', '/instance/assets');
       expect(screen.getByText('Status').closest('a')).toHaveAttribute('href', '/instance');
-
       expect(screen.getByText('my_repository')).toBeVisible();
     });
-  });
+  }, 10000);
 
   describe('Routes', () => {
     it('renders solids explorer', async () => {
