@@ -27,7 +27,12 @@ class _CompositeSolid:
         self.output_defs = check.opt_nullable_list_param(output_defs, "output", OutputDefinition)
         self.description = check.opt_str_param(description, "description")
 
-        self.config_schema = convert_user_facing_definition_config_schema(config_schema)
+        # Unlike other configurable objects, whose config schemas default to Any, composite solid
+        # config schemas default to None because not providing one means falling back to solid
+        # config.
+        self.config_schema = (
+            convert_user_facing_definition_config_schema(config_schema) if config_schema else None
+        )
         self.config_fn = check.opt_callable_param(config_fn, "config_fn")
 
     def __call__(self, fn: Callable[..., Any]):
