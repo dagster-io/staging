@@ -1,0 +1,97 @@
+import os
+from datetime import datetime
+
+import click
+import dagster_graphql
+
+from .utils import LegacyQueryHistoryInfo, get_queries
+
+
+@click.group(
+    name="query",
+    help="""This cli is used for commands related to the Dagster GraphQL client's queries.
+        In particular, it contains commands that pertain to checking backwards compatability.""",
+)
+def query():
+    pass
+
+
+@query.command()
+def check():
+    """This command checks whether backcompatability test setup is completed for the Dagster Python GraphQL Client.
+
+    It checks if the current versions of queries in use by the GraphQL client are present in the dehydrated
+    GraphQL backcompatability directory in `dagster_graphql_tests.graphql.client_backcompat.queries`
+
+    This is useful as a reminder when new queries or added or changes are made to existing queries in
+    use by the client.
+    """
+    current_queries_dict = get_queries()
+    legacy_query_info = LegacyQueryHistoryInfo.get()
+
+    query_directories_present = {
+        query_name: query_name in legacy_query_info.legacy_queries
+        for query_name in current_queries_dict
+    }
+    missing_query_history_subdirs = [
+        query_name
+        for (query_name, query_present) in query_directories_present.items()
+        if not query_present
+    ]
+    if missing_query_history_subdirs:
+        raise Exception(
+            "Missing some query history (sub)directories:"
+            f"\n\t{missing_query_history_subdirs}"
+            + f"\n\t at {legacy_query_info.directory}"
+            + "\n\t Please run `dagster-graphql-client query snapshot` on the command line"
+            + "or manually resolve these issues"
+        )
+    for query_name in query_directories_present:
+        query_dir = os.path.join(legacy_query_info.directory, query_name)
+        query_is_present = False
+        for filename in os.listdir(query_dir):
+            file_path = os.path.join(query_dir, filename)
+            with open(file_path, "r") as f:
+                old_query = f.read()
+                if old_query == current_queries_dict[query_name]:
+                    query_is_present = True
+                    break
+        if not query_is_present:
+            raise Exception(
+                f"The query dagster_graphql.client.client_queries.{query_name} "
+                + "is not present in the backcompatability history "
+                + f"directory {legacy_query_info.directory} "
+                + "\n\tPlease run `dagster-graphql-client query snapshot` on the command line "
+                + "or manually resolve these issues"
+            )
+    click.echo("All GraphQL Python Client backcompatability checks complete!")
+
+
+@query.command()
+def snapshot():
+    """This command dehydrates the GraphQL queries used by the Dagster Python GraphQL client.
+
+    It stores the queries as `<DAGSTER-GRAPHQL_VERSION>.<DATE>.graphql` files so that backwards compatability
+    tests can be performed on the current iteration of the GraphQL queries in use.
+    """
+    legacy_query_info = LegacyQueryHistoryInfo.get()
+    for (current_query_name, current_query_body) in get_queries().items():
+        query_dir = os.path.join(legacy_query_info.directory, current_query_name)
+        if current_query_name not in legacy_query_info.legacy_queries:
+            click.echo(
+                f"Couldn't find query history subdirectory for query {current_query_name}, so making a new one"
+                + f"\n\t at {query_dir}"
+            )
+            os.mkdir(query_dir)
+        query_filename = (
+            "-".join([dagster_graphql.__version__, datetime.today().strftime("%Y_%m_%d")])
+            + ".graphql"
+        )
+        query_full_file_path = os.path.join(query_dir, query_filename)
+        click.echo(
+            f"Writing the dagster_graphql.client.client_queries.{current_query_name}"
+            + f" query to a file: {query_full_file_path}"
+        )
+        with open(query_full_file_path, "w") as f:
+            f.write(current_query_body)
+    click.echo("Dagster GraphQL Client query snapshot complete!")
