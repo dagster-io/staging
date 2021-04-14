@@ -137,10 +137,10 @@
         ]
       },
       {
-        "title": "Configuration System",
+        "title": "Configuration",
         "children": [
           {
-            "title": "Config Schema",
+            "title": "Run Configuration",
             "path": "/concepts/configuration/config-schema"
           },
           {
