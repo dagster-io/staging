@@ -4,7 +4,7 @@ import {AppContext} from '../app/AppContext';
 import {Spinner} from '../ui/Spinner';
 
 import {ComputeLogContent} from './ComputeLogContent';
-import {ComputeLogsProvider} from './ComputeLogModal';
+import {ComputeLogsProvider} from './ComputeLogProvider';
 import {IRunMetadataDict} from './RunMetadataProvider';
 import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
 

@@ -5,111 +5,14 @@ import Ansi from 'ansi-to-react';
 import * as React from 'react';
 import styled, {createGlobalStyle} from 'styled-components/macro';
 
-import {Box} from '../ui/Box';
 import {Spinner} from '../ui/Spinner';
 import {FontFamily} from '../ui/styles';
 
-import {ExecutionStateDot} from './ExecutionStateDot';
-import {IStepState} from './RunMetadataProvider';
 import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
-
-interface IComputeLogContentProps {
-  rootServerURI: string;
-  runState: IStepState;
-  onRequestClose?: () => void;
-  stdout: ComputeLogContentFileFragment | null;
-  stderr: ComputeLogContentFileFragment | null;
-}
 
 const TRUNCATE_PREFIX = '\u001b[33m...logs truncated...\u001b[39m\n';
 const SCROLLER_LINK_TIMEOUT_MS = 3000;
 export const MAX_STREAMING_LOG_BYTES = 5242880; // 5 MB
-
-export class ComputeLogStepContent extends React.Component<IComputeLogContentProps> {
-  state = {selected: 'stderr'};
-
-  close = (e: React.SyntheticEvent) => {
-    e.stopPropagation();
-    this.props.onRequestClose && this.props.onRequestClose();
-  };
-
-  getDownloadUrl() {
-    const {stdout, stderr} = this.props;
-    const {selected} = this.state;
-    const logData = selected === 'stdout' ? stdout : stderr;
-    const downloadUrl = logData?.downloadUrl;
-    if (!downloadUrl) {
-      return null;
-    }
-    const isRelativeUrl = (x?: string) => x && x.startsWith('/');
-    return isRelativeUrl(downloadUrl) ? this.props.rootServerURI + downloadUrl : downloadUrl;
-  }
-
-  renderStatus() {
-    const {runState} = this.props;
-    if (runState === IStepState.RUNNING) {
-      return <Spinner purpose="body-text" />;
-    }
-    return (
-      <ExecutionStateDot
-        state={runState}
-        title={`${runState[0].toUpperCase()}${runState.substr(1)}`}
-      />
-    );
-  }
-
-  select = (selected: string) => {
-    this.setState({selected});
-  };
-
-  render() {
-    const {rootServerURI, stdout, stderr, onRequestClose} = this.props;
-    const {selected} = this.state;
-
-    const downloadUrl = this.getDownloadUrl();
-
-    return (
-      <Container>
-        <FileContainer>
-          <FileHeader>
-            <Box flex={{direction: 'row', alignItems: 'center'}}>
-              <Tab selected={selected === 'stderr'} onClick={() => this.select('stderr')}>
-                stderr
-              </Tab>
-              <Tab selected={selected === 'stdout'} onClick={() => this.select('stdout')}>
-                stdout
-              </Tab>
-            </Box>
-            <Box flex={{direction: 'row', alignItems: 'center'}}>
-              {this.renderStatus()}
-              {downloadUrl ? (
-                <Link
-                  aria-label="Download link"
-                  className="bp3-button bp3-minimal bp3-icon-download"
-                  href={downloadUrl}
-                  download
-                >
-                  <LinkText>Download {selected}</LinkText>
-                </Link>
-              ) : null}
-              {onRequestClose ? (
-                <button
-                  onClick={this.close}
-                  className="bp3-dialog-close-button bp3-button bp3-minimal bp3-icon-cross"
-                ></button>
-              ) : null}
-            </Box>
-          </FileHeader>
-          {selected === 'stdout' ? (
-            <ComputeLogContent rootServerURI={rootServerURI} logData={stdout} />
-          ) : (
-            <ComputeLogContent rootServerURI={rootServerURI} logData={stderr} />
-          )}
-        </FileContainer>
-      </Container>
-    );
-  }
-}
 
 export class ComputeLogContent extends React.Component<{
   rootServerURI: string;
@@ -379,26 +282,6 @@ const LineNumbers = (props: IScrollContainerProps) => {
   );
 };
 
-const LinkText = styled.span`
-  height: 1px;
-  width: 1px;
-  position: absolute;
-  overflow: hidden;
-  top: -10px;
-`;
-const Link = styled.a`
-  margin-left: 10px;
-  ::before {
-    margin: 0 !important;
-  }
-`;
-const Container = styled.div`
-  background-color: ${Colors.DARK_GRAY2};
-  position: relative;
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-`;
 const FileContainer = styled.div`
   flex: 1;
   height: 100%;
@@ -408,18 +291,6 @@ const FileContainer = styled.div`
   }
   display: flex;
   flex-direction: column;
-`;
-const FileHeader = styled.div`
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  height: 40px;
-  background-color: ${Colors.DARK_GRAY3};
-  border-bottom: 0.5px solid #5c7080;
-  color: ${({color}) => color || '#ffffff'};
-  font-weight: 600;
-  padding: 0 10px;
 `;
 const FileFooter = styled.div`
   display: flex;
@@ -480,33 +351,6 @@ const SolarizedColors = createGlobalStyle`
     color: #eee8d5;
   }
 `;
-const Tab = styled.div`
-  background-color: ${({selected}: {selected: boolean}) =>
-    selected ? Colors.DARK_GRAY2 : Colors.DARK_GRAY3};
-  cursor: pointer;
-  height: 30px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 0 150px;
-  margin-right: 1px;
-  margin-bottom: ${({selected}: {selected: boolean}) => (selected ? '-10px' : '-9px')};
-  border-top-right-radius: 5px;
-  border-top-left-radius: 5px;
-  border-top: 0.5px solid
-    ${({selected}: {selected: boolean}) => (selected ? '#5c7080' : 'transparent')};
-  border-left: 0.5px solid
-    ${({selected}: {selected: boolean}) => (selected ? '#5c7080' : 'transparent')};
-  border-right: 0.5px solid
-    ${({selected}: {selected: boolean}) => (selected ? '#5c7080' : 'transparent')};
-  &:hover {
-    border-top: 0.5px solid #5c7080;
-    border-left: 0.5px solid #5c7080;
-    border-right: 0.5px solid #5c7080;
-    height: ${({selected}: {selected: boolean}) => (selected ? '30px' : '28px')};
-  }
-`;
-
 const FileContent = styled.div`
   flex: 1;
   display: flex;
@@ -560,7 +404,6 @@ const ScrollToTop = styled.div`
     text-decoration: underline;
   }
 `;
-
 const LoadingContainer = styled.div`
   display: flex;
   justifycontent: center;

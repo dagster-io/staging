@@ -1,108 +1,13 @@
 import {gql} from '@apollo/client';
-import {Dialog} from '@blueprintjs/core';
 import * as React from 'react';
-import styled from 'styled-components/macro';
 
-import {AppContext} from '../app/AppContext';
 import {DirectGraphQLSubscription} from '../app/DirectGraphQLSubscription';
 import {ComputeIOType} from '../types/globalTypes';
-import {Spinner} from '../ui/Spinner';
 
-import {
-  ComputeLogStepContent,
-  COMPUTE_LOG_CONTENT_FRAGMENT,
-  MAX_STREAMING_LOG_BYTES,
-} from './ComputeLogContent';
-import {RunContext} from './RunContext';
-import {IStepState} from './RunMetadataProvider';
+import {COMPUTE_LOG_CONTENT_FRAGMENT, MAX_STREAMING_LOG_BYTES} from './ComputeLogContent';
 import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
 import {ComputeLogsSubscription} from './types/ComputeLogsSubscription';
 import {ComputeLogsSubscriptionFragment} from './types/ComputeLogsSubscriptionFragment';
-
-interface IComputeLogLink {
-  children: React.ReactNode;
-  runState: IStepState;
-  stepKey: string;
-}
-
-export const ComputeLogLink = ({runState, stepKey, children}: IComputeLogLink) => {
-  const [isOpen, setOpen] = React.useState(false);
-  const run = React.useContext(RunContext);
-
-  if (!run || !run.runId || runState === IStepState.SKIPPED) {
-    return null;
-  }
-
-  const open = (e: React.SyntheticEvent) => {
-    e.stopPropagation();
-    setOpen(true);
-  };
-  const close = () => setOpen(false);
-  return (
-    <>
-      <span onClick={open}>{children}</span>
-      <Dialog
-        onClose={close}
-        style={{
-          width: '100vw',
-          height: '100vh',
-          margin: 0,
-          padding: 0,
-          borderRadius: 0,
-        }}
-        usePortal={true}
-        isOpen={isOpen}
-      >
-        {isOpen ? (
-          <ComputeLogModal
-            runId={run.runId}
-            runState={runState}
-            stepKey={stepKey}
-            onRequestClose={close}
-          />
-        ) : (
-          <LoadingContainer>
-            <Spinner purpose="section" />
-          </LoadingContainer>
-        )}
-      </Dialog>
-    </>
-  );
-};
-
-interface ComputeLogModalProps {
-  runId: string;
-  stepKey: string;
-  runState: IStepState;
-  onRequestClose: () => void;
-}
-
-const ComputeLogModal = ({runId, onRequestClose, stepKey, runState}: ComputeLogModalProps) => {
-  const {rootServerURI, websocketURI} = React.useContext(AppContext);
-  return (
-    <ComputeLogsProvider websocketURI={websocketURI} runId={runId} stepKey={stepKey}>
-      {({isLoading, stdout, stderr}) => {
-        if (isLoading) {
-          return (
-            <LoadingContainer>
-              <Spinner purpose="section" />
-            </LoadingContainer>
-          );
-        }
-
-        return (
-          <ComputeLogStepContent
-            rootServerURI={rootServerURI}
-            runState={runState}
-            onRequestClose={onRequestClose}
-            stdout={stdout}
-            stderr={stderr}
-          />
-        );
-      }}
-    </ComputeLogsProvider>
-  );
-};
 
 interface IComputeLogsProviderProps {
   children: (props: {
@@ -253,11 +158,4 @@ const COMPUTE_LOGS_SUBSCRIPTION = gql`
     }
   }
   ${COMPUTE_LOGS_SUBSCRIPTION_FRAGMENT}
-`;
-
-const LoadingContainer = styled.div`
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
 `;
