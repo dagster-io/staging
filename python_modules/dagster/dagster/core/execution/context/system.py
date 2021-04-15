@@ -489,9 +489,6 @@ class TypeCheckContext:
         return self._plan_execution_context.log
 
 
-# HookContext currently uses undocumented attributes that are pulled from the step context for event
-# recording and logging. These should be removed, and the callsites should be changed to use the
-# step context instead.
 class HookContext:
     """The ``context`` object available to a hook function on an DagsterEvent.
 
@@ -520,20 +517,12 @@ class HookContext:
         return self._hook_def
 
     @property
-    def run_id(self) -> str:
-        return self._step_execution_context.run_id
-
-    @property
     def solid(self) -> "Solid":
         return self._step_execution_context.solid
 
     @property
     def resources(self) -> "Resources":
         return self._resources
-
-    @property
-    def required_resource_keys(self) -> Set[str]:
-        return self._required_resource_keys
 
     @property
     def solid_config(self) -> Any:
@@ -547,16 +536,8 @@ class HookContext:
         return self._step_execution_context.log
 
     @property
-    def pipeline_name(self) -> str:
-        return self._step_execution_context.pipeline_name
-
-    @property
-    def step(self) -> ExecutionStep:
-        return self._step_execution_context.step
-
-    @property
     def logging_tags(self) -> Dict[str, str]:
-        return self._step_execution_context.logging_tags
+        return self.log.logging_tags
 
 
 class OutputContext(NamedTuple):
