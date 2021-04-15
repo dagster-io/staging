@@ -7,7 +7,7 @@ from dagster.core.definitions.events import AssetKey
 from dagster.core.events.log import EventRecord
 from dagster.serdes import ConfigurableClass
 
-from .base import EventLogSequence, EventLogStorage, extract_asset_events_cursor
+from .base import EventLogStorage, extract_asset_events_cursor
 
 
 class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
@@ -18,7 +18,7 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
     """
 
     def __init__(self, inst_data=None):
-        self._logs = defaultdict(EventLogSequence)
+        self._logs = defaultdict(list)
         self._handlers = defaultdict(set)
         self._inst_data = inst_data
         self._asset_tags = defaultdict(dict)
@@ -70,7 +70,7 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
         pass
 
     def wipe(self):
-        self._logs = defaultdict(EventLogSequence)
+        self._logs = defaultdict(list)
 
     def watch(self, run_id, _start_cursor, callback):
         self._handlers[run_id].add(callback)
