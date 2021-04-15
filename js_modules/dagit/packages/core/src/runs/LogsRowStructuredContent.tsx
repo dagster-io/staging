@@ -1,11 +1,12 @@
 import {Colors, Intent, Tag} from '@blueprintjs/core';
+import querystring from 'query-string';
 import * as React from 'react';
+import {Link, useLocation} from 'react-router-dom';
 
 import {assertUnreachable} from '../app/Util';
 import {PythonErrorFragment} from '../app/types/PythonErrorFragment';
 import {ErrorSource} from '../types/globalTypes';
 
-import {ComputeLogLink} from './ComputeLogModal';
 import {EventTypeColumn} from './LogsRowComponents';
 import {
   LogRowStructuredContentTable,
@@ -25,7 +26,8 @@ interface IStructuredContentProps {
   metadata: IRunMetadataDict;
 }
 
-export const LogsRowStructuredContent: React.FC<IStructuredContentProps> = ({node, metadata}) => {
+export const LogsRowStructuredContent: React.FC<IStructuredContentProps> = ({node}) => {
+  const location = useLocation();
   const eventType = node.eventType as string;
   switch (node.__typename) {
     // Errors
@@ -48,6 +50,9 @@ export const LogsRowStructuredContent: React.FC<IStructuredContentProps> = ({nod
       if (!node.stepKey) {
         return <DefaultContent message={node.message} eventType={eventType} />;
       } else {
+        const currentQuery = querystring.parse(location.search);
+        const updatedQuery = {...currentQuery, logType: 'raw', selection: node.stepKey};
+        const href = `${location.pathname}?${querystring.stringify(updatedQuery)}`;
         return (
           <DefaultContent message={node.message} eventType={eventType}>
             <LogRowStructuredContentTable
@@ -55,12 +60,9 @@ export const LogsRowStructuredContent: React.FC<IStructuredContentProps> = ({nod
                 {
                   label: 'step_logs',
                   item: (
-                    <ComputeLogLink
-                      stepKey={node.stepKey}
-                      runState={metadata.steps[node.stepKey]?.state}
-                    >
+                    <Link to={href} style={{color: 'inherit'}}>
                       <MetadataEntryAction>View Raw Step Output</MetadataEntryAction>
-                    </ComputeLogLink>
+                    </Link>
                   ),
                 },
               ]}
