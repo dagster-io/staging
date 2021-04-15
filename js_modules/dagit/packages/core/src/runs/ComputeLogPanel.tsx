@@ -12,7 +12,7 @@ interface RunComputeLogs {
   runId: string;
   metadata: IRunMetadataDict;
   selectedStepKey?: string;
-  ioType: 'stdout' | 'stderr';
+  ioType: string;
 }
 
 export const ComputeLogPanel: React.FC<RunComputeLogs> = ({
@@ -35,7 +35,7 @@ export const ComputeLogPanel: React.FC<RunComputeLogs> = ({
           return (
             <ContentWrapper
               rootServerURI={rootServerURI}
-              logData={ioType === 'stdout' ? stdout : stderr}
+              logData={ioType === 'stderr' ? stderr : stdout}
               isLoading={isLoading}
             />
           );

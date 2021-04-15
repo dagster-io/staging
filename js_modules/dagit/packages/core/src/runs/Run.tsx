@@ -52,7 +52,6 @@ export const Run: React.FunctionComponent<RunProps> = (props) => {
     queryKey: 'selection',
     defaults: {selection: ''},
   });
-
   const {websocketURI} = React.useContext(AppContext);
 
   const onShowStateDetails = (stepKey: string, logs: RunPipelineRunEventFragment[]) => {
@@ -145,9 +144,16 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
   const splitPanelContainer = React.createRef<SplitPanelContainer>();
 
   const {basePath} = React.useContext(AppContext);
-  const [logType, setLogType] = React.useState<'structured' | 'raw'>('structured');
   const [computeLogStep, setComputeLogStep] = React.useState<string>();
-  const [computeLogType, onSetComputeLogType] = React.useState<'stdout' | 'stderr'>('stdout');
+  const [logType, setLogType] = useQueryPersistedState<string>({
+    queryKey: 'logType',
+    defaults: {logType: 'structured'},
+  });
+  const [computeLogType, onSetComputeLogType] = useQueryPersistedState<string>({
+    queryKey: 'computeLogType',
+    defaults: {logType: 'stdout'},
+  });
+
   const stepKeys = Object.keys(metadata.steps);
 
   const runtimeStepKeys = Object.keys(metadata.steps);
@@ -293,20 +299,20 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
               computeLogType={computeLogType}
               onSetComputeLogType={onSetComputeLogType}
             />
-            {logType === 'structured' ? (
+            {logType === 'raw' ? (
+              <ComputeLogPanel
+                runId={runId}
+                metadata={metadata}
+                selectedStepKey={computeLogStep}
+                ioType={computeLogType}
+              />
+            ) : (
               <LogsScrollingTable
                 logs={logs}
                 filter={logsFilter}
                 filterStepKeys={logsFilterStepKeys}
                 filterKey={`${JSON.stringify(logsFilter)}`}
                 metadata={metadata}
-              />
-            ) : (
-              <ComputeLogPanel
-                runId={runId}
-                metadata={metadata}
-                selectedStepKey={computeLogStep}
-                ioType={computeLogType}
               />
             )}
           </LogsContainer>

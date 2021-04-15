@@ -32,11 +32,11 @@ interface ILogsToolbarProps {
 
   filter: LogFilter;
   onSetFilter: (filter: LogFilter) => void;
-  logType: 'structured' | 'raw';
-  onSetLogType: (logType: 'structured' | 'raw') => void;
+  logType: string;
+  onSetLogType: (logType: string) => void;
   computeLogStep?: string;
-  onSetComputeLogStep: (step: string) => void;
-  computeLogType: 'stdout' | 'stderr';
+  onSetComputeLogStep: (step: 'structured' | 'raw') => void;
+  computeLogType: string;
   onSetComputeLogType: (type: 'stdout' | 'stderr') => void;
 }
 
@@ -61,13 +61,13 @@ export const LogsToolbar: React.FC<ILogsToolbarProps> = (props) => {
       <ButtonGroup style={{marginRight: 10}}>
         <Button
           icon="properties"
-          title="Structured logs"
-          active={logType === 'structured'}
+          title="Structured event logs"
+          active={logType !== 'raw'}
           onClick={() => onSetLogType('structured')}
         />
         <Button
           icon="console"
-          title="Raw logs"
+          title="Raw compute logs"
           active={logType === 'raw'}
           onClick={() => onSetLogType('raw')}
         />
@@ -100,7 +100,7 @@ const ComputeLogToolbar = ({
   metadata: IRunMetadataDict;
   computeLogStep?: string;
   onSetComputeLogStep: (step: string) => void;
-  computeLogType: 'stdout' | 'stderr';
+  computeLogType: string;
   onSetComputeLogType: (type: 'stdout' | 'stderr') => void;
 }) => {
   return (
@@ -137,7 +137,7 @@ const ComputeLogToolbar = ({
             title={
               <ButtonLink
                 color={
-                  computeLogType === 'stdout'
+                  computeLogType !== 'stderr'
                     ? Colors.BLUE1
                     : {link: Colors.GRAY2, hover: Colors.BLUE1}
                 }
@@ -167,7 +167,7 @@ const ComputeLogToolbar = ({
         </Tabs>
       </Group>
       <Group direction="row" spacing={12} alignItems="center">
-        {computeLogStep ? (
+        {computeLogStep && metadata.steps[computeLogStep] ? (
           metadata.steps[computeLogStep].state === IStepState.RUNNING ? (
             <Spinner purpose="body-text" />
           ) : (
