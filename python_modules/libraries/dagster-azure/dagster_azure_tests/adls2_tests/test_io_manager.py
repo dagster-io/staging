@@ -121,7 +121,7 @@ def test_adls2_pickle_io_manager_execution(storage_account, file_system, credent
             run_id=run_id,
             solid_def=pipeline_def.solid_def_named("return_one"),
         ),
-        log_manager=DagsterLogManager(run_id=pipeline_run.run_id, logging_tags={}, loggers=[]),
+        log=DagsterLogManager(run_id=pipeline_run.run_id, logging_tags={}, loggers=[]),
     )
 
     io_manager = PickledObjectADLS2IOManager(
@@ -152,7 +152,7 @@ def test_adls2_pickle_io_manager_execution(storage_account, file_system, credent
             run_id=run_id,
             solid_def=pipeline_def.solid_def_named("add_one"),
         ),
-        log_manager=DagsterLogManager(run_id=pipeline_run.run_id, logging_tags={}, loggers=[]),
+        log=DagsterLogManager(run_id=pipeline_run.run_id, logging_tags={}, loggers=[]),
     )
 
     assert get_step_output(add_one_step_events, "add_one")
