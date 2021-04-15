@@ -5,7 +5,6 @@ so we have a different layer of objects that encode the explicit public API
 in the user_context module
 """
 from abc import ABC, abstractmethod, abstractproperty
-from collections import namedtuple
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, NamedTuple, Optional, Set, cast
 
 from dagster import check
@@ -28,7 +27,7 @@ from dagster.core.storage.io_manager import IOManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.system_config.objects import EnvironmentConfig
-from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
+from dagster.core.types.dagster_type import DagsterType
 
 if TYPE_CHECKING:
     from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
@@ -490,9 +489,6 @@ class TypeCheckContext:
         return self._plan_execution_context.log
 
 
-# HookContext currently uses undocumented attributes that are pulled from the step context for event
-# recording and logging. These should be removed, and the callsites should be changed to use the
-# step context instead.
 class HookContext:
     """The ``context`` object available to a hook function on an DagsterEvent.
 
@@ -521,20 +517,12 @@ class HookContext:
         return self._hook_def
 
     @property
-    def run_id(self) -> str:
-        return self._step_execution_context.run_id
-
-    @property
     def solid(self) -> "Solid":
         return self._step_execution_context.solid
 
     @property
     def resources(self) -> "Resources":
         return self._resources
-
-    @property
-    def required_resource_keys(self) -> Set[str]:
-        return self._required_resource_keys
 
     @property
     def solid_config(self) -> Any:
@@ -548,16 +536,8 @@ class HookContext:
         return self._step_execution_context.log
 
     @property
-    def pipeline_name(self) -> str:
-        return self._step_execution_context.pipeline_name
-
-    @property
-    def step(self) -> ExecutionStep:
-        return self._step_execution_context.step
-
-    @property
     def logging_tags(self) -> Dict[str, str]:
-        return self._step_execution_context.logging_tags
+        return self.log.logging_tags
 
 
 class OutputContext(NamedTuple):
