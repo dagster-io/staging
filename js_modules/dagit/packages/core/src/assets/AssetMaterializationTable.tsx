@@ -6,11 +6,10 @@ import {PipelineReference} from '../pipelines/PipelineReference';
 import {MetadataEntries} from '../runs/MetadataEntry';
 import {RunStatusTagWithStats} from '../runs/RunStatusTag';
 import {titleForRun} from '../runs/RunUtils';
-import {Group} from '../ui/Group';
 import {Table} from '../ui/Table';
 import {FontFamily} from '../ui/styles';
 
-import {AssetLineageInfoElement} from './AssetLineageInfoElement';
+import {AssetLineageElements} from './AssetLineageElements';
 import {AssetQuery_assetOrError_Asset_assetMaterializations} from './types/AssetQuery';
 
 export const AssetMaterializationTable: React.FunctionComponent<{
@@ -70,19 +69,7 @@ const AssetMaterializationRow: React.FunctionComponent<{
         ) : null}
       </td>
       {isPartitioned && <td>{assetMaterialization.partition}</td>}
-      {hasLineage && (
-        <td>
-          {
-            <Group direction={'column'} spacing={0}>
-              {assetLineage.map((lineage_info) => (
-                <>
-                  <AssetLineageInfoElement lineage_info={lineage_info} />
-                </>
-              ))}
-            </Group>
-          }
-        </td>
-      )}
+      {hasLineage && <td>{<AssetLineageElements elements={assetLineage} />}</td>}
       <td>
         <Timestamp timestamp={{ms: Number(timestamp)}} />
       </td>

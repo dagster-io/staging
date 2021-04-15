@@ -1,6 +1,9 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
 
+import {Group} from '../main';
+import {ButtonLink} from '../ui/ButtonLink';
+
 import {AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_assetLineage} from './types/AssetQuery';
 
 export const AssetLineageInfoElement: React.FunctionComponent<{
@@ -22,5 +25,26 @@ export const AssetLineageInfoElement: React.FunctionComponent<{
         {lineage_info.assetKey.path.join(' > ')}
       </Link>
     </>
+  );
+};
+
+const MAX_COLLAPSED = 5;
+
+export const AssetLineageElements: React.FunctionComponent<{
+  elements: AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_assetLineage[];
+}> = ({elements}) => {
+  const [collapsed, setCollapsed] = React.useState(true);
+
+  return (
+    <Group direction={'column'} spacing={0}>
+      {(collapsed ? elements.slice(0, MAX_COLLAPSED) : elements).map((info, idx) => (
+        <AssetLineageInfoElement key={idx} lineage_info={info} />
+      ))}
+      {elements.length > MAX_COLLAPSED && (
+        <ButtonLink onClick={() => setCollapsed(!collapsed)}>
+          {collapsed ? 'Show More' : 'Show Less'}
+        </ButtonLink>
+      )}
+    </Group>
   );
 };
