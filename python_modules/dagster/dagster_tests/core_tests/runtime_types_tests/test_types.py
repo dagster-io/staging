@@ -200,7 +200,10 @@ def test_input_types_fail_in_pipeline():
 
     type_check_data = _type_check_data_for_input(solid_result, "string")
     assert not type_check_data.success
-    assert type_check_data.description == 'Value "1" of python type "int" must be a string.'
+    assert (
+        type_check_data.description
+        == "Value must be <class 'str'> and got value of type <class 'int'>."
+    )
 
     step_failure_event = solid_result.compute_step_failure_event
     assert step_failure_event.event_specific_data.error.cls_name == "DagsterTypeCheckDidNotPass"
@@ -229,7 +232,10 @@ def test_output_types_fail_in_pipeline():
     output_event = solid_result.get_output_event_for_compute()
     type_check_data = output_event.event_specific_data.type_check_data
     assert not type_check_data.success
-    assert type_check_data.description == 'Value "1" of python type "int" must be a string.'
+    assert (
+        type_check_data.description
+        == "Value must be <class 'str'> and got value of type <class 'int'>."
+    )
 
     step_failure_event = solid_result.compute_step_failure_event
     assert step_failure_event.event_specific_data.error.cls_name == "DagsterTypeCheckDidNotPass"

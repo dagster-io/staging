@@ -87,19 +87,6 @@ def dataframe_loader(_context, config):
         )
 
 
-def df_type_check(_, value):
-    if not isinstance(value, pd.DataFrame):
-        return TypeCheck(success=False)
-    return TypeCheck(
-        success=True,
-        metadata_entries=[
-            EventMetadataEntry.text(str(len(value)), "row_count", "Number of rows in DataFrame"),
-            # string cast columns since they may be things like datetime
-            EventMetadataEntry.json({"columns": list(map(str, value.columns))}, "metadata"),
-        ],
-    )
-
-
 DataFrame = DagsterType(
     name="PandasDataFrame",
     description="""Two-dimensional size-mutable, potentially heterogeneous
@@ -107,7 +94,15 @@ DataFrame = DagsterType(
     See http://pandas.pydata.org/""",
     loader=dataframe_loader,
     materializer=dataframe_materializer,
-    type_check_fn=df_type_check,
+    python_type=pd.DataFrame,
+    type_check_fn=lambda _, value: TypeCheck(
+        success=True,
+        metadata_entries=[
+            EventMetadataEntry.text(str(len(value)), "row_count", "Number of rows in DataFrame"),
+            # string cast columns since they may be things like datetime
+            EventMetadataEntry.json({"columns": list(map(str, value.columns))}, "metadata"),
+        ],
+    ),
 )
 
 
