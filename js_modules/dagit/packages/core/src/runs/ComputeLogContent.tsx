@@ -114,6 +114,7 @@ export class ComputeLogStepContent extends React.Component<IComputeLogContentPro
 export class ComputeLogContent extends React.Component<{
   rootServerURI: string;
   logData?: ComputeLogContentFileFragment | null;
+  isLoading?: boolean;
 }> {
   private timeout: number;
   private contentContainer = React.createRef<ScrollContainer>();
@@ -192,7 +193,7 @@ export class ComputeLogContent extends React.Component<{
   }
 
   render() {
-    const {logData} = this.props;
+    const {logData, isLoading} = this.props;
     let content = logData?.data;
     const isTruncated = content && Buffer.byteLength(content, 'utf8') >= MAX_STREAMING_LOG_BYTES;
 
@@ -231,6 +232,11 @@ export class ComputeLogContent extends React.Component<{
               />
             </RelativeContainer>
           </FileContent>
+          {isLoading ? (
+            <LoadingContainer>
+              <Spinner purpose="page" />
+            </LoadingContainer>
+          ) : null}
         </FileContainer>
         <FileFooter>{logData?.path}</FileFooter>
       </>
@@ -553,4 +559,17 @@ const ScrollToTop = styled.div`
   &:hover {
     text-decoration: underline;
   }
+`;
+
+const LoadingContainer = styled.div`
+  display: flex;
+  justifycontent: center;
+  alignitems: center;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  backgroundcolor: ${Colors.DARK_GRAY3};
+  opacity: 0.3;
 `;

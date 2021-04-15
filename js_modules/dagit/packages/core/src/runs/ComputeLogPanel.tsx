@@ -1,5 +1,4 @@
 import * as React from 'react';
-import styled from 'styled-components/macro';
 
 import {AppContext} from '../app/AppContext';
 import {Spinner} from '../ui/Spinner';
@@ -7,6 +6,7 @@ import {Spinner} from '../ui/Spinner';
 import {ComputeLogContent} from './ComputeLogContent';
 import {ComputeLogsProvider} from './ComputeLogModal';
 import {IRunMetadataDict} from './RunMetadataProvider';
+import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
 
 interface RunComputeLogs {
   runId: string;
@@ -32,25 +32,33 @@ export const ComputeLogPanel: React.FC<RunComputeLogs> = ({
     <div style={{flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column'}}>
       <ComputeLogsProvider websocketURI={websocketURI} runId={runId} stepKey={selectedStepKey}>
         {({isLoading, stdout, stderr}) => {
-          if (isLoading) {
-            return (
-              <LoadingContainer>
-                <Spinner purpose="section" />
-              </LoadingContainer>
-            );
-          }
-
-          const logData = ioType === 'stdout' ? stdout : stderr;
-          return <ComputeLogContent rootServerURI={rootServerURI} logData={logData} />;
+          return (
+            <ContentWrapper
+              rootServerURI={rootServerURI}
+              logData={ioType === 'stdout' ? stdout : stderr}
+              isLoading={isLoading}
+            />
+          );
         }}
       </ComputeLogsProvider>
     </div>
   );
 };
 
-const LoadingContainer = styled.div`
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-`;
+const ContentWrapper = ({
+  rootServerURI,
+  isLoading,
+  logData,
+}: {
+  isLoading: boolean;
+  logData: ComputeLogContentFileFragment | null;
+  rootServerURI: string;
+}) => {
+  const [data, setData] = React.useState<ComputeLogContentFileFragment | null>(null);
+  React.useEffect(() => {
+    if (logData && !isLoading) {
+      setData(logData);
+    }
+  }, [logData, isLoading]);
+  return <ComputeLogContent rootServerURI={rootServerURI} logData={data} isLoading={isLoading} />;
+};
