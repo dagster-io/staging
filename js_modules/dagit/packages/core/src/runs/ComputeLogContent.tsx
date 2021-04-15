@@ -380,8 +380,8 @@ const FileWarning = styled.div`
 `;
 const ScrollToast = styled.div`
   position: absolute;
-  top: 40px;
   height: 30px;
+  top: 0;
   left: 0;
   right: 0;
   display: flex;

@@ -103,6 +103,7 @@ const ComputeLogToolbar = ({
   computeLogType: string;
   onSetComputeLogType: (type: 'stdout' | 'stderr') => void;
 }) => {
+  const isValidStepSelection = steps.length && computeLogStep && metadata.steps[computeLogStep];
   return (
     <Box
       flex={{justifyContent: 'space-between', alignItems: 'center', direction: 'row'}}
@@ -110,6 +111,7 @@ const ComputeLogToolbar = ({
     >
       <Group direction="row" spacing={24} alignItems="center">
         <Select
+          disabled={!steps.length}
           items={steps}
           itemRenderer={(item: string, options: {handleClick: any; modifiers: any}) => (
             <MenuItem
@@ -127,66 +129,71 @@ const ComputeLogToolbar = ({
         >
           <Button
             text={computeLogStep || 'Select a step...'}
+            disabled={!steps.length}
             rightIcon="caret-down"
             style={{minHeight: 25}}
           />
         </Select>
-        <Tabs selectedTabId={computeLogType}>
-          <Tab
-            id="stdout"
-            title={
-              <ButtonLink
-                color={
-                  computeLogType !== 'stderr'
-                    ? Colors.BLUE1
-                    : {link: Colors.GRAY2, hover: Colors.BLUE1}
-                }
-                underline="never"
-                onClick={() => onSetComputeLogType('stdout')}
-              >
-                stdout
-              </ButtonLink>
-            }
-          />
-          <Tab
-            id="stderr"
-            title={
-              <ButtonLink
-                color={
-                  computeLogType === 'stderr'
-                    ? Colors.BLUE1
-                    : {link: Colors.GRAY2, hover: Colors.BLUE1}
-                }
-                underline="never"
-                onClick={() => onSetComputeLogType('stderr')}
-              >
-                stderr
-              </ButtonLink>
-            }
-          />
-        </Tabs>
-      </Group>
-      <Group direction="row" spacing={12} alignItems="center">
-        {computeLogStep && metadata.steps[computeLogStep] ? (
-          metadata.steps[computeLogStep].state === IStepState.RUNNING ? (
-            <Spinner purpose="body-text" />
-          ) : (
-            <ExecutionStateDot
-              state={metadata.steps[computeLogStep].state}
-              title={`${metadata.steps[computeLogStep].state[0].toUpperCase()}${metadata.steps[
-                computeLogStep
-              ].state.substr(1)}`}
+        {isValidStepSelection ? (
+          <Tabs selectedTabId={computeLogType}>
+            <Tab
+              id="stdout"
+              title={
+                <ButtonLink
+                  color={
+                    computeLogType !== 'stderr'
+                      ? Colors.BLUE1
+                      : {link: Colors.GRAY2, hover: Colors.BLUE1}
+                  }
+                  underline="never"
+                  onClick={() => onSetComputeLogType('stdout')}
+                >
+                  stdout
+                </ButtonLink>
+              }
             />
-          )
+            <Tab
+              id="stderr"
+              title={
+                <ButtonLink
+                  color={
+                    computeLogType === 'stderr'
+                      ? Colors.BLUE1
+                      : {link: Colors.GRAY2, hover: Colors.BLUE1}
+                  }
+                  underline="never"
+                  onClick={() => onSetComputeLogType('stderr')}
+                >
+                  stderr
+                </ButtonLink>
+              }
+            />
+          </Tabs>
         ) : null}
-        <a
-          aria-label="Download link"
-          className="bp3-button bp3-minimal bp3-icon-download"
-          href={'/'}
-          title={`Download ${computeLogStep}`}
-          download
-        ></a>
       </Group>
+      {isValidStepSelection ? (
+        <Group direction="row" spacing={12} alignItems="center">
+          {computeLogStep && metadata.steps[computeLogStep] ? (
+            metadata.steps[computeLogStep].state === IStepState.RUNNING ? (
+              <Spinner purpose="body-text" />
+            ) : (
+              <ExecutionStateDot
+                state={metadata.steps[computeLogStep].state}
+                title={`${metadata.steps[computeLogStep].state[0].toUpperCase()}${metadata.steps[
+                  computeLogStep
+                ].state.substr(1)}`}
+              />
+            )
+          ) : null}
+          <a
+            aria-label="Download link"
+            className="bp3-button bp3-minimal bp3-icon-download"
+            href={'/'}
+            title={`Download ${computeLogStep}`}
+            download
+          ></a>
+        </Group>
+      ) : null}
     </Box>
   );
 };

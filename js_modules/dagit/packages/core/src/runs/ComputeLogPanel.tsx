@@ -1,13 +1,13 @@
 import * as React from 'react';
 
 import {AppContext} from '../app/AppContext';
+import {Box} from '../ui/Box';
 import {Spinner} from '../ui/Spinner';
 
 import {ComputeLogContent} from './ComputeLogContent';
 import {ComputeLogsProvider} from './ComputeLogProvider';
 import {IRunMetadataDict} from './RunMetadataProvider';
 import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
-
 interface RunComputeLogs {
   runId: string;
   metadata: IRunMetadataDict;
@@ -25,7 +25,14 @@ export const ComputeLogPanel: React.FC<RunComputeLogs> = ({
   const stepKeys = Object.keys(metadata.steps);
 
   if (!stepKeys.length || !selectedStepKey) {
-    return <Spinner purpose="section" />;
+    return (
+      <Box
+        flex={{justifyContent: 'center', alignItems: 'center'}}
+        style={{flex: 1, height: '100%'}}
+      >
+        <Spinner purpose="section" />
+      </Box>
+    );
   }
 
   return (
@@ -56,7 +63,7 @@ const ContentWrapper = ({
 }) => {
   const [data, setData] = React.useState<ComputeLogContentFileFragment | null>(null);
   React.useEffect(() => {
-    if (logData && !isLoading) {
+    if (!isLoading) {
       setData(logData);
     }
   }, [logData, isLoading]);
