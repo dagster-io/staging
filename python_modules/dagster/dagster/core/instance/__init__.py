@@ -325,7 +325,7 @@ class DagsterInstance:
     # ctors
 
     @staticmethod
-    def ephemeral(tempdir=None, preload=None):
+    def ephemeral(tempdir=None):
         from dagster.core.run_coordinator import DefaultRunCoordinator
         from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
         from dagster.core.storage.event_log import InMemoryEventLogStorage
@@ -339,8 +339,8 @@ class DagsterInstance:
         return DagsterInstance(
             InstanceType.EPHEMERAL,
             local_artifact_storage=LocalArtifactStorage(tempdir),
-            run_storage=InMemoryRunStorage(preload=preload),
-            event_storage=InMemoryEventLogStorage(preload=preload),
+            run_storage=InMemoryRunStorage(),
+            event_storage=InMemoryEventLogStorage(),
             compute_log_manager=NoOpComputeLogManager(),
             run_coordinator=DefaultRunCoordinator(),
             run_launcher=SyncInMemoryRunLauncher(),
