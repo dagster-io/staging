@@ -489,9 +489,6 @@ class TypeCheckContext:
         return self._plan_execution_context.log
 
 
-# HookContext currently uses undocumented attributes that are pulled from the step context for event
-# recording and logging. These should be removed, and the callsites should be changed to use the
-# step context instead.
 class HookContext:
     """The ``context`` object available to a hook function on an DagsterEvent.
 
@@ -501,6 +498,8 @@ class HookContext:
         solid (Solid): The solid instance associated with the hook.
         resources (NamedTuple): Resources available in the hook context.
         solid_config (Any): The parsed config specific to this solid.
+        pipeline_name (str): The name of the pipeline where this hook is being triggered.
+        run_id (str): The id of the run where this hook is being triggered.
     """
 
     def __init__(
@@ -516,12 +515,16 @@ class HookContext:
         )
 
     @property
-    def hook_def(self) -> HookDefinition:
-        return self._hook_def
+    def pipeline_name(self) -> str:
+        return self._step_execution_context.pipeline_name
 
     @property
     def run_id(self) -> str:
         return self._step_execution_context.run_id
+
+    @property
+    def hook_def(self) -> HookDefinition:
+        return self._hook_def
 
     @property
     def solid(self) -> "Solid":
@@ -530,10 +533,6 @@ class HookContext:
     @property
     def resources(self) -> "Resources":
         return self._resources
-
-    @property
-    def required_resource_keys(self) -> Set[str]:
-        return self._required_resource_keys
 
     @property
     def solid_config(self) -> Any:
@@ -547,16 +546,8 @@ class HookContext:
         return self._step_execution_context.log
 
     @property
-    def pipeline_name(self) -> str:
-        return self._step_execution_context.pipeline_name
-
-    @property
-    def step(self) -> ExecutionStep:
-        return self._step_execution_context.step
-
-    @property
     def logging_tags(self) -> Dict[str, str]:
-        return self._step_execution_context.logging_tags
+        return self.log.logging_tags
 
 
 class OutputContext(NamedTuple):
