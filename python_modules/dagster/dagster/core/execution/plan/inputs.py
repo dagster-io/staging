@@ -499,14 +499,17 @@ class FromMultipleSources(
 
 
 def _load_input_with_input_manager(input_manager: "InputManager", context: "InputContext"):
+    from dagster.core.execution.context.system import StepExecutionContext
+
+    step_context = cast(StepExecutionContext, context.step_context)
     with user_code_error_boundary(
         DagsterExecutionLoadInputError,
         control_flow_exceptions=[Failure, RetryRequested],
         msg_fn=lambda: (
             f'Error occurred while loading input "{context.name}" of '
-            f'step "{context.step_context.step.key}":'
+            f'step "{step_context.step.key}":'
         ),
-        step_key=context.step_context.step.key,
+        step_key=step_context.step.key,
         input_name=context.name,
     ):
         value = input_manager.load_input(context)
