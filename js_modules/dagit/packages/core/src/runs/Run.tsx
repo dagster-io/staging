@@ -153,6 +153,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
     queryKey: 'computeLogType',
     defaults: {logType: 'stdout'},
   });
+  const [computeLogUrl, setComputeLogUrl] = React.useState<string | null>(null);
 
   const stepKeys = Object.keys(metadata.steps);
 
@@ -298,6 +299,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
               onSetComputeLogStep={onComputeLogStepSelect}
               computeLogType={computeLogType}
               onSetComputeLogType={onSetComputeLogType}
+              computeLogUrl={computeLogUrl}
             />
             {logType === 'raw' ? (
               <ComputeLogPanel
@@ -305,6 +307,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
                 metadata={metadata}
                 selectedStepKey={computeLogStep}
                 ioType={computeLogType}
+                setComputeLogUrl={setComputeLogUrl}
               />
             ) : (
               <LogsScrollingTable

@@ -15,8 +15,8 @@ const SCROLLER_LINK_TIMEOUT_MS = 3000;
 export const MAX_STREAMING_LOG_BYTES = 5242880; // 5 MB
 
 export class ComputeLogContent extends React.Component<{
-  rootServerURI: string;
   logData?: ComputeLogContentFileFragment | null;
+  downloadUrl?: string | null;
   isLoading?: boolean;
 }> {
   private timeout: number;
@@ -25,16 +25,6 @@ export class ComputeLogContent extends React.Component<{
   state = {
     showScrollToTop: false,
   };
-
-  getDownloadUrl() {
-    const {logData, rootServerURI} = this.props;
-    const downloadUrl = logData?.downloadUrl;
-    if (!downloadUrl) {
-      return null;
-    }
-    const isRelativeUrl = (x?: string) => x && x.startsWith('/');
-    return isRelativeUrl(downloadUrl) ? rootServerURI + downloadUrl : downloadUrl;
-  }
 
   hideWarning = () => {
     this.setState({showScrollToTop: false});
@@ -96,7 +86,7 @@ export class ComputeLogContent extends React.Component<{
   }
 
   render() {
-    const {logData, isLoading} = this.props;
+    const {logData, isLoading, downloadUrl} = this.props;
     let content = logData?.data;
     const isTruncated = content && Buffer.byteLength(content, 'utf8') >= MAX_STREAMING_LOG_BYTES;
 
@@ -105,7 +95,6 @@ export class ComputeLogContent extends React.Component<{
       const truncated = nextLine < content.length ? content.slice(nextLine) : content;
       content = TRUNCATE_PREFIX + truncated;
     }
-    const downloadUrl = this.getDownloadUrl();
     const warning = isTruncated ? (
       <FileWarning>
         <Icon icon={IconNames.WARNING_SIGN} style={{marginRight: 10, color: Colors.ORANGE5}} />

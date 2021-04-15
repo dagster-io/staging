@@ -38,6 +38,7 @@ interface ILogsToolbarProps {
   onSetComputeLogStep: (step: 'structured' | 'raw') => void;
   computeLogType: string;
   onSetComputeLogType: (type: 'stdout' | 'stderr') => void;
+  computeLogUrl: string | null;
 }
 
 const logQueryToString = (logQuery: LogFilterValue[]) =>
@@ -55,6 +56,7 @@ export const LogsToolbar: React.FC<ILogsToolbarProps> = (props) => {
     onSetComputeLogStep,
     computeLogType,
     onSetComputeLogType,
+    computeLogUrl,
   } = props;
   return (
     <LogsToolbarContainer>
@@ -82,6 +84,7 @@ export const LogsToolbar: React.FC<ILogsToolbarProps> = (props) => {
           onSetComputeLogType={onSetComputeLogType}
           computeLogStep={computeLogStep}
           onSetComputeLogStep={onSetComputeLogStep}
+          computeLogUrl={computeLogUrl}
         />
       )}
     </LogsToolbarContainer>
@@ -95,6 +98,7 @@ const ComputeLogToolbar = ({
   onSetComputeLogStep,
   computeLogType,
   onSetComputeLogType,
+  computeLogUrl,
 }: {
   steps: string[];
   metadata: IRunMetadataDict;
@@ -102,6 +106,7 @@ const ComputeLogToolbar = ({
   onSetComputeLogStep: (step: string) => void;
   computeLogType: string;
   onSetComputeLogType: (type: 'stdout' | 'stderr') => void;
+  computeLogUrl: string | null;
 }) => {
   const isValidStepSelection = steps.length && computeLogStep && metadata.steps[computeLogStep];
   return (
@@ -185,13 +190,15 @@ const ComputeLogToolbar = ({
               />
             )
           ) : null}
-          <a
-            aria-label="Download link"
-            className="bp3-button bp3-minimal bp3-icon-download"
-            href={'/'}
-            title={`Download ${computeLogStep}`}
-            download
-          ></a>
+          {computeLogUrl ? (
+            <a
+              aria-label="Download link"
+              className="bp3-button bp3-minimal bp3-icon-download"
+              href={computeLogUrl}
+              title={`Download ${computeLogStep}`}
+              download
+            ></a>
+          ) : null}
         </Group>
       ) : null}
     </Box>
