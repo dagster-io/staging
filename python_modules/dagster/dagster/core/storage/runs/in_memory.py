@@ -17,18 +17,8 @@ from .base import RunStorage
 
 
 class InMemoryRunStorage(RunStorage):
-    def __init__(self, preload=None):
+    def __init__(self):
         self._init_storage()
-        if preload:
-            for payload in preload:
-                self._runs[payload.pipeline_run.run_id] = payload.pipeline_run
-                self._pipeline_snapshots[
-                    payload.pipeline_run.pipeline_snapshot_id
-                ] = payload.pipeline_snapshot
-                self._ep_snapshots[
-                    payload.pipeline_run.execution_plan_snapshot_id
-                ] = payload.execution_plan_snapshot
-
         super().__init__()
 
     # separate method so it can be reused in wipe
