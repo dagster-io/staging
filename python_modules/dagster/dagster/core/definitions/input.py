@@ -28,8 +28,7 @@ def _check_default_value(input_name, dagster_type, default_value):
             )
 
         if isinstance(dagster_type, BuiltinScalarDagsterType):
-            type_check = dagster_type.type_check_scalar_value(default_value)
-            if not type_check.success:
+            if not isinstance(default_value, dagster_type.python_type):
                 raise DagsterInvalidDefinitionError(
                     (
                         "Type check failed for the default_value of InputDefinition "
