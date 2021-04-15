@@ -6,6 +6,8 @@ import styled from 'styled-components/macro';
 import {Box} from './Box';
 import {Spinner} from './Spinner';
 
+const MAX_SUGGESTIONS = 100;
+
 export interface SuggestionProvider {
   token: string;
   values: () => string[];
@@ -133,7 +135,7 @@ export const TokenizingField: React.FunctionComponent<TokenizingFieldProps> = ({
         .filter(suggestionNotUsed)
         .map((v) => ({text: `${provider.token}:${v}`, final: true}))
         .filter(suggestionMatchesTypedText)
-        .slice(0, 6); // never show too many suggestions for one provider
+        .slice(0, MAX_SUGGESTIONS); // never show too many suggestions for one provider
     };
 
     if (parts.length === 1) {
@@ -294,22 +296,24 @@ export const TokenizingField: React.FunctionComponent<TokenizingFieldProps> = ({
       position={'bottom-left'}
       content={
         suggestions.length > 0 ? (
-          <StyledMenu>
-            {suggestions.slice(0, 20).map((suggestion, idx) => (
-              <StyledMenuItem
-                key={suggestion.text}
-                text={suggestion.text}
-                shouldDismissPopover={false}
-                active={active ? active.idx === idx : false}
-                onMouseDown={(e: React.MouseEvent<any>) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onConfirmSuggestion(suggestion);
-                  setActive(null);
-                }}
-              />
-            ))}
-          </StyledMenu>
+          <div style={{maxHeight: 235, overflowY: 'scroll'}}>
+            <StyledMenu>
+              {suggestions.map((suggestion, idx) => (
+                <StyledMenuItem
+                  key={suggestion.text}
+                  text={suggestion.text}
+                  shouldDismissPopover={false}
+                  active={active ? active.idx === idx : false}
+                  onMouseDown={(e: React.MouseEvent<any>) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onConfirmSuggestion(suggestion);
+                    setActive(null);
+                  }}
+                />
+              ))}
+            </StyledMenu>
+          </div>
         ) : (
           <div />
         )
