@@ -27,6 +27,20 @@ class DagsterTypeKind(PythonEnum):
     REGULAR = "REGULAR"
 
 
+class AnyPythonTypeSentinel:
+    pass
+
+
+class NotSpecifiedPythonTypeSentinel:
+    pass
+
+
+class DagsterTypeExpectation:
+    # TODO: policies, type sig
+    def __init__(self, fn):
+        self.fn = fn
+
+
 class DagsterType:
     """Define a type in dagster. These can be used in the inputs and outputs of solids.
 
@@ -94,6 +108,8 @@ class DagsterType:
         auto_plugins=None,
         required_resource_keys=None,
         kind=DagsterTypeKind.REGULAR,
+        python_type=NotSpecifiedPythonTypeSentinel,
+        expectations=None,
     ):
         check.opt_str_param(key, "key")
         check.opt_str_param(name, "name")
@@ -135,8 +151,11 @@ class DagsterType:
             "required_resource_keys",
         )
 
-        self._type_check_fn = check.callable_param(type_check_fn, "type_check_fn")
-        _validate_type_check_fn(self._type_check_fn, self._name)
+        self._type_check_fn = check.opt_callable_param(type_check_fn, "type_check_fn")
+        if self._type_check_fn:
+            _validate_type_check_fn(self._type_check_fn, self._name)
+        else:
+            check.invariant(python_type is not NotSpecifiedPythonTypeSentinel)
 
         auto_plugins = check.opt_list_param(auto_plugins, "auto_plugins", of_type=type)
 
@@ -156,20 +175,50 @@ class DagsterType:
         )
 
         self.kind = check.inst_param(kind, "kind", DagsterTypeKind)
+        self.python_type = (
+            AnyPythonTypeSentinel if python_type is NotSpecifiedPythonTypeSentinel else python_type
+        )
 
-    def type_check(self, context, value):
-        retval = self._type_check_fn(context, value)
-
-        if not isinstance(retval, (bool, TypeCheck)):
-            raise DagsterInvariantViolationError(
-                (
-                    "You have returned {retval} of type {retval_type} from the type "
-                    'check function of type "{type_key}". Return value must be instance '
-                    "of TypeCheck or a bool."
-                ).format(retval=repr(retval), retval_type=type(retval), type_key=self.key)
+        if expectations:
+            raise Exception("TODO")
+        else:
+            self.expectations = (
+                [DagsterTypeExpectation(self._type_check_fn)] if self._type_check_fn else []
             )
 
-        return TypeCheck(success=retval) if isinstance(retval, bool) else retval
+    def type_check(self, context, value):
+        if self.python_type is not AnyPythonTypeSentinel:
+            if self.python_type is None:
+                if value is not None:
+                    return TypeCheck(
+                        success=False,
+                        description=f"Value must be None and got value of type {type(value)}.",
+                    )
+            elif not isinstance(value, self.python_type):
+                return TypeCheck(
+                    success=False,
+                    description=f"Value must be {self.python_type} and got value of type {type(value)}.",
+                )
+
+        metadata_entries = []
+
+        for expectation in self.expectations:
+            retval = expectation.fn(context, value)
+            if not isinstance(retval, (bool, TypeCheck)):
+                raise DagsterInvariantViolationError(
+                    f"You have returned {repr(retval)} of type {type(retval)} from the type "
+                    f'check function of type "{self.key}". Return value must be instance '
+                    "of TypeCheck or a bool."
+                )
+
+            type_check = retval if isinstance(retval, TypeCheck) else TypeCheck(success=retval)
+
+            if not type_check.success:
+                return type_check
+
+            metadata_entries.extend(type_check.metadata_entries)
+
+        return TypeCheck(success=True, metadata_entries=metadata_entries)
 
     def __eq__(self, other):
         return isinstance(other, DagsterType) and self.key == other.key
@@ -279,13 +328,6 @@ class BuiltinScalarDagsterType(DagsterType):
             **kwargs,
         )
 
-    def type_check_fn(self, _context, value):
-        return self.type_check_scalar_value(value)
-
-    @abstractmethod
-    def type_check_scalar_value(self, _value):
-        raise NotImplementedError()
-
 
 class _Int(BuiltinScalarDagsterType):
     def __init__(self):
@@ -293,11 +335,9 @@ class _Int(BuiltinScalarDagsterType):
             name="Int",
             loader=BuiltinSchemas.INT_INPUT,
             materializer=BuiltinSchemas.INT_OUTPUT,
-            type_check_fn=self.type_check_fn,
+            type_check_fn=None,
+            python_type=int,
         )
-
-    def type_check_scalar_value(self, value):
-        return _fail_if_not_of_type(value, int, "int")
 
 
 def _typemismatch_error_str(value, expected_type_desc):
@@ -320,11 +360,9 @@ class _String(BuiltinScalarDagsterType):
             name="String",
             loader=BuiltinSchemas.STRING_INPUT,
             materializer=BuiltinSchemas.STRING_OUTPUT,
-            type_check_fn=self.type_check_fn,
+            type_check_fn=None,
+            python_type=str,
         )
-
-    def type_check_scalar_value(self, value):
-        return _fail_if_not_of_type(value, str, "string")
 
 
 class _Float(BuiltinScalarDagsterType):
@@ -333,11 +371,9 @@ class _Float(BuiltinScalarDagsterType):
             name="Float",
             loader=BuiltinSchemas.FLOAT_INPUT,
             materializer=BuiltinSchemas.FLOAT_OUTPUT,
-            type_check_fn=self.type_check_fn,
+            python_type=float,
+            type_check_fn=None,
         )
-
-    def type_check_scalar_value(self, value):
-        return _fail_if_not_of_type(value, float, "float")
 
 
 class _Bool(BuiltinScalarDagsterType):
@@ -346,11 +382,9 @@ class _Bool(BuiltinScalarDagsterType):
             name="Bool",
             loader=BuiltinSchemas.BOOL_INPUT,
             materializer=BuiltinSchemas.BOOL_OUTPUT,
-            type_check_fn=self.type_check_fn,
+            python_type=bool,
+            type_check_fn=None,
         )
-
-    def type_check_scalar_value(self, value):
-        return _fail_if_not_of_type(value, bool, "bool")
 
 
 class Anyish(DagsterType):
@@ -373,13 +407,11 @@ class Anyish(DagsterType):
             materializer=materializer,
             serialization_strategy=serialization_strategy,
             is_builtin=is_builtin,
-            type_check_fn=self.type_check_method,
+            type_check_fn=None,
+            python_type=AnyPythonTypeSentinel,
             description=description,
             auto_plugins=auto_plugins,
         )
-
-    def type_check_method(self, _context, _value):
-        return TypeCheck(success=True)
 
     @property
     def supports_fan_in(self):
@@ -428,18 +460,10 @@ class _Nothing(DagsterType):
             kind=DagsterTypeKind.NOTHING,
             loader=None,
             materializer=None,
-            type_check_fn=self.type_check_method,
+            type_check_fn=None,
             is_builtin=True,
+            python_type=None,
         )
-
-    def type_check_method(self, _context, value):
-        if value is not None:
-            return TypeCheck(
-                success=False,
-                description="Value must be None, got a {value_type}".format(value_type=type(value)),
-            )
-
-        return TypeCheck(success=True)
 
     @property
     def supports_fan_in(self):
@@ -447,24 +471,6 @@ class _Nothing(DagsterType):
 
     def get_inner_type_for_fan_in(self):
         return self
-
-
-def isinstance_type_check_fn(
-    expected_python_type: typing.Type, dagster_type_name: str, expected_python_type_str: str
-):
-    def type_check(_context, value):
-        if not isinstance(value, expected_python_type):
-            return TypeCheck(
-                success=False,
-                description=(
-                    f"Value of type {type(value)} failed type check for Dagster type {dagster_type_name}, "
-                    f"expected value to be of Python type {expected_python_type_str}."
-                ),
-            )
-
-        return TypeCheck(success=True)
-
-    return type_check
 
 
 class PythonObjectDagsterType(DagsterType):
@@ -536,7 +542,8 @@ class PythonObjectDagsterType(DagsterType):
         super(PythonObjectDagsterType, self).__init__(
             key=key,
             name=name,
-            type_check_fn=isinstance_type_check_fn(python_type, name, self.type_str),
+            type_check_fn=None,
+            python_type=python_type,
             **kwargs,
         )
 
@@ -791,9 +798,8 @@ class TypeHintInferredDagsterType(DagsterType):
         super(TypeHintInferredDagsterType, self).__init__(
             key=f"_TypeHintInferred[{qualified_name}]",
             description=f"DagsterType created from a type hint for the Python type {qualified_name}",
-            type_check_fn=isinstance_type_check_fn(
-                python_type, python_type.__name__, qualified_name
-            ),
+            type_check_fn=None,
+            python_type=python_type,
         )
 
     @property
