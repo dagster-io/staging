@@ -17,16 +17,12 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
     WARNING: Dagit and other core functionality will not work if this is used on a real DagsterInstance
     """
 
-    def __init__(self, inst_data=None, preload=None):
+    def __init__(self, inst_data=None):
         self._logs = defaultdict(EventLogSequence)
         self._handlers = defaultdict(set)
         self._inst_data = inst_data
         self._asset_tags = defaultdict(dict)
         self._wiped_asset_keys = defaultdict(float)
-        if preload:
-            for payload in preload:
-                self._logs[payload.pipeline_run.run_id] = EventLogSequence(payload.event_list)
-
         super().__init__()
 
     @property
