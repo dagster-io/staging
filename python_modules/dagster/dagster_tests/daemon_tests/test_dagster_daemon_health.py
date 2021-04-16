@@ -24,16 +24,34 @@ def test_healthy():
     ) as instance:
         init_time = pendulum.now("UTC")
 
-        assert not all_daemons_healthy(instance, curr_time_seconds=init_time.float_timestamp)
-        assert not all_daemons_live(instance, curr_time_seconds=init_time.float_timestamp)
+        heartbeat_interval_seconds = 3
 
-        with daemon_controller_from_instance(instance) as controller:
+        assert not all_daemons_healthy(
+            instance,
+            curr_time_seconds=init_time.float_timestamp,
+            heartbeat_interval_seconds=heartbeat_interval_seconds,
+        )
+        assert not all_daemons_live(
+            instance,
+            curr_time_seconds=init_time.float_timestamp,
+            heartbeat_interval_seconds=heartbeat_interval_seconds,
+        )
+
+        with daemon_controller_from_instance(
+            instance, heartbeat_interval_seconds=heartbeat_interval_seconds
+        ) as controller:
 
             while True:
                 now = pendulum.now("UTC")
                 if all_daemons_healthy(
-                    instance, curr_time_seconds=now.float_timestamp
-                ) and all_daemons_live(instance, curr_time_seconds=now.float_timestamp):
+                    instance,
+                    curr_time_seconds=now.float_timestamp,
+                    heartbeat_interval_seconds=heartbeat_interval_seconds,
+                ) and all_daemons_live(
+                    instance,
+                    curr_time_seconds=now.float_timestamp,
+                    heartbeat_interval_seconds=heartbeat_interval_seconds,
+                ):
 
                     controller.check_daemon_threads()
                     controller.check_daemon_heartbeats()
@@ -41,9 +59,15 @@ def test_healthy():
                     beyond_tolerated_time = now.float_timestamp + 100
 
                     assert not all_daemons_healthy(
-                        instance, curr_time_seconds=beyond_tolerated_time
+                        instance,
+                        curr_time_seconds=beyond_tolerated_time,
+                        heartbeat_interval_seconds=heartbeat_interval_seconds,
                     )
-                    assert not all_daemons_live(instance, curr_time_seconds=beyond_tolerated_time)
+                    assert not all_daemons_live(
+                        instance,
+                        curr_time_seconds=beyond_tolerated_time,
+                        heartbeat_interval_seconds=heartbeat_interval_seconds,
+                    )
                     break
 
                 if (now - init_time).total_seconds() > 10:
@@ -82,8 +106,6 @@ def test_thread_die_daemon(monkeypatch):
             raise KeyboardInterrupt
             yield  # pylint: disable=unreachable
 
-        monkeypatch.setattr(SensorDaemon, "run_iteration", run_iteration_error)
-
         init_time = pendulum.now("UTC")
         with daemon_controller_from_instance(instance) as controller:
             while True:
@@ -119,31 +141,71 @@ def test_error_daemon(monkeypatch):
 
         monkeypatch.setattr(SensorDaemon, "run_iteration", run_iteration_error)
 
+        heartbeat_interval_seconds = 1
+
+        gen_daemons = lambda instance: [SensorDaemon(interval_seconds=1)]
+
         init_time = pendulum.now("UTC")
-        with daemon_controller_from_instance(instance) as controller:
+        with daemon_controller_from_instance(
+            instance, heartbeat_interval_seconds=heartbeat_interval_seconds, gen_daemons=gen_daemons
+        ) as controller:
             while True:
                 now = pendulum.now("UTC")
 
-                if all_daemons_live(instance):
+                if get_daemon_status(
+                    instance,
+                    SensorDaemon.daemon_type(),
+                    heartbeat_interval_seconds=heartbeat_interval_seconds,
+                    ignore_errors=True,
+                ).healthy:
                     # Despite error, daemon should still be running
                     controller.check_daemon_threads()
                     controller.check_daemon_heartbeats()
 
                     status = get_daemon_status(
-                        instance, SensorDaemon.daemon_type(), now.float_timestamp
+                        instance,
+                        SensorDaemon.daemon_type(),
+                        now.float_timestamp,
+                        heartbeat_interval_seconds=heartbeat_interval_seconds,
                     )
 
                     assert status.healthy == False
-                    assert len(status.last_heartbeat.errors) == 1
-                    assert (
-                        status.last_heartbeat.errors[0].message.strip()
-                        == "dagster.core.errors.DagsterInvariantViolationError: foobar"
-                    )
-                    assert not all_daemons_healthy(instance, curr_time_seconds=now.float_timestamp)
-                    assert all_daemons_live(instance, curr_time_seconds=now.float_timestamp)
-                    break
 
-                if (now - init_time).total_seconds() > 10:
+                    # Errors build up until they hit 5
+                    if len(status.last_heartbeat.errors) == 5:
+                        assert (
+                            status.last_heartbeat.errors[0].message.strip()
+                            == "dagster.core.errors.DagsterInvariantViolationError: foobar"
+                        )
+                        assert not get_daemon_status(
+                            instance,
+                            SensorDaemon.daemon_type(),
+                            curr_time_seconds=now.float_timestamp,
+                            heartbeat_interval_seconds=heartbeat_interval_seconds,
+                        ).healthy
+                        assert get_daemon_status(
+                            instance,
+                            SensorDaemon.daemon_type(),
+                            curr_time_seconds=now.float_timestamp,
+                            heartbeat_interval_seconds=heartbeat_interval_seconds,
+                            ignore_errors=True,
+                        ).healthy
+
+                        time.sleep(3)
+
+                        status = get_daemon_status(
+                            instance,
+                            SensorDaemon.daemon_type(),
+                            now.float_timestamp,
+                            heartbeat_interval_seconds=heartbeat_interval_seconds,
+                        )
+
+                        # Error count does not rise above 5
+                        assert len(status.last_heartbeat.errors) == 5
+
+                        break
+
+                if (now - init_time).total_seconds() > 15:
                     raise Exception("timed out waiting for heartbeat error")
 
                 time.sleep(0.5)

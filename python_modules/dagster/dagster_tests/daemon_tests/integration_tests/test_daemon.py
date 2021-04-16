@@ -2,8 +2,8 @@ import time
 
 import pendulum
 from dagster.daemon.controller import (
-    DAEMON_HEARTBEAT_INTERVAL_SECONDS,
     DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
+    DEFAULT_HEARTBEAT_INTERVAL_SECONDS,
     all_daemons_healthy,
 )
 
@@ -24,7 +24,7 @@ def test_heartbeat(
             assert all_daemons_healthy(instance) is True
 
         frozen_datetime = pendulum.now().add(
-            seconds=DAEMON_HEARTBEAT_INTERVAL_SECONDS + DAEMON_HEARTBEAT_TOLERANCE_SECONDS + 5
+            seconds=DEFAULT_HEARTBEAT_INTERVAL_SECONDS + DAEMON_HEARTBEAT_TOLERANCE_SECONDS + 5
         )
         with pendulum.test(frozen_datetime):
             assert all_daemons_healthy(instance) is False
