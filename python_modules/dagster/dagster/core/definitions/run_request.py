@@ -53,3 +53,21 @@ class RunRequest(namedtuple("_RunRequest", "run_key run_config tags")):
             run_config=check.opt_dict_param(run_config, "run_config"),
             tags=check.opt_dict_param(tags, "tags"),
         )
+
+
+@whitelist_for_serdes
+class MonitorRequest(namedtuple("_MonitorRequest", "origin_run_id message")):
+    """
+    Represents a monitor request that reacting to an existing pipeline run.
+
+    Attributes:
+        origin_run_id (str): The run id of the originating run that triggers this monitor request.
+        message (Optional[str]): A message displayed in Dagit for details about the monitor request.
+    """
+
+    def __new__(cls, origin_run_id, message=None):
+        return super(MonitorRequest, cls).__new__(
+            cls,
+            origin_run_id=check.str_param(origin_run_id, "origin_run_id"),
+            message=check.opt_str_param(message, "message"),
+        )
