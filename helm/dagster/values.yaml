@@ -7,6 +7,24 @@
 
 global:
   postgresqlSecretName: "dagster-postgresql-secret"
+
+  # Use a PostgreSQL connection string to connnect to the database. When this is disabled,
+  # the connection string is created using the host, username, password, and database values
+  # specified in .Values.postgresql.
+  #
+  # To specify additional connection parameters, enable this field and specify a connection string.
+  postgresqlConnectionString:
+    enabled: false
+
+    # The name of the secret containing the postgres connection string
+    postgresqlConnectionStringSecretName: "dagster-postgresql-connection-string-secret"
+
+    # Whether to generate a secret resource for the PostgreSQL connection string. Useful if
+    # global.postgresqlConnectionStringName is managed outside of this helm chart.
+    generatePostgresqlConnectionStringSecret: true
+
+    connectionString: ""
+
   # The DAGSTER_HOME env var is set by default on all nodes from this value
   dagsterHome: "/opt/dagster/dagster_home"
 

@@ -62,6 +62,46 @@ def test_k8s_run_launcher_default(
         assert updated_run.tags[DOCKER_IMAGE_TAG] == get_test_project_docker_image()
 
 
+@pytest.mark.integration
+def test_postgres_connection_string(
+    dagster_instance_for_k8s_run_launcher, helm_namespace_postgres_connection_string
+):
+    # sanity check that we have a K8sRunLauncher
+    check.inst(dagster_instance_for_k8s_run_launcher.run_launcher, K8sRunLauncher)
+    pods = DagsterKubernetesClient.production_client().core_api.list_namespaced_pod(
+        namespace=helm_namespace_postgres_connection_string
+    )
+    celery_pod_names = [p.metadata.name for p in pods.items if "celery-workers" in p.metadata.name]
+    check.invariant(not celery_pod_names)
+
+    run_config = load_yaml_from_path(os.path.join(get_test_project_environments_path(), "env.yaml"))
+    pipeline_name = "demo_pipeline"
+    tags = {"key": "value"}
+    run = create_run_for_test(
+        dagster_instance_for_k8s_run_launcher,
+        pipeline_name=pipeline_name,
+        run_config=run_config,
+        tags=tags,
+        mode="default",
+    )
+
+    with get_test_project_external_pipeline(pipeline_name) as external_pipeline:
+        dagster_instance_for_k8s_run_launcher.launch_run(
+            run.run_id,
+            ReOriginatedExternalPipelineForTest(external_pipeline),
+        )
+
+        result = wait_for_job_and_get_raw_logs(
+            job_name="dagster-run-%s" % run.run_id,
+            namespace=helm_namespace_postgres_connection_string,
+        )
+
+        assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+        updated_run = dagster_instance_for_k8s_run_launcher.get_run_by_id(run.run_id)
+        assert updated_run.tags[DOCKER_IMAGE_TAG] == get_test_project_docker_image()
+
+
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 
 
