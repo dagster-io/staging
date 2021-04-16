@@ -12,6 +12,7 @@ from dagster.core.definitions.reconstructable import (
 )
 from dagster.core.definitions.sensor import SensorExecutionContext
 from dagster.core.errors import (
+    DagsterUserCodeImportError,
     DagsterExecutionInterruptedError,
     DagsterInvalidSubsetError,
     DagsterRunNotFoundError,
@@ -80,6 +81,15 @@ def core_execute_run(recon_pipeline, pipeline_run, instance):
             message="Pipeline execution terminated by interrupt",
             pipeline_run=pipeline_run,
         )
+    except DagsterUserCodeImportError as e:
+        yield instance.report_engine_event(
+            "An error occurred importing user code.",
+            pipeline_run,
+            EngineEventData.engine_error(
+                serializable_error_info_from_exc_info(e.original_exc_info)
+            ),
+        )
+        yield from _report_run_failed_if_not_finished(instance, pipeline_run.run_id)
     except Exception:  # pylint: disable=broad-except
         yield instance.report_engine_event(
             "An exception was thrown during execution that is likely a framework error, "
