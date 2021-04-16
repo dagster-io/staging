@@ -193,6 +193,32 @@ class SqlEventLogStorage(EventLogStorage):
         events_by_id = self.get_logs_for_run_by_log_id(run_id, cursor)
         return [event for id, event in sorted(events_by_id.items(), key=lambda x: x[0])]
 
+    def get_events_by_type(self, run_id, dagster_event_type):
+        # check if event_type in DagsterEventType
+
+        query = (
+            db.select([SqlEventLogStorageTable.c.event])
+            .where(SqlEventLogStorageTable.c.run_id == run_id)
+            .where(SqlEventLogStorageTable.c.dagster_event_type == dagster_event_type)
+            .order_by(SqlEventLogStorageTable.c.id.asc())
+        )
+
+        with self.run_connection(run_id) as conn:
+            results = conn.execute(query).fetchall()
+
+        events = []
+
+        try:
+            for (json_str,) in results:
+                event = check.inst_param(
+                    deserialize_json_to_dagster_namedtuple(json_str), "event", EventRecord
+                )
+                events.append(event)
+        except (seven.JSONDecodeError, check.CheckError) as err:
+            raise DagsterEventLogInvalidForRun(run_id=run_id) from err
+
+        return events
+
     def get_stats_for_run(self, run_id):
         check.str_param(run_id, "run_id")
 
