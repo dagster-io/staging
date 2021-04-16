@@ -1,6 +1,6 @@
 from collections import namedtuple
 from functools import update_wrapper
-from typing import AbstractSet, Optional
+from typing import AbstractSet, Any, Dict, Optional
 
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
@@ -282,3 +282,24 @@ class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_inst
                 raise DagsterUnknownResourceError(attr)
 
         return _ScopedResources(**resource_instance_dict)  # type: ignore[call-arg]
+
+
+def make_config_resource(
+    config_schema: Optional[Dict[str, Any]] = None, description: Optional[str] = None
+):
+    """A helper function that creates a ``ResourceDefinition`` that takes configuration values.
+
+    Args:
+        config_schema (Optional[Dict[str, Any]], optional): The schema for the config. If set,
+            Dagster will check that config provided for the resource matches this schema and fail
+            if it does not. If not set, Dagster will accept any config provided for the resource.
+        description (Optional[str]): The description of the resource. Defaults to None.
+
+    Returns:
+        ResourceDefinition: A resource that allows you to pass configuration values.
+    """
+    return ResourceDefinition(
+        resource_fn=lambda init_context: init_context.resource_config,
+        config_schema=config_schema,
+        description=description,
+    )
