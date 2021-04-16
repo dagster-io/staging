@@ -159,7 +159,7 @@ class SensorDefinition:
         if len(result) == 1:
             return check.is_list(result, of_type=(RunRequest, SkipReason))
 
-        return check.is_list(result, of_type=RunRequest)
+        return check.is_list(result, of_type=(RunRequest))
 
     @property
     def minimum_interval_seconds(self):

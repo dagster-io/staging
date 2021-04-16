@@ -1,4 +1,5 @@
 from dagster import check
+from dagster.core.definitions.pipeline_hook.pipeline_hook import MONITOR_SENSOR_PREFIX
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.utils import merge_dicts
 
@@ -187,6 +188,7 @@ class RepositoryData:
             ),
             self._validate_partition_set,
         )
+
         self._sensors = _CacheingDefinitionIndex(
             SensorDefinition,
             "SensorDefinition",
@@ -194,6 +196,7 @@ class RepositoryData:
             sensors,
             self._validate_sensor,
         )
+
         # load all sensors to force validation
         self._sensors.get_all_definitions()
 
@@ -538,6 +541,9 @@ class RepositoryData:
 
     def _validate_sensor(self, sensor):
         pipelines = self.get_pipeline_names()
+        if sensor.name.startswith(MONITOR_SENSOR_PREFIX):
+            # TODO: validate sensor
+            return sensor
 
         if sensor.pipeline_name not in pipelines:
             raise DagsterInvalidDefinitionError(
