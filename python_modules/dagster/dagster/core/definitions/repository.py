@@ -187,6 +187,7 @@ class RepositoryData:
             ),
             self._validate_partition_set,
         )
+
         self._sensors = _CacheingDefinitionIndex(
             SensorDefinition,
             "SensorDefinition",
@@ -194,6 +195,7 @@ class RepositoryData:
             sensors,
             self._validate_sensor,
         )
+
         # load all sensors to force validation
         self._sensors.get_all_definitions()
 
