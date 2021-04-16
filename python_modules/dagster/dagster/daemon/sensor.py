@@ -264,7 +264,19 @@ def _evaluate_sensor(
 
     assert isinstance(sensor_runtime_data, SensorExecutionData)
     if not sensor_runtime_data.run_requests:
-        if sensor_runtime_data.skip_message:
+        if sensor_runtime_data.monitor_requests:
+            for monitor_request in sensor_runtime_data.monitor_requests:
+                context.logger.info(
+                    f"Completed a monitor request for run {monitor_request.origin_run_id}"
+                    f": {monitor_request.message}"
+                    if monitor_request.message
+                    else ""
+                )
+                context.update_state(
+                    JobTickStatus.SUCCESS,
+                    cursor=monitor_request.origin_run_id,
+                )
+        elif sensor_runtime_data.skip_message:
             context.logger.info(
                 f"Sensor returned false for {external_sensor.name}, skipping: "
                 f"{sensor_runtime_data.skip_message}"
