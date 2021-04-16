@@ -1,3 +1,8 @@
+{{- $postgresConnectionStringEnabled := .Values.postgresqlConnectionString.enabled }}
+{{- if .Values.global }}
+{{- $postgresConnectionStringEnabled = or .Values.global.postgresqlConnectionString.enabled $postgresConnectionStringEnabled }}
+{{- end }}
+
 {{ range $deployment := .Values.deployments }}
 apiVersion: apps/v1
 kind: Deployment
@@ -42,11 +47,19 @@ spec:
           env:
             - name: DAGSTER_CURRENT_IMAGE
               value: "{{ $deployment.image.repository }}:{{ $deployment.image.tag }}"
+            {{- if $postgresConnectionStringEnabled }}
+            - name: DAGSTER_PG_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "dagsterUserDeployments.postgresql.connectionStringSecretName" $ | quote }}
+                  key: postgresql-connection-string
+            {{- else }}
             - name: DAGSTER_PG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "dagsterUserDeployments.postgresql.secretName" $ }}
+                  name: {{ include "dagsterUserDeployments.postgresql.secretName" $ | quote }}
                   key: postgresql-password
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ include "dagster.fullname" $ }}-{{ $deployment.name }}-user-env

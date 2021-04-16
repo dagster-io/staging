@@ -85,6 +85,14 @@ Create the name of the service account to use
 {{- end }}
 {{- end -}}
 
+{{- define "dagsterUserDeployments.postgresql.connectionStringSecretName" -}}
+{{- if .Values.global }}
+{{- .Values.global.postgresqlConnectionString.postgresqlConnectionStringSecretName }}
+{{- else }}
+{{- .Values.postgresqlConnectionString.postgresqlConnectionStringSecretName }}
+{{- end }}
+{{- end -}}
+
 {{/*
 This environment shared across all User Code containers
 */}}
