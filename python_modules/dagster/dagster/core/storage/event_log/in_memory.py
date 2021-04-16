@@ -52,6 +52,9 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
         cursor = cursor + 1
         return self._logs[run_id][cursor:]
 
+    def get_events_by_type(self, run_id, dagster_event_type):
+        pass
+
     def store_event(self, event):
         check.inst_param(event, "event", EventRecord)
         run_id = event.run_id

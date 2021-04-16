@@ -9,6 +9,7 @@ from ..input import InputDefinition
 from ..mode import ModeDefinition
 from ..output import OutputDefinition
 from ..pipeline import PipelineDefinition
+from ..pipeline_hook.pipeline_hook import PipelineHookDefinition
 from ..preset import PresetDefinition
 
 
@@ -25,6 +26,7 @@ class _Pipeline:
         output_defs: Optional[List[OutputDefinition]] = None,
         config_schema: Optional[Dict[str, Any]] = None,
         config_fn: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
+        pipeline_hook_name_pending_defs: Optional[List[PipelineHookDefinition]] = None,
     ):
         self.name = check.opt_str_param(name, "name")
         self.mode_definitions = check.opt_list_param(mode_defs, "mode_defs", ModeDefinition)
@@ -39,6 +41,11 @@ class _Pipeline:
         )
         self.config_schema = config_schema
         self.config_fn = check.opt_callable_param(config_fn, "config_fn")
+        self.pipeline_hook_name_pending_defs = check.opt_list_param(
+            pipeline_hook_name_pending_defs,
+            "pipeline_hook_name_pending_defs",
+            of_type=PipelineHookDefinition,
+        )
 
     def __call__(self, fn: Callable[..., Any]) -> PipelineDefinition:
         check.callable_param(fn, "fn")
@@ -79,6 +86,7 @@ class _Pipeline:
             output_mappings=output_mappings,
             config_mapping=config_mapping,
             positional_inputs=positional_inputs,
+            pipeline_hook_name_pending_defs=self.pipeline_hook_name_pending_defs,
         )
         update_wrapper(pipeline_def, fn)
         return pipeline_def
@@ -95,6 +103,7 @@ def pipeline(
     output_defs: Optional[List[OutputDefinition]] = None,
     config_schema: Optional[Dict[str, Any]] = None,
     config_fn: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
+    pipeline_hook_name_pending_defs: Optional[List[PipelineHookDefinition]] = None,
 ) -> Union[PipelineDefinition, _Pipeline]:
     """Create a pipeline with the specified parameters from the decorated composition function.
 
@@ -176,4 +185,5 @@ def pipeline(
         output_defs=output_defs,
         config_schema=config_schema,
         config_fn=config_fn,
+        pipeline_hook_name_pending_defs=pipeline_hook_name_pending_defs,
     )
