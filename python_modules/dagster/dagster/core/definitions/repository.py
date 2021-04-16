@@ -1,4 +1,10 @@
+from typing import Dict, Optional
+
 from dagster import check
+from dagster.core.definitions.pipeline_hook.pipeline_hook import (
+    HOOK_SENSOR_PREFIX,
+    register_pipeline_hook,
+)
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.utils import merge_dicts
 
@@ -187,13 +193,18 @@ class RepositoryData:
             ),
             self._validate_partition_set,
         )
+
         self._sensors = _CacheingDefinitionIndex(
             SensorDefinition,
             "SensorDefinition",
             "sensor",
-            sensors,
+            merge_dicts(
+                {sensor.name: sensor for sensor in sensors},
+                self._generate_pipeline_hook_sensors(),
+            ),
             self._validate_sensor,
         )
+
         # load all sensors to force validation
         self._sensors.get_all_definitions()
 
@@ -538,6 +549,8 @@ class RepositoryData:
 
     def _validate_sensor(self, sensor):
         pipelines = self.get_pipeline_names()
+        if sensor.name.startswith(HOOK_SENSOR_PREFIX):
+            return sensor
 
         if sensor.pipeline_name not in pipelines:
             raise DagsterInvalidDefinitionError(
@@ -549,6 +562,15 @@ class RepositoryData:
 
     def _validate_partition_set(self, partition_set):
         return partition_set
+
+    def _generate_pipeline_hook_sensors(self) -> Optional[Dict[str, SensorDefinition]]:
+        # register pipeline hook (name pending) - using sensor machinery for now
+        _pipeline_hook_sensors = {}
+        for pipeline_def in self._pipelines.get_all_definitions():
+            for pipeline_hook_def in pipeline_def.pipeline_hook_name_pending_defs:
+                sensor_def = register_pipeline_hook(pipeline_hook_def, pipeline_def)
+                _pipeline_hook_sensors[sensor_def.name] = sensor_def
+        return _pipeline_hook_sensors
 
 
 class RepositoryDefinition:

@@ -37,6 +37,7 @@ if TYPE_CHECKING:
     from .run_config_schema import RunConfigSchema
     from dagster.core.snap import PipelineSnapshot, ConfigSchemaSnapshot
     from dagster.core.host_representation import PipelineIndex
+    from dagster.core.definitions.pipeline_hook.pipeline_hook import PipelineHookDefinition
 
 
 class PipelineDefinition(GraphDefinition):
@@ -144,6 +145,7 @@ class PipelineDefinition(GraphDefinition):
         _parent_pipeline_def: Optional[
             "PipelineDefinition"
         ] = None,  # https://github.com/dagster-io/dagster/issues/2115
+        pipeline_hook_name_pending_defs: Optional[List["PipelineHookDefinition"]] = None,
     ):
         # For these warnings they check truthiness because they get changed to [] higher
         # in the stack for the decorator case
@@ -235,6 +237,8 @@ class PipelineDefinition(GraphDefinition):
         )
         self._cached_run_config_schemas: Dict[str, "RunConfigSchema"] = {}
         self._cached_external_pipeline = None
+
+        self._pipeline_hook_name_pending_defs = pipeline_hook_name_pending_defs
 
     def copy_for_configured(
         self,
@@ -421,6 +425,10 @@ class PipelineDefinition(GraphDefinition):
     @property
     def hook_defs(self) -> AbstractSet[HookDefinition]:
         return self._hook_defs
+
+    @property
+    def pipeline_hook_name_pending_defs(self) -> Optional[List["PipelineHookDefinition"]]:
+        return self._pipeline_hook_name_pending_defs
 
     def get_all_hooks_for_handle(self, handle: SolidHandle) -> FrozenSet[HookDefinition]:
         """Gather all the hooks for the given solid from all places possibly attached with a hook.
