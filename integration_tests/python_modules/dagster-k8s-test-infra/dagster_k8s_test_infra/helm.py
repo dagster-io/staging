@@ -111,6 +111,16 @@ def helm_namespace_for_k8s_run_launcher(
         yield namespace
 
 
+@pytest.fixture(scope="session")
+def helm_namespace_postgres_connection_string(
+    dagster_docker_image, cluster_provider, request
+):  # pylint: disable=unused-argument, redefined-outer-name
+    with _helm_namespace_helper(
+        dagster_docker_image, helm_chart_for_postgres_connection_string, request
+    ) as namespace:
+        yield namespace
+
+
 @contextmanager
 def get_helm_test_namespace(should_cleanup=True):
     # Will be something like dagster-test-3fcd70 to avoid ns collisions in shared test environment
@@ -733,6 +743,72 @@ def helm_chart_for_user_deployments_subchart(namespace, docker_image, should_cle
         helm_config,
         helm_install_name="helm_chart_for_user_deployments_subchart",
         chart_name="helm/dagster/charts/dagster-user-deployments",
+    ):
+        yield
+
+
+@contextmanager
+def helm_chart_for_postgres_connection_string(namespace, docker_image, should_cleanup=True):
+    check.str_param(namespace, "namespace")
+    check.str_param(docker_image, "docker_image")
+    check.bool_param(should_cleanup, "should_cleanup")
+
+    repository, tag = docker_image.split(":")
+    pull_policy = image_pull_policy()
+    helm_config = {
+        "global": {
+            "postgresqlConnectionString": {
+                "enabled": True,
+                "postgresqlConnectionStringSecretName": "dagster-postgresql-connection-string-secret",
+                "generatePostgresqlConnectionStringSecret": True,
+                "connectionString": "postgresql://test:test@localhost:5432/test",
+            }
+        },
+        "dagster-user-deployments": {
+            "enabled": True,
+            "enableSubchart": False,
+            "deployments": [
+                {
+                    "name": "user-code-deployment-1",
+                    "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+                    "dagsterApiGrpcArgs": [
+                        "-m",
+                        "dagster_test.test_project.test_pipelines.repo",
+                        "-a",
+                        "define_demo_execution_repo",
+                    ],
+                    "port": 3030,
+                    "replicaCount": 1,
+                }
+            ],
+        },
+        "dagit": {
+            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+        },
+        "runLauncher": {
+            "type": "K8sRunLauncher",
+            "config": {
+                "k8sRunLauncher": {
+                    "jobNamespace": namespace,
+                }
+            },
+        },
+        "scheduler": {
+            "type": "K8sScheduler",
+            "config": {
+                "k8sScheduler": {
+                    "schedulerNamespace": namespace,
+                }
+            },
+        },
+        "dagsterDaemon": {"enabled": False},
+    }
+
+    with _helm_chart_helper(
+        namespace,
+        should_cleanup,
+        helm_config,
+        helm_install_name="helm_chart_for_postgres_connection_string",
     ):
         yield
 
