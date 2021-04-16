@@ -22,6 +22,7 @@ from dagster import (
 )
 from dagster.core.definitions import pipeline
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
+from dagster.core.definitions.resource import make_config_resource
 from dagster.core.errors import DagsterConfigMappingFunctionError, DagsterInvalidDefinitionError
 from dagster.core.events.log import EventRecord, construct_event_logger
 from dagster.core.execution.api import create_execution_plan, execute_plan, execute_run
@@ -360,6 +361,45 @@ def test_string_resource():
 
     assert result.success
     assert called["yup"]
+
+
+def test_config_resource():
+    any_config = 1
+    single_config = "my_string"
+    multi_config = {"foo": "my_string", "bar": 1}
+
+    @solid(required_resource_keys={"any_config", "single_config", "multi_config"})
+    def my_solid(context):
+        assert context.resources.any_config == any_config
+        assert context.resources.single_config == single_config
+        assert context.resources.multi_config == multi_config
+
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={
+                    "any_config": make_config_resource(),
+                    "single_config": make_config_resource(str),
+                    "multi_config": make_config_resource({"foo": str, "bar": int}),
+                },
+            )
+        ]
+    )
+    def my_pipeline():
+        my_solid()
+
+    result = execute_pipeline(
+        my_pipeline,
+        run_config={
+            "resources": {
+                "any_config": {"config": any_config},
+                "single_config": {"config": single_config},
+                "multi_config": {"config": multi_config},
+            }
+        },
+    )
+
+    assert result.success
 
 
 def test_hardcoded_resource():
