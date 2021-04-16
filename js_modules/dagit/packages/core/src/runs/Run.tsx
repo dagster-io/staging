@@ -304,7 +304,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
             {logType === 'raw' ? (
               <ComputeLogPanel
                 runId={runId}
-                metadata={metadata}
+                stepKeys={Object.keys(metadata.steps)}
                 selectedStepKey={computeLogStep}
                 ioType={computeLogType}
                 setComputeLogUrl={setComputeLogUrl}

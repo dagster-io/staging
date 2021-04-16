@@ -1,15 +1,15 @@
 import time
 
 from dagster import (
+    Field,
     InputDefinition,
+    Int,
+    ModeDefinition,
     Output,
     OutputDefinition,
     pipeline,
-    solid,
     resource,
-    Field,
-    Int,
-    ModeDefinition,
+    solid,
 )
 
 

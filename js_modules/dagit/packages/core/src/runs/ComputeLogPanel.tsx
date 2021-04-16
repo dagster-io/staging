@@ -6,11 +6,10 @@ import {Spinner} from '../ui/Spinner';
 
 import {ComputeLogContent} from './ComputeLogContent';
 import {ComputeLogsProvider} from './ComputeLogProvider';
-import {IRunMetadataDict} from './RunMetadataProvider';
 import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
 interface RunComputeLogs {
   runId: string;
-  metadata: IRunMetadataDict;
+  stepKeys: string[];
   selectedStepKey?: string;
   ioType: string;
   setComputeLogUrl: (url: string | null) => void;
@@ -30,14 +29,14 @@ const getComputeLogDownloadURL = (
 
 export const ComputeLogPanel: React.FC<RunComputeLogs> = ({
   runId,
-  metadata,
+  stepKeys,
   selectedStepKey,
   ioType,
   setComputeLogUrl,
 }) => {
   const {rootServerURI, websocketURI} = React.useContext(AppContext);
-  const stepKeys = Object.keys(metadata.steps);
 
+  console.log(runId, ioType, selectedStepKey);
   if (!stepKeys.length || !selectedStepKey) {
     return (
       <Box
@@ -55,9 +54,13 @@ export const ComputeLogPanel: React.FC<RunComputeLogs> = ({
         {({isLoading, stdout, stderr}) => {
           const logData = ioType === 'stderr' ? stderr : stdout;
           const downloadUrl = getComputeLogDownloadURL(rootServerURI, logData);
-          setComputeLogUrl(downloadUrl);
           return (
-            <ContentWrapper logData={logData} isLoading={isLoading} downloadUrl={downloadUrl} />
+            <ContentWrapper
+              logData={logData}
+              isLoading={isLoading}
+              downloadUrl={downloadUrl}
+              setComputeLogUrl={setComputeLogUrl}
+            />
           );
         }}
       </ComputeLogsProvider>
@@ -69,16 +72,15 @@ const ContentWrapper = ({
   isLoading,
   logData,
   downloadUrl,
+  setComputeLogUrl,
 }: {
   isLoading: boolean;
   logData: ComputeLogContentFileFragment | null;
   downloadUrl: string | null;
+  setComputeLogUrl: (url: string | null) => void;
 }) => {
-  const [data, setData] = React.useState<ComputeLogContentFileFragment | null>(null);
   React.useEffect(() => {
-    if (!isLoading) {
-      setData(logData);
-    }
-  }, [logData, isLoading]);
-  return <ComputeLogContent logData={data} isLoading={isLoading} downloadUrl={downloadUrl} />;
+    setComputeLogUrl(downloadUrl);
+  }, [setComputeLogUrl, downloadUrl]);
+  return <ComputeLogContent logData={logData} isLoading={isLoading} downloadUrl={downloadUrl} />;
 };

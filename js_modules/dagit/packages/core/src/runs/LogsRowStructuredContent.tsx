@@ -8,12 +8,7 @@ import {PythonErrorFragment} from '../app/types/PythonErrorFragment';
 import {ErrorSource} from '../types/globalTypes';
 
 import {EventTypeColumn} from './LogsRowComponents';
-import {
-  LogRowStructuredContentTable,
-  MetadataEntries,
-  MetadataEntryAction,
-  MetadataEntryLink,
-} from './MetadataEntry';
+import {LogRowStructuredContentTable, MetadataEntries, MetadataEntryLink} from './MetadataEntry';
 import {IRunMetadataDict} from './RunMetadataProvider';
 import {
   LogsRowStructuredFragment,
@@ -61,7 +56,7 @@ export const LogsRowStructuredContent: React.FC<IStructuredContentProps> = ({nod
                   label: 'step_logs',
                   item: (
                     <Link to={href} style={{color: 'inherit'}}>
-                      <MetadataEntryAction>View Raw Step Output</MetadataEntryAction>
+                      View Raw Step Output
                     </Link>
                   ),
                 },
