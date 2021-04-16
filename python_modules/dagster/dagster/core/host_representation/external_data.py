@@ -15,7 +15,7 @@ from dagster.core.definitions import (
     RepositoryDefinition,
     ScheduleDefinition,
 )
-from dagster.core.definitions.job import RunRequest, SkipReason
+from dagster.core.definitions.job import PipelineHookRunSuccess, RunRequest, SkipReason
 from dagster.core.definitions.partition import PartitionScheduleDefinition
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import whitelist_for_serdes
@@ -246,9 +246,9 @@ class ExternalSensorData(
 
 @whitelist_for_serdes
 class ExternalSensorExecutionData(
-    namedtuple("_ExternalSensorExecutionData", "run_requests skip_message")
+    namedtuple("_ExternalSensorExecutionData", "run_requests skip_message hook_run_successes")
 ):
-    def __new__(cls, run_requests=None, skip_message=None):
+    def __new__(cls, run_requests=None, skip_message=None, hook_run_successes=None):
         check.opt_list_param(run_requests, "run_requests", RunRequest)
         check.opt_str_param(skip_message, "skip_message")
         check.invariant(
@@ -258,16 +258,23 @@ class ExternalSensorExecutionData(
             cls,
             run_requests=run_requests,
             skip_message=skip_message,
+            # TODO: type check + error handling
+            hook_run_successes=hook_run_successes,
         )
 
     @staticmethod
     def from_execution_data(tick_data):
-        check.opt_list_param(tick_data, "tick_data", (SkipReason, RunRequest))
+        check.opt_list_param(
+            tick_data, "tick_data", (SkipReason, RunRequest, PipelineHookRunSuccess)
+        )
         return ExternalSensorExecutionData(
             run_requests=[datum for datum in tick_data if isinstance(datum, RunRequest)],
             skip_message=tick_data[0].skip_message
             if tick_data and isinstance(tick_data[0], SkipReason)
             else None,
+            hook_run_successes=[
+                datum for datum in tick_data if isinstance(datum, PipelineHookRunSuccess)
+            ],
         )
 
 

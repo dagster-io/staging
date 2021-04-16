@@ -252,6 +252,15 @@ def _evaluate_sensor(
             context.update_state(
                 JobTickStatus.SKIPPED, skip_reason=sensor_runtime_data.skip_message
             )
+        elif sensor_runtime_data.hook_run_successes:
+            for hook_run_success in sensor_runtime_data.hook_run_successes:
+                # update hook invocation state to ensure only one hook run is created per (run_id, event_type) across all sensor evaluations
+                context.add_run(
+                    run_id=hook_run_success.run_id,
+                    run_key=hook_run_success.run_key,
+                )
+                context.update_state(JobTickStatus.SUCCESS)
+
         else:
             context.logger.info(f"Sensor returned false for {external_sensor.name}, skipping")
             context.update_state(JobTickStatus.SKIPPED)

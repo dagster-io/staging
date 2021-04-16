@@ -52,3 +52,15 @@ class RunRequest(namedtuple("_RunRequest", "run_key run_config tags")):
             run_config=check.opt_dict_param(run_config, "run_config"),
             tags=check.opt_dict_param(tags, "tags"),
         )
+
+
+@whitelist_for_serdes
+class PipelineHookRunSuccess(namedtuple("_PipelineHookRunSuccess", "run_id run_key")):
+    """TODO docstring"""
+
+    def __new__(cls, run_id, run_key):
+        return super(PipelineHookRunSuccess, cls).__new__(
+            cls,
+            run_id=check.str_param(run_id, "run_id"),
+            run_key=check.str_param(run_key, "run_key"),
+        )

@@ -7,7 +7,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.instance.ref import InstanceRef
 from dagster.utils import ensure_gen
 
-from .job import JobType, RunRequest, SkipReason
+from .job import JobType, PipelineHookRunSuccess, RunRequest, SkipReason
 from .mode import DEFAULT_MODE_NAME
 from .utils import check_valid_name
 
@@ -157,9 +157,9 @@ class SensorDefinition:
             return []
 
         if len(result) == 1:
-            return check.is_list(result, of_type=(RunRequest, SkipReason))
+            return check.is_list(result, of_type=(RunRequest, SkipReason, PipelineHookRunSuccess))
 
-        return check.is_list(result, of_type=RunRequest)
+        return check.is_list(result, of_type=(RunRequest, PipelineHookRunSuccess))
 
     @property
     def minimum_interval_seconds(self):

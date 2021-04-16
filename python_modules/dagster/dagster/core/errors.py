@@ -516,6 +516,10 @@ class HookExecutionError(DagsterUserCodeExecutionError):
     """ Error raised during the execution of a user-defined hook. """
 
 
+class PipelineHookExecutionError(DagsterUserCodeExecutionError):
+    """ Error raised during the execution of a user-defined pipeline hook. """
+
+
 class DagsterImportError(DagsterError):
     """ Import error raised while importing user-code. """
 
