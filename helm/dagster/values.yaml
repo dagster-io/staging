@@ -7,6 +7,10 @@
 
 global:
   postgresqlSecretName: "dagster-postgresql-secret"
+
+  # The name of the secret containing the postgres connection string
+  postgresqlConnectionStringSecretName: "dagster-postgresql-connection-string-secret"
+
   # The DAGSTER_HOME env var is set by default on all nodes from this value
   dagsterHome: "/opt/dagster/dagster_home"
 
@@ -535,6 +539,20 @@ postgresql:
 # Whether to generate a secret resource for the PostgreSQL password. Useful if
 # global.postgresqlSecretName is managed outside of this helm chart.
 generatePostgresqlPasswordSecret: true
+
+# Use a PostgreSQL connection string to connnect to the database. When this is disabled,
+# the connection string is created using the host, username, password, and database values
+# specified in .Values.postgresql.
+#
+# To specify other connection parameters, a connection string can be specified instead.
+postgresqlConnectionString:
+  enabled: false
+
+  # Whether to generate a secret resource for the PostgreSQL connection string. Useful if
+  # global.postgresqlConnectionStringName is managed outside of this helm chart.
+  generatePostgresqlConnectionStringSecret: true
+
+  connectionString: ""
 
 ####################################################################################################
 # RabbitMQ: Configuration values for rabbitmq. Only one of RabbitMQ / Redis should be enabled.

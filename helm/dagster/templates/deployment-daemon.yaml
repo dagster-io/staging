@@ -42,6 +42,14 @@ spec:
           command: ['sh', '-c', {{ include "dagster.postgresql.pgisready" . | squote }}]
           securityContext:
             {{- toYaml .Values.dagsterDaemon.securityContext | nindent 12 }}
+          {{- if .Values.postgresqlConnectionString.enabled }}
+          env:
+            - name: DAGSTER_PG_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.postgresqlConnectionStringSecretName | quote }}
+                  key: postgresql-connection-string
+          {{- end }}
       containers:
         - name: {{ $.Chart.Name }}
           securityContext:
@@ -51,11 +59,19 @@ spec:
           command: ["dagster-daemon"]
           args: ["run"]
           env:
+            {{- if .Values.postgresqlConnectionString.enabled }}
+            - name: DAGSTER_PG_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.postgresqlConnectionStringSecretName | quote }}
+                  key: postgresql-connection-string
+            {{- else }}
             - name: DAGSTER_PG_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: {{ include "dagster.postgresql.secretName" $ | quote }}
                   key: postgresql-password
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ template "dagster.fullname" $ }}-daemon-env

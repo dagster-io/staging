@@ -78,7 +78,11 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{- define "dagster.postgresql.pgisready" -}}
+{{- if .Values.postgresqlConnectionString.enabled }}
+until pg_isready -d $(DAGSTER_PG_CONNECTION_STRING); do echo waiting for database; sleep 2; done;
+{{- else }}
 until pg_isready -h {{ include "dagster.postgresql.host" . }} -p {{ .Values.postgresql.service.port }} -U {{ .Values.postgresql.postgresqlUsername }}; do echo waiting for database; sleep 2; done;
+{{- end }}
 {{- end -}}
 
 {{/*
@@ -167,10 +171,13 @@ This includes Dagit, Celery Workers, Run Master, and Step Execution containers.
 DAGSTER_HOME: {{ .Values.global.dagsterHome | quote }}
 DAGSTER_K8S_CELERY_BROKER: "{{ template "dagster.celery.broker_url" . }}"
 DAGSTER_K8S_CELERY_BACKEND: "{{ template "dagster.celery.backend_url" . }}"
-DAGSTER_K8S_PG_PASSWORD_SECRET: {{ include "dagster.postgresql.secretName" . | quote }}
 DAGSTER_K8S_INSTANCE_CONFIG_MAP: "{{ template "dagster.fullname" .}}-instance"
 DAGSTER_K8S_PIPELINE_RUN_NAMESPACE: "{{ .Release.Namespace }}"
 DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP: "{{ template "dagster.fullname" . }}-pipeline-env"
 DAGSTER_K8S_PIPELINE_RUN_IMAGE: "{{- .Values.pipelineRun.image.repository -}}:{{- .Values.pipelineRun.image.tag -}}"
 DAGSTER_K8S_PIPELINE_RUN_IMAGE_PULL_POLICY: "{{ .Values.pipelineRun.image.pullPolicy }}"
+
+{{- if not .Values.postgresqlConnectionString.enabled }}
+DAGSTER_K8S_PG_PASSWORD_SECRET: {{ include "dagster.postgresql.secretName" . | quote }}
+{{- end }}
 {{- end -}}

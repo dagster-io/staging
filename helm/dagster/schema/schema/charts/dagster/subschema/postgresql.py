@@ -15,3 +15,9 @@ class PostgreSQL(BaseModel):
     postgresqlPassword: str
     postgresqlDatabase: str
     service: Service
+
+
+class PostgreSQLConnectionString(BaseModel):
+    enabled: bool
+    generatePostgresqlConnectionStringSecret: bool
+    connectionString: str

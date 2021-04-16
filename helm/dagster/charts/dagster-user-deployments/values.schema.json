@@ -3,6 +3,10 @@
     "description": "@generated",
     "type": "object",
     "properties": {
+        "postgresqlConnectionStringSecretName": {
+            "title": "Postgresqlconnectionstringsecretname",
+            "type": "string"
+        },
         "deployments": {
             "title": "Deployments",
             "type": "array",
@@ -12,6 +16,7 @@
         }
     },
     "required": [
+        "postgresqlConnectionStringSecretName",
         "deployments"
     ],
     "definitions": {

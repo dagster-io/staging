@@ -8,7 +8,7 @@ from .flower import Flower
 from .global_ import Global
 from .ingress import Ingress
 from .migrate import Migrate
-from .postgresql import PostgreSQL
+from .postgresql import PostgreSQL, PostgreSQLConnectionString
 from .rabbitmq import RabbitMQ
 from .redis import Redis
 from .run_launcher import RunLauncher

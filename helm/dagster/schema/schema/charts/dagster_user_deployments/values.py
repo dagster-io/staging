@@ -8,4 +8,5 @@ from .subschema.user_deployments import UserDeployment
 class DagsterUserDeploymentsHelmValues(BaseModel):
     __doc__ = "@" + "generated"
 
+    postgresqlConnectionStringSecretName: str
     deployments: List[UserDeployment]

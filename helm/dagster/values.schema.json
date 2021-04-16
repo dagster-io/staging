@@ -16,6 +16,9 @@
             "title": "Generatepostgresqlpasswordsecret",
             "type": "boolean"
         },
+        "postgresqlConnectionString": {
+            "$ref": "#/definitions/PostgreSQLConnectionString"
+        },
         "rabbitmq": {
             "$ref": "#/definitions/RabbitMQ"
         },
@@ -65,6 +68,7 @@
         "dagster-user-deployments",
         "postgresql",
         "generatePostgresqlPasswordSecret",
+        "postgresqlConnectionString",
         "rabbitmq",
         "redis",
         "flower",
@@ -514,6 +518,29 @@
                 "postgresqlPassword",
                 "postgresqlDatabase",
                 "service"
+            ]
+        },
+        "PostgreSQLConnectionString": {
+            "title": "PostgreSQLConnectionString",
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "title": "Enabled",
+                    "type": "boolean"
+                },
+                "generatePostgresqlConnectionStringSecret": {
+                    "title": "Generatepostgresqlconnectionstringsecret",
+                    "type": "boolean"
+                },
+                "connectionString": {
+                    "title": "Connectionstring",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "enabled",
+                "generatePostgresqlConnectionStringSecret",
+                "connectionString"
             ]
         },
         "RabbitMQConfiguration": {
@@ -1828,6 +1855,10 @@
                     "title": "Postgresqlsecretname",
                     "type": "string"
                 },
+                "postgresqlConnectionStringSecretName": {
+                    "title": "Postgresqlconnectionstringsecretname",
+                    "type": "string"
+                },
                 "dagsterHome": {
                     "title": "Dagsterhome",
                     "type": "string"
@@ -1839,6 +1870,7 @@
             },
             "required": [
                 "postgresqlSecretName",
+                "postgresqlConnectionStringSecretName",
                 "dagsterHome",
                 "serviceAccountName"
             ]
