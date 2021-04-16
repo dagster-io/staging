@@ -147,13 +147,16 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
         if not origin_id in self._active_grpc_processes_or_errors:
             refresh_server = True
         else:
-            process, _creation_timestamp, server_id = self._active_grpc_processes_or_errors[
-                origin_id
-            ]
-            refresh_server = loadable_target_origin != process.loadable_target_origin
+            (
+                process_or_error,
+                _creation_timestamp,
+                server_id,
+            ) = self._active_grpc_processes_or_errors[origin_id]
+            refresh_server = (
+                isinstance(process_or_error, GrpcServerProcess)
+                and loadable_target_origin != process_or_error.loadable_target_origin
+            )
 
-        # Handle when loadable_target_origin is None
-        # Detect when the loadable target origin has changed???
         if refresh_server:
             try:
                 new_server_id = str(uuid.uuid4())
@@ -174,15 +177,20 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
                 new_server_id,
             )
 
-        process, _creation_timestamp, server_id = self._active_grpc_processes_or_errors[origin_id]
+        process_or_error, _creation_timestamp, server_id = self._active_grpc_processes_or_errors[
+            origin_id
+        ]
 
-        if isinstance(process, SerializableErrorInfo):
+        if isinstance(process_or_error, SerializableErrorInfo):
             raise DagsterUserCodeProcessError(
-                process.to_string(), user_code_process_error_infos=[process]
+                process_or_error.to_string(), user_code_process_error_infos=[process_or_error]
             )
 
         return GrpcServerEndpoint(
-            server_id=server_id, host="localhost", port=process.port, socket=process.socket
+            server_id=server_id,
+            host="localhost",
+            port=process_or_error.port,
+            socket=process_or_error.socket,
         )
 
     # Clear out processes from the map periodically so that they'll be re-created the next
