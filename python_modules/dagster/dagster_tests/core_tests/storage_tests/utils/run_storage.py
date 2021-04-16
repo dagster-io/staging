@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 
 import pendulum
 import pytest
@@ -565,6 +566,60 @@ class TestRunStorage:
             run.run_id
             for run in storage.get_runs(PipelineRunsFilter(statuses=[PipelineRunStatus.SUCCESS]))
         } == set()
+
+    def test_fetch_by_timestamp(self, storage):
+        assert storage
+        self._skip_in_memory(storage)
+
+        one = make_new_run_id()
+        two = make_new_run_id()
+        three = make_new_run_id()
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=one, pipeline_name="some_pipeline", status=PipelineRunStatus.STARTED
+            )
+        )
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=two, pipeline_name="some_pipeline", status=PipelineRunStatus.FAILURE
+            )
+        )
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=three, pipeline_name="some_pipeline", status=PipelineRunStatus.STARTED
+            )
+        )
+        storage.handle_run_event(
+            three,  # three succeeds
+            DagsterEvent(
+                message="a message",
+                event_type_value=DagsterEventType.PIPELINE_SUCCESS.value,
+                pipeline_name="some_pipeline",
+            ),
+        )
+        storage.handle_run_event(
+            one,  # fail one after two has fails and three has succeeded
+            DagsterEvent(
+                message="a message",
+                event_type_value=DagsterEventType.PIPELINE_FAILURE.value,
+                pipeline_name="some_pipeline",
+            ),
+        )
+        _, run_two_update_timestamp = storage.get_runs_by_timestamp(
+            update_after=datetime(2020, 1, 1), filters=PipelineRunsFilter(run_ids=[two])
+        )[0]
+        assert [
+            run.run_id
+            for (run, _) in storage.get_runs_by_timestamp(update_after=run_two_update_timestamp)
+        ] == [three, one]
+
+        assert [
+            run.run_id
+            for (run, _) in storage.get_runs_by_timestamp(
+                update_after=run_two_update_timestamp,
+                filters=PipelineRunsFilter(statuses=[PipelineRunStatus.FAILURE]),
+            )
+        ] == [one]
 
     def test_fetch_by_status_cursored(self, storage):
         assert storage

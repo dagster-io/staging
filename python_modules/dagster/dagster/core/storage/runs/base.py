@@ -1,5 +1,6 @@
 import warnings
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from dagster.core.events import DagsterEvent
@@ -140,6 +141,20 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
 
         Returns:
             Optional[PipelineRun]
+        """
+
+    def get_runs_by_timestamp(
+        self, update_after: datetime, filters: PipelineRunsFilter = None, limit: int = None
+    ) -> List[Tuple[PipelineRun, datetime]]:
+        """Return a list of runs with their update_timestamp, sorted by time in ascending order.
+
+        Args:
+            update_after (datetime): the UTC timestamp after which to filter the runs.
+            filters (Optional[PipelineRunsFilter]): the filter by which to filter runs.
+            limit (Optional[int]): Number of results to get. Defaults to infinite.
+
+        Returns:
+            List[Tuple[PipelineRun, datetime]]
         """
 
     @abstractmethod

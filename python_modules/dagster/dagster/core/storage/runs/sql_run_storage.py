@@ -309,6 +309,35 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         rows = self.fetchall(query)
         return deserialize_json_to_dagster_namedtuple(rows[0][0]) if len(rows) else None
 
+    def get_runs_by_timestamp(self, update_after, filters=None, limit=None):
+        check.inst_param(update_after, "update_after", datetime)
+        filters = check.opt_inst_param(
+            filters, "filters", PipelineRunsFilter, default=PipelineRunsFilter()
+        )
+        limit = check.opt_int_param(limit, "limit")
+
+        query = (
+            db.select([RunsTable.c.run_body, RunsTable.c.update_timestamp])
+            .select_from(RunsTable)
+            .order_by(RunsTable.c.update_timestamp.asc())  # order by update timestamp in asc
+        )
+        query = self._add_filters_to_query(query, filters)
+
+        if limit:
+            query = query.limit(limit)
+
+        if update_after:
+            query = query.where(RunsTable.c.update_timestamp > update_after)
+
+        rows = self.fetchall(query)
+
+        result = []
+        for row in rows:
+            update_timestamp = row[1]
+            result.append((self._row_to_run(row), update_timestamp))
+
+        return result
+
     def get_run_tags(self):
         result = defaultdict(set)
         query = db.select([RunTagsTable.c.key, RunTagsTable.c.value]).distinct(

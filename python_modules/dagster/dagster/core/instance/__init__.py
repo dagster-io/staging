@@ -9,7 +9,7 @@ import weakref
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Dict, Iterable, Union
+from typing import TYPE_CHECKING, Dict, Iterable, List, Tuple, Union
 
 import yaml
 from dagster import check
@@ -990,6 +990,11 @@ class DagsterInstance:
         self, filters: PipelineRunsFilter = None, cursor: str = None, limit: int = None
     ) -> Dict[str, Dict[str, Union[Iterable[PipelineRun], int]]]:
         return self._run_storage.get_run_groups(filters=filters, cursor=cursor, limit=limit)
+
+    def get_runs_by_timestamp(
+        self, update_after: datetime, filters: PipelineRunsFilter = None, limit: int = None
+    ) -> List[Tuple[PipelineRun, datetime]]:
+        return self._run_storage.get_runs_by_timestamp(update_after, filters, limit)
 
     def wipe(self):
         self._run_storage.wipe()
