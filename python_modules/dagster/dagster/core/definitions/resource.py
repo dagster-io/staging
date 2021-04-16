@@ -281,3 +281,20 @@ class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_inst
                 raise DagsterUnknownResourceError(attr)
 
         return _ScopedResources(**resource_instance_dict)  # type: ignore[call-arg]
+
+
+def make_config_resource(config_schema=None, description=None):
+    """A helper function that creates a ``ResourceDefinition`` with a configuration value.
+
+    Args:
+        config_schema (Any): A hardcoded object which helps mock the resource.
+        description ([Optional[str]]): The description of the resource. Defaults to None.
+
+    Returns:
+        [ResourceDefinition]: A resource that pass .
+    """
+    return ResourceDefinition(
+        resource_fn=lambda init_context: init_context.resource_config,
+        config_schema=config_schema,
+        description=description,
+    )
