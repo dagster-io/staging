@@ -140,6 +140,12 @@ class InMemoryRunStorage(RunStorage):
         check.str_param(run_id, "run_id")
         return self._runs.get(run_id)
 
+    def get_runs_by_timestamp(self, update_after, filters=None, limit=None):
+        raise NotImplementedError(
+            "get_runs_by_timestamp is used by sensors which live in a separate process. "
+            "It cannot use in memory storage."
+        )
+
     def get_run_tags(self):
         all_tags = defaultdict(set)
         for _run_id, tags in self._run_tags.items():
