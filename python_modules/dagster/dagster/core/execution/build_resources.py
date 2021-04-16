@@ -18,17 +18,17 @@ from .context_creation_pipeline import initialize_console_manager
 
 
 def _get_mapped_resource_config(
-    resource_defs: Dict[str, ResourceDefinition], run_config: Dict[str, Any]
+    resource_defs: Dict[str, ResourceDefinition], resource_config: Dict[str, Any]
 ) -> Dict[str, ResourceConfig]:
     resource_config_schema = define_resource_dictionary_cls(
         resource_defs, set(resource_defs.keys())
     )
-    config_evr = process_config(resource_config_schema, run_config)
+    config_evr = process_config(resource_config_schema, resource_config)
     if not config_evr.success:
         raise DagsterInvalidConfigError(
             "Error in config for resources ",
             config_evr.errors,
-            run_config,
+            resource_config,
         )
     config_value = config_evr.value
     return config_map_resources(resource_defs, config_value)
@@ -38,7 +38,7 @@ def _get_mapped_resource_config(
 def build_resources(
     resources: Dict[str, Any],
     instance: Optional[DagsterInstance] = None,
-    run_config: Optional[Dict[str, Any]] = None,
+    resource_config: Optional[Dict[str, Any]] = None,
     pipeline_run: Optional[PipelineRun] = None,
     log_manager: Optional[DagsterLogManager] = None,
 ) -> Generator[NamedTuple, None, None]:
@@ -54,7 +54,7 @@ def build_resources(
             required resource dependencies to a given resource must be contained within this
             dictionary, or the resource build will fail.
         instance (Optional[DagsterInstance]): The dagster instance configured to instantiate resources on.
-        run_config (Optional[Dict[str, Any]]): A dict representing the configuration to be provided
+        resource_config (Optional[Dict[str, Any]]): A dict representing the configuration to be provided
             to each resource during initialization and teardown.
         pipeline_run (Optional[PipelineRun]): The pipeline run to provide during resource
             initialization and teardown. If the provided resources require either the `pipeline_run`
@@ -75,9 +75,9 @@ def build_resources(
         else:
             resource_defs[resource_key] = ResourceDefinition.hardcoded_resource(resource)
     instance = check.opt_inst_param(instance, "instance", DagsterInstance)
-    run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
+    resource_config = check.opt_dict_param(resource_config, "resource_config", key_type=str)
     log_manager = check.opt_inst_param(log_manager, "log_manager", DagsterLogManager)
-    mapped_resource_config = _get_mapped_resource_config(resource_defs, run_config)
+    mapped_resource_config = _get_mapped_resource_config(resource_defs, resource_config)
     with ephemeral_instance_if_missing(instance) as dagster_instance:
         resources_manager = resource_initialization_manager(
             resource_defs=resource_defs,
