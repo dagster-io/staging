@@ -133,6 +133,10 @@ class EventLogStorage(ABC, MayHaveInstanceWeakref):
     def wipe_asset(self, asset_key: AssetKey):
         """Remove asset index history from event log for given asset_key"""
 
+    @abstractmethod
+    def get_events_by_type(self, run_id, dagster_event_type) -> Iterable[EventRecord]:
+        pass
+
 
 def extract_asset_events_cursor(cursor, before_cursor, after_cursor, ascending):
     if cursor:
