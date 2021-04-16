@@ -58,6 +58,7 @@ from dagster.core.definitions import (
     intermediate_storage,
     lambda_solid,
     logger,
+    make_config_resource,
     monthly_schedule,
     multiple_process_executor_requirements,
     multiprocess_executor,
