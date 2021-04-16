@@ -1,0 +1,5 @@
+resources:
+  variables:
+    config:
+      my_str: foo
+      my_int: 1
