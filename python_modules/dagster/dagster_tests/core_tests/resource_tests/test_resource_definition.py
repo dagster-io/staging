@@ -362,6 +362,45 @@ def test_string_resource():
     assert called["yup"]
 
 
+def test_config_resource():
+    any_config = 1
+    single_config = "my_string"
+    multi_config = {"foo": "my_string", "bar": 1}
+
+    @solid(required_resource_keys={"any_config", "single_config", "multi_config"})
+    def my_solid(context):
+        assert context.resources.any_config == any_config
+        assert context.resources.single_config == single_config
+        assert context.resources.multi_config == multi_config
+
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={
+                    "any_config": ResourceDefinition.config_resource(),
+                    "single_config": ResourceDefinition.config_resource(str),
+                    "multi_config": ResourceDefinition.config_resource({"foo": str, "bar": int}),
+                },
+            )
+        ]
+    )
+    def my_pipeline():
+        my_solid()
+
+    result = execute_pipeline(
+        my_pipeline,
+        run_config={
+            "resources": {
+                "any_config": {"config": any_config},
+                "single_config": {"config": single_config},
+                "multi_config": {"config": multi_config},
+            }
+        },
+    )
+
+    assert result.success
+
+
 def test_hardcoded_resource():
     called = {}
 
