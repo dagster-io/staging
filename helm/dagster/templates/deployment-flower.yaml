@@ -41,6 +41,14 @@ spec:
           command: ['sh', '-c', {{ include "dagster.postgresql.pgisready" . | squote }}]
           securityContext:
             {{- toYaml .Values.flower.securityContext | nindent 12 }}
+          {{- if .Values.global.postgresqlConnectionString.enabled }}
+          env:
+            - name: DAGSTER_PG_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.postgresqlConnectionStringSecretName | quote }}
+                  key: postgresql-connection-string
+          {{- end }}
       containers:
         - name: {{ .Chart.Name }}
           securityContext:

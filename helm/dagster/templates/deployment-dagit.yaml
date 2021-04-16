@@ -42,6 +42,14 @@ spec:
           command: ['sh', '-c', {{ include "dagster.postgresql.pgisready" . | squote }}]
           securityContext:
             {{- toYaml .Values.dagit.securityContext | nindent 12 }}
+          {{- if .Values.global.postgresqlConnectionString.enabled }}
+          env:
+            - name: DAGSTER_PG_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.postgresqlConnectionStringSecretName | quote }}
+                  key: postgresql-connection-string
+          {{- end }}
         {{- if (and $userDeployments.enabled $userDeployments.enableSubchart) }}
         {{- range $deployment := $userDeployments.deployments }}
         - name: "init-user-deployment-{{- $deployment.name -}}"
@@ -61,11 +69,19 @@ spec:
             "{{ template "dagster.dagit.dagitCommand" $ }}"
           ]
           env:
+            {{- if .Values.global.postgresqlConnectionString.enabled }}
+            - name: DAGSTER_PG_CONNECTION_STRING
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.postgresqlConnectionStringSecretName | quote }}
+                  key: postgresql-connection-string
+            {{- else }}
             - name: DAGSTER_PG_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "dagster.postgresql.secretName" . | quote }}
+                  name: {{ include "dagster.postgresql.secretName" $ | quote }}
                   key: postgresql-password
+            {{- end }}
           envFrom:
             - configMapRef:
                 name: {{ template "dagster.fullname" . }}-dagit-env

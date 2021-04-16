@@ -1820,6 +1820,34 @@
                 "name"
             ]
         },
+        "PostgreSQLConnectionString": {
+            "title": "PostgreSQLConnectionString",
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "title": "Enabled",
+                    "type": "boolean"
+                },
+                "postgresqlConnectionStringSecretName": {
+                    "title": "Postgresqlconnectionstringsecretname",
+                    "type": "string"
+                },
+                "generatePostgresqlConnectionStringSecret": {
+                    "title": "Generatepostgresqlconnectionstringsecret",
+                    "type": "boolean"
+                },
+                "connectionString": {
+                    "title": "Connectionstring",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "enabled",
+                "postgresqlConnectionStringSecretName",
+                "generatePostgresqlConnectionStringSecret",
+                "connectionString"
+            ]
+        },
         "Global": {
             "title": "Global",
             "type": "object",
@@ -1827,6 +1855,9 @@
                 "postgresqlSecretName": {
                     "title": "Postgresqlsecretname",
                     "type": "string"
+                },
+                "postgresqlConnectionString": {
+                    "$ref": "#/definitions/PostgreSQLConnectionString"
                 },
                 "dagsterHome": {
                     "title": "Dagsterhome",
@@ -1839,6 +1870,7 @@
             },
             "required": [
                 "postgresqlSecretName",
+                "postgresqlConnectionString",
                 "dagsterHome",
                 "serviceAccountName"
             ]
