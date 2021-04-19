@@ -391,12 +391,15 @@ def resolve_checked_solid_fn_inputs(
             "parameter named 'context'."
         )
 
+    in_map = {in_def.name: idx for idx, in_def in enumerate(explicit_input_defs)}
     input_defs = list(explicit_input_defs)
-    if inputs_to_infer:
-        for inferred_input in infer_input_definitions(
-            decorator_name, fn_name, compute_fn, has_context_arg
-        ):
-            if inferred_input.name in inputs_to_infer:
-                input_defs.append(inferred_input)
+    for inferred_input in infer_input_definitions(
+        decorator_name, fn_name, compute_fn, has_context_arg
+    ):
+        if inferred_input.name in inputs_to_infer:
+            input_defs.append(inferred_input)
+
+        if inferred_input.name in in_map:
+            input_defs[in_map[inferred_input.name]].update_from_inferred(inferred_input)
 
     return input_defs, positional_arg_name_list(input_args)

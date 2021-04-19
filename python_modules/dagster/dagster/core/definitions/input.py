@@ -85,6 +85,7 @@ class InputDefinition:
     ):
         self._name = check_valid_name(name)
 
+        self._type_not_set = dagster_type is None
         self._dagster_type = check.inst(resolve_dagster_type(dagster_type), DagsterType)
 
         self._description = check.opt_str_param(description, "description")
@@ -206,6 +207,21 @@ class InputDefinition:
         else:
             maps_to = InputPointer(solid_name, input_name)
         return InputMapping(self, maps_to)
+
+    def update_from_inferred(self, inferred_input_def: "InputDefinition") -> None:
+        """
+        Update properties of this InputDefinition from one inferred from type signature.
+        This can update: dagster_type, description, and default_value if they are not set.
+        """
+        if self._type_not_set:
+            self._dagster_type = inferred_input_def.dagster_type
+            self._type_not_set = False
+
+        if self.description is None and inferred_input_def.description is not None:
+            self._description = inferred_input_def.description
+
+        if not self.has_default_value and inferred_input_def.has_default_value:
+            self._default_value = inferred_input_def.default_value
 
 
 class InputPointer(namedtuple("_InputPointer", "solid_name input_name")):
