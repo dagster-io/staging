@@ -2,6 +2,7 @@ import os
 import re
 
 import click
+import mock
 import pytest
 from click import UsageError
 from click.testing import CliRunner
@@ -265,6 +266,24 @@ def test_execute_non_existant_file():
 
         with pytest.raises(OSError):
             execute_execute_command(kwargs=kwargs, instance=instance)
+
+
+@mock.patch("dagster.core.definitions.ReconstructablePipeline.get_definition")
+def test_execute_syntax_error_file(get_definition_mock):
+    get_definition_mock.side_effect = SyntaxError()
+    with instance_for_test() as instance:
+        cli_args = {
+            "python_file": file_relative_path(__file__, "test_cli_commands.py"),
+            "atribute": "bar",
+            "pipeline": "foo",
+            "module_name": None,
+            "config": (file_relative_path(__file__, "in_memory_env.yaml"),),
+        }
+        result = execute_execute_command(
+            kwargs=cli_args,
+            instance=instance,
+        )
+        assert result.success
 
 
 def test_attribute_not_found():
