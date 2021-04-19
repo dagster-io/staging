@@ -45,6 +45,22 @@ width={3122}
 height={2028}
 />
 
+## Python Client <Experimental/>
+
+Dagster also provides the \[] to interface with a Dagster GraphQL server from Python. The snippet below shows example instantiation of the client:
+
+```python file=/concepts/dagit/graphql/client_example.py startafter=start_setup_marker endbefore=end_setup_marker
+from dagster_graphql.client import (
+    DagsterGraphQLClient,
+    DagsterGraphQLClientError,
+    ReloadRepositoryLocationInfo,
+    ReloadRepositoryLocationStatus,
+)
+from dagster.core.storage.pipeline_run import PipelineRunStatus
+
+client = DagsterGraphQLClient("localhost", port_number=3000)
+```
+
 ## Example Queries
 
 ### Get a list of pipelines runs
