@@ -247,7 +247,10 @@ def create_offset_partition_selector(execution_time_to_partition_fn):
             "on your partition set matches your execution timezone."
         )
 
-        earliest_possible_partition = partition_set_def.get_partitions(None)[0]
+        earliest_possible_partition = next(iter(partition_set_def.get_partitions(None)), None)
+        if not earliest_possible_partition:
+            return no_partitions_skip_reason
+
         valid_partitions = partition_set_def.get_partitions(context.scheduled_execution_time)
 
         if not context.scheduled_execution_time:
