@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs, { link } from "fs";
 import path from "path";
 import fg from "fast-glob";
 import { Node } from "hast";
@@ -103,6 +103,11 @@ function isLinkLegit(
     return true;
   }
 
+  // Validate mailto links
+  if (rawTarget.startsWith("mailto:")) {
+    return true;
+  }
+
   // Validate links to public assets
   if (rawTarget.startsWith("assets/") || rawTarget.startsWith("images/")) {
     return fileExists(path.resolve(ROOT_DIR, "next/public", rawTarget));
@@ -146,13 +151,19 @@ function collectInternalLinks(
     if (url.startsWith("#")) {
       // is a self-referencing anchor link
       result.push(`${currentFilePath.replace(/\.mdx$/, "")}${url}`);
-    } else if (!url.startsWith("/")) {
+    } else if (!url.startsWith("/") && !url.startsWith("mailto:")) {
       throw new Error(
         `Do not use relative references ('${url}' in ${currentFilePath}). All links should start with '/'`
       );
     } else {
       // remove the leading `/` from the link target
-      result.push(url.substr(1));
+      let linkTarget = url.substr(1);
+
+      if (url.startsWith("mailto:")) {
+        linkTarget = url;
+      }
+
+      result.push(linkTarget);
     }
   });
 
