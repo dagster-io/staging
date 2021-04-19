@@ -7,11 +7,10 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from dagster import check
-from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.core.errors import (
     DagsterImportError,
-    DagsterUserCodeImportError,
     DagsterInvariantViolationError,
+    DagsterUserCodeImportError,
 )
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.serdes import whitelist_for_serdes
@@ -188,7 +187,9 @@ def load_python_module(module_name, warn_only=False, remove_from_path_fn=None):
         except ImportError as ie:
             error = ie
         except Exception as e:
-            raise DagsterUserCodeImportError("", user_exception=e, original_exc_info=sys.exc_info())
+            raise DagsterUserCodeImportError(
+                "", user_exception=e, original_exc_info=sys.exc_info()
+            ) from e
 
     if error:
         try:
@@ -209,7 +210,7 @@ def load_python_module(module_name, warn_only=False, remove_from_path_fn=None):
                     f"Module {module_name} not found. Packages must be installed rather than "
                     "relying on the working directory to resolve module loading."
                 ) from error
-        except RuntimeError as re:
+        except RuntimeError:
             # We might be here because numpy throws run time errors at import time when being
             # imported multiple times, just raise the original import error
             raise error
