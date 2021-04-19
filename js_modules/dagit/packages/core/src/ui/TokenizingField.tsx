@@ -289,6 +289,16 @@ export const TokenizingField: React.FunctionComponent<TokenizingFieldProps> = ({
     }
   };
 
+  const menuRef = React.createRef<HTMLDivElement>();
+  React.useEffect(() => {
+    if (menuRef.current && active) {
+      const el = menuRef.current.querySelector(`[data-idx='${active.idx}']`);
+      if (el && el instanceof HTMLElement) {
+        el.scrollIntoView({block: 'nearest'});
+      }
+    }
+  }, [menuRef, active]);
+
   return (
     <Popover
       minimal={true}
@@ -296,10 +306,11 @@ export const TokenizingField: React.FunctionComponent<TokenizingFieldProps> = ({
       position={'bottom-left'}
       content={
         suggestions.length > 0 ? (
-          <div style={{maxHeight: 235, overflowY: 'scroll'}}>
+          <div style={{maxHeight: 235, overflowY: 'scroll'}} ref={menuRef}>
             <StyledMenu>
               {suggestions.map((suggestion, idx) => (
                 <StyledMenuItem
+                  data-idx={idx}
                   key={suggestion.text}
                   text={suggestion.text}
                   shouldDismissPopover={false}
