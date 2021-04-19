@@ -77,7 +77,7 @@ def assert_in_composition(solid_name):
         )
 
 
-def _is_in_composition():
+def is_in_composition():
     return _composition_stack
 
 
@@ -224,7 +224,7 @@ class PendingNodeInvocation:
         if self.given_alias is not None:
             check_valid_name(self.given_alias)
 
-        if _is_in_composition():
+        if is_in_composition():
             current_context().add_pending_invocation(self)
 
     def __call__(self, *args, **kwargs):

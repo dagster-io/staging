@@ -1,9 +1,23 @@
-from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from dagster import check
 from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.storage.io_manager import IOManager, IOManagerDefinition
 from dagster.core.types.dagster_type import DagsterType
+from dagster.utils import merge_dicts
 from dagster.utils.backcompat import experimental_arg_warning
 
 from .config import ConfigMapping
@@ -16,6 +30,20 @@ from .graph import GraphDefinition
 from .i_solid_definition import NodeDefinition
 from .input import InputDefinition, InputMapping
 from .output import OutputDefinition, OutputMapping
+
+if TYPE_CHECKING:
+    from dagster.core.execution.plan.outputs import StepOutputHandle
+
+
+def hardcoded_value_io_manager_factory(value: Any) -> IOManager:
+    class HardcodedIOManager(IOManager):
+        def load_input(self, context):
+            return value
+
+        def handle_output(self, context, obj):
+            raise NotImplementedError()
+
+    return HardcodedIOManager()
 
 
 class SolidDefinition(NodeDefinition):
@@ -102,6 +130,109 @@ class SolidDefinition(NodeDefinition):
             tags=check.opt_dict_param(tags, "tags", key_type=str),
             positional_inputs=positional_inputs,
         )
+
+    def __call__(self, *args):
+        from dagster.core.definitions.composition import is_in_composition
+        from dagster.core.definitions import ModeDefinition, ResourceDefinition, PipelineDefinition
+        from dagster.core.definitions.pipeline_base import InMemoryPipeline
+        from dagster.core.execution.api import (
+            create_execution_plan,
+            ExecuteRunWithPlanIterable,
+            pipeline_execution_iterator,
+        )
+        from dagster.core.execution.context_creation_pipeline import (
+            PlanOrchestrationContextManager,
+            orchestration_context_event_generator,
+        )
+        from dagster.core.instance import DagsterInstance
+
+        if is_in_composition():
+            # TODO: Call i_solid_definition's __call__ method
+            super(SolidDefinition, self).__call__()
+        else:
+            context = args[0]
+            inputs = args[1:]
+
+            check.invariant(len(inputs) == len(self.input_defs))
+            hardcoded_io_managers = {}
+            new_input_defs = []
+            # TODO: check that input types provided match the input definitions
+            for input_def, input_value in zip(self.input_defs, inputs):
+                root_manager_key = f"{input_def.name}__root_manager"
+                hardcoded_io_managers[root_manager_key] = IOManagerDefinition.hardcoded_io_manager(
+                    hardcoded_value_io_manager_factory(input_value)
+                )
+                new_input_def = input_def.copy_for_root_manager_key(root_manager_key)
+                new_input_defs.append(new_input_def)
+
+            new_solid_def = SolidDefinition(
+                self.name,
+                new_input_defs,
+                self.compute_fn,
+                self.output_defs,
+                self._config_schema,
+                self._description,
+                self._tags,
+                self._required_resource_keys,
+                self._positional_inputs,
+                self._version,
+            )
+
+            resources = context.resources
+            resource_defs = (
+                {
+                    resource_key: ResourceDefinition.hardcoded_resource(resource_instance)
+                    for resource_key, resource_instance in resources._asdict().items()
+                }
+                if resources
+                else {}
+            )
+
+            resource_defs = merge_dicts(resource_defs, hardcoded_io_managers)
+            # TODO: change this to also hardcode IO managers
+            mode_def = ModeDefinition("created", resource_defs=resource_defs)
+
+            pipeline_def = PipelineDefinition(
+                [new_solid_def], name=f"pipeline_wraps_{self.name}", mode_defs=[mode_def]
+            )
+
+            pipeline = InMemoryPipeline(pipeline_def)
+
+            execution_plan = create_execution_plan(pipeline, mode=mode_def.name)
+
+            recorder: Dict["StepOutputHandle", Any] = {}
+
+            instance = DagsterInstance.ephemeral()
+
+            pipeline_run = instance.create_run_for_pipeline(
+                pipeline_def=pipeline_def,
+                mode=mode_def.name,
+            )
+
+            _execute_run_iterable = ExecuteRunWithPlanIterable(
+                execution_plan=execution_plan,
+                iterator=pipeline_execution_iterator,
+                execution_context_manager=PlanOrchestrationContextManager(
+                    orchestration_context_event_generator,
+                    pipeline=pipeline,
+                    execution_plan=execution_plan,
+                    run_config=None,
+                    pipeline_run=pipeline_run,
+                    instance=instance,
+                    raise_on_error=True,
+                    output_capture=recorder,
+                ),
+            )
+            _event_list = list(_execute_run_iterable)
+
+            result = {}
+            for handle, value in recorder.items():
+                if handle.step_key == self.name and handle.output_name == "result":
+                    return value
+                else:
+                    result[handle.output_name] = value
+
+            return result
 
     @property
     def compute_fn(self) -> Callable[..., Any]:

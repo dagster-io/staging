@@ -168,6 +168,18 @@ class InputDefinition:
         """
         return self._asset_key_fn(context)
 
+    def copy_for_root_manager_key(self, root_manager_key: str) -> "InputDefinition":
+        return InputDefinition(
+            name=self.name,
+            dagster_type=self._dagster_type,
+            description=self._description,
+            default_value=self._default_value,
+            root_manager_key=root_manager_key,
+            metadata=self._metadata,
+            asset_key=self._asset_key_fn,
+            asset_partitions=self._asset_partitions_fn,
+        )
+
     def get_asset_partitions(self, context) -> Optional[Set[str]]:
         """Get the set of partitions that this solid will read from this InputDefinition for the given
         :py:class:`InputContext` (if any).
