@@ -1,23 +1,19 @@
 # start_scheduler_marker_0
 import csv
+import requests
 from datetime import datetime, time
 
 from dagster import daily_schedule, pipeline, repository, solid
-from dagster.utils import file_relative_path
 
 
 @solid
 def hello_cereal(context, date):
-    dataset_path = file_relative_path(__file__, "cereal.csv")
-    context.log.info(dataset_path)
-    with open(dataset_path, "r") as fd:
-        cereals = [row for row in csv.DictReader(fd)]
-
-    context.log.info(
-        "Today is {date}. Found {n_cereals} cereals".format(
-            date=date, n_cereals=len(cereals)
-        )
+    response = requests.get(
+        "https://raw.githubusercontent.com/dagster-io/dagster/master/examples/docs_snippets/docs_snippets/intro_tutorial/cereal.csv"
     )
+    lines = response.text.split("\n")
+    cereals = [row for row in csv.DictReader(lines)]
+    context.log.info(f"Today is {date}. Found {len(cereals)} cereals.")
 
 
 @pipeline
@@ -35,13 +31,7 @@ def hello_cereal_pipeline():
     execution_timezone="US/Central",
 )
 def good_morning_schedule(date):
-    return {
-        "solids": {
-            "hello_cereal": {
-                "inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}
-            }
-        }
-    }
+    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}
 
 
 # end_scheduler_marker_1
@@ -72,13 +62,7 @@ def weekday_filter(_context):
     should_execute=weekday_filter,
 )
 def good_weekday_morning_schedule(date):
-    return {
-        "solids": {
-            "hello_cereal": {
-                "inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}
-            }
-        }
-    }
+    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}
 
 
 # end_scheduler_marker_4
