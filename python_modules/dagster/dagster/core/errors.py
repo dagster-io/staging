@@ -236,11 +236,6 @@ class DagsterTypeCheckError(DagsterUserCodeExecutionError):
     """
 
 
-class DagsterUserCodeImportError(DagsterUserCodeExecutionError):
-    """Indicates an error in the import process caused by user code. E.g. a user has invalid syntax
-    in a module that dagster needs to load."""
-
-
 class DagsterExecutionLoadInputError(DagsterUserCodeExecutionError):
     """Indicates an error occurred while loading an input for a step."""
 
