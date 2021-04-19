@@ -13,7 +13,7 @@ from ...decorator_utils import (
     validate_decorated_fn_positionals,
 )
 from ..events import AssetMaterialization, ExpectationResult, Materialization, Output
-from ..inference import infer_input_definitions, infer_output_definitions
+from ..inference import infer_input_props, infer_output_definitions
 from ..input import InputDefinition
 from ..output import OutputDefinition
 from ..solid import SolidDefinition
@@ -397,12 +397,24 @@ def resolve_checked_solid_fn_inputs(
             "parameter named 'context'."
         )
 
-    input_defs = list(explicit_input_defs)
-    if inputs_to_infer:
-        for inferred_input in infer_input_definitions(
-            decorator_name, fn_name, compute_fn, has_context_arg
-        ):
-            if inferred_input.name in inputs_to_infer:
-                input_defs.append(inferred_input)
+    inferred_props = {
+        inferred.name: inferred
+        for inferred in infer_input_props(decorator_name, fn_name, compute_fn, has_context_arg)
+    }
+    input_defs = []
+    for input_def in explicit_input_defs:
+        if input_def.name in inferred_props:
+            # combine any information missing on the explicit def that can be inferred
+            input_defs.append(input_def.combine_with_inferred(inferred_props[input_def.name]))
+        else:
+            # pass through those that don't have any inference info, such as Nothing type inputs
+            input_defs.append(input_def)
+
+    # build defs from the inferred props for those without explicit entries
+    input_defs.extend(
+        InputDefinition.create_from_inferred(inferred)
+        for inferred in inferred_props.values()
+        if inferred.name in inputs_to_infer
+    )
 
     return input_defs, positional_arg_name_list(input_args)
