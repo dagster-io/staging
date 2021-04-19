@@ -1,34 +1,27 @@
 # start_pipeline_marker
 import csv
-import os
 
+import requests
 from dagster import execute_pipeline, pipeline, solid
 
 
 @solid
-def read_csv(context):
-    csv_path = os.path.join(
-        os.path.dirname(__file__), context.solid_config["csv_name"]
-    )
-    with open(csv_path, "r") as fd:
-        lines = [row for row in csv.DictReader(fd)]
-
-    context.log.info(f"Read {len(lines)} lines")
-    return lines
+def download_csv(context):
+    response = requests.get(context.solid_config["url"])
+    lines = response.text.split("\n")
+    return [row for row in csv.DictReader(lines)]
 
 
 @solid
 def sort_by_calories(context, cereals):
-    sorted_cereals = sorted(
-        cereals, key=lambda cereal: int(cereal["calories"])
-    )
+    sorted_cereals = sorted(cereals, key=lambda cereal: int(cereal["calories"]))
 
     context.log.info(f'Most caloric cereal: {sorted_cereals[-1]["name"]}')
 
 
 @pipeline
 def configurable_pipeline():
-    sort_by_calories(read_csv())
+    sort_by_calories(download_csv())
 
 
 # end_pipeline_marker
@@ -36,7 +29,13 @@ def configurable_pipeline():
 if __name__ == "__main__":
     # start_run_config_marker
     run_config = {
-        "solids": {"read_csv": {"config": {"csv_name": "cereal.csv"}}}
+        "solids": {
+            "download_csv": {
+                "config": {
+                    "url": "https://raw.githubusercontent.com/dagster-io/dagster/master/examples/docs_snippets/docs_snippets/intro_tutorial/cereal.csv"
+                }
+            }
+        }
     }
     # end_run_config_marker
     # start_execute_marker
