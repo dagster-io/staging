@@ -21,13 +21,6 @@ from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 from dagster.core.storage.io_manager import io_manager
 
 
-def failure():
-    x = 1 / 0
-
-
-failure()
-
-
 def get_date_partitions():
     """Every day in 2020"""
     d1 = datetime.date(2020, 1, 1)
