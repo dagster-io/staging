@@ -18,12 +18,14 @@ import {MetadataEntry} from '../runs/MetadataEntry';
 import {titleForRun} from '../runs/RunUtils';
 import {FontFamily} from '../ui/styles';
 
+import {AssetPredecessorLink} from './AssetMaterializationTable';
 import {Sparkline} from './Sparkline';
 import {AssetNumericHistoricalData} from './types';
 import {
   AssetQuery_assetOrError_Asset_assetMaterializations,
   AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_materialization_metadataEntries,
 } from './types/AssetQuery';
+import {useMaterializationBuckets} from './useMaterializationBuckets';
 
 const COL_WIDTH = 120;
 
@@ -66,9 +68,17 @@ export const AssetMaterializationMatrix: React.FC<AssetMaterializationMatrixProp
     initialOffset: React.useCallback((el) => ({left: el.scrollWidth - el.clientWidth, top: 0}), []),
   });
 
+  const bucketed = useMaterializationBuckets({
+    materializations,
+    isPartitioned,
+    shouldBucketPartitions: true,
+  });
+
+  const anyPredecessors = bucketed.some(({predecessors}) => !!predecessors?.length);
+
   const visibleRangeStart = Math.max(0, Math.floor((viewport.left - OVERSCROLL) / COL_WIDTH));
   const visibleCount = Math.ceil((viewport.width + OVERSCROLL * 2) / COL_WIDTH);
-  const visible = materializations.slice(visibleRangeStart, visibleRangeStart + visibleCount);
+  const visible = bucketed.slice(visibleRangeStart, visibleRangeStart + visibleCount);
 
   const lastXHover = React.useRef<string | number | null>(null);
   React.useEffect(() => {
@@ -76,7 +86,7 @@ export const AssetMaterializationMatrix: React.FC<AssetMaterializationMatrixProp
       return;
     }
     if (xHover !== null) {
-      const idx = materializations.findIndex((m) => xForAssetMaterialization(m, xAxis) === xHover);
+      const idx = bucketed.findIndex((m) => xForAssetMaterialization(m.latest, xAxis) === xHover);
       if ((idx !== -1 && idx < visibleRangeStart) || idx > visibleRangeStart + visibleCount) {
         onMoveToViewport({left: idx * COL_WIDTH - (viewport.width - COL_WIDTH) / 2, top: 0}, false);
       }
@@ -85,8 +95,8 @@ export const AssetMaterializationMatrix: React.FC<AssetMaterializationMatrixProp
   });
 
   const metadataLabels = uniq(
-    flatMap(materializations, (m) =>
-      m.materializationEvent.materialization.metadataEntries.map((e) => e.label),
+    flatMap(bucketed, (m) =>
+      m.latest.materializationEvent.materialization.metadataEntries.map((e) => e.label),
     ),
   );
 
@@ -98,6 +108,7 @@ export const AssetMaterializationMatrix: React.FC<AssetMaterializationMatrixProp
             <HeaderRowLabel>Run</HeaderRowLabel>
             {isPartitioned && <HeaderRowLabel>Partition</HeaderRowLabel>}
             <HeaderRowLabel>Timestamp</HeaderRowLabel>
+            {anyPredecessors ? <HeaderRowLabel>Previous materializations</HeaderRowLabel> : null}
             {[...metadataLabels, LABEL_STEP_EXECUTION_TIME].map((label, idx) => (
               <MetadataRowLabel
                 bordered={idx === 0 || label === LABEL_STEP_EXECUTION_TIME}
@@ -120,12 +131,13 @@ export const AssetMaterializationMatrix: React.FC<AssetMaterializationMatrixProp
         <GridScrollContainer {...containerProps}>
           <div
             style={{
-              width: materializations.length * COL_WIDTH,
+              width: bucketed.length * COL_WIDTH,
               position: 'relative',
               height: 80,
             }}
           >
-            {visible.map((assetMaterialization, visibleIdx) => {
+            {visible.map((historicalMaterialization, visibleIdx) => {
+              const {latest: assetMaterialization, predecessors} = historicalMaterialization;
               const {materializationEvent, partition} = assetMaterialization;
               const x = xForAssetMaterialization(assetMaterialization, xAxis);
               const {startTime, endTime} = materializationEvent.stepStats || {};
@@ -156,9 +168,23 @@ export const AssetMaterializationMatrix: React.FC<AssetMaterializationMatrixProp
                     </Link>
                   </div>
                   {isPartitioned && <div className={`cell`}>{partition}</div>}
-                  <div className={`cell`} style={{borderBottom: `1px solid ${Colors.LIGHT_GRAY1}`}}>
+                  <div
+                    className="cell"
+                    style={anyPredecessors ? {} : {borderBottom: `1px solid ${Colors.LIGHT_GRAY1}`}}
+                  >
                     <Timestamp timestamp={{ms: Number(materializationEvent.timestamp)}} />
                   </div>
+                  {anyPredecessors ? (
+                    <div className="cell" style={{borderBottom: `1px solid ${Colors.LIGHT_GRAY1}`}}>
+                      {predecessors?.length ? (
+                        <AssetPredecessorLink
+                          isPartitioned={isPartitioned}
+                          hasLineage={false}
+                          predecessors={predecessors}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                   {metadataLabels.map((label) => {
                     const entry = materializationEvent.materialization.metadataEntries.find(
                       (m) => m.label === label,
