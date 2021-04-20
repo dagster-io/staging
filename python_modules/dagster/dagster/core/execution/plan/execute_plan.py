@@ -58,6 +58,9 @@ def inner_plan_execution_iterator(
             with pipeline_context.instance.compute_log_manager.watch(
                 step_context.pipeline_run, step_context.step.key
             ):
+                yield DagsterEvent.capture_logs(
+                    step_context, step_context.step.key, [step_context.step]
+                )
 
                 for step_event in check.generator(
                     _dagster_event_sequence_for_step(step_context, active_execution.retry_state)
