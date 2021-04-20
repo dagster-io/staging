@@ -231,15 +231,6 @@
             "path": "/concepts/assets/asset-materializations"
           }
         ]
-      },
-      {
-        "title": "Executors",
-        "children": [
-          {
-            "title": "Executors",
-            "path": "/concepts/executors"
-          }
-        ]
       }
     ]
   },
@@ -264,12 +255,16 @@
             "path": "/deployment/dagster-daemon"
           },
           {
-            "title": "Run Launcher",
+            "title": "Run Coordinators",
+            "path": "/deployment/run-coordinator"
+          },
+          {
+            "title": "Run Launchers",
             "path": "/deployment/run-launcher"
           },
           {
-            "title": "Run Coordinator",
-            "path": "/deployment/run-coordinator"
+            "title": "Executors",
+            "path": "/deployment/executors"
           }
         ]
       },
@@ -312,23 +307,18 @@
           {
             "title": "Deploying Dagster to GCP",
             "path": "/deployment/guides/gcp"
-          }
-        ]
-      },
-      {
-        "title": "Executor & Run Launchers",
-        "children": [
+          },
           {
             "title": "Executing on Celery",
-            "path": "/deployment/custom-infra/celery"
+            "path": "/deployment/guides/celery"
           },
           {
             "title": "Executing on Dask",
-            "path": "/deployment/custom-infra/dask"
+            "path": "/deployment/guides/dask"
           },
           {
             "title": "Executing on Airflow",
-            "path": "/deployment/custom-infra/airflow"
+            "path": "/deployment/guides/airflow"
           }
         ]
       }
