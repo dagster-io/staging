@@ -91,15 +91,14 @@ class SensorLaunchContext:
         if exception_value and not isinstance(exception_value, (KeyboardInterrupt, GeneratorExit)):
             error_data = serializable_error_info_from_exc_info(sys.exc_info())
             self.update_state(JobTickStatus.FAILURE, error=error_data)
-            self._write()
-            self._logger.error(
-                "Error launching sensor run: {error_info}".format(
-                    error_info=error_data.to_string()
-                ),
-            )
-            return True  # Swallow the exception after logging in the tick DB
 
         self._write()
+
+        self._instance.purge_job_ticks(
+            self._job_state.job_origin_id,
+            tick_status=JobTickStatus.SKIPPED,
+            before=pendulum.now("UTC").subtract(days=7).timestamp(),  #  keep the last 7 days
+        )
 
 
 def _check_for_debug_crash(debug_crash_flags, key):
@@ -211,12 +210,6 @@ def execute_sensor_iteration(instance, logger, workspace, debug_crash_flags=None
                     job_state,
                     sensor_debug_crash_flags,
                 )
-
-            instance.purge_job_ticks(
-                job_state.job_origin_id,
-                tick_status=JobTickStatus.SKIPPED,
-                before=now.subtract(days=7).timestamp(),  #  keep the last 7 days
-            )
         except Exception:  # pylint: disable=broad-except
             error_info = serializable_error_info_from_exc_info(sys.exc_info())
             logger.error(
@@ -254,7 +247,7 @@ def _evaluate_sensor(
             f"Failed to resolve sensor for {external_sensor.name} : {error_info.to_string()}"
         )
         context.update_state(JobTickStatus.FAILURE, error=error_info)
-        yield
+        yield error_info
         return
 
     assert isinstance(sensor_runtime_data, ExternalSensorExecutionData)
@@ -298,6 +291,8 @@ def _evaluate_sensor(
 
         _check_for_debug_crash(sensor_debug_crash_flags, "RUN_CREATED")
 
+        error_info = None
+
         try:
             context.logger.info(
                 "Launching run for {sensor_name}".format(sensor_name=external_sensor.name)
@@ -309,11 +304,12 @@ def _evaluate_sensor(
                 )
             )
         except Exception:  # pylint: disable=broad-except
+            error_info = serializable_error_info_from_exc_info(sys.exc_info())
             context.logger.error(
-                f"Run {run.run_id} created successfully but failed to launch: "
-                f"{str(serializable_error_info_from_exc_info(sys.exc_info()))}"
+                f"Run {run.run_id} created successfully but failed to launch: " f"{str(error_info)}"
             )
-        yield
+
+        yield error_info
 
         _check_for_debug_crash(sensor_debug_crash_flags, "RUN_LAUNCHED")
 
