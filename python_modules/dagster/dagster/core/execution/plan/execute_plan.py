@@ -1,5 +1,7 @@
+import copy
+import itertools
 import sys
-from typing import Iterator, List, cast
+from typing import Iterator, cast
 
 from dagster import check
 from dagster.core.definitions import Failure, HookExecutionResult, RetryRequested
@@ -39,7 +41,6 @@ def inner_plan_execution_iterator(
         while not active_execution.is_complete:
             step = active_execution.get_next_step()
             step_context = cast(StepExecutionContext, pipeline_context.for_step(step))
-            step_event_list = []
 
             missing_resources = [
                 resource_key
@@ -54,44 +55,56 @@ def inner_plan_execution_iterator(
                 ).format(solid_name=step_context.solid.name, missing_resources=missing_resources),
             )
 
-            # capture all of the logs for this step
-            with pipeline_context.instance.compute_log_manager.watch(
-                step_context.pipeline_run, step_context.step.key
-            ):
+            # replicate the event iterator so we can yield the sequence and pass it to hooks
+            original_iterator = _all_dagster_event_sequence_for_step(
+                pipeline_context, step_context, active_execution, step
+            )
+            step_event_iterator, step_event_iterator_for_hook = itertools.tee(original_iterator)
 
-                for step_event in check.generator(
-                    _dagster_event_sequence_for_step(step_context, active_execution.retry_state)
-                ):
-                    check.inst(step_event, DagsterEvent)
-                    step_event_list.append(step_event)
-                    yield step_event
-                    active_execution.handle_event(step_event)
-
-                active_execution.verify_complete(pipeline_context, step.key)
-
-            # process skips from failures or uncovered inputs
-            for event in active_execution.plan_events_iterator(pipeline_context):
-                step_event_list.append(event)
-                yield event
-
-            # pass a list of step events to hooks
-            for hook_event in _trigger_hook(step_context, step_event_list):
+            # pass the cloned iterator to solid hooks
+            for hook_event in _trigger_hook(step_context, step_event_iterator_for_hook):
                 yield hook_event
+            # yield step event
+            for step_event in step_event_iterator:
+                yield step_event
+
+
+def _all_dagster_event_sequence_for_step(pipeline_context, step_context, active_execution, step):
+    # capture all of the logs for this step
+    with pipeline_context.instance.compute_log_manager.watch(
+        step_context.pipeline_run, step_context.step.key
+    ):
+
+        for step_event in check.generator(
+            _dagster_event_sequence_for_step(step_context, active_execution.retry_state)
+        ):
+            check.inst(step_event, DagsterEvent)
+            yield step_event
+            active_execution.handle_event(step_event)
+
+        active_execution.verify_complete(pipeline_context, step.key)
+
+    # process skips from failures or uncovered inputs
+    for event in active_execution.plan_events_iterator(pipeline_context):
+        yield event
 
 
 def _trigger_hook(
-    step_context: StepExecutionContext, step_event_list: List[DagsterEvent]
+    step_context: StepExecutionContext, step_event_iterator: Iterator[DagsterEvent]
 ) -> Iterator[DagsterEvent]:
     """Trigger hooks and record hook's operatonal events"""
     hook_defs = step_context.pipeline_def.get_all_hooks_for_handle(step_context.solid_handle)
     # when the solid doesn't have a hook configured
     if hook_defs is None:
         return
+    # replicate the event iterator again because each hook would need its own stateful event iterator.
+    iterator_master_copy, _ = itertools.tee(step_event_iterator)
 
     # when there are multiple hooks set on a solid, the hooks will run sequentially for the solid.
     # * we will not able to execute hooks asynchronously until we drop python 2.
     for hook_def in hook_defs:
         hook_context = step_context.for_hook(hook_def)
+        event_iterator_copy = copy.copy(iterator_master_copy)
 
         try:
             with user_code_error_boundary(
@@ -99,7 +112,7 @@ def _trigger_hook(
                 lambda: "Error occurred during the execution of hook_fn triggered for solid "
                 '"{solid_name}"'.format(solid_name=step_context.solid.name),
             ):
-                hook_execution_result = hook_def.hook_fn(hook_context, step_event_list)
+                hook_execution_result = hook_def.hook_fn(hook_context, event_iterator_copy)
 
         except HookExecutionError as hook_execution_error:
             # catch hook execution error and field a failure event instead of failing the pipeline run

@@ -2,8 +2,11 @@ from collections import defaultdict
 
 import pytest
 from dagster import (
+    AssetMaterialization,
+    DagsterEventType,
     Int,
     ModeDefinition,
+    Output,
     composite_solid,
     execute_pipeline,
     pipeline,
@@ -14,6 +17,7 @@ from dagster.core.definitions import failure_hook, success_hook
 from dagster.core.definitions.decorators.hook import event_list_hook
 from dagster.core.definitions.events import HookExecutionResult
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.events.log import EventRecord, construct_event_logger
 
 
 class SomeUserException(Exception):
@@ -473,3 +477,113 @@ def test_hook_subpipeline():
     result = execute_pipeline(a_pipeline, solid_selection=["solid_a"])
     assert result.success
     assert called_hook_to_solids["hook_a_generic"] == {"solid_a"}
+
+
+def test_hook_event_stream():
+    order = []
+
+    @event_list_hook
+    def a_hook(_, event_list):
+        order.append("enter-hook")
+        next(event_list)
+        order.append("consumed-step-start")
+        next(event_list)
+        order.append("consumed-mat-one")
+        next(event_list)
+        order.append("consumed-mat-two")
+        next(event_list)
+        order.append("consumed-output")
+        return HookExecutionResult(hook_name="a_hook")
+
+    @solid
+    def a_solid(_):
+        order.append("enter-solid")
+        yield AssetMaterialization(asset_key="one")
+
+        assert order == [
+            "enter-hook",
+            "consumed-step-start",
+            "enter-solid",
+            "consumed-mat-one",
+        ]
+        order.append("reentered-after-yielded-asset-one")
+        yield AssetMaterialization(asset_key="two")
+
+        assert order[-2:] == [
+            "reentered-after-yielded-asset-one",
+            "consumed-mat-two",
+        ]
+
+        order.append("reentered-after-yielded-asset-two")
+        yield Output(1)
+        assert order[-2:] == [
+            "reentered-after-yielded-asset-two",
+            "consumed-output",
+        ]
+        order.append("reentered-after-output")
+
+    @a_hook
+    @pipeline
+    def a_pipeline():
+        a_solid()
+
+    result = execute_pipeline(a_pipeline)
+    assert result.success
+    # test if hook consumes event stream asynchronously
+    assert order == [
+        "enter-hook",
+        "consumed-step-start",
+        "enter-solid",
+        "consumed-mat-one",
+        "reentered-after-yielded-asset-one",
+        "consumed-mat-two",
+        "reentered-after-yielded-asset-two",
+        "consumed-output",
+        "reentered-after-output",
+    ]
+
+
+def test_hook_dagster_event_order():
+    dagster_event_order = []
+
+    def _event_callback(record):
+        assert isinstance(record, EventRecord)
+        if record.is_dagster_event:
+            if record.dagster_event.is_step_event or record.dagster_event.is_hook_event:
+                dagster_event_order.append(record.dagster_event_type)
+
+    @event_list_hook
+    def a_hook(_, event_list):
+        # consumed STEP_START
+        next(event_list)
+        # consumed ASSET_MATERIALIZATION
+        next(event_list)
+        # hook finished and should fire HOOK_COMPLETED event after ASSET_MATERIALIZATION
+        return HookExecutionResult(hook_name="a_hook")
+
+    @solid
+    def a_solid(_):
+        yield AssetMaterialization(asset_key="one")
+        yield Output(1)
+
+    @a_hook
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(logger_defs={"callback": construct_event_logger(_event_callback)})
+        ],
+    )
+    def a_pipeline():
+        a_solid()
+
+    result = execute_pipeline(a_pipeline, {"loggers": {"callback": {}}})
+    assert result.success
+    # test dagster event order in the log
+    assert dagster_event_order == [
+        DagsterEventType.STEP_START,
+        DagsterEventType.ASSET_MATERIALIZATION,
+        # hook finished when it's done consuming the event stream
+        DagsterEventType.HOOK_COMPLETED,
+        DagsterEventType.STEP_OUTPUT,
+        DagsterEventType.HANDLED_OUTPUT,
+        DagsterEventType.STEP_SUCCESS,
+    ]

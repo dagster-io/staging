@@ -1,5 +1,5 @@
 from functools import update_wrapper
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Set, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Iterator, Optional, Set, Union, cast
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
@@ -22,7 +22,9 @@ class _Hook:
             required_resource_keys, "required_resource_keys"
         )
 
-    def __call__(self, fn: Callable[["HookContext", List["DagsterEvent"]], Any]) -> HookDefinition:
+    def __call__(
+        self, fn: Callable[["HookContext", Iterator["DagsterEvent"]], Any]
+    ) -> HookDefinition:
 
         check.callable_param(fn, "fn")
 
@@ -152,7 +154,7 @@ def success_hook(
 
         @event_list_hook(_name, required_resource_keys)
         def _success_hook(
-            context: "HookContext", event_list: List["DagsterEvent"]
+            context: "HookContext", event_list: Iterator["DagsterEvent"]
         ) -> HookExecutionResult:
             for event in event_list:
                 if event.is_step_success:
@@ -223,7 +225,7 @@ def failure_hook(
 
         @event_list_hook(_name, required_resource_keys)
         def _failure_hook(
-            context: "HookContext", event_list: List["DagsterEvent"]
+            context: "HookContext", event_list: Iterator["DagsterEvent"]
         ) -> HookExecutionResult:
             for event in event_list:
                 if event.is_step_failure:
