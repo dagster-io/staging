@@ -5,7 +5,7 @@ from dagster.builtins import BuiltinEnum
 from dagster.core.errors import DagsterInvalidConfigError, DagsterInvalidDefinitionError
 from dagster.serdes import serialize_value
 from dagster.utils import is_enum_value
-from dagster.utils.typing_api import is_typing_type
+from dagster.utils.typing_api import is_closed_python_optional_type, is_typing_type
 
 from .config_type import Array, ConfigAnyInstance, ConfigType, ConfigTypeKind
 from .field_utils import FIELD_NO_DEFAULT_PROVIDED, all_optional_type
@@ -79,6 +79,13 @@ def resolve_to_config_type(dagster_type):
                 dagster_type=repr(dagster_type),
                 desc=VALID_CONFIG_DESC,
             )
+        )
+
+    if is_closed_python_optional_type(dagster_type):
+        raise DagsterInvalidDefinitionError(
+            "Cannot use typing.Optional in the context of config. If you want this field to be "
+            "optional, please use Field(<type>, is_required=False), and if you want this field to "
+            "be required, but accept a value of None, use dagster.Noneable(<type>)."
         )
 
     if is_typing_type(dagster_type):
