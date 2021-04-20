@@ -9,7 +9,7 @@ It's also possible to schedule pipelines for execution by compiling them to a fo
 
 This is the approach we use to deploy Dagster pipelines to Airflow (using the [dagster-airflow](https://github.com/dagster-io/dagster/tree/master/python_modules/libraries/dagster-airflow) package).
 
-We don't recommend deploying Dagster pipelines to Airflow in greenfield installations. (We recommend the built-in [scheduler and partition system](/tutorial/advanced-tutorial/scheduling) for scheduling pipelines, and the [Celery-based executor](/deployment/custom-infra/celery) for large-scale deployments.) But if you have a large existing Airflow install, this integration will allow you to follow an incremental adoption path.
+We don't recommend deploying Dagster pipelines to Airflow in greenfield installations. (We recommend the built-in [scheduler and partition system](/tutorial/advanced-tutorial/scheduling) for scheduling pipelines, and the [Celery-based executor](/deployment/guides/celery) for large-scale deployments.) But if you have a large existing Airflow install, this integration will allow you to follow an incremental adoption path.
 
 ## Requirements
 
@@ -166,28 +166,28 @@ Ensure that the Airflow webserver, scheduler (and any workers appropriate to the
 When you fire up the Airflow UI, you should see the new DAG:
 
 <Image
-alt="intro_airflow_one.png"
-src="/images/deploying/intro_airflow_one.png"
-width={1272}
-height={868}
+  alt="intro_airflow_one.png"
+  src="/images/deploying/intro_airflow_one.png"
+  width={1272}
+  height={868}
 />
 
 Kick off a run manually, and you'll be able to use the ordinary views of the pipeline's progress:
 
 <Image
-alt="intro_airflow_dag_view.png"
-src="/images/deploying/intro_airflow_dag_view.png"
-width={1272}
-height={868}
+  alt="intro_airflow_dag_view.png"
+  src="/images/deploying/intro_airflow_dag_view.png"
+  width={1272}
+  height={868}
 />
 
 And logs will be available in the Airflow log viewer:
 
 <Image
-alt="intro_airflow_logs_view.png"
-src="/images/deploying/intro_airflow_logs_view.png"
-width={1272}
-height={868}
+  alt="intro_airflow_logs_view.png"
+  src="/images/deploying/intro_airflow_logs_view.png"
+  width={1272}
+  height={868}
 />
 
 ### Running Containerized
