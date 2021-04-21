@@ -443,7 +443,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                 namespace=job_namespace,
                 instance=instance,
                 run_id=execute_step_args.pipeline_run_id,
-                wait_timeout=self.job_wait_timeout,
+                wait_timeout=job_config.job_wait_timeout,
             )
         except (DagsterK8sError, DagsterK8sTimeoutError) as err:
             step_failure_event = construct_step_failure_event_and_handle(
