@@ -1,11 +1,10 @@
 import {gql, useQuery} from '@apollo/client';
-import {Colors, Breadcrumbs, IBreadcrumbProps, Icon} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
+import {Colors, Breadcrumbs, IBreadcrumbProps} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link, RouteComponentProps} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {featureEnabled, FeatureFlag} from '../app/Util';
+import {useQueryPersistedState} from '../hooks/useQueryPersistedState';
 import {Box} from '../ui/Box';
 import {Group} from '../ui/Group';
 import {Loading} from '../ui/Loading';
@@ -26,9 +25,10 @@ export const AssetEntryRoot: React.FunctionComponent<RouteComponentProps> = ({ma
   const queryResult = useQuery<AssetEntryRootQuery>(ASSET_ENTRY_ROOT_QUERY, {
     variables: {assetKey: {path: currentPath}},
   });
+  const [view, setView] = useQueryPersistedState<string>({queryKey: 'view', defaults: {view: ''}});
 
   const pathDetails = () => {
-    if (currentPath.length === 1 || !featureEnabled(FeatureFlag.DirectoryAssetCatalog)) {
+    if (currentPath.length === 1) {
       return <Link to="/instance/assets">Asset</Link>;
     }
 
@@ -60,33 +60,14 @@ export const AssetEntryRoot: React.FunctionComponent<RouteComponentProps> = ({ma
     <Page>
       <Group direction="column" spacing={20}>
         <PageHeader
-          title={
-            featureEnabled(FeatureFlag.DirectoryAssetCatalog) ? (
-              <Heading>{currentPath[currentPath.length - 1]}</Heading>
-            ) : (
-              <Box flex={{alignItems: 'center'}}>
-                {currentPath
-                  .map<React.ReactNode>((p, i) => <Heading key={i}>{p}</Heading>)
-                  .reduce((prev, curr, i) => [
-                    prev,
-                    <Box key={`separator_${i}`} padding={4}>
-                      <Icon icon={IconNames.CHEVRON_RIGHT} iconSize={18} />
-                    </Box>,
-                    curr,
-                  ])}
-              </Box>
-            )
-          }
+          title={<Heading>{currentPath[currentPath.length - 1]}</Heading>}
           icon="th"
           description={<PathDetails>{pathDetails()}</PathDetails>}
         />
         <Loading queryResult={queryResult}>
           {({assetOrError}) => {
             if (assetOrError.__typename === 'AssetNotFoundError') {
-              if (featureEnabled(FeatureFlag.DirectoryAssetCatalog)) {
-                return <AssetsCatalogTable prefixPath={currentPath} />;
-              }
-              return <AssetsCatalogTable />;
+              return <AssetsCatalogTable prefixPath={currentPath} view={view} setView={setView} />;
             }
 
             return (
