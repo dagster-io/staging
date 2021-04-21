@@ -1,12 +1,16 @@
 from collections import namedtuple
-from typing import Optional, Set
+from typing import Any, Optional, Set, TypeVar
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
-from dagster.core.types.dagster_type import resolve_dagster_type
+from dagster.core.errors import DagsterError, DagsterInvalidDefinitionError
+from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 from dagster.utils.backcompat import experimental_arg_warning
 
+from .inference import InferredOutputProps
 from .utils import DEFAULT_OUTPUT, check_valid_name
+
+TOut = TypeVar("TOut", bound="OutputDefinition")
 
 
 class OutputDefinition:
@@ -51,8 +55,10 @@ class OutputDefinition:
         metadata=None,
         asset_key=None,
         asset_partitions=None,
+        # make sure new parameters are updated in combine_with_inferred below
     ):
         self._name = check_valid_name(check.opt_str_param(name, "name", DEFAULT_OUTPUT))
+        self._type_not_set = dagster_type is None
         self._dagster_type = resolve_dagster_type(dagster_type)
         self._description = check.opt_str_param(description, "description")
         self._is_required = check.opt_bool_param(is_required, "is_required", default=True)
@@ -70,9 +76,11 @@ class OutputDefinition:
 
         if callable(asset_key):
             self._asset_key_fn = asset_key
-        else:
+        elif asset_key is not None:
             asset_key = check.opt_inst_param(asset_key, "asset_key", AssetKey)
             self._asset_key_fn = lambda _: asset_key
+        else:
+            self._asset_key_fn = None
 
         if asset_partitions:
             experimental_arg_warning("asset_partitions", "OutputDefinition.__init__")
@@ -81,11 +89,14 @@ class OutputDefinition:
                 "asset_partitions",
                 'Cannot specify "asset_partitions" argument without also specifying "asset_key"',
             )
+
         if callable(asset_partitions):
             self._asset_partitions_fn = asset_partitions
-        else:
+        elif asset_partitions is not None:
             asset_partitions = check.opt_set_param(asset_partitions, "asset_partitions", str)
             self._asset_partitions_fn = lambda _: asset_partitions
+        else:
+            self._asset_partitions_fn = None
 
     @property
     def name(self):
@@ -131,6 +142,9 @@ class OutputDefinition:
             context (OutputContext): The OutputContext that this OutputDefinition is being evaluated
             in
         """
+        if self._asset_key_fn is None:
+            return None
+
         return self._asset_key_fn(context)
 
     def get_asset_partitions(self, context) -> Optional[Set[str]]:
@@ -141,6 +155,9 @@ class OutputDefinition:
             context (OutputContext): The OutputContext that this OutputDefinition is being evaluated
             in
         """
+        if self._asset_partitions_fn is None:
+            return None
+
         return self._asset_partitions_fn(context)
 
     def mapping_from(self, solid_name, output_name=None):
@@ -160,6 +177,43 @@ class OutputDefinition:
                 output_mapping = OutputDefinition(Int).mapping_from('child_solid')
         """
         return OutputMapping(self, OutputPointer(solid_name, output_name))
+
+    @staticmethod
+    def create_from_inferred(inferred: InferredOutputProps) -> "OutputDefinition":
+        return OutputDefinition(
+            dagster_type=_checked_inferred_type(inferred.annotation),
+            description=inferred.description,
+        )
+
+    def combine_with_inferred(self: TOut, inferred: InferredOutputProps) -> TOut:
+        dagster_type = self._dagster_type
+        if self._type_not_set:
+            dagster_type = _checked_inferred_type(inferred.annotation)
+        if self._description is None:
+            description = inferred.description
+        else:
+            description = self.description
+
+        return self.__class__(
+            name=self._name,
+            dagster_type=dagster_type,
+            description=description,
+            is_required=self._is_required,
+            io_manager_key=self._manager_key,
+            metadata=self._metadata,
+            asset_key=self._asset_key_fn,
+            asset_partitions=self._asset_partitions_fn,
+        )
+
+
+def _checked_inferred_type(inferred: Any) -> DagsterType:
+    try:
+        return resolve_dagster_type(inferred)
+    except DagsterError as e:
+        raise DagsterInvalidDefinitionError(
+            f"Problem using type '{inferred}' from function signature, correct the issue "
+            "or explicitly set the dagster_type on your OutputDefinition."
+        ) from e
 
 
 class DynamicOutputDefinition(OutputDefinition):
