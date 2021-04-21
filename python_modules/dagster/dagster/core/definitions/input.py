@@ -1,9 +1,9 @@
 from collections import namedtuple
-from typing import Optional, Set
+from typing import Any, Optional, Set
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
-from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.errors import DagsterError, DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import (
     BuiltinScalarDagsterType,
     DagsterType,
@@ -79,7 +79,7 @@ class InputDefinition:
         metadata=None,
         asset_key=None,
         asset_partitions=None,
-        # when adding new params, make sure to update update_from_inferred below
+        # when adding new params, make sure to update combine_with_inferred below
     ):
         self._name = check_valid_name(name)
 
@@ -210,7 +210,7 @@ class InputDefinition:
     def create_from_inferred(inferred: InferredInputProps) -> "InputDefinition":
         return InputDefinition(
             name=inferred.name,
-            dagster_type=inferred.python_type,
+            dagster_type=_checked_inferred_type(inferred.python_type),
             description=inferred.description,
             default_value=inferred.default_value,
         )
@@ -228,7 +228,7 @@ class InputDefinition:
 
         dagster_type = self._dagster_type
         if self._type_not_set:
-            dagster_type = inferred.python_type
+            dagster_type = _checked_inferred_type(inferred.python_type)
 
         description = self._description
         if description is None and inferred.description is not None:
@@ -248,6 +248,16 @@ class InputDefinition:
             asset_key=self._asset_key_fn,
             asset_partitions=self._asset_partitions_fn,
         )
+
+
+def _checked_inferred_type(inferred: Any) -> DagsterType:
+    try:
+        return resolve_dagster_type(inferred)
+    except DagsterError as e:
+        raise DagsterInvalidDefinitionError(
+            f"Problem using type '{inferred}' from function signature, correct the issue "
+            "or explicitly set the dagster_type on your InputDefinition."
+        ) from e
 
 
 class InputPointer(namedtuple("_InputPointer", "solid_name input_name")):

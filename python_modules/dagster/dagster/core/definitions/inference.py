@@ -1,11 +1,8 @@
 import inspect
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Type
 
-from dagster.check import CheckError
-from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.seven import funcsigs, is_module_available
 
-from .output import OutputDefinition
 from .utils import NoValueSentinel
 
 
@@ -16,6 +13,13 @@ class InferredInputProps(NamedTuple):
     python_type: Optional[Type]
     description: Optional[str]
     default_value: Any = NoValueSentinel
+
+
+class InferredOutputProps(NamedTuple):
+    """The information about an input that can be inferred from the function signature"""
+
+    python_type: Optional[Type]
+    description: Optional[str]
 
 
 def _infer_input_description_from_docstring(fn: Callable) -> Dict[str, Optional[str]]:
@@ -40,24 +44,20 @@ def _infer_output_description_from_docstring(fn: Callable) -> Optional[str]:
     return docstring.returns.description
 
 
-def infer_output_definitions(
-    decorator_name: str, solid_name: str, fn: Callable
-) -> List[OutputDefinition]:
+def infer_output_props(fn: Callable) -> InferredOutputProps:
     signature = funcsigs.signature(fn)
-    try:
-        description = _infer_output_description_from_docstring(fn)
-        return [
-            OutputDefinition()
-            if signature.return_annotation is funcsigs.Signature.empty
-            else OutputDefinition(signature.return_annotation, description=description)
-        ]
 
-    except CheckError as type_error:
-        raise DagsterInvalidDefinitionError(
-            "Error inferring Dagster type for return type "
-            f'"{signature.return_annotation}" from {decorator_name} "{solid_name}". '
-            f"Correct the issue or explicitly pass definitions to {decorator_name}."
-        ) from type_error
+    description = _infer_output_description_from_docstring(fn)
+    python_type = (
+        None
+        if signature.return_annotation is funcsigs.Signature.empty
+        else signature.return_annotation
+    )
+
+    return InferredOutputProps(
+        python_type=python_type,
+        description=description,
+    )
 
 
 def has_explicit_return_type(fn: Callable) -> bool:
@@ -73,48 +73,34 @@ def _input_param_type(type_annotation: Type) -> Optional[Type]:
 
 def _infer_inputs_from_params(
     params: List[funcsigs.Parameter],
-    decorator_name: str,
-    solid_name: str,
     descriptions: Optional[Dict[str, Optional[str]]] = None,
 ) -> List[InferredInputProps]:
     descriptions: Dict[str, Optional[str]] = descriptions or {}
     input_defs = []
     for param in params:
-        try:
-            if param.default is not funcsigs.Parameter.empty:
-                input_def = InferredInputProps(
-                    param.name,
-                    _input_param_type(param.annotation),
-                    default_value=param.default,
-                    description=descriptions.get(param.name),
-                )
-            else:
-                input_def = InferredInputProps(
-                    param.name,
-                    _input_param_type(param.annotation),
-                    description=descriptions.get(param.name),
-                )
+        if param.default is not funcsigs.Parameter.empty:
+            input_def = InferredInputProps(
+                param.name,
+                _input_param_type(param.annotation),
+                default_value=param.default,
+                description=descriptions.get(param.name),
+            )
+        else:
+            input_def = InferredInputProps(
+                param.name,
+                _input_param_type(param.annotation),
+                description=descriptions.get(param.name),
+            )
 
-            input_defs.append(input_def)
-
-        except CheckError as type_error:
-            raise DagsterInvalidDefinitionError(
-                f"Error inferring Dagster type for input name {param.name} typed as "
-                f'"{param.annotation}" from {decorator_name} "{solid_name}". '
-                "Correct the issue or explicitly pass definitions to {decorator_name}."
-            ) from type_error
+        input_defs.append(input_def)
 
     return input_defs
 
 
-def infer_input_props(
-    decorator_name: str, fn_name: str, fn: Callable, has_context_arg: bool
-) -> List[InferredInputProps]:
+def infer_input_props(fn: Callable, has_context_arg: bool) -> List[InferredInputProps]:
     signature = funcsigs.signature(fn)
     params = list(signature.parameters.values())
     descriptions = _infer_input_description_from_docstring(fn)
     params_to_infer = params[1:] if has_context_arg else params
-    defs = _infer_inputs_from_params(
-        params_to_infer, decorator_name, fn_name, descriptions=descriptions
-    )
+    defs = _infer_inputs_from_params(params_to_infer, descriptions=descriptions)
     return defs
