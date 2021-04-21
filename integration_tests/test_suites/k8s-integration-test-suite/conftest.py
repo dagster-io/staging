@@ -84,7 +84,7 @@ def run_launcher(
         instance_config_map="dagster-instance",
         postgres_password_secret="dagster-postgresql-secret",
         dagster_home="/opt/dagster/dagster_home",
-        job_image=get_test_project_docker_image(),
+        job_image=get_test_project_docker_image() + "not-a-real-image",
         load_incluster_config=False,
         kubeconfig_file=cluster_provider.kubeconfig_file,
         image_pull_policy=image_pull_policy(),

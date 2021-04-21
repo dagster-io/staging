@@ -60,7 +60,9 @@ def test_k8s_run_launcher_default(
         )
 
         result = wait_for_job_and_get_raw_logs(
-            job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
+            job_name="dagster-run-%s" % run.run_id,
+            namespace=helm_namespace_for_k8s_run_launcher,
+            wait_timeout=10,
         )
 
         assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
@@ -125,7 +127,7 @@ def test_k8s_run_launcher_with_celery_executor_fails(
             ReOriginatedExternalPipelineForTest(external_pipeline),
         )
 
-        timeout = datetime.timedelta(0, 120)
+        timeout = datetime.timedelta(0, 10)
 
         found_pipeline_failure = False
 
@@ -187,7 +189,9 @@ def test_failing_k8s_run_launcher(
             ReOriginatedExternalPipelineForTest(external_pipeline),
         )
         result = wait_for_job_and_get_raw_logs(
-            job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
+            job_name="dagster-run-%s" % run.run_id,
+            namespace=helm_namespace_for_k8s_run_launcher,
+            wait_timeout=10,
         )
 
         assert "PIPELINE_SUCCESS" not in result, "no match, result: {}".format(result)
@@ -235,7 +239,9 @@ def test_k8s_run_launcher_terminate(
         )
 
         wait_for_job(
-            job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
+            job_name="dagster-run-%s" % run.run_id,
+            namespace=helm_namespace_for_k8s_run_launcher,
+            wait_timeout=10,
         )
 
         timeout = datetime.timedelta(0, 30)
