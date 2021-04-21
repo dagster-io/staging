@@ -1,12 +1,16 @@
 from collections import namedtuple
-from typing import Optional, Set
+from typing import Any, Optional, Set, TypeVar
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
-from dagster.core.types.dagster_type import resolve_dagster_type
+from dagster.core.errors import DagsterError, DagsterInvalidDefinitionError
+from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 from dagster.utils.backcompat import experimental_arg_warning
 
+from .inference import InferredOutputProps
 from .utils import DEFAULT_OUTPUT, check_valid_name
+
+TOut = TypeVar("TOut", bound="OutputDefinition")
 
 
 class OutputDefinition:
@@ -51,8 +55,10 @@ class OutputDefinition:
         metadata=None,
         asset_key=None,
         asset_partitions=None,
+        # make sure new parameters are updated in combine_with_inferred below
     ):
         self._name = check_valid_name(check.opt_str_param(name, "name", DEFAULT_OUTPUT))
+        self._type_not_set = dagster_type is None
         self._dagster_type = resolve_dagster_type(dagster_type)
         self._description = check.opt_str_param(description, "description")
         self._is_required = check.opt_bool_param(is_required, "is_required", default=True)
@@ -160,6 +166,43 @@ class OutputDefinition:
                 output_mapping = OutputDefinition(Int).mapping_from('child_solid')
         """
         return OutputMapping(self, OutputPointer(solid_name, output_name))
+
+    @staticmethod
+    def create_from_inferred(inferred: InferredOutputProps) -> "OutputDefinition":
+        return OutputDefinition(
+            dagster_type=_checked_inferred_type(inferred.python_type),
+            description=inferred.description,
+        )
+
+    def combine_with_inferred(self: TOut, inferred: InferredOutputProps) -> TOut:
+        dagster_type = self._dagster_type
+        if self._type_not_set:
+            dagster_type = _checked_inferred_type(inferred.python_type)
+        if self._description is None:
+            description = inferred.description
+        else:
+            description = self.description
+
+        return self.__class__(
+            name=self._name,
+            dagster_type=dagster_type,
+            description=description,
+            is_required=self._is_required,
+            io_manager_key=self._manager_key,
+            metadata=self._metadata,
+            asset_key=self._asset_key_fn,
+            asset_partitions=self._asset_partitions_fn,
+        )
+
+
+def _checked_inferred_type(inferred: Any) -> DagsterType:
+    try:
+        return resolve_dagster_type(inferred)
+    except DagsterError as e:
+        raise DagsterInvalidDefinitionError(
+            f"Problem using type '{inferred}' from function signature, correct the issue "
+            "or explicitly set the dagster_type on your OutputDefinition."
+        ) from e
 
 
 class DynamicOutputDefinition(OutputDefinition):
