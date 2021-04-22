@@ -1,10 +1,10 @@
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, NamedTuple, Optional
+from typing import Any, Dict, Generator, Optional
 
 from dagster import check
 from dagster.config.validate import process_config
 from dagster.core.definitions.environment_configs import define_resource_dictionary_cls
-from dagster.core.definitions.resource import ResourceDefinition, ScopedResourcesBuilder
+from dagster.core.definitions.resource import ResourceDefinition, Resources, ScopedResourcesBuilder
 from dagster.core.errors import DagsterInvalidConfigError
 from dagster.core.execution.resources_init import resource_initialization_manager
 from dagster.core.instance import DagsterInstance
@@ -41,7 +41,7 @@ def build_resources(
     run_config: Optional[Dict[str, Any]] = None,
     pipeline_run: Optional[PipelineRun] = None,
     log_manager: Optional[DagsterLogManager] = None,
-) -> Generator[NamedTuple, None, None]:
+) -> Generator[Resources, None, None]:
     """Context manager that yields resources using provided resource definitions and run config.
 
     This API allows for using resources in an independent context. Resources will be initialized
