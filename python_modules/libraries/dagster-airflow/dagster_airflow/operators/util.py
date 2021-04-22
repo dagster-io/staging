@@ -66,26 +66,7 @@ def get_aws_environment():
     return default_env
 
 
-def check_storage_specified(run_config, error_message_base_dir_ex="'/tmp/special_place'"):
-    if "intermediate_storage" not in run_config:
-        raise AirflowException(
-            "No intermediate_storage config found -- must configure intermediate storage accessible from all nodes (e.g. s3) "
-            "Ex.: \n"
-            "intermediate_storage:\n"
-            "  filesystem:\n"
-            "    base_dir: {error_message_base_dir_ex}"
-            "\n\n --or--\n\n"
-            "intermediate_storage:\n"
-            "  s3:\n"
-            "    s3_bucket: 'my-s3-bucket'\n"
-            "\n\n --or--\n\n"
-            "intermediate_storage:\n"
-            "  gcs:\n"
-            "    gcs_bucket: 'my-gcs-bucket'\n".format(
-                error_message_base_dir_ex=error_message_base_dir_ex
-            )
-        )
-
+def check_storage_specified(run_config):
     check.invariant(
         "in_memory" not in run_config.get("intermediate_storage", {}),
         "Cannot use in-memory intermediate storage with Airflow. Must use intermediate storage "
