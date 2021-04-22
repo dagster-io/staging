@@ -5,7 +5,7 @@ from airflow.exceptions import AirflowException, AirflowSkipException
 from dagster import DagsterEventType, check
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.api import create_execution_plan, execute_plan
-from dagster.core.execution.plan.plan import should_skip_step
+from dagster.core.execution.plan.plan import can_isolate_steps, should_skip_step
 from dagster.core.instance import AIRFLOW_EXECUTION_DATE_STR, DagsterInstance
 
 
@@ -66,8 +66,10 @@ def get_aws_environment():
     return default_env
 
 
-def check_storage_specified(run_config, error_message_base_dir_ex="'/tmp/special_place'"):
-    if "intermediate_storage" not in run_config:
+def check_storage_specified(
+    pipeline_def, mode_def, run_config, error_message_base_dir_ex="'/tmp/special_place'"
+):
+    if not can_isolate_steps(pipeline_def, mode_def) and "intermediate_storage" not in run_config:
         raise AirflowException(
             "No intermediate_storage config found -- must configure intermediate storage accessible from all nodes (e.g. s3) "
             "Ex.: \n"
