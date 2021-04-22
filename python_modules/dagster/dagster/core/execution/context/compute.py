@@ -226,3 +226,105 @@ class SolidExecutionContext(AbstractComputeExecutionContext):
             StepExecutionContext: The underlying system context.
         """
         return self._step_execution_context
+
+
+def _property_msg(prop_name, method):
+    return f"The {prop_name} {method} is not set on the context when a solid is directly invoked."
+
+
+class DirectSolidExecutionContext(SolidExecutionContext):
+    """The ``context`` object available as the first argument to a solid's compute function when
+    being invoked directly.
+    """
+
+    def __init__(self, solid_config: Any):  # pylint: disable=W0231
+        from dagster.core.execution.context_creation_pipeline import initialize_console_manager
+
+        self._solid_config = solid_config
+        self._log = initialize_console_manager(None)
+        self._pdb: Optional[ForkedPdb] = None
+
+    @property
+    def solid_config(self) -> Any:
+        return self._solid_config
+
+    @property
+    def resources(self) -> Resources:
+        raise DagsterInvalidPropertyError(_property_msg("resources", "property"))
+
+    @property
+    def pipeline_run(self) -> PipelineRun:
+        raise DagsterInvalidPropertyError(_property_msg("pipeline_run", "property"))
+
+    @property
+    def instance(self) -> DagsterInstance:
+        raise DagsterInvalidPropertyError(_property_msg("instance", "property"))
+
+    @property
+    def pdb(self) -> ForkedPdb:
+        """dagster.utils.forked_pdb.ForkedPdb: Gives access to pdb debugging from within the solid.
+
+        Example:
+
+        .. code-block:: python
+
+            @solid
+            def debug_solid(context):
+                context.pdb.set_trace()
+
+        """
+        if self._pdb is None:
+            self._pdb = ForkedPdb()
+
+        return self._pdb
+
+    @property
+    def step_launcher(self) -> Optional[StepLauncher]:
+        raise DagsterInvalidPropertyError(_property_msg("step_launcher", "property"))
+
+    @property
+    def run_id(self) -> str:
+        """str: Hard-coded value to indicate that we are directly invoking solid."""
+        return "EPHEMERAL"
+
+    @property
+    def run_config(self) -> dict:
+        raise DagsterInvalidPropertyError(_property_msg("run_config", "property"))
+
+    @property
+    def pipeline_def(self) -> PipelineDefinition:
+        raise DagsterInvalidPropertyError(_property_msg("pipeline_def", "property"))
+
+    @property
+    def pipeline_name(self) -> str:
+        raise DagsterInvalidPropertyError(_property_msg("pipeline_name", "property"))
+
+    @property
+    def mode_def(self) -> ModeDefinition:
+        raise DagsterInvalidPropertyError(_property_msg("mode_def", "property"))
+
+    @property
+    def log(self) -> DagsterLogManager:
+        """DagsterLogManager: A console manager constructed for this context."""
+        return self._log
+
+    @property
+    def solid_handle(self) -> SolidHandle:
+        raise DagsterInvalidPropertyError(_property_msg("solid_handle", "property"))
+
+    @property
+    def solid(self) -> Solid:
+        raise DagsterInvalidPropertyError(_property_msg("solid", "property"))
+
+    @property
+    def solid_def(self) -> SolidDefinition:
+        raise DagsterInvalidPropertyError(_property_msg("solid_def", "property"))
+
+    def has_tag(self, key: str) -> bool:
+        raise DagsterInvalidPropertyError(_property_msg("has_tag", "method"))
+
+    def get_tag(self, key: str) -> str:
+        raise DagsterInvalidPropertyError(_property_msg("get_tag", "method"))
+
+    def get_step_execution_context(self) -> StepExecutionContext:
+        raise DagsterInvalidPropertyError(_property_msg("get_step_execution_context", "methods"))
