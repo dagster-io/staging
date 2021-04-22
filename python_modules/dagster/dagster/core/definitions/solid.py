@@ -16,6 +16,7 @@ from .graph import GraphDefinition
 from .i_solid_definition import NodeDefinition
 from .input import InputDefinition, InputMapping
 from .output import OutputDefinition, OutputMapping
+from .solid_invocation import solid_invocation_result
 
 
 class SolidDefinition(NodeDefinition):
@@ -103,6 +104,14 @@ class SolidDefinition(NodeDefinition):
             tags=check.opt_dict_param(tags, "tags", key_type=str),
             positional_inputs=positional_inputs,
         )
+
+    def __call__(self, *args, **kwargs) -> Any:
+        from .composition import is_in_composition
+
+        if is_in_composition():
+            return super(SolidDefinition, self).__call__(*args, **kwargs)
+        else:
+            return solid_invocation_result(self, *args, **kwargs)
 
     @property
     def compute_fn(self) -> Callable[..., Any]:
