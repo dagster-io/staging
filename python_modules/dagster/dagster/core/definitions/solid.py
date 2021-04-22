@@ -16,6 +16,7 @@ from .graph import GraphDefinition
 from .i_solid_definition import NodeDefinition
 from .input import InputDefinition, InputMapping
 from .output import OutputDefinition, OutputMapping
+from .solid_invocation import solid_invocation_result
 
 
 class SolidDefinition(NodeDefinition):
@@ -85,6 +86,7 @@ class SolidDefinition(NodeDefinition):
         required_resource_keys: Optional[Union[Set[str], FrozenSet[str]]] = None,
         positional_inputs: Optional[List[str]] = None,
         version: Optional[str] = None,
+        context_arg_provided: Optional[bool] = True,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
@@ -95,6 +97,8 @@ class SolidDefinition(NodeDefinition):
         if version:
             experimental_arg_warning("version", "SolidDefinition.__init__")
 
+        self._context_arg_provided = check.bool_param(context_arg_provided, "context_arg_provided")
+
         super(SolidDefinition, self).__init__(
             name=name,
             input_defs=check.list_param(input_defs, "input_defs", InputDefinition),
@@ -103,6 +107,25 @@ class SolidDefinition(NodeDefinition):
             tags=check.opt_dict_param(tags, "tags", key_type=str),
             positional_inputs=positional_inputs,
         )
+
+    def __call__(self, *args, **kwargs) -> Any:
+        from .composition import is_in_composition
+        from dagster.core.execution.context.invocation import DirectSolidExecutionContext
+
+        if is_in_composition():
+            return super(SolidDefinition, self).__call__(*args, **kwargs)
+        else:
+            if self._context_arg_provided:
+                check.invariant(
+                    len(args) > 0
+                    and (args[0] is None or isinstance(args[0], DirectSolidExecutionContext)),
+                    f"Compute function of solid '{self.name}' has context argument, but no context "
+                    "was provided when invoking.",
+                )
+                context = args[0]
+                return solid_invocation_result(self, context, *args[1:], **kwargs)
+            else:
+                return solid_invocation_result(self, None, *args, **kwargs)
 
     @property
     def compute_fn(self) -> Callable[..., Any]:
@@ -158,6 +181,7 @@ class SolidDefinition(NodeDefinition):
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
+            context_arg_provided=self._context_arg_provided,
         )
 
 
