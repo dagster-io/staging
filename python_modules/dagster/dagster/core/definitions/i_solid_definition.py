@@ -2,6 +2,7 @@ from abc import abstractmethod, abstractproperty
 
 from dagster import check
 from dagster.core.definitions.configurable import NamedConfigurableDefinition
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.utils import frozendict, frozenlist
 
 from .hook import HookDefinition
