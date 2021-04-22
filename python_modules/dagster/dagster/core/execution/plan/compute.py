@@ -89,7 +89,23 @@ def _yield_compute_results(
 ) -> Iterator[SolidOutputUnion]:
     check.inst_param(step_context, "step_context", StepExecutionContext)
 
-    user_event_generator = compute_fn(SolidExecutionContext(step_context), inputs)
+    solid_config = step_context.environment_config.solids.get(str(step_context.solid_handle))
+    user_event_generator = compute_fn(
+        SolidExecutionContext(
+            resources=step_context.resources,
+            run_id=step_context.run_id,
+            log_manager=step_context.log,
+            solid_config=solid_config.config if solid_config else None,
+            pipeline_run=step_context.pipeline_run,
+            instance=step_context.instance,
+            step_launcher=step_context.step_launcher,
+            pipeline_def=step_context.pipeline_def,
+            mode_def=step_context.mode_def,
+            solid_handle=step_context.solid_handle,
+            step_execution_context=step_context,
+        ),
+        inputs,
+    )
 
     if isinstance(user_event_generator, Output):
         raise DagsterInvariantViolationError(

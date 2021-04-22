@@ -2,6 +2,7 @@ from abc import abstractmethod, abstractproperty
 
 from dagster import check
 from dagster.core.definitions.configurable import NamedConfigurableDefinition
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.utils import frozendict, frozenlist
 
 from .hook import HookDefinition
@@ -134,6 +135,13 @@ class NodeDefinition(NamedConfigurableDefinition):
 
     def __call__(self, *args, **kwargs):
         from .composition import PendingNodeInvocation
+
+        if kwargs or any([not isinstance(arg, PendingNodeInvocation) for arg in args]):
+            raise DagsterInvariantViolationError(
+                f'Attempted to execute solid "{self.name}" within the context of a '
+                "`composite_solid` or `pipeline`. When constructing a pipeline, solids should be "
+                "invoked with no arguments."
+            )
 
         return PendingNodeInvocation(self)(*args, **kwargs)
 
