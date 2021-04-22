@@ -301,15 +301,18 @@ class ExternalExecutionParamsErrorData(namedtuple("_ExternalExecutionParamsError
 
 @whitelist_for_serdes
 class ExternalPartitionSetData(
-    namedtuple("_ExternalPartitionSetData", "name pipeline_name solid_selection mode")
+    namedtuple(
+        "_ExternalPartitionSetData", "name pipeline_name solid_selection mode partition_names"
+    )
 ):
-    def __new__(cls, name, pipeline_name, solid_selection, mode):
+    def __new__(cls, name, pipeline_name, solid_selection, mode, partition_names):
         return super(ExternalPartitionSetData, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
             solid_selection=check.opt_nullable_list_param(solid_selection, "solid_selection", str),
             mode=check.opt_str_param(mode, "mode"),
+            partition_names=check.opt_list_param(partition_names, "partition_names", str),
         )
 
 
@@ -440,6 +443,7 @@ def external_partition_set_data_from_def(partition_set_def):
         pipeline_name=partition_set_def.pipeline_name,
         solid_selection=partition_set_def.solid_selection,
         mode=partition_set_def.mode,
+        partition_names=partition_set_def.get_partition_names(),
     )
 
 

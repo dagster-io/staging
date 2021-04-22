@@ -635,8 +635,10 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
 
-        return sync_get_external_partition_names_grpc(
-            self.client, repository_handle, partition_set_name
+        return (
+            self.get_repository[repository_handle.repository_name]
+            .get_external_partition_set(partition_set_name)
+            .partition_names
         )
 
     def get_external_schedule_execution_data(
