@@ -7,12 +7,13 @@ from dagster import daily_schedule, pipeline, repository, solid
 
 
 @solid
-def hello_cereal(context, date):
+def hello_cereal(context):
     response = requests.get(
         "https://raw.githubusercontent.com/dagster-io/dagster/master/examples/docs_snippets/docs_snippets/intro_tutorial/cereal.csv"
     )
     lines = response.text.split("\n")
     cereals = [row for row in csv.DictReader(lines)]
+    date = context.solid_config["date"]
     context.log.info(f"Today is {date}. Found {len(cereals)} cereals.")
 
 
@@ -31,7 +32,11 @@ def hello_cereal_pipeline():
     execution_timezone="US/Central",
 )
 def good_morning_schedule(date):
-    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}
+    return {
+        "solids": {
+            "hello_cereal": {"config": {"date": date.strftime("%Y-%m-%d")}}
+        }
+    }
 
 
 # end_scheduler_marker_1
@@ -62,7 +67,11 @@ def weekday_filter(_context):
     should_execute=weekday_filter,
 )
 def good_weekday_morning_schedule(date):
-    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}
+    return {
+        "solids": {
+            "hello_cereal": {"config": {"date": date.strftime("%Y-%m-%d")}}
+        }
+    }
 
 
 # end_scheduler_marker_4
