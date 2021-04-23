@@ -6,7 +6,7 @@ in the user_context module
 """
 import warnings
 from abc import ABC, abstractmethod, abstractproperty
-from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Set, cast
+from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Set, Union, cast
 
 from dagster import check
 from dagster.core.definitions.hook import HookDefinition
@@ -590,3 +590,28 @@ class HookContext:
         """
 
         return self._step_execution_context.step_exception
+
+    @property
+    def solid_output_values(self) -> Dict[str, Union[Any, Dict[str, Any]]]:
+        """The computed output values.
+
+        Returns a dictionary where keys are output names and the values are:
+            * the output values in the normal case
+            * a dictionary from mapping key to corresponding value in the mapped case
+        """
+        results = {}
+
+        for step_output_handle, value in self._step_execution_context.output_capture.items():
+            if self.step_key != step_output_handle.step_key:
+                continue
+            if step_output_handle.mapping_key:
+                if results.get(step_output_handle.output_name) is None:
+                    results[step_output_handle.output_name] = {
+                        step_output_handle.mapping_key: value
+                    }
+                else:
+                    results[step_output_handle.output_name][step_output_handle.mapping_key] = value
+            else:
+                results[step_output_handle.output_name] = value
+
+        return results
