@@ -6,7 +6,7 @@ in the user_context module
 """
 import warnings
 from abc import ABC, abstractmethod, abstractproperty
-from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Set, cast
+from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Set, Union, cast
 
 from dagster import check
 from dagster.core.definitions.hook import HookDefinition
@@ -17,7 +17,7 @@ from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvalidPropertyError, DagsterInvariantViolationError
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.step import ExecutionStep
 from dagster.core.execution.retries import RetryMode
@@ -590,3 +590,35 @@ class HookContext:
         """
 
         return self._step_execution_context.step_exception
+
+    @property
+    def solid_output_values(self) -> Dict[str, Union[Any, Dict[str, Any]]]:
+        """The computed output values.
+
+        Returns a dictionary where keys are output names and the values are:
+            * the output values in the normal case
+            * a dictionary from mapping key to corresponding value in the mapped case
+        """
+        results: Dict[str, Union[Any, Dict[str, Any]]] = {}
+
+        if self._step_execution_context.output_capture is None:
+            # this property relies on the output_capture on the pipeline context, and
+            # the output capture dictionary will only have values in the in process case,
+            # so we error to communicate in case users try to access it in cases like step launcher.
+            raise DagsterInvalidPropertyError(
+                "`solid_output_values` is only available in the in process case."
+            )
+        for step_output_handle, value in self._step_execution_context.output_capture.items():
+            if self.step_key != step_output_handle.step_key:
+                continue
+            if step_output_handle.mapping_key:
+                if results.get(step_output_handle.output_name) is None:
+                    results[step_output_handle.output_name] = {
+                        step_output_handle.mapping_key: value
+                    }
+                else:
+                    results[step_output_handle.output_name][step_output_handle.mapping_key] = value
+            else:
+                results[step_output_handle.output_name] = value
+
+        return results
