@@ -4,7 +4,8 @@ import kubernetes
 import pytest
 from dagster_k8s.client import DagsterK8sError, WaitForPodState
 from dagster_k8s.utils import retrieve_pod_logs, wait_for_job_success, wait_for_pod
-from dagster_k8s_test_infra.helm import get_helm_test_namespace
+
+pytest_plugins = ["dagster_k8s_test_infra.helm"]
 
 
 def construct_pod_spec(name, cmd):
