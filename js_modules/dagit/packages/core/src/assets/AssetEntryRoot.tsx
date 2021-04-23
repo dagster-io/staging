@@ -1,6 +1,7 @@
 import {gql, useQuery} from '@apollo/client';
 import {Colors, Breadcrumbs, IBreadcrumbProps, Icon} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
+import qs from 'qs';
 import * as React from 'react';
 import {Link, RouteComponentProps} from 'react-router-dom';
 import styled from 'styled-components/macro';
@@ -27,10 +28,11 @@ export const AssetEntryRoot: React.FunctionComponent<RouteComponentProps> = ({ma
     variables: {assetKey: {path: currentPath}},
   });
   const [view, setView] = useQueryPersistedState<string>({queryKey: 'view', defaults: {view: ''}});
+  const viewQuery = view ? `?${qs.stringify({view})}` : '';
 
   const pathDetails = () => {
     if (currentPath.length === 1 || view !== 'directory') {
-      return <Link to="/instance/assets">Assets</Link>;
+      return <Link to={`/instance/assets${viewQuery}`}>Assets</Link>;
     }
 
     const breadcrumbs: IBreadcrumbProps[] = [];
@@ -42,12 +44,12 @@ export const AssetEntryRoot: React.FunctionComponent<RouteComponentProps> = ({ma
 
     return (
       <Box flex={{direction: 'row', alignItems: 'center'}} style={{maxWidth: 500}}>
-        <div style={{marginRight: '5px'}}>
-          <Link to="/instance/assets?view=directory">Assets</Link>
-        </div>
+        <Box margin={{right: 4}}>
+          <Link to={`/instance/assets${viewQuery}`}>Assets</Link>:
+        </Box>
         <Breadcrumbs
           breadcrumbRenderer={({text, href}) => (
-            <Link to={href || '#'}>
+            <Link to={href ? `${href}${viewQuery}` : '#'}>
               <span style={{fontSize: '14px'}}>{text}</span>
             </Link>
           )}
