@@ -5,6 +5,7 @@ from dagster import (
     ModeDefinition,
     OutputDefinition,
     composite_solid,
+    default_executors,
     execute_pipeline,
     fs_io_manager,
     pipeline,
@@ -190,7 +191,7 @@ def test_tags():
             emit.name: {"result": ["0", "1", "2"]},
         },
     )
-    plan = create_execution_plan(dynamic_pipeline, known_state=known_state)
+    plan = create_execution_plan(dynamic_pipeline, default_executors, known_state=known_state)
 
     assert plan.get_step_by_key(emit.name).tags == {"first": "1"}
 

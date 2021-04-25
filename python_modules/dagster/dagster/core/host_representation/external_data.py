@@ -9,6 +9,7 @@ from collections import namedtuple
 
 from dagster import check
 from dagster.core.definitions import (
+    ExecutorDefinition,
     PartitionSetDefinition,
     PipelineDefinition,
     PresetDefinition,
@@ -379,13 +380,19 @@ class ExternalPartitionExecutionErrorData(
         )
 
 
-def external_repository_data_from_def(repository_def):
+def external_repository_data_from_def(repository_def, default_executor_defs):
     check.inst_param(repository_def, "repository_def", RepositoryDefinition)
+    check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
 
     return ExternalRepositoryData(
         name=repository_def.name,
         external_pipeline_datas=sorted(
-            list(map(external_pipeline_data_from_def, repository_def.get_all_pipelines())),
+            list(
+                map(
+                    lambda p: external_pipeline_data_from_def(p, default_executor_defs),
+                    repository_def.get_all_pipelines(),
+                )
+            ),
             key=lambda pd: pd.name,
         ),
         external_schedule_datas=sorted(
@@ -403,12 +410,14 @@ def external_repository_data_from_def(repository_def):
     )
 
 
-def external_pipeline_data_from_def(pipeline_def):
+def external_pipeline_data_from_def(pipeline_def, default_executor_defs):
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+    check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
+
     return ExternalPipelineData(
         name=pipeline_def.name,
-        pipeline_snapshot=pipeline_def.get_pipeline_snapshot(),
-        parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(),
+        pipeline_snapshot=pipeline_def.get_pipeline_snapshot(default_executor_defs),
+        parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(default_executor_defs),
         active_presets=sorted(
             list(map(external_preset_data_from_def, pipeline_def.preset_defs)),
             key=lambda pd: pd.name,

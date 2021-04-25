@@ -1,7 +1,7 @@
 import json
 from unittest import mock
 
-from dagster import pipeline, reconstructable
+from dagster import default_executors, pipeline, reconstructable
 from dagster.core.host_representation import InProcessRepositoryLocationOrigin, RepositoryHandle
 from dagster.core.storage.tags import DOCKER_IMAGE_TAG
 from dagster.core.test_utils import create_run_for_test, instance_for_test
@@ -49,6 +49,7 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
             recon_pipeline,
             solid_selection=None,
             repository_handle=repo_handle,
+            default_executor_defs=default_executors,
         )
 
         # Launch the run in a fake Dagster instance.
@@ -100,6 +101,7 @@ def test_no_postgres(kubeconfig_file):
             recon_pipeline,
             solid_selection=None,
             repository_handle=repo_handle,
+            default_executor_defs=default_executors,
         )
 
         # Launch the run in a fake Dagster instance.

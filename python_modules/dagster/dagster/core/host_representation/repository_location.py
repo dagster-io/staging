@@ -18,6 +18,7 @@ from dagster.api.snapshot_pipeline import sync_get_external_pipeline_subset_grpc
 from dagster.api.snapshot_repository import sync_get_streaming_external_repositories_data_grpc
 from dagster.api.snapshot_schedule import sync_get_external_schedule_execution_data_grpc
 from dagster.api.snapshot_sensor import sync_get_external_sensor_execution_data_grpc
+from dagster.core.definitions.executor import default_executors
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.plan.state import KnownExecutionState
@@ -205,6 +206,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
         self._external_repo = external_repo_from_def(
             repo_def,
             RepositoryHandle(repository_name=def_name, repository_location=self),
+            default_executors,
         )
         self._repositories = {self._external_repo.name: self._external_repo}
 
@@ -245,6 +247,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
 
     def get_subset_external_pipeline_result(self, selector):
         check.inst_param(selector, "selector", PipelineSelector)
+
         check.invariant(
             selector.location_name == self.name,
             "PipelineSelector location_name mismatch, got {selector.location_name} expected {self.name}".format(
@@ -255,7 +258,9 @@ class InProcessRepositoryLocation(RepositoryLocation):
         from dagster.grpc.impl import get_external_pipeline_subset_result
 
         return get_external_pipeline_subset_result(
-            self.get_reconstructable_pipeline(selector.pipeline_name), selector.solid_selection
+            self.get_reconstructable_pipeline(selector.pipeline_name),
+            selector.solid_selection,
+            default_executors,
         )
 
     def get_external_execution_plan(
@@ -280,6 +285,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
                     ).subset_for_execution_from_existing_pipeline(
                         external_pipeline.solids_to_execute
                     ),
+                    default_executor_defs=default_executors,
                     run_config=run_config,
                     mode=mode,
                     step_keys_to_execute=step_keys_to_execute,

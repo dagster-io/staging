@@ -1,3 +1,4 @@
+from dagster import default_executors
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -8,6 +9,7 @@ from dagster_test.toys.composition import composition
 def test_compile():
     environment_config = EnvironmentConfig.build(
         composition,
+        default_executors,
         {"solids": {"add_four": {"inputs": {"num": {"value": 1}}}}},
     )
 

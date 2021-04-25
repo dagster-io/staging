@@ -9,6 +9,7 @@ from dagster import (
     PipelineDefinition,
     SolidDefinition,
     composite_solid,
+    default_executors,
     execute_pipeline,
     lambda_solid,
     pipeline,
@@ -873,7 +874,7 @@ def test_tags():
     def tag():
         emit.tag({"invoke": "2"})()
 
-    plan = create_execution_plan(tag)
+    plan = create_execution_plan(tag, default_executors)
     step = list(plan.step_dict.values())[0]
     assert step.tags == {"def": "1", "invoke": "2"}
 
@@ -900,6 +901,6 @@ def test_tag_subset():
         empty()
         emit.tag({"invoke": "2"})()
 
-    plan = create_execution_plan(tag.get_pipeline_subset_def({"emit"}))
+    plan = create_execution_plan(tag.get_pipeline_subset_def({"emit"}), default_executors)
     step = list(plan.step_dict.values())[0]
     assert step.tags == {"def": "1", "invoke": "2"}

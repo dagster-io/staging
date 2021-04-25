@@ -26,6 +26,7 @@ from .dependency import (
     SolidHandle,
     SolidInvocation,
 )
+from .executor import ExecutorDefinition
 from .graph import GraphDefinition
 from .hook import HookDefinition
 from .mode import ModeDefinition
@@ -267,7 +268,9 @@ class PipelineDefinition(GraphDefinition):
             _parent_pipeline_def=self._parent_pipeline_def,
         )
 
-    def get_run_config_schema(self, mode: Optional[str] = None) -> "RunConfigSchema":
+    def get_run_config_schema(
+        self, default_executor_defs: List[ExecutorDefinition], mode: Optional[str] = None
+    ) -> "RunConfigSchema":
         check.str_param(mode, "mode")
 
         mode_def = self.get_mode_definition(mode)
@@ -276,7 +279,7 @@ class PipelineDefinition(GraphDefinition):
             return self._cached_run_config_schemas[mode_def.name]
 
         self._cached_run_config_schemas[mode_def.name] = _create_run_config_schema(
-            self, mode_def, self._resource_requirements[mode_def.name]
+            self, mode_def, self._resource_requirements[mode_def.name], default_executor_defs
         )
         return self._cached_run_config_schemas[mode_def.name]
 
@@ -386,22 +389,24 @@ class PipelineDefinition(GraphDefinition):
 
         return self._preset_dict[name]
 
-    def get_pipeline_snapshot(self) -> "PipelineSnapshot":
-        return self.get_pipeline_index().pipeline_snapshot
+    def get_pipeline_snapshot(self, default_executor_defs) -> "PipelineSnapshot":
+        check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
+        return self.get_pipeline_index(default_executor_defs).pipeline_snapshot
 
-    def get_pipeline_snapshot_id(self) -> str:
-        return self.get_pipeline_index().pipeline_snapshot_id
+    def get_pipeline_snapshot_id(self, default_executor_defs) -> str:
+        check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
+        return self.get_pipeline_index(default_executor_defs).pipeline_snapshot_id
 
-    def get_pipeline_index(self) -> "PipelineIndex":
+    def get_pipeline_index(self, default_executor_defs) -> "PipelineIndex":
         from dagster.core.snap import PipelineSnapshot
         from dagster.core.host_representation import PipelineIndex
 
-        return PipelineIndex(
-            PipelineSnapshot.from_pipeline_def(self), self.get_parent_pipeline_snapshot()
-        )
+        check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
 
-    def get_config_schema_snapshot(self) -> "ConfigSchemaSnapshot":
-        return self.get_pipeline_snapshot().config_schema_snapshot
+        return PipelineIndex(
+            PipelineSnapshot.from_pipeline_def(self, default_executor_defs),
+            self.get_parent_pipeline_snapshot(default_executor_defs),
+        )
 
     @property
     def is_subset_pipeline(self) -> bool:
@@ -411,7 +416,8 @@ class PipelineDefinition(GraphDefinition):
     def parent_pipeline_def(self) -> Optional["PipelineDefinition"]:
         return None
 
-    def get_parent_pipeline_snapshot(self) -> Optional["PipelineSnapshot"]:
+    def get_parent_pipeline_snapshot(self, default_executor_defs) -> Optional["PipelineSnapshot"]:
+        check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
         return None
 
     @property
@@ -498,8 +504,9 @@ class PipelineSubsetDefinition(PipelineDefinition):
     def parent_pipeline_def(self) -> Optional["PipelineDefinition"]:
         return self._parent_pipeline_def
 
-    def get_parent_pipeline_snapshot(self) -> Optional["PipelineSnapshot"]:
-        return self._parent_pipeline_def.get_pipeline_snapshot()
+    def get_parent_pipeline_snapshot(self, default_executor_defs) -> Optional["PipelineSnapshot"]:
+        check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
+        return self._parent_pipeline_def.get_pipeline_snapshot(default_executor_defs)
 
     @property
     def is_subset_pipeline(self) -> bool:
@@ -863,6 +870,7 @@ def _create_run_config_schema(
     pipeline_def: PipelineDefinition,
     mode_definition: ModeDefinition,
     required_resources: Set[str],
+    default_executor_defs: List[ExecutorDefinition],
 ) -> "RunConfigSchema":
     from .environment_configs import (
         EnvironmentClassCreationData,
@@ -895,6 +903,7 @@ def _create_run_config_schema(
             logger_defs=mode_definition.loggers,
             ignored_solids=ignored_solids,
             required_resources=required_resources,
+            default_executor_defs=default_executor_defs,
         )
     )
 

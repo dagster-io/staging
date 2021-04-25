@@ -12,7 +12,6 @@ from ..external import (
     ensure_valid_step_keys,
     get_external_pipeline_or_raise,
 )
-from ..fetch_runs import is_config_valid
 from ..pipeline_run_storage import PipelineRunObservableSubscribe
 from ..utils import ExecutionParams, UserFacingGraphQLError, capture_error
 from .backfill import cancel_partition_backfill, create_and_launch_partition_backfill

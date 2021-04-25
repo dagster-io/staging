@@ -14,6 +14,7 @@ from dagster import (
     SolidDefinition,
     SolidInvocation,
     String,
+    default_executors,
     execute_pipeline,
     lambda_solid,
     pipeline,
@@ -39,6 +40,7 @@ def create_creation_data(pipeline_def):
         logger_defs=default_loggers(),
         ignored_solids=[],
         required_resources=set(),
+        default_executor_defs=default_executors,
     )
 
 
@@ -61,7 +63,7 @@ def test_all_types_provided():
         ],
     )
 
-    run_config_schema = create_run_config_schema(pipeline_def)
+    run_config_schema = create_run_config_schema(pipeline_def, default_executors)
 
     all_types = list(run_config_schema.all_config_types())
 
@@ -98,7 +100,7 @@ def test_provided_default_on_resources_config():
     def pipeline_def():
         some_solid()
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     some_resource_field = env_type.fields["resources"].config_type.fields["some_resource"]
     assert some_resource_field.is_required is False
 
@@ -108,7 +110,7 @@ def test_provided_default_on_resources_config():
 
     assert some_resource_field.default_value == {"config": {"with_default_int": 23434}}
 
-    value = EnvironmentConfig.build(pipeline_def, {})
+    value = EnvironmentConfig.build(pipeline_def, default_executors, {})
     assert value.resources == {
         "some_resource": ResourceConfig({"with_default_int": 23434}),
         "io_manager": ResourceConfig(None),
@@ -124,7 +126,7 @@ def test_default_environment():
     def pipeline_def():
         some_solid()
 
-    assert EnvironmentConfig.build(pipeline_def, {})
+    assert EnvironmentConfig.build(pipeline_def, default_executors, {})
 
 
 def test_solid_config():
@@ -138,6 +140,7 @@ def test_solid_dictionary_type():
 
     env_obj = EnvironmentConfig.build(
         pipeline_def,
+        default_executors,
         {
             "solids": {"int_config_solid": {"config": 1}, "string_config_solid": {"config": "bar"}},
         },
@@ -184,7 +187,7 @@ def assert_has_fields(dtype, *fields):
 
 
 def test_solid_configs_defaults():
-    env_type = create_environment_type(define_test_solids_config_pipeline())
+    env_type = create_environment_type(define_test_solids_config_pipeline(), default_executors)
 
     solids_field = env_type.fields["solids"]
 
@@ -219,7 +222,9 @@ def test_solid_dictionary_some_no_config():
         int_config_solid()
         no_config_solid()
 
-    env = EnvironmentConfig.build(pipeline_def, {"solids": {"int_config_solid": {"config": 1}}})
+    env = EnvironmentConfig.build(
+        pipeline_def, default_executors, {"solids": {"int_config_solid": {"config": 1}}}
+    )
 
     assert {"int_config_solid", "no_config_solid"} == set(env.solids.keys())
     assert env.solids == {
@@ -257,6 +262,7 @@ def test_whole_environment():
 
     env = EnvironmentConfig.build(
         pipeline_def,
+        default_executors,
         {
             "resources": {"test_resource": {"config": 1}},
             "solids": {"int_config_solid": {"config": 123}},
@@ -334,7 +340,7 @@ def test_optional_solid_with_optional_scalar_config():
         ],
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
 
     assert env_type.fields["solids"].is_required is False
 
@@ -342,7 +348,7 @@ def test_optional_solid_with_optional_scalar_config():
 
     assert solids_type.fields["int_config_solid"].is_required is False
 
-    env_obj = EnvironmentConfig.build(pipeline_def, {})
+    env_obj = EnvironmentConfig.build(pipeline_def, default_executors, {})
 
     assert env_obj.solids["int_config_solid"].config is None
 
@@ -364,7 +370,7 @@ def test_optional_solid_with_required_scalar_config():
         ],
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
 
     assert env_type.fields["solids"].is_required is True
 
@@ -397,7 +403,7 @@ def test_required_solid_with_required_subfield():
         ],
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
 
     assert env_type.fields["solids"].is_required is True
     assert env_type.fields["solids"].config_type
@@ -411,6 +417,7 @@ def test_required_solid_with_required_subfield():
 
     env_obj = EnvironmentConfig.build(
         pipeline_def,
+        default_executors,
         {"solids": {"int_config_solid": {"config": {"required_field": "foobar"}}}},
     )
 
@@ -439,7 +446,7 @@ def test_optional_solid_with_optional_subfield():
         ],
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     assert env_type.fields["solids"].is_required is False
     assert env_type.fields["execution"].is_required is False
 
@@ -475,7 +482,7 @@ def test_required_resource_with_required_subfield():
         ],
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     assert env_type.fields["solids"].is_required is False
     assert env_type.fields["execution"].is_required is False
     assert env_type.fields["resources"].is_required
@@ -502,7 +509,7 @@ def test_all_optional_field_on_single_resource():
         ],
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     assert env_type.fields["solids"].is_required is False
     assert env_type.fields["execution"].is_required is False
     assert env_type.fields["resources"].is_required is False
@@ -539,7 +546,7 @@ def test_optional_and_required_context():
         ],
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     assert env_type.fields["solids"].is_required is False
 
     assert env_type.fields["execution"].is_required is False
@@ -562,6 +569,7 @@ def test_optional_and_required_context():
 
     env_obj = EnvironmentConfig.build(
         pipeline_def,
+        default_executors,
         {"resources": {"required_resource": {"config": {"required_field": "foo"}}}},
     )
 
@@ -586,7 +594,7 @@ def test_required_inputs():
         },
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
 
     solids_type = env_type.fields["solids"].config_type
 
@@ -622,7 +630,7 @@ def test_mix_required_inputs():
         dependencies={"add_numbers": {"right": DependencyDefinition("return_three")}},
     )
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     solids_type = env_type.fields["solids"].config_type
     add_numbers_type = solids_type.fields["add_numbers"].config_type
     inputs_fields_dict = add_numbers_type.fields["inputs"].config_type.fields
@@ -634,7 +642,7 @@ def test_mix_required_inputs():
 def test_files_default_config():
     pipeline_def = PipelineDefinition(name="pipeline", solid_defs=[])
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     assert "storage" in env_type.fields
 
     config_value = process_config(env_type, {})
@@ -646,7 +654,7 @@ def test_files_default_config():
 def test_storage_in_memory_config():
     pipeline_def = PipelineDefinition(name="pipeline", solid_defs=[])
 
-    env_type = create_environment_type(pipeline_def)
+    env_type = create_environment_type(pipeline_def, default_executors)
     assert "storage" in env_type.fields
 
     config_value = process_config(env_type, {"intermediate_storage": {"in_memory": {}}})
