@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Dict, Iterable, Union
 import yaml
 from dagster import check
 from dagster.core.definitions.events import AssetKey
+from dagster.core.definitions.executor import default_executors
 from dagster.core.definitions.pipeline import PipelineDefinition, PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import (
@@ -654,7 +655,9 @@ class DagsterInstance:
             environment_config = None
             full_execution_plan = execution_plan
         else:
-            environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode)
+            environment_config = EnvironmentConfig.build(
+                pipeline_def, self.default_executor_defs, run_config, mode
+            )
             full_execution_plan = ExecutionPlan.build(
                 InMemoryPipeline(pipeline_def), environment_config
             )
@@ -669,7 +672,9 @@ class DagsterInstance:
                 )
 
             if not environment_config:
-                environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode)
+                environment_config = EnvironmentConfig.build(
+                    pipeline_def, self.default_executor_defs, run_config, mode
+                )
 
             subsetted_execution_plan = resolve_memoized_execution_plan(
                 full_execution_plan,
@@ -686,7 +691,9 @@ class DagsterInstance:
                 )
         elif step_keys_to_execute:
             if not environment_config:
-                environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode)
+                environment_config = EnvironmentConfig.build(
+                    pipeline_def, self.default_executor_defs, run_config, mode
+                )
             subsetted_execution_plan = full_execution_plan.build_subset_plan(
                 step_keys_to_execute, pipeline_def, environment_config
             )
@@ -705,11 +712,14 @@ class DagsterInstance:
             tags=tags,
             root_run_id=root_run_id,
             parent_run_id=parent_run_id,
-            pipeline_snapshot=pipeline_def.get_pipeline_snapshot(),
+            pipeline_snapshot=pipeline_def.get_pipeline_snapshot(self.default_executor_defs),
             execution_plan_snapshot=snapshot_from_execution_plan(
-                subsetted_execution_plan, pipeline_def.get_pipeline_snapshot_id()
+                subsetted_execution_plan,
+                pipeline_def.get_pipeline_snapshot_id(self.default_executor_defs),
             ),
-            parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(),
+            parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(
+                self.default_executor_defs
+            ),
         )
 
     def _construct_run_with_snapshots(
@@ -1532,3 +1542,7 @@ class DagsterInstance:
 
     def update_backfill(self, partition_backfill):
         return self._run_storage.update_backfill(partition_backfill)
+
+    @property
+    def default_executor_defs(self):
+        return default_executors

@@ -1,4 +1,4 @@
-from dagster import ModeDefinition, logger, pipeline, resource
+from dagster import ModeDefinition, default_executors, logger, pipeline, resource
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 
@@ -36,7 +36,7 @@ def test_mode_snap(snapshot):
     def a_pipeline():
         pass
 
-    pipeline_snapshot = PipelineSnapshot.from_pipeline_def(a_pipeline)
+    pipeline_snapshot = PipelineSnapshot.from_pipeline_def(a_pipeline, default_executors)
     assert len(pipeline_snapshot.mode_def_snaps) == 1
     mode_def_snap = pipeline_snapshot.mode_def_snaps[0]
 

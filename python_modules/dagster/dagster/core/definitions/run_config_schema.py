@@ -3,6 +3,7 @@ from collections import namedtuple
 from dagster import check
 from dagster.config.config_type import ConfigType
 
+from .executor import ExecutorDefinition
 from .pipeline import PipelineDefinition
 
 
@@ -45,12 +46,13 @@ class RunConfigSchema(
         return self.config_type_dict_by_key.values()
 
 
-def create_run_config_schema(pipeline_def, mode=None):
+def create_run_config_schema(pipeline_def, default_executor_defs, mode=None):
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+    check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
     mode = check.opt_str_param(mode, "mode", default=pipeline_def.get_default_mode_name())
 
-    return pipeline_def.get_run_config_schema(mode)
+    return pipeline_def.get_run_config_schema(default_executor_defs, mode)
 
 
-def create_environment_type(pipeline_def, mode=None):
-    return create_run_config_schema(pipeline_def, mode).environment_type
+def create_environment_type(pipeline_def, default_executor_defs, mode=None):
+    return create_run_config_schema(pipeline_def, default_executor_defs, mode).environment_type

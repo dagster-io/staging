@@ -73,7 +73,7 @@ def test_create_pipeline_snapshot():
         run = instance.get_run_by_id(result.run_id)
 
         assert run.pipeline_snapshot_id == create_pipeline_snapshot_id(
-            noop_pipeline.get_pipeline_snapshot()
+            noop_pipeline.get_pipeline_snapshot(instance.default_executor_defs)
         )
 
 
@@ -87,10 +87,10 @@ def test_create_execution_plan_snapshot():
         noop_solid()
 
     with instance_for_test() as instance:
-        execution_plan = create_execution_plan(noop_pipeline)
+        execution_plan = create_execution_plan(noop_pipeline, instance.default_executor_defs)
 
         ep_snapshot = snapshot_from_execution_plan(
-            execution_plan, noop_pipeline.get_pipeline_snapshot_id()
+            execution_plan, noop_pipeline.get_pipeline_snapshot_id(instance.default_executor_defs)
         )
         ep_snapshot_id = create_execution_plan_snapshot_id(ep_snapshot)
 

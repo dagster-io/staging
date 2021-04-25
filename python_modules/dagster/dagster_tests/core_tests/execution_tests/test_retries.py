@@ -193,7 +193,7 @@ def test_retry_deferral():
     with instance_for_test() as instance:
         pipeline_def = define_retry_limit_pipeline()
         events = execute_plan(
-            create_execution_plan(pipeline_def),
+            create_execution_plan(pipeline_def, instance.default_executor_defs),
             InMemoryPipeline(pipeline_def),
             pipeline_run=PipelineRun(pipeline_name="retry_limits", run_id="42"),
             retry_mode=RetryMode.DEFERRED,

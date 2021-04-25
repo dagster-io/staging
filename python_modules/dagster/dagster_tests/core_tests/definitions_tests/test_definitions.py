@@ -12,6 +12,7 @@ from dagster import (
     PipelineDefinition,
     SolidInvocation,
     String,
+    default_executors,
     lambda_solid,
     solid,
 )
@@ -137,7 +138,7 @@ def test_pipeline_types():
         dependencies={"solid_one": {"input_one": DependencyDefinition("produce_string")}},
     )
 
-    run_config_schema = create_run_config_schema(pipeline_def)
+    run_config_schema = create_run_config_schema(pipeline_def, default_executors)
 
     assert run_config_schema.has_config_type("String")
     assert run_config_schema.has_config_type("Int")
