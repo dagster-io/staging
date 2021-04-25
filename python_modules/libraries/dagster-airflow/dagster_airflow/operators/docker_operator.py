@@ -257,6 +257,7 @@ class DagsterDockerOperator(DockerOperator):
             recon_pipeline.subset_for_execution_from_existing_pipeline(
                 pipeline_run.solids_to_execute
             ),
+            self.instance.default_executor_defs,
             run_config=self.run_config,
             step_keys_to_execute=self.step_keys,
             mode=self.mode,

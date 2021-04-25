@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 from dagster import check
-from dagster.core.definitions.executor import ExecutorDefinition, default_executors
+from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.loggers import default_loggers
 from dagster.utils.merger import merge_dicts
 
@@ -32,8 +32,7 @@ class ModeDefinition(
         logger_defs (Optional[Dict[str, LoggerDefinition]]): A dictionary of string logger
             identifiers to their implementations.
         executor_defs (Optional[List[ExecutorDefinition]]): The set of executors available when
-            executing in this mode. By default, this will be the 'in_process' and 'multiprocess'
-            executors (:py:data:`~dagster.default_executors`).
+            executing in this mode.
         description (Optional[str]): A human-readable description of the mode.
         intermediate_storage_defs (Optional[List[IntermediateStorageDefinition]]): The set of intermediate storage
             options available when executing in this mode. By default, this will be the 'in_memory'
@@ -82,13 +81,16 @@ class ModeDefinition(
                 "intermediate_storage_defs",
                 of_type=IntermediateStorageDefinition,
             ),
-            executor_defs=check.list_param(
-                executor_defs if executor_defs else default_executors,
+            executor_defs=check.opt_list_param(
+                executor_defs,
                 "executor_defs",
                 of_type=ExecutorDefinition,
             ),
             description=check.opt_str_param(description, "description"),
         )
+
+    def get_executor_defs(self, default_defs):
+        return self.executor_defs if self.executor_defs else default_defs
 
     @property
     def resource_key_set(self):

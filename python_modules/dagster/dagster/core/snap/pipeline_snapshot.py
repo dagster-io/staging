@@ -17,6 +17,7 @@ from dagster.config.snap import (
     ConfigSchemaSnapshot,
     ConfigTypeSnap,
 )
+from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition, PipelineSubsetDefinition
 from dagster.core.utils import toposort_flatten
 from dagster.serdes import create_snapshot_id, deserialize_value, whitelist_for_serdes
@@ -88,13 +89,14 @@ class PipelineSnapshot(
         )
 
     @classmethod
-    def from_pipeline_def(cls, pipeline_def):
+    def from_pipeline_def(cls, pipeline_def, default_executor_defs):
         check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+        check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
         lineage = None
         if isinstance(pipeline_def, PipelineSubsetDefinition):
             lineage = PipelineSnapshotLineage(
                 parent_snapshot_id=create_pipeline_snapshot_id(
-                    cls.from_pipeline_def(pipeline_def.parent_pipeline_def)
+                    cls.from_pipeline_def(pipeline_def.parent_pipeline_def, default_executor_defs)
                 ),
                 solid_selection=pipeline_def.solid_selection,
                 solids_to_execute=pipeline_def.solids_to_execute,
@@ -104,13 +106,18 @@ class PipelineSnapshot(
             name=pipeline_def.name,
             description=pipeline_def.description,
             tags=pipeline_def.tags,
-            config_schema_snapshot=build_config_schema_snapshot(pipeline_def),
+            config_schema_snapshot=build_config_schema_snapshot(
+                pipeline_def, default_executor_defs
+            ),
             dagster_type_namespace_snapshot=build_dagster_type_namespace_snapshot(pipeline_def),
             solid_definitions_snapshot=build_solid_definitions_snapshot(pipeline_def),
             dep_structure_snapshot=build_dep_structure_snapshot_from_icontains_solids(pipeline_def),
             mode_def_snaps=[
                 build_mode_def_snap(
-                    md, pipeline_def.get_run_config_schema(md.name).environment_type.key
+                    md,
+                    pipeline_def.get_run_config_schema(
+                        default_executor_defs, md.name
+                    ).environment_type.key,
                 )
                 for md in pipeline_def.mode_definitions
             ],

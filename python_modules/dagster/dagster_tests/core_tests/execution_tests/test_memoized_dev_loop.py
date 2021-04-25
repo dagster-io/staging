@@ -1,7 +1,7 @@
 import tempfile
 
 import pytest
-from dagster import execute_pipeline, reexecute_pipeline
+from dagster import default_executors, execute_pipeline, reexecute_pipeline
 from dagster.core.errors import DagsterNoStepsToExecuteException
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
@@ -35,11 +35,13 @@ def get_ephemeral_instance(temp_dir):
 
 def get_step_keys_to_execute(pipeline, run_config, mode, instance):
     memoized_execution_plan = resolve_memoized_execution_plan(
-        create_execution_plan(pipeline, run_config=run_config, mode=mode),
+        create_execution_plan(
+            pipeline, instance.default_executor_defs, run_config=run_config, mode=mode
+        ),
         pipeline,
         run_config,
         instance,
-        EnvironmentConfig.build(pipeline, run_config=run_config, mode=mode),
+        EnvironmentConfig.build(pipeline, default_executors, run_config=run_config, mode=mode),
     )
     return memoized_execution_plan.step_keys_to_execute
 

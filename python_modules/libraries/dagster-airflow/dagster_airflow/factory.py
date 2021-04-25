@@ -200,7 +200,9 @@ def _make_airflow_dag(
     if mode is None:
         mode = pipeline.get_default_mode_name()
 
-    execution_plan = create_execution_plan(pipeline, run_config, mode=mode)
+    execution_plan = create_execution_plan(
+        pipeline, instance.default_executor_defs, run_config, mode=mode
+    )
 
     tasks = {}
 
@@ -219,9 +221,12 @@ def _make_airflow_dag(
             dag=dag,
             instance_ref=instance.get_ref(),
             op_kwargs=op_kwargs,
-            pipeline_snapshot=pipeline.get_pipeline_snapshot(),
+            pipeline_snapshot=pipeline.get_pipeline_snapshot(instance.default_executor_defs),
             execution_plan_snapshot=snapshot_from_execution_plan(
-                execution_plan, pipeline_snapshot_id=pipeline.get_pipeline_snapshot_id()
+                execution_plan,
+                pipeline_snapshot_id=pipeline.get_pipeline_snapshot_id(
+                    instance.default_executor_defs
+                ),
             ),
         )
         task = operator(operator_parameters)

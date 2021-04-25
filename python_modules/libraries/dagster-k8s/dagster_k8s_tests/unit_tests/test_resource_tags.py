@@ -1,5 +1,5 @@
 import pytest
-from dagster import pipeline, solid
+from dagster import default_executors, pipeline, solid
 from dagster.core.errors import DagsterInvalidConfigError
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.plan.state import KnownExecutionState
@@ -106,7 +106,7 @@ def test_tags_to_plan():
             }
         )()
 
-    plan = create_execution_plan(k8s_ready)
+    plan = create_execution_plan(k8s_ready, default_executors)
     step = list(plan.step_dict.values())[0]
 
     user_defined_k8s_config = get_user_defined_k8s_config(step.tags)
@@ -163,7 +163,7 @@ def test_tags_to_dynamic_plan():
             emit.name: {"result": ["0", "1", "2"]},
         },
     )
-    plan = create_execution_plan(k8s_ready, known_state=known_state)
+    plan = create_execution_plan(k8s_ready, default_executors, known_state=known_state)
 
     emit_step = plan.get_step_by_key(emit.name)
     user_defined_k8s_config = get_user_defined_k8s_config(emit_step.tags)

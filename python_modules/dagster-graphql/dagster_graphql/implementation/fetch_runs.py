@@ -1,42 +1,11 @@
-from dagster import PipelineDefinition, check
-from dagster.config.validate import validate_config
-from dagster.core.definitions import create_run_config_schema
+from dagster import check
 from dagster.core.host_representation import PipelineSelector
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster.core.storage.tags import TagType, get_tag_type
 from graphql.execution.base import ResolveInfo
 
 from .external import ensure_valid_config, get_external_pipeline_or_raise
-from .utils import UserFacingGraphQLError, capture_error
-
-
-def is_config_valid(pipeline_def, run_config, mode):
-    check.str_param(mode, "mode")
-    check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
-
-    run_config_schema = create_run_config_schema(pipeline_def, mode)
-    validated_config = validate_config(run_config_schema.environment_type, run_config)
-    return validated_config.success
-
-
-def get_validated_config(pipeline_def, run_config, mode):
-    from ..schema.pipelines.config import GraphenePipelineConfigValidationInvalid
-
-    check.str_param(mode, "mode")
-    check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
-
-    run_config_schema = create_run_config_schema(pipeline_def, mode)
-
-    validated_config = validate_config(run_config_schema.environment_type, run_config)
-
-    if not validated_config.success:
-        raise UserFacingGraphQLError(
-            GraphenePipelineConfigValidationInvalid.for_validation_errors(
-                pipeline_def.get_external_pipeline(), validated_config.errors
-            )
-        )
-
-    return validated_config
+from .utils import capture_error
 
 
 def get_run_by_id(graphene_info, run_id):

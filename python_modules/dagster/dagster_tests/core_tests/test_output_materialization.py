@@ -12,6 +12,7 @@ from dagster import (
     PipelineDefinition,
     String,
     dagster_type_materializer,
+    default_executors,
     execute_pipeline,
     lambda_solid,
     solid,
@@ -81,6 +82,7 @@ def one_input_no_output_pipeline():
 def test_basic_json_default_output_config_schema():
     env = EnvironmentConfig.build(
         single_int_output_pipeline(),
+        default_executors,
         {"solids": {"return_one": {"outputs": [{"result": {"json": {"path": "foo"}}}]}}},
     )
 
@@ -93,6 +95,7 @@ def test_basic_json_default_output_config_schema():
 def test_basic_json_named_output_config_schema():
     env = EnvironmentConfig.build(
         single_int_named_output_pipeline(),
+        default_executors,
         {"solids": {"return_named_one": {"outputs": [{"named": {"json": {"path": "foo"}}}]}}},
     )
 
@@ -106,6 +109,7 @@ def test_basic_json_misnamed_output_config_schema():
     with pytest.raises(DagsterInvalidConfigError) as exc_context:
         EnvironmentConfig.build(
             single_int_named_output_pipeline(),
+            default_executors,
             {
                 "solids": {
                     "return_named_one": {"outputs": [{"wrong_name": {"json": {"path": "foo"}}}]}
@@ -119,10 +123,12 @@ def test_basic_json_misnamed_output_config_schema():
 
 
 def test_no_outputs_no_inputs_config_schema():
-    assert EnvironmentConfig.build(no_input_no_output_pipeline())
+    assert EnvironmentConfig.build(no_input_no_output_pipeline(), default_executors)
 
     with pytest.raises(DagsterInvalidConfigError) as exc_context:
-        EnvironmentConfig.build(no_input_no_output_pipeline(), {"solids": {"return_one": {}}})
+        EnvironmentConfig.build(
+            no_input_no_output_pipeline(), default_executors, {"solids": {"return_one": {}}}
+        )
 
     assert len(exc_context.value.errors) == 1
     assert (
@@ -134,12 +140,14 @@ def test_no_outputs_no_inputs_config_schema():
 def test_no_outputs_one_input_config_schema():
     assert EnvironmentConfig.build(
         one_input_no_output_pipeline(),
+        default_executors,
         {"solids": {"take_input_return_nothing": {"inputs": {"dummy": {"value": "value"}}}}},
     )
 
     with pytest.raises(DagsterInvalidConfigError) as exc_context:
         EnvironmentConfig.build(
             one_input_no_output_pipeline(),
+            default_executors,
             {
                 "solids": {
                     "take_input_return_nothing": {
