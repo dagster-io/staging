@@ -66,6 +66,7 @@ class EnvironmentClassCreationData(NamedTuple):
     logger_defs: Dict[str, LoggerDefinition]
     ignored_solids: List[Solid]
     required_resources: Set[str]
+    default_executor_defs: List[ExecutorDefinition]
 
 
 def define_logger_dictionary_cls(creation_data: EnvironmentClassCreationData) -> Shape:
@@ -136,7 +137,11 @@ def define_environment_cls(creation_data: EnvironmentClassCreationData):
                 ),
                 "storage": storage_field,
                 "intermediate_storage": intermediate_storage_field,
-                "execution": define_execution_field(creation_data.mode_definition.executor_defs),
+                "execution": define_execution_field(
+                    creation_data.mode_definition.get_executor_defs(
+                        creation_data.default_executor_defs
+                    )
+                ),
                 "loggers": Field(define_logger_dictionary_cls(creation_data)),
                 "resources": Field(
                     define_resource_dictionary_cls(

@@ -2,6 +2,7 @@ import sys
 
 import pendulum
 import pytest
+from dagster import default_executors
 from dagster.core.definitions import PipelineDefinition
 from dagster.core.errors import DagsterRunAlreadyExists, DagsterSnapshotDoesNotExist
 from dagster.core.events import DagsterEvent, DagsterEventType
@@ -136,8 +137,8 @@ class TestRunStorage:
         assert storage
         pipeline_def_a = PipelineDefinition(name="some_pipeline", solid_defs=[])
         pipeline_def_b = PipelineDefinition(name="some_other_pipeline", solid_defs=[])
-        pipeline_snapshot_a = pipeline_def_a.get_pipeline_snapshot()
-        pipeline_snapshot_b = pipeline_def_b.get_pipeline_snapshot()
+        pipeline_snapshot_a = pipeline_def_a.get_pipeline_snapshot(default_executors)
+        pipeline_snapshot_b = pipeline_def_b.get_pipeline_snapshot(default_executors)
         pipeline_snapshot_a_id = create_pipeline_snapshot_id(pipeline_snapshot_a)
         pipeline_snapshot_b_id = create_pipeline_snapshot_id(pipeline_snapshot_b)
 
@@ -649,7 +650,7 @@ class TestRunStorage:
 
     def test_add_get_snapshot(self, storage):
         pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
-        pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
+        pipeline_snapshot = pipeline_def.get_pipeline_snapshot(default_executors)
         pipeline_snapshot_id = create_pipeline_snapshot_id(pipeline_snapshot)
 
         assert storage.add_pipeline_snapshot(pipeline_snapshot) == pipeline_snapshot_id
@@ -668,7 +669,7 @@ class TestRunStorage:
         run_with_snapshot_id = "lkasjdflkjasdf"
         pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
 
-        pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
+        pipeline_snapshot = pipeline_def.get_pipeline_snapshot(default_executors)
 
         pipeline_snapshot_id = create_pipeline_snapshot_id(pipeline_snapshot)
 
@@ -715,9 +716,9 @@ class TestRunStorage:
         from dagster.core.snap import snapshot_from_execution_plan
 
         pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
-        execution_plan = create_execution_plan(pipeline_def)
+        execution_plan = create_execution_plan(pipeline_def, default_executors)
         ep_snapshot = snapshot_from_execution_plan(
-            execution_plan, pipeline_def.get_pipeline_snapshot_id()
+            execution_plan, pipeline_def.get_pipeline_snapshot_id(default_executors)
         )
 
         snapshot_id = storage.add_execution_plan_snapshot(ep_snapshot)

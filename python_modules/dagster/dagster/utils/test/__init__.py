@@ -68,7 +68,11 @@ def create_test_pipeline_execution_context(logger_defs=None):
     run_config = {"loggers": {key: {} for key in loggers}}
     pipeline_run = PipelineRun(pipeline_name="test_legacy_context", run_config=run_config)
     instance = DagsterInstance.ephemeral()
-    execution_plan = create_execution_plan(pipeline=pipeline_def, run_config=run_config)
+    execution_plan = create_execution_plan(
+        pipeline=pipeline_def,
+        default_executor_defs=instance.default_executor_defs,
+        run_config=run_config,
+    )
     creation_data = create_context_creation_data(
         InMemoryPipeline(pipeline_def), execution_plan, run_config, pipeline_run, instance
     )
@@ -240,7 +244,7 @@ def yield_empty_pipeline_context(run_id=None, instance=None):
         instance, "instance", DagsterInstance, default=DagsterInstance.ephemeral()
     )
 
-    execution_plan = create_execution_plan(pipeline)
+    execution_plan = create_execution_plan(pipeline, instance.default_executor_defs)
 
     pipeline_run = instance.create_run(
         pipeline_name="<empty>",
@@ -253,11 +257,13 @@ def yield_empty_pipeline_context(run_id=None, instance=None):
         tags=None,
         root_run_id=None,
         parent_run_id=None,
-        pipeline_snapshot=pipeline_def.get_pipeline_snapshot(),
+        pipeline_snapshot=pipeline_def.get_pipeline_snapshot(instance.default_executor_defs),
         execution_plan_snapshot=snapshot_from_execution_plan(
-            execution_plan, pipeline_def.get_pipeline_snapshot_id()
+            execution_plan, pipeline_def.get_pipeline_snapshot_id(instance.default_executor_defs)
         ),
-        parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(),
+        parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(
+            instance.default_executor_defs
+        ),
     )
     with scoped_pipeline_context(execution_plan, pipeline, {}, pipeline_run, instance) as context:
         yield context

@@ -36,7 +36,7 @@ def find_events(events, event_type=None):
 def test_execution_plan_simple_two_steps():
     pipeline_def = define_two_int_pipeline()
     instance = DagsterInstance.ephemeral()
-    execution_plan = create_execution_plan(pipeline_def)
+    execution_plan = create_execution_plan(pipeline_def, instance.default_executor_defs)
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline_def, execution_plan=execution_plan
     )
@@ -72,9 +72,10 @@ def test_execution_plan_two_outputs():
 
     pipeline_def = PipelineDefinition(name="return_one_two_pipeline", solid_defs=[return_one_two])
 
-    execution_plan = create_execution_plan(pipeline_def)
-
     instance = DagsterInstance.ephemeral()
+
+    execution_plan = create_execution_plan(pipeline_def, instance.default_executor_defs)
+
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline_def, execution_plan=execution_plan
     )
@@ -100,7 +101,7 @@ def test_reentrant_execute_plan():
 
     pipeline_def = PipelineDefinition(name="has_tag_pipeline", solid_defs=[has_tag])
     instance = DagsterInstance.ephemeral()
-    execution_plan = create_execution_plan(pipeline_def)
+    execution_plan = create_execution_plan(pipeline_def, instance.default_executor_defs)
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline_def, tags={"foo": "bar"}, execution_plan=execution_plan
     )

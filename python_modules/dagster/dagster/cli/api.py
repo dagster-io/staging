@@ -208,6 +208,7 @@ def execute_step_command(input_json):
 
             execution_plan = create_execution_plan(
                 recon_pipeline,
+                instance.default_executor_defs,
                 run_config=pipeline_run.run_config,
                 step_keys_to_execute=args.step_keys_to_execute,
                 mode=pipeline_run.mode,

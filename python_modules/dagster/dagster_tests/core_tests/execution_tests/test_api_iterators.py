@@ -253,7 +253,9 @@ def test_execute_plan_iterator():
         )
         run_config = {"loggers": {"callback": {}}}
 
-        execution_plan = create_execution_plan(pipeline, run_config=run_config)
+        execution_plan = create_execution_plan(
+            pipeline, instance.default_executor_defs, run_config=run_config
+        )
         pipeline_run = instance.create_run_for_pipeline(
             pipeline_def=pipeline,
             run_config={"loggers": {"callback": {}}},

@@ -12,6 +12,7 @@ from dagster import (
     InputDefinition,
     ModeDefinition,
     OutputDefinition,
+    default_executors,
     execute_pipeline,
     pipeline,
     reexecute_pipeline,
@@ -171,12 +172,14 @@ def test_fs_io_manager_reexecution():
 
 def test_can_reexecute():
     pipeline_def = define_pipeline(fs_io_manager, {})
-    plan = create_execution_plan(pipeline_def)
+    plan = create_execution_plan(pipeline_def, default_executors)
     assert plan.artifacts_persisted
 
 
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
-    plan = create_execution_plan(pipeline_def, step_keys_to_execute=step_keys_to_execute)
+    plan = create_execution_plan(
+        pipeline_def, default_executors, step_keys_to_execute=step_keys_to_execute
+    )
     with DagsterInstance.ephemeral() as instance:
         pipeline_run = instance.create_run_for_pipeline(
             pipeline_def=pipeline_def,

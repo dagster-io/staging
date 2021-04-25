@@ -30,15 +30,19 @@ def recon_repository_from_origin(origin):
     return ReconstructableRepository(origin.code_pointer)
 
 
-def external_repo_from_def(repository_def, repository_handle):
-    return ExternalRepository(external_repository_data_from_def(repository_def), repository_handle)
+def external_repo_from_def(repository_def, repository_handle, default_executor_defs):
+    return ExternalRepository(
+        external_repository_data_from_def(repository_def, default_executor_defs), repository_handle
+    )
 
 
 def recon_repo_from_external_repo(external_repo):
     return ReconstructableRepository(external_repo.get_python_origin().code_pointer)
 
 
-def external_pipeline_from_recon_pipeline(recon_pipeline, solid_selection, repository_handle):
+def external_pipeline_from_recon_pipeline(
+    recon_pipeline, solid_selection, repository_handle, default_executor_defs
+):
     if solid_selection:
         sub_pipeline = recon_pipeline.subset_for_execution(solid_selection)
         pipeline_def = sub_pipeline.get_definition()
@@ -46,6 +50,6 @@ def external_pipeline_from_recon_pipeline(recon_pipeline, solid_selection, repos
         pipeline_def = recon_pipeline.get_definition()
 
     return ExternalPipeline(
-        external_pipeline_data_from_def(pipeline_def),
+        external_pipeline_data_from_def(pipeline_def, default_executor_defs),
         repository_handle=repository_handle,
     )

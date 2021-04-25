@@ -4,7 +4,13 @@ import sys
 import types
 
 import pytest
-from dagster import DagsterInvariantViolationError, PipelineDefinition, lambda_solid, pipeline
+from dagster import (
+    DagsterInvariantViolationError,
+    PipelineDefinition,
+    default_executors,
+    lambda_solid,
+    pipeline,
+)
 from dagster.core.definitions.reconstructable import ReconstructableRepository, reconstructable
 from dagster.core.snap import PipelineSnapshot, create_pipeline_snapshot_id
 from dagster.utils import file_relative_path
@@ -36,7 +42,9 @@ lambda_version = lambda: the_pipeline
 
 
 def pid(pipeline_def):
-    return create_pipeline_snapshot_id(PipelineSnapshot.from_pipeline_def(pipeline_def))
+    return create_pipeline_snapshot_id(
+        PipelineSnapshot.from_pipeline_def(pipeline_def, default_executors)
+    )
 
 
 def test_function():
