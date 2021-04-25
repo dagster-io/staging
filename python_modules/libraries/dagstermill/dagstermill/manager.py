@@ -149,7 +149,7 @@ class Manager:
         self.pipeline = pipeline
 
         environment_config = EnvironmentConfig.build(
-            pipeline_def, run_config, mode=pipeline_run.mode
+            pipeline_def, instance.default_executor_defs, run_config, mode=pipeline_run.mode
         )
 
         execution_plan = ExecutionPlan.build(
@@ -245,7 +245,11 @@ class Manager:
         self.solid_def = solid_def
         self.pipeline = pipeline_def
 
-        environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode_def.name)
+        instance = DagsterInstance.ephemeral()
+
+        environment_config = EnvironmentConfig.build(
+            pipeline_def, instance.default_executor_defs, run_config, mode=mode_def.name
+        )
 
         pipeline = InMemoryPipeline(pipeline_def)
         execution_plan = ExecutionPlan.build(pipeline, environment_config)
@@ -255,7 +259,7 @@ class Manager:
             pipeline,
             run_config,
             pipeline_run,
-            DagsterInstance.ephemeral(),
+            instance,
             scoped_resources_builder_cm=self._setup_resources,
         ) as pipeline_context:
 

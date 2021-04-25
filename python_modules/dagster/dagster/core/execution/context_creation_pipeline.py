@@ -58,16 +58,15 @@ def construct_intermediate_storage_data(storage_init_context):
 
 def executor_def_from_config(mode_definition, environment_config):
     selected_executor = environment_config.execution.execution_engine_name
+    executor_defs = mode_definition.get_executor_defs(environment_config.default_executor_defs)
     if selected_executor is None:
-        if len(mode_definition.executor_defs) == 1:
-            return mode_definition.executor_defs[0]
+        if len(executor_defs) == 1:
+            return executor_defs[0]
 
-        check.failed(
-            f"No executor selected but there are {len(mode_definition.executor_defs)} options."
-        )
+        check.failed(f"No executor selected but there are {len(executor_defs)} options.")
 
     else:
-        for executor_def in mode_definition.executor_defs:
+        for executor_def in executor_defs:
             if executor_def.name == selected_executor:
                 return executor_def
 
@@ -103,7 +102,9 @@ def create_context_creation_data(
     instance,
 ):
     pipeline_def = pipeline.get_definition()
-    environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=pipeline_run.mode)
+    environment_config = EnvironmentConfig.build(
+        pipeline_def, instance.default_executor_defs, run_config, mode=pipeline_run.mode
+    )
 
     mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
     intermediate_storage_def = environment_config.intermediate_storage_def_for_mode(mode_def)

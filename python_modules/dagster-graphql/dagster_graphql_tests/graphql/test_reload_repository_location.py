@@ -1,7 +1,7 @@
 import sys
 from unittest import mock
 
-from dagster import file_relative_path, repository
+from dagster import default_executors, file_relative_path, repository
 from dagster.cli.workspace.load import location_origins_from_yaml_paths
 from dagster.core.code_pointer import CodePointer
 from dagster.core.host_representation import (
@@ -167,7 +167,7 @@ class TestReloadRepositoriesOutOfProcess(
                 def new_repo():
                     return []
 
-                new_repo_data = external_repository_data_from_def(new_repo)
+                new_repo_data = external_repository_data_from_def(new_repo, default_executors)
 
                 external_repository_mock.return_value = {"new_repo": new_repo_data}
 

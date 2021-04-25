@@ -4,6 +4,7 @@ from airflow.models.dag import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.utils.dates import days_ago
 from airflow.utils.helpers import chain
+from dagster import default_executors
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import serialize_pp
 from dagster_airflow.dagster_pipeline_factory import make_dagster_pipeline_from_airflow_dag
@@ -28,7 +29,8 @@ def test_one_task_dag(snapshot):
     snapshot.assert_match(
         serialize_pp(
             PipelineSnapshot.from_pipeline_def(
-                make_dagster_pipeline_from_airflow_dag(dag=dag)
+                make_dagster_pipeline_from_airflow_dag(dag=dag),
+                default_executors,
             ).dep_structure_snapshot
         )
     )
@@ -52,7 +54,8 @@ def test_two_task_dag_no_dep(snapshot):
     snapshot.assert_match(
         serialize_pp(
             PipelineSnapshot.from_pipeline_def(
-                make_dagster_pipeline_from_airflow_dag(dag=dag)
+                make_dagster_pipeline_from_airflow_dag(dag=dag),
+                default_executors,
             ).dep_structure_snapshot
         )
     )
@@ -77,7 +80,8 @@ def test_two_task_dag_with_dep(snapshot):
     snapshot.assert_match(
         serialize_pp(
             PipelineSnapshot.from_pipeline_def(
-                make_dagster_pipeline_from_airflow_dag(dag=dag)
+                make_dagster_pipeline_from_airflow_dag(dag=dag),
+                default_executors,
             ).dep_structure_snapshot
         )
     )
@@ -113,7 +117,8 @@ def test_diamond_task_dag(snapshot):
     snapshot.assert_match(
         serialize_pp(
             PipelineSnapshot.from_pipeline_def(
-                make_dagster_pipeline_from_airflow_dag(dag=dag)
+                make_dagster_pipeline_from_airflow_dag(dag=dag),
+                default_executors,
             ).dep_structure_snapshot
         )
     )
@@ -149,7 +154,8 @@ def test_multi_root_dag(snapshot):
     snapshot.assert_match(
         serialize_pp(
             PipelineSnapshot.from_pipeline_def(
-                make_dagster_pipeline_from_airflow_dag(dag=dag)
+                make_dagster_pipeline_from_airflow_dag(dag=dag),
+                default_executors,
             ).dep_structure_snapshot
         )
     )
@@ -184,7 +190,8 @@ def test_multi_leaf_dag(snapshot):
     snapshot.assert_match(
         serialize_pp(
             PipelineSnapshot.from_pipeline_def(
-                make_dagster_pipeline_from_airflow_dag(dag=dag)
+                make_dagster_pipeline_from_airflow_dag(dag=dag),
+                default_executors,
             ).dep_structure_snapshot
         )
     )
@@ -434,7 +441,8 @@ def test_complex_dag(snapshot):
     snapshot.assert_match(
         serialize_pp(
             PipelineSnapshot.from_pipeline_def(
-                make_dagster_pipeline_from_airflow_dag(dag=dag)
+                make_dagster_pipeline_from_airflow_dag(dag=dag),
+                default_executors,
             ).dep_structure_snapshot
         )
     )

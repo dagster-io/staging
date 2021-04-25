@@ -1,4 +1,11 @@
-from dagster import InputDefinition, OutputDefinition, composite_solid, pipeline, solid
+from dagster import (
+    InputDefinition,
+    OutputDefinition,
+    composite_solid,
+    default_executors,
+    pipeline,
+    solid,
+)
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.snap import create_pipeline_snapshot_id, snapshot_from_execution_plan
 from dagster.serdes import serialize_pp
@@ -13,12 +20,13 @@ def test_create_noop_execution_plan(snapshot):
     def noop_pipeline():
         noop_solid()
 
-    execution_plan = create_execution_plan(noop_pipeline)
+    execution_plan = create_execution_plan(noop_pipeline, default_executors)
 
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot())
+                execution_plan,
+                create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot(default_executors)),
             )
         )
     )
@@ -37,12 +45,13 @@ def test_create_execution_plan_with_dep(snapshot):
     def noop_pipeline():
         solid_two(solid_one())
 
-    execution_plan = create_execution_plan(noop_pipeline)
+    execution_plan = create_execution_plan(noop_pipeline, default_executors)
 
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot())
+                execution_plan,
+                create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot(default_executors)),
             )
         )
     )
@@ -76,12 +85,13 @@ def test_create_with_composite(snapshot):
     def do_comps():
         add(num_one=comp_1(), num_two=comp_2())
 
-    execution_plan = create_execution_plan(do_comps)
+    execution_plan = create_execution_plan(do_comps, default_executors)
 
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(do_comps.get_pipeline_snapshot())
+                execution_plan,
+                create_pipeline_snapshot_id(do_comps.get_pipeline_snapshot(default_executors)),
             )
         )
     )
@@ -96,12 +106,13 @@ def test_create_noop_execution_plan_with_tags(snapshot):
     def noop_pipeline():
         noop_solid()
 
-    execution_plan = create_execution_plan(noop_pipeline)
+    execution_plan = create_execution_plan(noop_pipeline, default_executors)
 
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot())
+                execution_plan,
+                create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot(default_executors)),
             )
         )
     )
