@@ -13,6 +13,7 @@ from threading import Event as ThreadingEventType
 import grpc
 from dagster import check, seven
 from dagster.core.code_pointer import CodePointer
+from dagster.core.definitions.executor import default_executors
 from dagster.core.definitions.reconstructable import (
     ReconstructableRepository,
     repository_def_from_target_def,
@@ -180,6 +181,7 @@ class DagsterApiServer(DagsterApiServicer):
         heartbeat_timeout=30,
         lazy_load_user_code=False,
         fixed_server_id=None,
+        default_executor_defs=None,
     ):
         super(DagsterApiServer, self).__init__()
 
@@ -197,6 +199,11 @@ class DagsterApiServer(DagsterApiServicer):
         # Each server is initialized with a unique UUID. This UUID is used by clients to track when
         # servers are replaced and is used for cache invalidation and reloading.
         self._server_id = check.opt_str_param(fixed_server_id, "fixed_server_id", str(uuid.uuid4()))
+
+        self._default_executor_defs = check.opt_list_param(
+            default_executor_defs if default_executor_defs else default_executors,
+            "default_executor_defs",
+        )
 
         # Client tells the server to shutdown by calling ShutdownServer (or by failing to send a
         # hearbeat, at which point this event is set. The cleanup thread will then set the server
@@ -343,7 +350,9 @@ class DagsterApiServer(DagsterApiServicer):
         check.inst_param(execution_plan_args, "execution_plan_args", ExecutionPlanSnapshotArgs)
         recon_pipeline = self._recon_pipeline_from_origin(execution_plan_args.pipeline_origin)
         execution_plan_snapshot_or_error = get_external_execution_plan_snapshot(
-            recon_pipeline, execution_plan_args
+            recon_pipeline,
+            execution_plan_args,
+            self._default_executor_defs,
         )
         return api_pb2.ExecutionPlanSnapshotReply(
             serialized_execution_plan_snapshot=serialize_dagster_namedtuple(
@@ -453,6 +462,7 @@ class DagsterApiServer(DagsterApiServicer):
                 get_external_pipeline_subset_result(
                     self._recon_pipeline_from_origin(pipeline_subset_snapshot_args.pipeline_origin),
                     pipeline_subset_snapshot_args.solid_selection,
+                    self._default_executor_defs,
                 )
             )
         )
@@ -465,7 +475,9 @@ class DagsterApiServer(DagsterApiServicer):
         check.inst_param(repository_origin, "repository_origin", ExternalRepositoryOrigin)
         recon_repo = self._recon_repository_from_origin(repository_origin)
         return serialize_dagster_namedtuple(
-            external_repository_data_from_def(recon_repo.get_definition())
+            external_repository_data_from_def(
+                recon_repo.get_definition(), self._default_executor_defs
+            )
         )
 
     def ExternalRepository(self, request, _context):

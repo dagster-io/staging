@@ -3,6 +3,7 @@ import warnings
 from collections import namedtuple
 
 from dagster import check
+from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.run_config_schema import create_environment_type
 from dagster.core.errors import DagsterInvalidConfigError
@@ -78,12 +79,13 @@ class ResourceConfig(namedtuple("_ResourceConfig", "config")):
 class EnvironmentConfig(
     namedtuple(
         "_EnvironmentConfig",
-        "solids execution intermediate_storage resources loggers original_config_dict mode",
+        "solids default_executor_defs execution intermediate_storage resources loggers original_config_dict mode",
     )
 ):
     def __new__(
         cls,
         solids=None,
+        default_executor_defs=None,
         execution=None,
         intermediate_storage=None,
         resources=None,
@@ -91,6 +93,9 @@ class EnvironmentConfig(
         original_config_dict=None,
         mode=None,
     ):
+        check.opt_list_param(
+            default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition
+        )
         check.opt_inst_param(execution, "execution", ExecutionConfig)
         check.opt_inst_param(
             intermediate_storage, "intermediate_storage", IntermediateStorageConfig
@@ -105,6 +110,7 @@ class EnvironmentConfig(
         return super(EnvironmentConfig, cls).__new__(
             cls,
             solids=check.opt_dict_param(solids, "solids", key_type=str, value_type=SolidConfig),
+            default_executor_defs=default_executor_defs,
             execution=execution,
             intermediate_storage=intermediate_storage,
             resources=resources,
@@ -114,23 +120,32 @@ class EnvironmentConfig(
         )
 
     @staticmethod
-    def build(pipeline_def, run_config=None, mode=None):
+    def build(
+        pipeline_def,
+        default_executor_defs,
+        run_config=None,
+        mode=None,
+    ):
         """This method validates a given run config against the pipeline config schema. If
         successful, we instantiate an EnvironmentConfig object.
 
         In case the run_config is invalid, this method raises a DagsterInvalidConfigError
         """
         from dagster.config.validate import process_config
-        from dagster.core.definitions.executor import ExecutorDefinition
         from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
         from .composite_descent import composite_descent
 
         check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+        default_executor_defs = check.list_param(
+            default_executor_defs,
+            "default_executor_defs",
+            of_type=ExecutorDefinition,
+        )
         run_config = check.opt_dict_param(run_config, "run_config")
         check.opt_str_param(mode, "mode")
 
         mode = mode or pipeline_def.get_default_mode_name()
-        environment_type = create_environment_type(pipeline_def, mode)
+        environment_type = create_environment_type(pipeline_def, default_executor_defs, mode)
 
         config_evr = process_config(
             environment_type, run_config_storage_field_backcompat(run_config)
@@ -155,7 +170,11 @@ class EnvironmentConfig(
         )
 
         config_mapped_execution_configs = config_map_objects(
-            config_value, mode_def.executor_defs, "execution", ExecutorDefinition, "executor"
+            config_value,
+            mode_def.get_executor_defs(default_executor_defs),
+            "execution",
+            ExecutorDefinition,
+            "executor",
         )
 
         resource_defs = pipeline_def.get_mode_definition(mode).resource_defs
@@ -169,6 +188,7 @@ class EnvironmentConfig(
 
         return EnvironmentConfig(
             solids=solid_config_dict,
+            default_executor_defs=default_executor_defs,
             execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
             intermediate_storage=IntermediateStorageConfig.from_dict(
                 config_mapped_intermediate_storage_configs

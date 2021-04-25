@@ -16,6 +16,7 @@ from dagster import (
     OutputDefinition,
     PipelineDefinition,
     SolidInvocation,
+    default_executors,
     execute_pipeline,
     lambda_solid,
     solid,
@@ -302,7 +303,7 @@ def test_execution_plan():
         solid_defs=[emit_nothing, consume_nothing],
         dependencies={"consume_nothing": {"ready": DependencyDefinition("emit_nothing")}},
     )
-    plan = create_execution_plan(pipe)
+    plan = create_execution_plan(pipe, default_executors)
 
     levels = plan.get_steps_to_execute_by_level()
 

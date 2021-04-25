@@ -7,6 +7,7 @@ from dagster import (
     Int,
     OutputDefinition,
     PipelineDefinition,
+    default_executors,
     lambda_solid,
     reconstructable,
 )
@@ -59,7 +60,9 @@ def test_using_file_system_for_subplan():
 
     instance = DagsterInstance.ephemeral()
 
-    environment_config = EnvironmentConfig.build(pipeline, run_config=run_config)
+    environment_config = EnvironmentConfig.build(
+        pipeline, instance.default_executor_defs, run_config=run_config
+    )
     execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline), environment_config)
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline, execution_plan=execution_plan
@@ -104,6 +107,7 @@ def test_using_intermediates_file_system_is_persistent():
     run_config = {"intermediate_storage": {"filesystem": {}}}
     execution_plan = create_execution_plan(
         pipeline,
+        default_executors,
         run_config=run_config,
     )
 
@@ -118,6 +122,7 @@ def test_using_intermediates_file_system_for_subplan():
     instance = DagsterInstance.ephemeral()
     environment_config = EnvironmentConfig.build(
         pipeline,
+        instance.default_executor_defs,
         run_config=run_config,
     )
 
@@ -170,6 +175,7 @@ def test_using_intermediates_to_override():
     instance = DagsterInstance.ephemeral()
     environment_config = EnvironmentConfig.build(
         pipeline,
+        instance.default_executor_defs,
         run_config=run_config,
     )
     execution_plan = ExecutionPlan.build(
@@ -206,6 +212,7 @@ def test_using_file_system_for_subplan_multiprocessing():
 
         environment_config = EnvironmentConfig.build(
             pipeline.get_definition(),
+            instance.default_executor_defs,
             run_config=run_config,
         )
         execution_plan = ExecutionPlan.build(
@@ -269,6 +276,7 @@ def test_using_intermediate_file_system_for_subplan_multiprocessing():
 
         environment_config = EnvironmentConfig.build(
             pipeline.get_definition(),
+            instance.default_executor_defs,
             run_config=run_config,
         )
         execution_plan = ExecutionPlan.build(
@@ -329,6 +337,7 @@ def test_execute_step_wrong_step_key():
 
     environment_config = EnvironmentConfig.build(
         pipeline,
+        instance.default_executor_defs,
     )
     execution_plan = ExecutionPlan.build(
         InMemoryPipeline(pipeline),
@@ -375,6 +384,7 @@ def test_using_file_system_for_subplan_missing_input():
     instance = DagsterInstance.ephemeral()
     environment_config = EnvironmentConfig.build(
         pipeline,
+        instance.default_executor_defs,
         run_config=run_config,
     )
     execution_plan = ExecutionPlan.build(
@@ -407,6 +417,7 @@ def test_using_file_system_for_subplan_invalid_step():
 
     environment_config = EnvironmentConfig.build(
         pipeline,
+        instance.default_executor_defs,
         run_config=run_config,
     )
     execution_plan = ExecutionPlan.build(

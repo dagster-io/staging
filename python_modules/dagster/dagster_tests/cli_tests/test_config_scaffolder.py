@@ -6,6 +6,7 @@ from dagster import (
     SolidDefinition,
     String,
     check,
+    default_executors,
 )
 from dagster.cli.config_scaffolder import scaffold_pipeline_config, scaffold_type
 from dagster.config import config_type
@@ -37,7 +38,7 @@ def test_basic_solids_config(snapshot):
         ],
     )
 
-    env_config_type = create_environment_type(pipeline_def)
+    env_config_type = create_environment_type(pipeline_def, default_executors)
 
     assert env_config_type.fields["solids"].is_required
     solids_config_type = env_config_type.fields["solids"].config_type
@@ -59,7 +60,11 @@ def test_basic_solids_config(snapshot):
 
     assert set(console_logger_config_config_type.fields.keys()) == set(["log_level", "name"])
 
-    snapshot.assert_match(scaffold_pipeline_config(pipeline_def, skip_non_required=False))
+    snapshot.assert_match(
+        scaffold_pipeline_config(
+            pipeline_def, default_executor_defs=default_executors, skip_non_required=False
+        )
+    )
 
 
 def dummy_resource(config_field):
@@ -82,14 +87,32 @@ def test_two_modes(snapshot):
         ],
     )
 
-    snapshot.assert_match(scaffold_pipeline_config(pipeline_def, mode="mode_one"))
-
     snapshot.assert_match(
-        scaffold_pipeline_config(pipeline_def, mode="mode_one", skip_non_required=False)
+        scaffold_pipeline_config(
+            pipeline_def, default_executor_defs=default_executors, mode="mode_one"
+        )
     )
 
-    snapshot.assert_match(scaffold_pipeline_config(pipeline_def, mode="mode_two"))
+    snapshot.assert_match(
+        scaffold_pipeline_config(
+            pipeline_def,
+            default_executor_defs=default_executors,
+            mode="mode_one",
+            skip_non_required=False,
+        )
+    )
 
     snapshot.assert_match(
-        scaffold_pipeline_config(pipeline_def, mode="mode_two", skip_non_required=False)
+        scaffold_pipeline_config(
+            pipeline_def, default_executor_defs=default_executors, mode="mode_two"
+        )
+    )
+
+    snapshot.assert_match(
+        scaffold_pipeline_config(
+            pipeline_def,
+            default_executor_defs=default_executors,
+            mode="mode_two",
+            skip_non_required=False,
+        )
     )

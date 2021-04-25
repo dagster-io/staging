@@ -54,6 +54,7 @@ class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
             start_termination_thread(self.term_event)
             execution_plan = create_execution_plan(
                 pipeline=pipeline,
+                default_executor_defs=instance.default_executor_defs,
                 run_config=self.run_config,
                 mode=self.pipeline_run.mode,
                 step_keys_to_execute=[self.step_key],

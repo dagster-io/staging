@@ -6,6 +6,7 @@ import sys
 import pendulum
 from dagster import check
 from dagster.core.definitions import ScheduleExecutionContext
+from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.core.definitions.reconstructable import (
     ReconstructablePipeline,
     ReconstructableRepository,
@@ -186,8 +187,9 @@ def start_run_in_subprocess(
         )
 
 
-def get_external_pipeline_subset_result(recon_pipeline, solid_selection):
+def get_external_pipeline_subset_result(recon_pipeline, solid_selection, default_executor_defs):
     check.inst_param(recon_pipeline, "recon_pipeline", ReconstructablePipeline)
+    check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
 
     if solid_selection:
         try:
@@ -200,7 +202,7 @@ def get_external_pipeline_subset_result(recon_pipeline, solid_selection):
     else:
         definition = recon_pipeline.get_definition()
 
-    external_pipeline_data = external_pipeline_data_from_def(definition)
+    external_pipeline_data = external_pipeline_data_from_def(definition, default_executor_defs)
     return ExternalPipelineSubsetResult(success=True, external_pipeline_data=external_pipeline_data)
 
 
@@ -329,9 +331,10 @@ def get_partition_tags(recon_repo, partition_set_name, partition_name):
         )
 
 
-def get_external_execution_plan_snapshot(recon_pipeline, args):
+def get_external_execution_plan_snapshot(recon_pipeline, args, default_executor_defs):
     check.inst_param(recon_pipeline, "recon_pipeline", ReconstructablePipeline)
     check.inst_param(args, "args", ExecutionPlanSnapshotArgs)
+    check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
 
     try:
         pipeline = (
@@ -343,6 +346,7 @@ def get_external_execution_plan_snapshot(recon_pipeline, args):
         return snapshot_from_execution_plan(
             create_execution_plan(
                 pipeline=pipeline,
+                default_executor_defs=default_executor_defs,
                 run_config=args.run_config,
                 mode=args.mode,
                 step_keys_to_execute=args.step_keys_to_execute,
