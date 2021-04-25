@@ -11,6 +11,7 @@ from dagster import (
     String,
     composite_solid,
     dagster_type_loader,
+    default_executors,
     io_manager,
     pipeline,
     resource,
@@ -173,8 +174,8 @@ def versioned_pipeline_expected_step2_output_version():
 
 def test_resolve_step_versions_no_external_dependencies():
     versioned_pipeline = versioned_pipeline_factory()
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    environment_config = EnvironmentConfig.build(versioned_pipeline)
+    speculative_execution_plan = create_execution_plan(versioned_pipeline, default_executors)
+    environment_config = EnvironmentConfig.build(versioned_pipeline, default_executors)
 
     versions = resolve_step_versions(
         versioned_pipeline, speculative_execution_plan, environment_config
@@ -188,9 +189,11 @@ def test_resolve_step_versions_no_external_dependencies():
 def test_resolve_step_output_versions_no_external_dependencies():
     versioned_pipeline = versioned_pipeline_factory()
     speculative_execution_plan = create_execution_plan(
-        versioned_pipeline, run_config={}, mode="main"
+        versioned_pipeline, default_executors, run_config={}, mode="main"
     )
-    environment_config = EnvironmentConfig.build(versioned_pipeline, run_config={}, mode="main")
+    environment_config = EnvironmentConfig.build(
+        versioned_pipeline, default_executors, run_config={}, mode="main"
+    )
 
     versions = resolve_step_output_versions(
         versioned_pipeline, speculative_execution_plan, environment_config
@@ -223,8 +226,8 @@ def no_version_pipeline():
 
 def test_resolve_memoized_execution_plan_no_stored_results():
     versioned_pipeline = versioned_pipeline_factory(VersionedInMemoryIOManager())
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    environment_config = EnvironmentConfig.build(versioned_pipeline)
+    speculative_execution_plan = create_execution_plan(versioned_pipeline, default_executors)
+    environment_config = EnvironmentConfig.build(versioned_pipeline, default_executors)
 
     with DagsterInstance.ephemeral() as dagster_instance:
         memoized_execution_plan = resolve_memoized_execution_plan(
@@ -241,9 +244,9 @@ def test_resolve_memoized_execution_plan_yes_stored_results():
     manager = VersionedInMemoryIOManager()
     versioned_pipeline = versioned_pipeline_factory(manager)
 
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
+    speculative_execution_plan = create_execution_plan(versioned_pipeline, default_executors)
 
-    environment_config = EnvironmentConfig.build(versioned_pipeline)
+    environment_config = EnvironmentConfig.build(versioned_pipeline, default_executors)
 
     step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
     step_output_version = resolve_step_output_versions(
@@ -277,9 +280,11 @@ def test_resolve_memoized_execution_plan_partial_versioning():
     manager = VersionedInMemoryIOManager()
 
     partially_versioned_pipeline = partially_versioned_pipeline_factory(manager)
-    speculative_execution_plan = create_execution_plan(partially_versioned_pipeline)
+    speculative_execution_plan = create_execution_plan(
+        partially_versioned_pipeline, default_executors
+    )
 
-    environment_config = EnvironmentConfig.build(partially_versioned_pipeline)
+    environment_config = EnvironmentConfig.build(partially_versioned_pipeline, default_executors)
 
     step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
 
@@ -344,11 +349,12 @@ def run_test_with_builtin_type(type_to_test, loader_version, type_value):
     }
     speculative_execution_plan = create_execution_plan(
         versioned_pipeline_ext_input_builtin_type,
+        default_executors,
         run_config=run_config,
     )
 
     environment_config = EnvironmentConfig.build(
-        versioned_pipeline_ext_input_builtin_type, run_config=run_config
+        versioned_pipeline_ext_input_builtin_type, default_executors, run_config=run_config
     )
 
     versions = resolve_step_versions(
@@ -396,8 +402,12 @@ def versioned_pipeline_default_value():
 
 
 def test_resolve_step_versions_default_value():
-    speculative_execution_plan = create_execution_plan(versioned_pipeline_default_value)
-    environment_config = EnvironmentConfig.build(versioned_pipeline_default_value)
+    speculative_execution_plan = create_execution_plan(
+        versioned_pipeline_default_value, default_executors
+    )
+    environment_config = EnvironmentConfig.build(
+        versioned_pipeline_default_value, default_executors
+    )
 
     versions = resolve_step_versions(
         versioned_pipeline_default_value, speculative_execution_plan, environment_config
@@ -489,7 +499,9 @@ def test_resource_versions():
         }
     }
 
-    environment_config = EnvironmentConfig.build(modes_pipeline, run_config, mode="fakemode")
+    environment_config = EnvironmentConfig.build(
+        modes_pipeline, default_executors, run_config, mode="fakemode"
+    )
 
     resource_versions_by_key = resolve_resource_versions(environment_config, modes_pipeline)
 
@@ -529,10 +541,10 @@ def versioned_modes_pipeline():
 def test_step_versions_with_resources():
     run_config = {"resources": {"test_resource": {"config": {"input_str": "apple"}}}}
     speculative_execution_plan = create_execution_plan(
-        versioned_modes_pipeline, run_config=run_config, mode="fakemode"
+        versioned_modes_pipeline, default_executors, run_config=run_config, mode="fakemode"
     )
     environment_config = EnvironmentConfig.build(
-        versioned_modes_pipeline, run_config=run_config, mode="fakemode"
+        versioned_modes_pipeline, default_executors, run_config=run_config, mode="fakemode"
     )
 
     versions = resolve_step_versions(
@@ -543,7 +555,7 @@ def test_step_versions_with_resources():
     solid_config_version = resolve_config_version(None)
 
     environment_config = EnvironmentConfig.build(
-        versioned_modes_pipeline, run_config, mode="fakemode"
+        versioned_modes_pipeline, default_executors, run_config, mode="fakemode"
     )
 
     resource_versions_by_key = resolve_resource_versions(
@@ -584,9 +596,13 @@ def test_step_versions_composite_solid():
         "loggers": {"console": {"config": {"log_level": "ERROR"}}},
     }
 
-    speculative_execution_plan = create_execution_plan(wrap_pipeline, run_config=run_config)
+    speculative_execution_plan = create_execution_plan(
+        wrap_pipeline, default_executors, run_config=run_config
+    )
 
-    environment_config = EnvironmentConfig.build(wrap_pipeline, run_config=run_config)
+    environment_config = EnvironmentConfig.build(
+        wrap_pipeline, default_executors, run_config=run_config
+    )
 
     versions = resolve_step_versions(wrap_pipeline, speculative_execution_plan, environment_config)
 

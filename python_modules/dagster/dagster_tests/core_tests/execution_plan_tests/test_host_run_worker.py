@@ -78,6 +78,7 @@ def test_host_run_worker():
         }
         execution_plan = create_execution_plan(
             pipeline_with_mode,
+            instance.default_executor_defs,
             run_config,
         )
 
@@ -128,6 +129,7 @@ def test_custom_executor_fn():
         }
         execution_plan = create_execution_plan(
             pipeline_with_mode,
+            instance.default_executor_defs,
             run_config,
         )
 

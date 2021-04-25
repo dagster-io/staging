@@ -4,6 +4,7 @@ from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple, Union
 
 from dagster import check
 from dagster.core.definitions import IPipeline, PipelineDefinition
+from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.core.definitions.pipeline import PipelineSubsetDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
@@ -189,7 +190,10 @@ def execute_run(
 
     if is_memoized_run(pipeline_run.tags):
         environment_config = EnvironmentConfig.build(
-            pipeline.get_definition(), pipeline_run.run_config, pipeline_run.mode
+            pipeline.get_definition(),
+            instance.default_executor_defs,
+            pipeline_run.run_config,
+            pipeline_run.mode,
         )
 
         execution_plan = resolve_memoized_execution_plan(
@@ -711,6 +715,7 @@ def _get_execution_plan_from_run(
             )
     return create_execution_plan(
         pipeline,
+        instance.default_executor_defs,
         run_config=pipeline_run.run_config,
         mode=pipeline_run.mode,
         step_keys_to_execute=pipeline_run.step_keys_to_execute,
@@ -719,6 +724,7 @@ def _get_execution_plan_from_run(
 
 def create_execution_plan(
     pipeline: Union[IPipeline, PipelineDefinition],
+    default_executor_defs: List[ExecutorDefinition],
     run_config: Optional[dict] = None,
     mode: Optional[str] = None,
     step_keys_to_execute: Optional[List[str]] = None,
@@ -727,11 +733,14 @@ def create_execution_plan(
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+    check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
     run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
     mode = check.opt_str_param(mode, "mode", default=pipeline_def.get_default_mode_name())
     check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
 
-    environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode)
+    environment_config = EnvironmentConfig.build(
+        pipeline_def, default_executor_defs, run_config, mode=mode
+    )
 
     return ExecutionPlan.build(
         pipeline,
@@ -973,6 +982,7 @@ def _resolve_reexecute_step_selection(
     parent_logs = instance.all_logs(parent_pipeline_run.run_id)
     parent_plan = create_execution_plan(
         pipeline,
+        instance.default_executor_defs,
         parent_pipeline_run.run_config,
         mode,
         known_state=KnownExecutionState.derive_from_logs(parent_logs),
@@ -980,6 +990,7 @@ def _resolve_reexecute_step_selection(
     step_keys_to_execute = parse_step_selection(parent_plan.get_all_step_deps(), step_selection)
     execution_plan = create_execution_plan(
         pipeline,
+        instance.default_executor_defs,
         run_config,
         mode,
         known_state=KnownExecutionState.for_reexecution(parent_logs, step_keys_to_execute),

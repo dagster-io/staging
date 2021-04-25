@@ -1,13 +1,16 @@
 from dagster import PipelineDefinition, check
 from dagster.config.config_type import ConfigType, ConfigTypeKind
-from dagster.core.definitions import create_environment_type
+from dagster.core.definitions import ExecutorDefinition, create_environment_type
 
 
-def scaffold_pipeline_config(pipeline_def, skip_non_required=True, mode=None):
+def scaffold_pipeline_config(
+    pipeline_def, default_executor_defs, skip_non_required=True, mode=None
+):
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+    check.list_param(default_executor_defs, "default_executor_defs", of_type=ExecutorDefinition)
     check.bool_param(skip_non_required, "skip_non_required")
 
-    env_config_type = create_environment_type(pipeline_def, mode=mode)
+    env_config_type = create_environment_type(pipeline_def, default_executor_defs, mode=mode)
 
     env_dict = {}
 

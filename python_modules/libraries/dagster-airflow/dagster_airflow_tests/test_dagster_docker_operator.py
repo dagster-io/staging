@@ -2,7 +2,7 @@ import os
 
 import pytest
 from airflow.exceptions import AirflowException
-from dagster import pipeline, repository, solid
+from dagster import default_executors, pipeline, repository, solid
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.snap import snapshot_from_execution_plan
@@ -28,10 +28,11 @@ def my_repository():
     return [nonce_pipeline]
 
 
-nonce_pipeline_snapshot = nonce_pipeline.get_pipeline_snapshot()
+nonce_pipeline_snapshot = nonce_pipeline.get_pipeline_snapshot(default_executors)
 
 nonce_execution_plan_snapshot = snapshot_from_execution_plan(
-    create_execution_plan(nonce_pipeline), nonce_pipeline.get_pipeline_snapshot_id()
+    create_execution_plan(nonce_pipeline, default_executors),
+    nonce_pipeline.get_pipeline_snapshot_id(default_executors),
 )
 
 recon_repo_for_tests = ReconstructableRepository.for_file(

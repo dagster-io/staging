@@ -256,7 +256,9 @@ def execute_list_versions_command(instance, kwargs):
     pipeline = recon_pipeline_from_origin(pipeline_origin)
     run_config = get_run_config_from_file_list(config)
 
-    environment_config = EnvironmentConfig.build(pipeline.get_definition(), run_config, mode=mode)
+    environment_config = EnvironmentConfig.build(
+        pipeline.get_definition(), instance.default_executor_defs, run_config, mode=mode
+    )
     execution_plan = ExecutionPlan.build(pipeline, environment_config)
 
     step_output_versions = resolve_step_output_versions(
@@ -661,9 +663,12 @@ def do_scaffold_command(pipeline_def, printer, skip_non_required):
     check.callable_param(printer, "printer")
     check.bool_param(skip_non_required, "skip_non_required")
 
-    config_dict = scaffold_pipeline_config(pipeline_def, skip_non_required=skip_non_required)
-    yaml_string = yaml.dump(config_dict, default_flow_style=False)
-    printer(yaml_string)
+    with DagsterInstance.get() as instance:
+        config_dict = scaffold_pipeline_config(
+            pipeline_def, instance.default_executor_defs, skip_non_required=skip_non_required
+        )
+        yaml_string = yaml.dump(config_dict, default_flow_style=False)
+        printer(yaml_string)
 
 
 def gen_partition_names_from_args(partition_names, kwargs):
