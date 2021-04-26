@@ -7,8 +7,8 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.instance.ref import InstanceRef
 from dagster.utils import ensure_gen
 
-from .job import JobType, RunRequest, SkipReason
 from .mode import DEFAULT_MODE_NAME
+from .run_request import JobType, RunRequest, SkipReason
 from .utils import check_valid_name
 
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
