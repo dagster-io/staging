@@ -262,18 +262,25 @@ class Resources:
     provides a workaround."""
 
 
-class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_instance_dict")):
+class ScopedResourcesBuilder(
+    namedtuple("ScopedResourcesBuilder", "resource_instance_dict is_context_manager")
+):
     """There are concepts in the codebase (e.g. solids, system storage) that receive
     only the resources that they have specified in required_resource_keys.
     ScopedResourcesBuilder is responsible for dynamically building a class with
     only those required resources and returning an instance of that class."""
 
-    def __new__(cls, resource_instance_dict: Optional[Dict[str, Any]] = None):
+    def __new__(
+        cls,
+        resource_instance_dict: Optional[Dict[str, Any]],
+        is_context_manager: Optional[bool] = False,
+    ):
         return super(ScopedResourcesBuilder, cls).__new__(
             cls,
             resource_instance_dict=check.opt_dict_param(
                 resource_instance_dict, "resource_instance_dict", key_type=str
             ),
+            is_context_manager=check.bool_param(is_context_manager, "is_context_manager"),
         )
 
     def build(self, required_resource_keys: Optional[AbstractSet[str]]) -> Resources:
