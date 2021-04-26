@@ -82,5 +82,5 @@ def test_resource_init_values():
         assert resources.bar == "bar"
 
 
-def test_resource_init_io_manager():
-    build_resources({"io_manager": InMemoryIOManager})
+def test_build_resources_as_function():
+    assert build_resources({"foo": "bar"}).foo == "bar"
