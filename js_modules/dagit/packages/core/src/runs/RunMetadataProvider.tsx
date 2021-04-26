@@ -71,7 +71,11 @@ export const EMPTY_RUN_METADATA: IRunMetadataDict = {
   steps: {},
 };
 
-function extractMetadataFromLogs(logs: RunMetadataProviderMessageFragment[]): IRunMetadataDict {
+export function extractMetadataFromLogs(
+  logs: RunMetadataProviderMessageFragment[],
+): IRunMetadataDict {
+  console.log(logs);
+
   const metadata: IRunMetadataDict = {
     firstLogAt: 0,
     mostRecentLogAt: 0,
