@@ -174,6 +174,7 @@ class RepositoryLocation(AbstractContextManager):
         name: str,
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
+        cursor: Optional[str],
     ) -> Union["ExternalSensorExecutionData", "ExternalSensorExecutionErrorData"]:
         pass
 
@@ -397,9 +398,10 @@ class InProcessRepositoryLocation(RepositoryLocation):
         name: str,
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
+        cursor: Optional[str],
     ) -> Union["ExternalSensorExecutionData", "ExternalSensorExecutionErrorData"]:
         return get_external_sensor_execution(
-            self._recon_repo, instance.get_ref(), name, last_completion_time, last_run_key
+            self._recon_repo, instance.get_ref(), name, last_completion_time, last_run_key, cursor
         )
 
     def get_external_partition_set_execution_param_data(
@@ -692,6 +694,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         name: str,
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
+        cursor: Optional[str],
     ) -> "ExternalSensorExecutionData":
         return sync_get_external_sensor_execution_data_grpc(
             self.client,
@@ -700,6 +703,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             name,
             last_completion_time,
             last_run_key,
+            cursor,
         )
 
     def get_external_partition_set_execution_param_data(

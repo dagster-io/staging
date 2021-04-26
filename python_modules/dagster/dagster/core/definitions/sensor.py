@@ -7,8 +7,8 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.instance.ref import InstanceRef
 from dagster.utils import ensure_gen
 
-from .job import JobType, RunRequest, SkipReason
 from .mode import DEFAULT_MODE_NAME
+from .run_request import JobType, RunRequest, SkipReason
 from .utils import check_valid_name
 
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
@@ -22,8 +22,11 @@ class SensorExecutionContext:
 
     Attributes:
         instance_ref (InstanceRef): The serialized instance configured to run the schedule
-        last_completion_time (float): The last time that the sensor was evaluated (UTC).
-        last_run_key (str): The run key of the RunRequest most recently created by this sensor.
+        cursor (Optional[str]): The cursor, passed back from the last sensor evaluation via
+            the cursor attribute of SkipReason and RunRequest
+        last_completion_time (float): DEPRECATED The last time that the sensor was evaluated (UTC).
+        last_run_key (str): DEPRECATED The run key of the RunRequest most recently created by this
+            sensor. Use the preferred `cursor` attribute instead.
     """
 
     __slots__ = [
