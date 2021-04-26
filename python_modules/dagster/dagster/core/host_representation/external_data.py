@@ -15,7 +15,7 @@ from dagster.core.definitions import (
     RepositoryDefinition,
     ScheduleDefinition,
 )
-from dagster.core.definitions.job import RunRequest, SkipReason
+from dagster.core.definitions.run_request import RunRequest, SkipReason
 from dagster.core.definitions.partition import PartitionScheduleDefinition
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import whitelist_for_serdes

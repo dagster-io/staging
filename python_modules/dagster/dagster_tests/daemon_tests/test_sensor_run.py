@@ -11,7 +11,7 @@ import pytest
 from dagster import Any, Field, pipeline, repository, solid
 from dagster.cli.workspace.dynamic_workspace import DynamicWorkspace
 from dagster.core.definitions.decorators.sensor import sensor
-from dagster.core.definitions.job import JobType
+from dagster.core.definitions.run_request import JobType
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.definitions.sensor import RunRequest, SkipReason
 from dagster.core.execution.api import execute_pipeline

@@ -1,7 +1,7 @@
 from contextlib import suppress
 
 from dagster import SensorExecutionContext, execute_pipeline, pipeline, reconstructable, solid
-from dagster.core.definitions.job import RunRequest
+from dagster.core.definitions.run_request import RunRequest
 from dagster.core.test_utils import instance_for_test
 from docs_snippets.concepts.partitions_schedules_sensors.sensors.sensor_alert import (
     failure_alert_pipeline,
