@@ -135,3 +135,22 @@ def build_resources(
         log_manager=log_manager,
     )
     return build_resources_cm
+
+
+def build_resource(
+    resource: ResourceDefinition,
+    instance: Optional[DagsterInstance] = None,
+    resource_config: Optional[Dict[str, Any]] = None,
+    pipeline_run: Optional[PipelineRun] = None,
+    log_manager: Optional[DagsterLogManager] = None,
+) -> Any:
+    check.inst_param(resource, "resource", ResourceDefinition)
+    check.opt_dict_param(resource_config, "resource_config", key_type=str)
+    top_level_config = {"resource": {"config": resource_config}} if resource_config else None
+    return build_resources(  # type: ignore[union-attr]
+        {"resource": resource},
+        instance=instance,
+        resource_config=top_level_config,
+        pipeline_run=pipeline_run,
+        log_manager=log_manager,
+    ).resource
