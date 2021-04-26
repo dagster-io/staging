@@ -1,3 +1,4 @@
+import inspect
 from collections import deque
 from typing import AbstractSet, Deque, Dict, Optional, cast
 
@@ -104,6 +105,7 @@ def _core_resource_initialization_event_generator(
 ):
 
     pipeline_name = None
+    is_context_manager = False
     if emit_persistent_events:
         check.invariant(
             pipeline_run and execution_plan,
@@ -153,6 +155,7 @@ def _core_resource_initialization_event_generator(
                 initialized_resource = check.inst(manager.get_object(), InitializedResource)
                 resource_instances[resource_name] = initialized_resource.resource
                 resource_init_times[resource_name] = initialized_resource.duration
+                is_context_manager = is_context_manager or initialized_resource.is_generator
                 resource_managers.append(manager)
 
         if emit_persistent_events and resource_keys_to_init:
@@ -163,7 +166,7 @@ def _core_resource_initialization_event_generator(
                 resource_instances,
                 resource_init_times,
             )
-        yield ScopedResourcesBuilder(resource_instances)
+        yield ScopedResourcesBuilder(resource_instances, is_context_manager)
     except DagsterUserCodeExecutionError as dagster_user_error:
         # Can only end up in this state if we attempt to initialize a resource, so
         # resource_keys_to_init cannot be empty
@@ -255,9 +258,10 @@ class InitializedResource:
     `EventGenerationManager`-wrapped event stream.
     """
 
-    def __init__(self, obj, duration):
+    def __init__(self, obj, duration, is_generator):
         self.resource = obj
         self.duration = duration
+        self.is_generator = is_generator
 
 
 def single_resource_generation_manager(context, resource_name, resource_def):
@@ -274,9 +278,12 @@ def single_resource_event_generator(context, resource_name, resource_def):
             try:
                 with time_execution_scope() as timer_result:
                     resource_or_gen = resource_def.resource_fn(context)
+                    resource_is_gen = inspect.isgenerator(resource_or_gen)
                     gen = ensure_gen(resource_or_gen)
                     resource = next(gen)
-                resource = InitializedResource(resource, format_duration(timer_result.millis))
+                resource = InitializedResource(
+                    resource, format_duration(timer_result.millis), resource_is_gen
+                )
             except StopIteration:
                 check.failed(
                     "Resource generator {name} must yield one item.".format(name=resource_name)
