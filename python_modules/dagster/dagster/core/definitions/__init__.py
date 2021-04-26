@@ -57,7 +57,6 @@ from .graph import GraphDefinition
 from .hook import HookDefinition
 from .input import InputDefinition, InputMapping
 from .intermediate_storage import IntermediateStorageDefinition, intermediate_storage
-from .run_request import JobType, RunRequest, SkipReason
 from .logger import LoggerDefinition, logger
 from .mode import ModeDefinition
 from .output import OutputDefinition, OutputMapping
@@ -73,6 +72,7 @@ from .reconstructable import (
 from .repository import RepositoryDefinition
 from .resource import ResourceDefinition, resource
 from .run_config_schema import RunConfigSchema, create_environment_type, create_run_config_schema
+from .run_request import JobType, RunRequest, SkipReason
 from .schedule import ScheduleDefinition, ScheduleExecutionContext
 from .sensor import SensorDefinition, SensorExecutionContext
 from .solid import CompositeSolidDefinition, NodeDefinition, SolidDefinition

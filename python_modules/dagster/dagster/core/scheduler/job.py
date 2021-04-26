@@ -5,6 +5,7 @@ from dagster import check
 from dagster.core.definitions.run_request import JobType
 from dagster.core.host_representation.origin import ExternalJobOrigin
 from dagster.serdes import whitelist_for_serdes
+from dagster.utils import merge_dicts
 from dagster.utils.error import SerializableErrorInfo
 
 
@@ -233,27 +234,39 @@ class JobTickData(
 
     def with_status(self, status, error=None, timestamp=None):
         return JobTickData(
-            **self._asdict(),
-            status=check.inst_param(status, "status", JobTickStatus),
-            timestamp=timestamp if timestamp is not None else self.timestamp,
-            error=error if error is not None else self.error,
+            **merge_dicts(
+                self._asdict(),
+                {
+                    "status": status,
+                    "timestamp": timestamp if timestamp is not None else self.timestamp,
+                    "error": error if error is not None else self.error,
+                },
+            )
         )
 
     def with_run(self, run_id, run_key=None):
         check.str_param(run_id, "run_id")
         return JobTickData(
-            **self._asdict(),
-            run_ids=[*self.run_ids, run_id],
-            run_keys=[*self.run_keys, run_key] if run_key else self.run_keys,
+            **merge_dicts(
+                self._asdict(),
+                {
+                    "run_ids": [*self.run_ids, run_id],
+                    "run_keys": [*self.run_keys, run_key] if run_key else self.run_keys,
+                },
+            )
         )
 
     def with_reason(self, skip_reason):
         return JobTickData(
-            **self._asdict(), skip_reason=check.opt_str_param(skip_reason, "skip_reason")
+            **merge_dicts(
+                self._asdict(), {"skip_reason": check.opt_str_param(skip_reason, "skip_reason")}
+            )
         )
 
     def with_cursor(self, cursor):
-        return JobTickData(**self._asdict(), cursor=check.opt_str_param(cursor, "cursor"))
+        return JobTickData(
+            **merge_dicts(self._asdict(), {"cursor": check.opt_str_param(cursor, "cursor")})
+        )
 
 
 def _validate_job_tick_args(job_type, status, run_ids=None, error=None, skip_reason=None):

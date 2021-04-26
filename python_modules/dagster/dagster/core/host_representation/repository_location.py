@@ -133,7 +133,7 @@ class RepositoryLocation(AbstractContextManager):
 
     @abstractmethod
     def get_external_sensor_execution_data(
-        self, instance, repository_handle, name, last_completion_time, last_run_key
+        self, instance, repository_handle, name, last_completion_time, last_run_key, cursor
     ):
         pass
 
@@ -346,10 +346,10 @@ class InProcessRepositoryLocation(RepositoryLocation):
         )
 
     def get_external_sensor_execution_data(
-        self, instance, repository_handle, name, last_completion_time, last_run_key
+        self, instance, repository_handle, name, last_completion_time, last_run_key, cursor
     ):
         return get_external_sensor_execution(
-            self._recon_repo, instance.get_ref(), name, last_completion_time, last_run_key
+            self._recon_repo, instance.get_ref(), name, last_completion_time, last_run_key, cursor
         )
 
     def get_external_partition_set_execution_param_data(
@@ -662,7 +662,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         )
 
     def get_external_sensor_execution_data(
-        self, instance, repository_handle, name, last_completion_time, last_run_key
+        self, instance, repository_handle, name, last_completion_time, last_run_key, cursor
     ):
         return sync_get_external_sensor_execution_data_grpc(
             self.client,
@@ -671,6 +671,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             name,
             last_completion_time,
             last_run_key,
+            cursor,
         )
 
     def get_external_partition_set_execution_param_data(

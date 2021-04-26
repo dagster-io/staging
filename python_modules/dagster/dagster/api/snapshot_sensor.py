@@ -9,7 +9,7 @@ from dagster.grpc.types import SensorExecutionArgs
 
 
 def sync_get_external_sensor_execution_data_ephemeral_grpc(
-    instance, repository_handle, sensor_name, last_completion_time, last_run_key
+    instance, repository_handle, sensor_name, last_completion_time, last_run_key, cursor
 ):
     from dagster.grpc.client import ephemeral_grpc_api_client
 
@@ -18,12 +18,18 @@ def sync_get_external_sensor_execution_data_ephemeral_grpc(
         origin.repository_location_origin.loadable_target_origin
     ) as api_client:
         return sync_get_external_sensor_execution_data_grpc(
-            api_client, instance, repository_handle, sensor_name, last_completion_time, last_run_key
+            api_client,
+            instance,
+            repository_handle,
+            sensor_name,
+            last_completion_time,
+            last_run_key,
+            cursor,
         )
 
 
 def sync_get_external_sensor_execution_data_grpc(
-    api_client, instance, repository_handle, sensor_name, last_completion_time, last_run_key
+    api_client, instance, repository_handle, sensor_name, last_completion_time, last_run_key, cursor
 ):
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(sensor_name, "sensor_name")
@@ -40,6 +46,7 @@ def sync_get_external_sensor_execution_data_grpc(
                 sensor_name=sensor_name,
                 last_completion_time=last_completion_time,
                 last_run_key=last_run_key,
+                cursor=cursor,
             )
         ),
         (ExternalSensorExecutionData, ExternalSensorExecutionErrorData),
