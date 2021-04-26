@@ -30,11 +30,12 @@ class SensorExecutionContext:
         "_instance_ref",
         "_last_completion_time",
         "_last_run_key",
+        "_cursor",
         "_exit_stack",
         "_instance",
     ]
 
-    def __init__(self, instance_ref, last_completion_time, last_run_key):
+    def __init__(self, instance_ref, last_completion_time, last_run_key, cursor):
         self._exit_stack = ExitStack()
         self._instance = None
 
@@ -43,6 +44,7 @@ class SensorExecutionContext:
             last_completion_time, "last_completion_time"
         )
         self._last_run_key = check.opt_str_param(last_run_key, "last_run_key")
+        self._cursor = check.opt_str_param(cursor, "cursor")
 
         self._instance = None
 
@@ -67,6 +69,10 @@ class SensorExecutionContext:
     @property
     def last_run_key(self):
         return self._last_run_key
+
+    @property
+    def cursor(self):
+        return self._cursor
 
 
 class SensorDefinition:

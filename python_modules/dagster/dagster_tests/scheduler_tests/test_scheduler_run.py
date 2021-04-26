@@ -23,7 +23,7 @@ from dagster import (
     solid,
 )
 from dagster.cli.workspace.dynamic_workspace import DynamicWorkspace
-from dagster.core.definitions.job import RunRequest
+from dagster.core.definitions.run_request import RunRequest
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.errors import DagsterScheduleWipeRequired
 from dagster.core.host_representation import (

@@ -2,7 +2,7 @@ import datetime
 
 import pendulum
 from dagster import check
-from dagster.core.definitions.job import SkipReason
+from dagster.core.definitions.run_request import SkipReason
 from dagster.core.definitions.partition import Partition, PartitionSetDefinition
 from dagster.core.definitions.schedule import ScheduleExecutionContext
 from dagster.core.errors import DagsterInvariantViolationError
