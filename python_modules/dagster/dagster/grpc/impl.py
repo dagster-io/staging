@@ -244,7 +244,7 @@ def get_external_schedule_execution(
 
 
 def get_external_sensor_execution(
-    recon_repo, instance_ref, sensor_name, last_completion_timestamp, last_run_key
+    recon_repo, instance_ref, sensor_name, last_completion_timestamp, last_run_key, cursor
 ):
     check.inst_param(
         recon_repo,
@@ -256,7 +256,10 @@ def get_external_sensor_execution(
     sensor_def = definition.get_sensor_def(sensor_name)
 
     with SensorExecutionContext(
-        instance_ref, last_completion_time=last_completion_timestamp, last_run_key=last_run_key
+        instance_ref,
+        last_completion_time=last_completion_timestamp,
+        last_run_key=last_run_key,
+        cursor=cursor,
     ) as sensor_context:
         try:
             with user_code_error_boundary(

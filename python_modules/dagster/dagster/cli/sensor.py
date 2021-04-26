@@ -249,15 +249,22 @@ def execute_stop_command(sensor_name, cli_args, print_fn, instance=None):
     help="Set the last_run_key value for the sensor context",
     default=None,
 )
+@click.option(
+    "--cursor",
+    help="Set the cursor value for the sensor context",
+    default=None,
+)
 @repository_target_argument
-def sensor_preview_command(sensor_name, since, last_run_key, **kwargs):
+def sensor_preview_command(sensor_name, since, last_run_key, cursor, **kwargs):
     sensor_name = extract_sensor_name(sensor_name)
     if since:
         since = float(since)
-    return execute_preview_command(sensor_name, since, last_run_key, kwargs, click.echo)
+    return execute_preview_command(sensor_name, since, last_run_key, cursor, kwargs, click.echo)
 
 
-def execute_preview_command(sensor_name, since, last_run_key, cli_args, print_fn, instance=None):
+def execute_preview_command(
+    sensor_name, since, last_run_key, cursor, cli_args, print_fn, instance=None
+):
     with DagsterInstance.get() as instance:
         with get_repository_location_from_kwargs(cli_args) as repo_location:
             try:
@@ -268,7 +275,12 @@ def execute_preview_command(sensor_name, since, last_run_key, cli_args, print_fn
                 external_sensor = external_repo.get_external_sensor(sensor_name)
                 try:
                     sensor_runtime_data = repo_location.get_external_sensor_execution_data(
-                        instance, external_repo.handle, external_sensor.name, since, last_run_key
+                        instance,
+                        external_repo.handle,
+                        external_sensor.name,
+                        since,
+                        last_run_key,
+                        cursor,
                     )
                 except Exception:  # pylint: disable=broad-except
                     error_info = serializable_error_info_from_exc_info(sys.exc_info())
