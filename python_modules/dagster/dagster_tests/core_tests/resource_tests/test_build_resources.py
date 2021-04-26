@@ -2,7 +2,7 @@ import pytest
 from dagster import Field, resource
 from dagster.core.definitions.resource import Resources
 from dagster.core.errors import DagsterResourceFunctionError
-from dagster.core.execution.build_resources import build_resources
+from dagster.core.execution.build_resources import build_resource, build_resources
 
 
 def test_basic_resource():
@@ -87,3 +87,19 @@ def test_build_resources_as_function():
     resources = build_resources({"foo": "bar"})
     assert isinstance(resources, Resources)
     assert resources.foo == "bar"
+
+
+def test_build_resource():
+    @resource
+    def basic_resource(_):
+        return "foo"
+
+    assert build_resource(basic_resource) == "foo"
+
+
+def test_build_resource_requires_config():
+    @resource(config_schema={"foo": str})
+    def resource_requires_config(init_context):
+        return init_context.resource_config["foo"]
+
+    assert build_resource(resource_requires_config, resource_config={"foo": "bar"}) == "bar"
