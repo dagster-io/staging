@@ -445,7 +445,8 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
         return HookContext(self, hook_def)
 
     def _get_source_run_id(self, step_output_handle: StepOutputHandle) -> str:
-        # determine if the step is skipped
+        # determine if the step is not selected and
+        # walk through event logs to find the right run_id based on the run lineage
         if (
             # this is re-execution
             self.pipeline_run.parent_run_id
@@ -454,7 +455,27 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
             # this step is not being executed
             and step_output_handle.step_key not in self.pipeline_run.step_keys_to_execute
         ):
-            return self.pipeline_run.parent_run_id
+            from dagster.core.events import get_step_output_event
+
+            _, runs = self.instance.get_run_group(self.run_id)
+            run_id_to_parent_run_id = {run.run_id: run.parent_run_id for run in runs}
+            parent_run_id = self.pipeline_run.parent_run_id
+            while parent_run_id:
+                # FIXME: N db calls where N = number of parent runs
+                logs = self.instance.all_logs(parent_run_id)
+                # if the parent run has yielded an HandledOutput event for the given step output,
+                # we find the source run id
+                if get_step_output_event(
+                    events=[e.dagster_event for e in logs if e.is_dagster_event],
+                    step_key=step_output_handle.step_key,
+                    output_name=step_output_handle.output_name,
+                ):
+                    return parent_run_id
+                else:
+                    # else, keep looking backwards
+                    parent_run_id = run_id_to_parent_run_id[parent_run_id]
+            # return the root run id if we don't find a qualified run
+            return self.pipeline_run.root_run_id
         else:
             return self.pipeline_run.run_id
 
