@@ -1,5 +1,8 @@
 import inspect
+from abc import ABC, abstractmethod
 from collections import namedtuple
+from datetime import datetime
+from typing import Callable, List, NamedTuple, Optional, cast
 
 import pendulum
 from dagster import check
@@ -12,10 +15,13 @@ from dagster.core.errors import (
 )
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import check_tags
+from dagster.seven import PendulumDateTime, to_timezone
 from dagster.utils import merge_dicts
 
 from .mode import DEFAULT_MODE_NAME
 from .utils import check_valid_name
+
+DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 
 
 class Partition(namedtuple("_Partition", ("value name"))):
@@ -52,12 +58,123 @@ def last_empty_partition(context, partition_set_def):
     return selected
 
 
+class PartitionParams(ABC):
+    @abstractmethod
+    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+        ...
+
+
+class StaticPartitionParams(
+    PartitionParams, NamedTuple("_StaticPartitionParams", [("partitions", List[Partition])])
+):
+    def __new__(cls, partitions: List[Partition]):
+        return super(StaticPartitionParams, cls).__new__(
+            cls, check.list_param(partitions, "partitions", of_type=Partition)
+        )
+
+    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+        return self.partitions
+
+
+class TimeBasedPartitionParams(
+    PartitionParams,
+    NamedTuple(
+        "_TimeBasedPartitionParams",
+        [
+            ("start", datetime),
+            ("end", Optional[datetime]),
+            ("delta_range", str),
+            ("delta_amount", Optional[int]),
+            ("fmt", Optional[str]),
+            ("inclusive", Optional[bool]),
+            ("timezone", Optional[str]),
+        ],
+    ),
+):
+    def __new__(
+        cls,
+        start: datetime,
+        end: Optional[datetime],
+        delta_range: str,
+        fmt: Optional[str],
+        inclusive: Optional[bool],
+        timezone: Optional[str],
+    ):
+        check.invariant(
+            not (end and start > end),
+            f'Selected date range start "{start}" '
+            f'is after date range end "{end}"'.format(
+                start=start.strftime(fmt) if fmt is not None else start,
+                end=cast(datetime, end).strftime(fmt) if fmt is not None else end,
+            ),
+        )
+        return super(TimeBasedPartitionParams, cls).__new__(
+            cls,
+            check.inst_param(start, "start", datetime),
+            check.opt_inst_param(end, "end", datetime),
+            check.str_param(delta_range, "delta_range"),
+            check.opt_int_param(1, "delta_amount", 1),
+            check.opt_str_param(fmt, "fmt", default=DEFAULT_DATE_FORMAT),
+            check.opt_bool_param(inclusive, "inclusive", default=False),
+            check.opt_str_param(timezone, "timezone", default="UTC"),
+        )
+
+    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+        check.opt_inst_param(current_time, "current_time", datetime)
+        _start = (
+            to_timezone(self.start, self.timezone)
+            if isinstance(self.start, PendulumDateTime)
+            else pendulum.instance(self.start, tz=self.timezone)
+        )
+
+        if self.end:
+            _end = self.end
+        elif current_time:
+            _end = current_time
+        else:
+            _end = pendulum.now(self.timezone)
+
+        # coerce to the definition timezone
+        if isinstance(_end, PendulumDateTime):
+            _end = to_timezone(_end, self.timezone)
+        else:
+            _end = pendulum.instance(_end, tz=self.timezone)
+
+        period = pendulum.period(_start, _end)  # type: ignore
+        date_names = [
+            Partition(value=current, name=current.strftime(self.fmt))
+            for current in period.range(self.delta_range, self.delta_amount)
+        ]
+
+        # We don't include the last element here by default since we only want
+        # fully completed intervals, and the _end time is in the middle of the interval
+        # represented by the last element of date_names
+        return date_names if self.inclusive else date_names[:-1]
+
+
+class DynamicPartitionParams(
+    PartitionParams,
+    NamedTuple(
+        "_DynamicPartitionParams",
+        [("partition_fn", Callable[[Optional[datetime]], List[Partition]])],
+    ),
+):
+    def __new__(cls, partition_fn: Callable[[Optional[datetime]], List[Partition]]):
+        return super(DynamicPartitionParams, cls).__new__(
+            cls, check.callable_param(partition_fn, "partition_fn")
+        )
+
+    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+        return self.partition_fn(current_time)
+
+
 class PartitionSetDefinition(
     namedtuple(
         "_PartitionSetDefinition",
         (
             "name pipeline_name partition_fn solid_selection mode "
-            "user_defined_run_config_fn_for_partition user_defined_tags_fn_for_partition"
+            "user_defined_run_config_fn_for_partition user_defined_tags_fn_for_partition "
+            "partition_params"
         ),
     )
 ):
@@ -78,6 +195,8 @@ class PartitionSetDefinition(
         tags_fn_for_partition (Callable[[Partition], Optional[dict[str, str]]]): A function that
             takes a :py:class:`~dagster.Partition` and returns a list of key value pairs that will
             be added to the generated run for this partition.
+        partition_params (Optional[PartitionParams]): A set of parameters used to construct the set
+            of valid partition objects.
     """
 
     def __new__(
@@ -89,6 +208,7 @@ class PartitionSetDefinition(
         mode=None,
         run_config_fn_for_partition=lambda _partition: {},
         tags_fn_for_partition=lambda _partition: {},
+        partition_params=None,
     ):
         partition_fn_param_count = len(inspect.signature(partition_fn).parameters)
 
@@ -129,6 +249,9 @@ class PartitionSetDefinition(
             user_defined_tags_fn_for_partition=check.callable_param(
                 tags_fn_for_partition, "tags_fn_for_partition"
             ),
+            partition_params=check.opt_inst_param(
+                partition_params, "partition_params", PartitionParams
+            ),
         )
 
     def run_config_for_partition(self, partition):
@@ -143,7 +266,12 @@ class PartitionSetDefinition(
         return tags
 
     def get_partitions(self, current_time=None):
-        return self.partition_fn(current_time)
+        partition_params = (
+            DynamicPartitionParams(self.partition_fn)
+            if self.partition_params is None
+            else self.partition_params
+        )
+        return partition_params.get_partitions(current_time)
 
     def get_partition(self, name):
         for partition in self.get_partitions():
