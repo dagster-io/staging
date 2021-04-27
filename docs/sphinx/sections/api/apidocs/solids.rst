@@ -85,6 +85,9 @@ Metadata entries
 Dagster uses lists of metadata entries to communicate arbitrary user-specified metadata about
 structured events.
 
+.. autoclass:: EventMetadata
+    :members:
+
 .. autoclass:: EventMetadataEntry
     :members:
 
@@ -107,6 +110,9 @@ structured events.
     :members:
 
 .. autoclass:: IntMetadataEntryData
+    :members:
+
+.. autoclass:: PythonArtifactMetadataEntryData
     :members:
 
 -------
