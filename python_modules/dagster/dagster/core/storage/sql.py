@@ -1,6 +1,7 @@
 # pylint chokes on the perfectly ok import from alembic.migration
 import sys
 import threading
+import warnings
 from contextlib import contextmanager
 from functools import lru_cache
 
@@ -11,6 +12,7 @@ from alembic.migration import MigrationContext  # pylint: disable=import-error
 from alembic.script import ScriptDirectory
 from dagster.core.errors import DagsterInstanceMigrationRequired
 from dagster.utils import file_relative_path
+from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.log import quieten
 from sqlalchemy.ext.compiler import compiles
 
@@ -41,9 +43,17 @@ _alembic_lock = threading.Lock()
 
 
 def stamp_alembic_rev(alembic_config, conn, rev="head", quiet=True):
-    with _alembic_lock, quieten(quiet):
-        alembic_config.attributes["connection"] = conn
-        stamp(alembic_config, rev)
+    try:
+        with _alembic_lock, quieten(quiet):
+            alembic_config.attributes["connection"] = conn
+            stamp(alembic_config, rev)
+    except db.exc.IntegrityError:
+        warnings.warn(
+            "Caught IntegrityError while stamping alembic revision, most likely due "
+            "to two database initializations happening simultaneously: {error_info}".format(
+                error_info=str(serializable_error_info_from_exc_info(sys.exc_info()))
+            )
+        )
 
 
 def check_alembic_revision(alembic_config, conn):
