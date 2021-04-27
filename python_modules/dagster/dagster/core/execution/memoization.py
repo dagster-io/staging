@@ -19,10 +19,16 @@ def validate_reexecution_memoization(
             "Run id {} set as parent run id was not found in instance".format(parent_run_id),
             invalid_run_id=parent_run_id,
         )
+    print("=====================")
+    print(
+        "len(execution_plan.step_keys_to_execute) == len(execution_plan.steps)",
+        len(execution_plan.step_keys_to_execute) == len(execution_plan.steps),
+    )
 
     # exclude full pipeline re-execution
     if len(execution_plan.step_keys_to_execute) == len(execution_plan.steps):
         return
+    print("execution_plan.artifacts_persisted", execution_plan.artifacts_persisted)
 
     if execution_plan.artifacts_persisted:
         return

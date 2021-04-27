@@ -454,6 +454,8 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
             # this step is not being executed
             and step_output_handle.step_key not in self.pipeline_run.step_keys_to_execute
         ):
+            # walk through event logs to find the right run_id based on run lineage
+            # self.instance.
             return self.pipeline_run.parent_run_id
         else:
             return self.pipeline_run.run_id

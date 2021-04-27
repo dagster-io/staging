@@ -175,6 +175,52 @@ def test_can_reexecute():
     assert plan.artifacts_persisted
 
 
+def test_source_run_id():
+    @solid
+    def one(_):
+        return 1
+
+    @solid
+    def plus_two(_, i):
+        return i + 2
+
+    @solid
+    def plus_three(_, i):
+        return i + 3
+
+    with tempfile.TemporaryDirectory() as tmpdir_path:
+        instance = DagsterInstance.ephemeral()
+
+        my_fs_io_manager = fs_io_manager.configured({"base_dir": tmpdir_path})
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": my_fs_io_manager})])
+        def my_pipeline():
+            plus_three(plus_two(one()))
+
+        first_result = execute_pipeline(my_pipeline, instance=instance)
+        assert first_result.success
+        first_run_id = first_result.run_id
+
+        second_result = reexecute_pipeline(
+            my_pipeline,
+            instance=instance,
+            parent_run_id=first_run_id,
+            step_selection=["plus_two*"],
+        )
+        assert second_result.success
+        second_run_id = second_result.run_id
+
+        # TODO: better unit test to test source_run_if only
+        # context._get_source_run_id should return first_run_id
+        third_result = reexecute_pipeline(
+            my_pipeline,
+            instance=instance,
+            parent_run_id=second_run_id,
+            step_selection=["plus_two*"],
+        )
+        assert third_result.success
+
+
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
     plan = create_execution_plan(pipeline_def, step_keys_to_execute=step_keys_to_execute)
     with DagsterInstance.ephemeral() as instance:
