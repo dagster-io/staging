@@ -88,6 +88,9 @@ structured events.
 .. autoclass:: EventMetadataEntry
     :members:
 
+.. autoclass:: EventMetadata
+    :members:
+
 .. autoclass:: JsonMetadataEntryData
     :members:
 

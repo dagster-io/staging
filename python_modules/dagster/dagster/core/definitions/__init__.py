@@ -28,6 +28,7 @@ from .events import (
     AssetKey,
     AssetMaterialization,
     DynamicOutput,
+    EventMetadata,
     EventMetadataEntry,
     ExpectationResult,
     Failure,

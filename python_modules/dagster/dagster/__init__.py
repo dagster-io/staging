@@ -8,6 +8,7 @@ from dagster.core.definitions import (
     CompositeSolidDefinition,
     ConfigMapping,
     DependencyDefinition,
+    EventMetadata,
     EventMetadataEntry,
     ExecutorDefinition,
     ExecutorRequirement,
