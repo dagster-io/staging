@@ -366,6 +366,7 @@ def construct_dagster_k8s_job(
     pod_name=None,
     component=None,
     env_vars=None,
+    additional_labels=None,
 ):
     """Constructs a Kubernetes Job object for a dagster-graphql invocation.
 
@@ -420,6 +421,9 @@ def construct_dagster_k8s_job(
 
     if component:
         dagster_labels["app.kubernetes.io/component"] = component
+
+    if additional_labels:
+        dagster_labels.update(additional_labels)
 
     env = [kubernetes.client.V1EnvVar(name="DAGSTER_HOME", value=job_config.dagster_home)]
     if job_config.postgres_password_secret:
