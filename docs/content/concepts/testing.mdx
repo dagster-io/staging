@@ -18,28 +18,18 @@ Dagster enables you to build testable and maintainable data applications. It pro
 
 In data applications, testing computations and pipelines is notoriously challenging. Because of this, they often go relatively untested before hitting production. If there is testing in place, these tests are often slow, not run during common developer workflows, and have limited value because of the inability to simulate conditions in the production environment.
 
-We believe the underlying fact is that data applications encode much of their business logic in heavy, external systems. Examples include processing systems like Spark and data warehouses such as Snowflake and Redshift. It is difficult to structure software to isolate these dependencies or nearly impossible to run them in a lightweight manner.
+One of the underlying reasons is that data applications encode much of their business logic in heavy, external systems. Examples include processing systems like Spark and data warehouses such as Snowflake and Redshift. It's difficult to run them in a lightweight manner - you can't stand up a new Redshift cluster inside each unit test.
 
-This page demonstrates how Dagster addresses these challenges:
+This page discusses how Dagster addresses these challenges:
 
 - It provides convenient ways to write [Unit Tests in Data Applications](#unit-tests-in-data-applications).
 - It allows you to [Separate Business Logic from Environments](#separating-business-logic-from-environments) and, therefore, write lightweight tests.
 
 ## Unit Tests in Data Applications
 
-Principal: Errors that can be caught by unit tests should be caught by unit tests.
+### Testing Pipelines
 
-Corollary: Do not attempt to unit test for errors that unit tests cannot catch.
-
-Using unit tests without keeping these principles in mind is why the data community frequently treats unit tests with skepticism. It is too often interpreted as simulating an external system such as Spark or data warehouse in a granular manner. Those are very complex systems that are impossible to emulate faithfully. Do not try to do so.
-
-Unit tests are not acceptance tests. They should not be the judge of whether a computation is correct. However, unit testing -- when properly scoped -- is still valuable in data applications. There are massive classes of errors that we can address without interacting with external services and catch earlier in the process: refactoring errors, syntax errors in interpreted languages, configuration errors, graph structure errors, and so on. Errors caught in a fast feedback loop of unit testing can be addressed orders of magnitude faster than those caught during an expensive batch computation in staging or production.
-
-So, unit tests should be viewed primarily as productivity and code quality tools, leading to more correct calculations. Here we will demonstrate how Dagster conveniently enables unit tests.
-
-### Testing a Pipeline Execution
-
-The workhouse function for unit-testing a pipeline is the <PyObject object="execute_pipeline" /> function. Using this function you can execute a pipeline in process and then test execution properties using the <PyObject object="PipelineExecutionResult" /> object that it returns.
+The workhouse function for unit-testing a pipeline is the <PyObject object="execute_pipeline" /> function. Using this function, you can execute a pipeline in process and then test execution properties using the <PyObject object="PipelineExecutionResult" /> object that it returns.
 
 ```python file=/concepts/solids_pipelines/unit_tests.py startafter=start_test_pipeline_marker endbefore=end_test_pipeline_marker
 def test_pipeline():
@@ -52,6 +42,21 @@ def test_pipeline():
     assert result.output_for_solid("add_one") == 2
     assert result.output_for_solid("add_two") == 3
     assert result.output_for_solid("subtract") == -1
+```
+
+### Testing Solids
+
+You can execute a single solid without writing a pipeline using <PyObject object="execute_solid" />. Using this function you will a single solid in an ephemeral pipeline. You can then then test execution properties using the <PyObject object="SolidExecutionResult" /> object that it returns.
+
+```python file=/concepts/solids_pipelines/unit_tests.py startafter=start_test_solid_marker endbefore=end_test_solid_marker
+def test_solid():
+    result = execute_solid(add_one)
+
+    # return type is SolidExecutionResult
+    assert isinstance(result, SolidExecutionResult)
+    assert result.success
+    # check the solid output value
+    assert result.output_value() == 2
 ```
 
 You can find more unit test examples in the [Examples](#examples) section below.
@@ -118,21 +123,6 @@ def run_in_prod():
 For more information, you can check out the [Modes](/concepts/modes-resources) and [Resources](/concepts/modes-resources) sections.
 
 ## Examples
-
-### Testing single solid execution
-
-You can execute a single solid without writing a pipeline using <PyObject object="execute_solid" />. Using this function you will a single solid in an ephemeral pipeline. You can then then test execution properties using the <PyObject object="SolidExecutionResult" /> object that it returns.
-
-```python file=/concepts/solids_pipelines/unit_tests.py startafter=start_test_solid_marker endbefore=end_test_solid_marker
-def test_solid():
-    result = execute_solid(add_one)
-
-    # return type is SolidExecutionResult
-    assert isinstance(result, SolidExecutionResult)
-    assert result.success
-    # check the solid output value
-    assert result.output_value() == 2
-```
 
 ### Testing pipeline execution with configs
 
