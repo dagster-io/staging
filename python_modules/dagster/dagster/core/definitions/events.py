@@ -5,7 +5,7 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check, seven
-from dagster.core.errors import DagsterInvalidAssetKey
+from dagster.core.errors import DagsterInvalidAssetKey, DagsterInvalidEventMetadata
 from dagster.serdes import DefaultNamedTupleSerializer, whitelist_for_serdes
 from dagster.utils.backcompat import (
     experimental_arg_warning,
@@ -34,6 +34,61 @@ def validate_asset_key_string(s):
 
 def parse_asset_key_string(s):
     return list(filter(lambda x: x, re.split(ASSET_KEY_SPLIT_REGEX, s)))
+
+
+def parse_metadata_entry(label, value):
+    check.str_param(label, "label")
+
+    if isinstance(value, (EventMetadataEntry, PartitionMetadataEntry)):
+        raise DagsterInvalidEventMetadata(
+            f"Expected a metadata value, found an instance of {value.__class__.__name__}. Consider "
+            "instead using a EventMetadata wrapper for the value, or using the `metadata_entries` "
+            "parameter to pass in a List[EventMetadataEntry|PartitionMetadataEntry]."
+        )
+
+    if isinstance(
+        value,
+        (
+            TextMetadataEntryData,
+            UrlMetadataEntryData,
+            PathMetadataEntryData,
+            JsonMetadataEntryData,
+            MarkdownMetadataEntryData,
+            FloatMetadataEntryData,
+            IntMetadataEntryData,
+            PythonArtifactMetadataEntryData,
+        ),
+    ):
+        return EventMetadataEntry(label, None, value)
+
+    if isinstance(value, str):
+        return EventMetadataEntry.text(value, label)
+
+    if isinstance(value, float):
+        return EventMetadataEntry.float(value, label)
+
+    if isinstance(value, int):
+        return EventMetadataEntry.int(value, label)
+
+    if isinstance(value, dict):
+        return EventMetadataEntry.json(value, label)
+
+    raise DagsterInvalidEventMetadata(
+        f'Could not resolve the metadata value for "{label}" to a known type. Consider '
+        "wrapping the value with the appropriate EventMetadata type."
+    )
+
+
+def parse_metadata(metadata, metadata_entries):
+    if metadata_entries:
+        return check.list_param(
+            metadata_entries, "metadata_entries", (EventMetadataEntry, PartitionMetadataEntry)
+        )
+
+    return [
+        parse_metadata_entry(k, v)
+        for k, v in check.opt_dict_param(metadata, "metadata", key_type=str).items()
+    ]
 
 
 @whitelist_for_serdes
@@ -144,6 +199,191 @@ class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions")):
         return super(AssetLineageInfo, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
 
 
+class EventMetadata:
+    """Utility class to wrap metadata values passed into Dagster events so that they can be
+    displayed in Dagit and other tooling."""
+
+    @staticmethod
+    def text(text):
+        """Static constructor for a metadata value wrapping text as
+        :py:class:`TextMetadataEntryData`. Can be used as the value type for the `metadata`
+        parameter for supported events. For example:
+
+        .. code-block:: python
+            @solid
+            def emit_metadata_solid(context, df):
+                yield AssetMaterialization(
+                    asset_key="my_dataset",
+                    metadata={
+                        "my_text_label": EventMetadata.text('hello')
+                    },
+                )
+
+        Args:
+            text (str): The text string for a metadata entry.
+        """
+        return TextMetadataEntryData(text)
+
+    @staticmethod
+    def url(url):
+        """Static constructor for a metadata value wrapping a URL as
+        :py:class:`UrlMetadataEntryData`. Can be used as the value type for the `metadata`
+        parameter for supported events. For example:
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context):
+                yield AssetMaterialization(
+                    asset_key="my_dashboard",
+                    metadata={
+                        "dashboard_url": EventMetadata.url("http://mycoolsite.com/my_dashboard"),
+                    }
+                )
+
+
+        Args:
+            url (str): The URL for a metadata entry.
+        """
+        return UrlMetadataEntryData(url)
+
+    @staticmethod
+    def path(path):
+        """Static constructor for a metadata value wrapping a path as
+        :py:class:`PathMetadataEntryData`. For example:
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context):
+                yield AssetMaterialization(
+                    asset_key="my_dataset",
+                    metadata={
+                        "filepath": EventMetadata.path("path/to/file"),
+                    }
+                )
+
+        Args:
+            path (str): The path for a metadata entry.
+        """
+        return PathMetadataEntryData(path)
+
+    @staticmethod
+    def json(data):
+        """Static constructor for a metadata value wrapping a path as
+        :py:class:`JsonMetadataEntryData`. Can be used as the value type for the `metadata`
+        parameter for supported events. For example:
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context):
+                yield ExpectationResult(
+                    success=not missing_things,
+                    label="is_present",
+                    metadata={
+                        "about my dataset": EventMetadata.json({"missing_columns": missing_things})
+                    },
+                )
+
+        Args:
+            data (Dict[str, Any]): The JSON data for a metadata entry.
+        """
+        return JsonMetadataEntryData(data)
+
+    @staticmethod
+    def md(data):
+        """Static constructor for a metadata value wrapping markdown data as
+        :py:class:`MarkdownMetadataEntryData`. Can be used as the value type for the `metadata`
+        parameter for supported events. For example:
+
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context, md_str):
+                yield AssetMaterialization(
+                    asset_key="info",
+                    metadata={
+                        'Details': EventMetadata.md(md_str)
+                    },
+                )
+
+        Args:
+            md_str (str): The markdown for a metadata entry.
+        """
+        return MarkdownMetadataEntryData(data)
+
+    @staticmethod
+    def python_artifact(python_artifact):
+        """Static constructor for a metadata value wrapping a python artifact as
+        :py:class:`PythonArtifactMetadataEntryData`. Can be used as the value type for the
+        `metadata` parameter for supported events. For example:
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context, df):
+                yield AssetMaterialization(
+                    asset_key="my_dataset",
+                    metadata={
+                        "size (bytes)": EventMetadata.float(calculate_bytes(df)),
+                    }
+                )
+
+        Args:
+            value (Callable): The python class or function for a metadata entry.
+        """
+        check.callable_param(python_artifact, "python_artifact")
+        return PythonArtifactMetadataEntryData(python_artifact.__module__, python_artifact.__name__)
+
+    @staticmethod
+    def float(value):
+        """Static constructor for a metadata value wrapping a float as
+        :py:class:`FloatMetadataEntryData`. Can be used as the value type for the `metadata`
+        parameter for supported events. For example:
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context, df):
+                yield AssetMaterialization(
+                    asset_key="my_dataset",
+                    metadata={
+                        "size (bytes)": EventMetadata.float(calculate_bytes(df)),
+                    }
+                )
+
+        Args:
+            value (float): The float value for a metadata entry.
+        """
+
+        return FloatMetadataEntryData(value)
+
+    @staticmethod
+    def int(value):
+        """Static constructor for a metadata entry wrapping an int as
+        :py:class:`IntMetadataEntryData`. Can be used as the value type for the `metadata`
+        parameter for supported events. For example:
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context, df):
+                yield AssetMaterialization(
+                    asset_key="my_dataset",
+                    metadata={
+                        "number of rows": EventMetadata.int(len(df)),
+                    },
+                )
+
+        Args:
+            value (int): The int value for a metadata entry.
+        """
+
+        return IntMetadataEntryData(value)
+
+
 @whitelist_for_serdes
 class EventMetadataEntry(namedtuple("_EventMetadataEntry", "label description entry_data")):
     """The standard structure for describing metadata for Dagster events.
@@ -234,7 +474,6 @@ class EventMetadataEntry(namedtuple("_EventMetadataEntry", "label description en
             label (str): Short display label for this metadata entry.
             description (Optional[str]): A human-readable description of this metadata entry.
         """
-
         return EventMetadataEntry(label, description, PathMetadataEntryData(path))
 
     @staticmethod
@@ -436,6 +675,13 @@ class MarkdownMetadataEntryData(namedtuple("_MarkdownMetadataEntryData", "md_str
 class PythonArtifactMetadataEntryData(
     namedtuple("_PythonArtifactMetadataEntryData", "module name")
 ):
+    """Container class for python artifact metadata entry data.
+
+    Args:
+        module (str): The module where the python artifact can be found
+        name (str): The name of the python artifact
+    """
+
     def __new__(cls, module, name):
         return super(PythonArtifactMetadataEntryData, cls).__new__(
             cls, check.str_param(module, "module"), check.str_param(name, "name")
@@ -514,20 +760,21 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
             "result")
         metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
             (Experimental) A set of metadata entries to attach to events related to this Output.
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+            Arbitrary metadata about the failure.  Keys are displayed string labels.
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None, metadata=None):
         if metadata_entries:
             experimental_arg_warning("metadata_entries", "Output.__new__")
+        elif metadata:
+            experimental_arg_warning("metadata", "Output.__new__")
+
         return super(Output, cls).__new__(
             cls,
             value,
             check.str_param(output_name, "output_name"),
-            check.opt_list_param(
-                metadata_entries,
-                "metadata_entries",
-                (EventMetadataEntry, PartitionMetadataEntry),
-            ),
+            parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -552,21 +799,24 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             (default: "result")
         metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
             (Experimental) A set of metadata entries to attach to events related to this output.
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+            (Experimental) Arbitrary metadata about the failure.  Keys are displayed string labels.
     """
 
-    def __new__(cls, value, mapping_key, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+    def __new__(
+        cls, value, mapping_key, output_name=DEFAULT_OUTPUT, metadata_entries=None, metadata=None
+    ):
         if metadata_entries:
             experimental_arg_warning("metadata_entries", "DynamicOutput.__new__")
+        elif metadata:
+            experimental_arg_warning("metadata", "DynamicOutput.__new__")
+
         return super(DynamicOutput, cls).__new__(
             cls,
             value,
             check_valid_name(check.str_param(mapping_key, "mapping_key")),
             check.str_param(output_name, "output_name"),
-            check.opt_list_param(
-                metadata_entries,
-                "metadata_entries",
-                (EventMetadataEntry, PartitionMetadataEntry),
-            ),
+            parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -592,11 +842,22 @@ class AssetMaterialization(
         metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the
             materialized value.
         partition (Optional[str]): The name of the partition that was materialized.
-        tags (Dict[str, str]): (Experimental) Metadata for a given asset materialization.  Used for
-            search and organization of the asset entry in the asset catalog in Dagit.
+        tags (Optional[Dict[str, str]]): (Experimental) Tag metadata for a given asset
+            materialization.  Used for search and organization of the asset entry in the asset
+            catalog in Dagit.
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+            Arbitrary metadata about the event.  Keys are displayed string labels.
     """
 
-    def __new__(cls, asset_key, description=None, metadata_entries=None, partition=None, tags=None):
+    def __new__(
+        cls,
+        asset_key,
+        description=None,
+        metadata_entries=None,
+        partition=None,
+        tags=None,
+        metadata=None,
+    ):
         if isinstance(asset_key, AssetKey):
             check.inst_param(asset_key, "asset_key", AssetKey)
         elif isinstance(asset_key, str):
@@ -615,9 +876,7 @@ class AssetMaterialization(
             cls,
             asset_key=asset_key,
             description=check.opt_str_param(description, "description"),
-            metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
-            ),
+            metadata_entries=parse_metadata(metadata, metadata_entries),
             partition=check.opt_str_param(partition, "partition"),
             tags=check.opt_dict_param(tags, "tags", key_type=str, value_type=str),
         )
@@ -744,17 +1003,17 @@ class ExpectationResult(
         description (Optional[str]): A longer human-readable description of the expectation.
         metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the
             expectation.
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+            Arbitrary metadata about the event.  Keys are displayed string labels.
     """
 
-    def __new__(cls, success, label=None, description=None, metadata_entries=None):
+    def __new__(cls, success, label=None, description=None, metadata_entries=None, metadata=None):
         return super(ExpectationResult, cls).__new__(
             cls,
             success=check.bool_param(success, "success"),
             label=check.opt_str_param(label, "label", "result"),
             description=check.opt_str_param(description, "description"),
-            metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
-            ),
+            metadata_entries=parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -774,16 +1033,16 @@ class TypeCheck(namedtuple("_TypeCheck", "success description metadata_entries")
         description (Optional[str]): A human-readable description of the type check.
         metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the
             type check.
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+            Arbitrary metadata about the event.  Keys are displayed string labels.
     """
 
-    def __new__(cls, success, description=None, metadata_entries=None):
+    def __new__(cls, success, description=None, metadata_entries=None, metadata=None):
         return super(TypeCheck, cls).__new__(
             cls,
             success=check.bool_param(success, "success"),
             description=check.opt_str_param(description, "description"),
-            metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
-            ),
+            metadata_entries=parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -798,14 +1057,14 @@ class Failure(Exception):
         description (Optional[str]): A human-readable description of the failure.
         metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the
             failure.
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+            Arbitrary metadata about the failure.  Keys are displayed string labels.
     """
 
-    def __init__(self, description=None, metadata_entries=None):
+    def __init__(self, description=None, metadata_entries=None, metadata=None):
         super(Failure, self).__init__(description)
         self.description = check.opt_str_param(description, "description")
-        self.metadata_entries = check.opt_list_param(
-            metadata_entries, "metadata_entries", of_type=EventMetadataEntry
-        )
+        self.metadata_entries = parse_metadata(metadata, metadata_entries)
 
 
 class RetryRequested(Exception):
