@@ -261,7 +261,11 @@ def multiprocess_executor(init_context):
     and negative numbers can be used.
     """
     from dagster.core.executor.init import InitExecutorContext
+
     from dagster.core.executor.multiprocess import MultiprocessExecutor
+
+    # from dagster.core.executor.extendable import CoreExecutor
+    # from dagster.core.executor.extendable.step_handler import MultiprocessStepHandler
 
     check.inst_param(init_context, "init_context", InitExecutorContext)
 
@@ -269,6 +273,7 @@ def multiprocess_executor(init_context):
         max_concurrent=init_context.executor_config["max_concurrent"],
         retries=RetryMode.from_config(init_context.executor_config["retries"]),
     )
+    # return CoreExecutor(MultiprocessStepHandler())
 
 
 default_executors = [in_process_executor, multiprocess_executor]

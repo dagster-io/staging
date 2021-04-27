@@ -64,8 +64,8 @@ def define_cluster_provider_fixture(additional_kind_images=None):
             existing_cluster = kind_cluster_exists(cluster_name)
 
             with kind_cluster(cluster_name, should_cleanup=should_cleanup) as cluster_config:
+                docker_image = get_test_project_docker_image()
                 if not IS_BUILDKITE and not existing_cluster:
-                    docker_image = get_test_project_docker_image()
                     try:
                         client = docker.from_env()
                         client.images.get(docker_image)
@@ -75,11 +75,11 @@ def define_cluster_provider_fixture(additional_kind_images=None):
                         )
                     except docker.errors.ImageNotFound:
                         build_and_tag_test_image(docker_image)
-                    kind_load_images(
-                        cluster_name=cluster_config.name,
-                        local_dagster_test_image=docker_image,
-                        additional_images=additional_kind_images,
-                    )
+                kind_load_images(
+                    cluster_name=cluster_config.name,
+                    local_dagster_test_image=docker_image,
+                    additional_images=additional_kind_images,
+                )
                 yield cluster_config
 
         # Use cluster from kubeconfig
