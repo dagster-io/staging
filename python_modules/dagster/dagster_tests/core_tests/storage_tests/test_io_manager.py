@@ -12,6 +12,7 @@ from dagster import (
     InputDefinition,
     ModeDefinition,
     OutputDefinition,
+    composite_solid,
     execute_pipeline,
     pipeline,
     reexecute_pipeline,
@@ -173,6 +174,110 @@ def test_can_reexecute():
     pipeline_def = define_pipeline(fs_io_manager, {})
     plan = create_execution_plan(pipeline_def)
     assert plan.artifacts_persisted
+
+
+def test_reexecute_subset_of_subset():
+    with tempfile.TemporaryDirectory() as tmpdir_path:
+        instance = DagsterInstance.ephemeral()
+
+        my_fs_io_manager = fs_io_manager.configured({"base_dir": tmpdir_path})
+
+        def my_pipeline_def(should_fail):
+            @solid
+            def one(_):
+                return 1
+
+            @solid
+            def plus_two(_, i):
+                if should_fail:
+                    raise Exception()
+                return i + 2
+
+            @solid
+            def plus_three(_, i):
+                return i + 3
+
+            @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": my_fs_io_manager})])
+            def my_pipeline():
+                plus_three(plus_two(one()))
+
+            return my_pipeline
+
+        first_result = execute_pipeline(
+            my_pipeline_def(should_fail=True), instance=instance, raise_on_error=False
+        )
+        assert not first_result.success
+
+        first_run_id = first_result.run_id
+
+        second_result = reexecute_pipeline(
+            my_pipeline_def(should_fail=False),
+            instance=instance,
+            parent_run_id=first_run_id,
+            step_selection=["plus_two*"],
+        )
+        assert second_result.success
+        assert second_result.result_for_solid("plus_two").output_value() == 3
+        second_run_id = second_result.run_id
+
+        # step_context._get_source_run_id should return first_run_id
+        third_result = reexecute_pipeline(
+            my_pipeline_def(should_fail=False),
+            instance=instance,
+            parent_run_id=second_run_id,
+            step_selection=["plus_two*"],
+        )
+        assert third_result.success
+        assert third_result.result_for_solid("plus_two").output_value() == 3
+
+
+def test_reexecute_subset_of_subset_with_composite():
+    @solid
+    def one(_):
+        return 1
+
+    @solid
+    def plus_two(_, i):
+        return i + 2
+
+    @composite_solid
+    def one_plus_two():
+        return plus_two(one())
+
+    @solid
+    def plus_three(_, i):
+        return i + 3
+
+    with tempfile.TemporaryDirectory() as tmpdir_path:
+        instance = DagsterInstance.ephemeral()
+
+        my_fs_io_manager = fs_io_manager.configured({"base_dir": tmpdir_path})
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": my_fs_io_manager})])
+        def my_pipeline():
+            plus_three(one_plus_two())
+
+        first_result = execute_pipeline(my_pipeline, instance=instance)
+        assert first_result.success
+        first_run_id = first_result.run_id
+
+        second_result = reexecute_pipeline(
+            my_pipeline,
+            instance=instance,
+            parent_run_id=first_run_id,
+            step_selection=["plus_three"],
+        )
+        assert second_result.success
+        second_run_id = second_result.run_id
+
+        # step_context._get_source_run_id should return first_run_id
+        third_result = reexecute_pipeline(
+            my_pipeline,
+            instance=instance,
+            parent_run_id=second_run_id,
+            step_selection=["plus_three"],
+        )
+        assert third_result.success
 
 
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
