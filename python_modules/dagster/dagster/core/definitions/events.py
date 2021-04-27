@@ -5,7 +5,7 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check, seven
-from dagster.core.errors import DagsterInvalidAssetKey
+from dagster.core.errors import DagsterInvalidAssetKey, DagsterInvalidEventMetadata
 from dagster.serdes import DefaultNamedTupleSerializer, whitelist_for_serdes
 from dagster.utils.backcompat import (
     experimental_arg_warning,
@@ -34,6 +34,61 @@ def validate_asset_key_string(s):
 
 def parse_asset_key_string(s):
     return list(filter(lambda x: x, re.split(ASSET_KEY_SPLIT_REGEX, s)))
+
+
+def parse_metadata_entry(label, value):
+    check.str_param(label, "label")
+
+    if isinstance(value, (EventMetadataEntry, PartitionMetadataEntry)):
+        raise DagsterInvalidEventMetadata(
+            f"Expected a metadata value, found an instance of {value.__class__.__name__}. Consider "
+            "instead using a EventMetadata wrapper for the value, or using the `metadata_entries` "
+            "parameter to pass in a List[EventMetadataEntry|PartitionMetadataEntry]."
+        )
+
+    if isinstance(
+        value,
+        (
+            TextMetadataEntryData,
+            UrlMetadataEntryData,
+            PathMetadataEntryData,
+            JsonMetadataEntryData,
+            MarkdownMetadataEntryData,
+            FloatMetadataEntryData,
+            IntMetadataEntryData,
+            PythonArtifactMetadataEntryData,
+        ),
+    ):
+        return EventMetadataEntry(label, None, value)
+
+    if isinstance(value, str):
+        return EventMetadataEntry.text(value, label)
+
+    if isinstance(value, float):
+        return EventMetadataEntry.float(value, label)
+
+    if isinstance(value, int):
+        return EventMetadataEntry.int(value, label)
+
+    if isinstance(value, dict):
+        return EventMetadataEntry.json(value, label)
+
+    raise DagsterInvalidEventMetadata(
+        f'Could not resolve the metadata value for "{label}" to a known type. Consider '
+        "wrapping the value with the appropriate EventMetadata type."
+    )
+
+
+def parse_metadata(metadata, metadata_entries):
+    if metadata_entries:
+        return check.list_param(
+            metadata_entries, "metadata_entries", (EventMetadataEntry, PartitionMetadataEntry)
+        )
+
+    return [
+        parse_metadata_entry(k, v)
+        for k, v in check.opt_dict_param(metadata, "metadata", key_type=str).items()
+    ]
 
 
 @whitelist_for_serdes
@@ -142,6 +197,43 @@ class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions")):
         asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
         partitions = check.opt_set_param(partitions, "partitions", str)
         return super(AssetLineageInfo, cls).__new__(cls, asset_key=asset_key, partitions=partitions)
+
+
+class EventMetadata:
+    """Convenience class to access the underlying typed event metadata data types."""
+
+    @staticmethod
+    def text(text):
+        return TextMetadataEntryData(text)
+
+    @staticmethod
+    def url(url):
+        return UrlMetadataEntryData(url)
+
+    @staticmethod
+    def path(path):
+        return PathMetadataEntryData(path)
+
+    @staticmethod
+    def json(data):
+        return JsonMetadataEntryData(data)
+
+    @staticmethod
+    def md(data):
+        return MarkdownMetadataEntryData(data)
+
+    @staticmethod
+    def python_artifact(python_artifact):
+        check.callable_param(python_artifact, "python_artifact")
+        return PythonArtifactMetadataEntryData(python_artifact.__module__, python_artifact.__name__)
+
+    @staticmethod
+    def float(value):
+        return FloatMetadataEntryData(value)
+
+    @staticmethod
+    def int(value):
+        return IntMetadataEntryData(value)
 
 
 @whitelist_for_serdes
@@ -516,18 +608,17 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
             (Experimental) A set of metadata entries to attach to events related to this Output.
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, metadata_entries=None, metadata=None):
         if metadata_entries:
             experimental_arg_warning("metadata_entries", "Output.__new__")
+        elif metadata:
+            experimental_arg_warning("metadata", "Output.__new__")
+
         return super(Output, cls).__new__(
             cls,
             value,
             check.str_param(output_name, "output_name"),
-            check.opt_list_param(
-                metadata_entries,
-                "metadata_entries",
-                (EventMetadataEntry, PartitionMetadataEntry),
-            ),
+            parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -554,7 +645,9 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             (Experimental) A set of metadata entries to attach to events related to this output.
     """
 
-    def __new__(cls, value, mapping_key, output_name=DEFAULT_OUTPUT, metadata_entries=None):
+    def __new__(
+        cls, value, mapping_key, output_name=DEFAULT_OUTPUT, metadata_entries=None, metadata=None
+    ):
         if metadata_entries:
             experimental_arg_warning("metadata_entries", "DynamicOutput.__new__")
         return super(DynamicOutput, cls).__new__(
@@ -562,11 +655,7 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             value,
             check_valid_name(check.str_param(mapping_key, "mapping_key")),
             check.str_param(output_name, "output_name"),
-            check.opt_list_param(
-                metadata_entries,
-                "metadata_entries",
-                (EventMetadataEntry, PartitionMetadataEntry),
-            ),
+            parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -596,7 +685,15 @@ class AssetMaterialization(
             search and organization of the asset entry in the asset catalog in Dagit.
     """
 
-    def __new__(cls, asset_key, description=None, metadata_entries=None, partition=None, tags=None):
+    def __new__(
+        cls,
+        asset_key,
+        description=None,
+        metadata_entries=None,
+        partition=None,
+        tags=None,
+        metadata=None,
+    ):
         if isinstance(asset_key, AssetKey):
             check.inst_param(asset_key, "asset_key", AssetKey)
         elif isinstance(asset_key, str):
@@ -615,9 +712,7 @@ class AssetMaterialization(
             cls,
             asset_key=asset_key,
             description=check.opt_str_param(description, "description"),
-            metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
-            ),
+            metadata_entries=parse_metadata(metadata, metadata_entries),
             partition=check.opt_str_param(partition, "partition"),
             tags=check.opt_dict_param(tags, "tags", key_type=str, value_type=str),
         )
@@ -746,15 +841,13 @@ class ExpectationResult(
             expectation.
     """
 
-    def __new__(cls, success, label=None, description=None, metadata_entries=None):
+    def __new__(cls, success, label=None, description=None, metadata_entries=None, metadata=None):
         return super(ExpectationResult, cls).__new__(
             cls,
             success=check.bool_param(success, "success"),
             label=check.opt_str_param(label, "label", "result"),
             description=check.opt_str_param(description, "description"),
-            metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
-            ),
+            metadata_entries=parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -776,14 +869,12 @@ class TypeCheck(namedtuple("_TypeCheck", "success description metadata_entries")
             type check.
     """
 
-    def __new__(cls, success, description=None, metadata_entries=None):
+    def __new__(cls, success, description=None, metadata_entries=None, metadata=None):
         return super(TypeCheck, cls).__new__(
             cls,
             success=check.bool_param(success, "success"),
             description=check.opt_str_param(description, "description"),
-            metadata_entries=check.opt_list_param(
-                metadata_entries, metadata_entries, of_type=EventMetadataEntry
-            ),
+            metadata_entries=parse_metadata(metadata, metadata_entries),
         )
 
 
@@ -800,12 +891,10 @@ class Failure(Exception):
             failure.
     """
 
-    def __init__(self, description=None, metadata_entries=None):
+    def __init__(self, description=None, metadata_entries=None, metadata=None):
         super(Failure, self).__init__(description)
         self.description = check.opt_str_param(description, "description")
-        self.metadata_entries = check.opt_list_param(
-            metadata_entries, "metadata_entries", of_type=EventMetadataEntry
-        )
+        self.metadata_entries = parse_metadata(metadata, metadata_entries)
 
 
 class RetryRequested(Exception):
