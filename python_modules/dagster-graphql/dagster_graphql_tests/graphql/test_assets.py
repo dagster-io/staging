@@ -1,3 +1,5 @@
+import time
+
 from dagster import AssetKey
 from dagster_graphql.client.query import LAUNCH_PIPELINE_EXECUTION_MUTATION
 from dagster_graphql.test.utils import execute_dagster_graphql, infer_pipeline_selector
@@ -82,6 +84,20 @@ WIPE_ASSETS = """
     mutation AssetKeyWipe($assetKeys: [AssetKeyInput!]!) {
         wipeAssets(assetKeys: $assetKeys) {
             __typename
+        }
+    }
+"""
+
+GET_ASSET_MATERIALIZATION_TIMESTAMP = """
+    query AssetQuery($assetKey: AssetKeyInput!, $asOf: Float) {
+        assetOrError(assetKey: $assetKey) {
+            ... on Asset {
+                assetMaterializations(beforeTimestamp: $asOf) {
+                    materializationEvent {
+                        timestamp
+                    }
+                }
+            }
         }
     }
 """
@@ -227,3 +243,47 @@ class TestAssetAwareEventLog(
         assert result.data["assetOrError"]
         assert result.data["assetOrError"]["tags"]
         snapshot.assert_match(result.data)
+
+    def test_asset_asof_timestamp(self, graphql_context):
+        _create_run(graphql_context, "asset_tag_pipeline")
+        result = execute_dagster_graphql(
+            graphql_context,
+            GET_ASSET_MATERIALIZATION_TIMESTAMP,
+            variables={"assetKey": {"path": ["a"]}},
+        )
+        assert result.data
+        assert result.data["assetOrError"]
+        materializations = result.data["assetOrError"]["assetMaterializations"]
+        assert len(materializations) == 1
+        first_timestamp = float(materializations[0]["materializationEvent"]["timestamp"]) / 1000
+
+        as_of_timestamp = first_timestamp + 1
+
+        time.sleep(1.1)
+        _create_run(graphql_context, "asset_tag_pipeline")
+        result = execute_dagster_graphql(
+            graphql_context,
+            GET_ASSET_MATERIALIZATION_TIMESTAMP,
+            variables={"assetKey": {"path": ["a"]}},
+        )
+        assert result.data
+        assert result.data["assetOrError"]
+        materializations = result.data["assetOrError"]["assetMaterializations"]
+        assert len(materializations) == 2
+        second_timestamp = float(materializations[0]["materializationEvent"]["timestamp"]) / 1000
+
+        assert second_timestamp > as_of_timestamp
+
+        result = execute_dagster_graphql(
+            graphql_context,
+            GET_ASSET_MATERIALIZATION_TIMESTAMP,
+            variables={"assetKey": {"path": ["a"]}, "asOf": as_of_timestamp},
+        )
+        assert result.data
+        assert result.data["assetOrError"]
+        materializations = result.data["assetOrError"]["assetMaterializations"]
+        assert len(materializations) == 1
+        assert (
+            first_timestamp
+            == float(materializations[0]["materializationEvent"]["timestamp"]) / 1000
+        )
