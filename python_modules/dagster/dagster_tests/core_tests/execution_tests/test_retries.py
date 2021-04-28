@@ -22,6 +22,7 @@ from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.retries import RetryMode
 from dagster.core.test_utils import instance_for_test
+from dagster.experimental import RetryPolicy
 
 executors = pytest.mark.parametrize(
     "environment",
@@ -257,3 +258,17 @@ def test_step_retry_fixed_wait(environment):
             assert end_wait is not None
             delay = end_wait - start_wait
             assert delay > DELAY
+
+
+def test_retry_policy():
+    @solid(policy=RetryPolicy())
+    def throws(_):
+        raise Exception("I fail")
+
+    @pipeline
+    def policy_test():
+        throws()
+
+    result = execute_pipeline(policy_test, raise_on_error=False)
+    assert not result.success
+    assert result.result_for_solid("throws").retry_attempts == 1

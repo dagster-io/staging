@@ -79,11 +79,15 @@ class SolidInvocation(namedtuple("Solid", "name alias tags hook_defs")):
         tags: Dict[str, str] = None,
         hook_defs: AbstractSet[HookDefinition] = None,
     ):
-        name = check.str_param(name, "name")
-        alias = check.opt_str_param(alias, "alias")
-        tags = frozentags(check.opt_dict_param(tags, "tags", value_type=str, key_type=str))
-        hook_defs = frozenset(check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition))
-        return super(cls, SolidInvocation).__new__(cls, name, alias, tags, hook_defs)
+        return super().__new__(
+            cls,
+            name=check.str_param(name, "name"),
+            alias=check.opt_str_param(alias, "alias"),
+            tags=frozentags(check.opt_dict_param(tags, "tags", value_type=str, key_type=str)),
+            hook_defs=frozenset(
+                check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
+            ),
+        )
 
 
 class Solid:
@@ -199,6 +203,10 @@ class Solid:
     @property
     def hook_defs(self) -> AbstractSet[HookDefinition]:
         return self._hook_defs
+
+    @property
+    def execution_policy(self):
+        return self.definition.execution_policy
 
 
 @whitelist_for_serdes

@@ -2,6 +2,7 @@ from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Set
 
 from dagster import check
 from dagster.core.definitions.dependency import SolidHandle
+from dagster.core.definitions.policy import SolidExecutionPolicy
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import DagsterType
 from dagster.utils.backcompat import experimental_arg_warning
@@ -85,6 +86,7 @@ class SolidDefinition(NodeDefinition):
         required_resource_keys: Optional[Union[Set[str], FrozenSet[str]]] = None,
         positional_inputs: Optional[List[str]] = None,
         version: Optional[str] = None,
+        policy: Optional[SolidExecutionPolicy] = None,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
@@ -94,6 +96,7 @@ class SolidDefinition(NodeDefinition):
         self._version = check.opt_str_param(version, "version")
         if version:
             experimental_arg_warning("version", "SolidDefinition.__init__")
+        self._policy = check.opt_inst_param(policy, "policy", SolidExecutionPolicy)
 
         super(SolidDefinition, self).__init__(
             name=name,
@@ -158,7 +161,12 @@ class SolidDefinition(NodeDefinition):
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
+            policy=self.execution_policy,
         )
+
+    @property
+    def execution_policy(self) -> Optional[SolidExecutionPolicy]:
+        return self._policy
 
 
 class CompositeSolidDefinition(GraphDefinition):
