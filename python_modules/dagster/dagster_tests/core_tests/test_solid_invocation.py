@@ -361,7 +361,7 @@ def test_solid_retry_requested():
     def solid_retries():
         raise RetryRequested()
 
-    with pytest.raises(RetryRequested):
+    with pytest.raises(DagsterSolidInvocationError):
         solid_retries()
 
 

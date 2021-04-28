@@ -2,7 +2,7 @@ import inspect
 from typing import TYPE_CHECKING, Any, Dict, Generator, Optional, cast
 
 from dagster import check
-from dagster.core.definitions.events import AssetMaterialization, RetryRequested
+from dagster.core.definitions.events import AssetMaterialization
 from dagster.core.errors import (
     DagsterInvalidConfigError,
     DagsterInvalidInvocationError,
@@ -200,7 +200,6 @@ def _core_generator(
 
     with user_code_error_boundary(
         DagsterSolidInvocationError,
-        control_flow_exceptions=[RetryRequested],
         msg_fn=lambda: f'Error occurred while invoking solid "{solid_def.name}":',
     ):
         compute_iterator = solid_def.compute_fn(context, input_dict)
