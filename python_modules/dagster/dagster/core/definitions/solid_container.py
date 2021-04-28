@@ -208,6 +208,7 @@ def _build_pipeline_solid_dict(
                     graph_definition=graph_definition,
                     tags=solid_instance_tags,
                     hook_defs=hook_defs,
+                    execution_policy=solid_instance.execution_policy if solid_instance else None,
                 )
             )
 

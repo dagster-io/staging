@@ -3,6 +3,7 @@ from collections import namedtuple
 from typing import NamedTuple
 
 from dagster import check
+from dagster.core.definitions.policy import SolidExecutionPolicy
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.utils import frozentags
 
@@ -89,7 +90,7 @@ class InProgressCompositionContext:
         self._collisions = {}
         self._pending_invocations = {}
 
-    def observe_invocation(self, given_alias, node_def, input_bindings, tags=None, hook_defs=None):
+    def observe_invocation(self, given_alias, node_def, input_bindings, tags, hook_defs):
         if given_alias is None:
             node_name = node_def.name
             self._pending_invocations.pop(node_name, None)
@@ -112,7 +113,11 @@ class InProgressCompositionContext:
             )
 
         self._invocations[node_name] = InvokedNode(
-            node_name, node_def, input_bindings, tags, hook_defs
+            node_name,
+            node_def,
+            input_bindings,
+            tags,
+            hook_defs,
         )
         return node_name
 
@@ -198,6 +203,8 @@ class CompleteCompositionContext(
                     invocation.node_name,
                     tags=invocation.tags,
                     hook_defs=invocation.hook_defs,
+                    # will have to change for solid.with_policy(...)()
+                    execution_policy=invocation.node_def.execution_policy,
                 )
             ] = deps
 
@@ -211,11 +218,21 @@ class PendingNodeInvocation:
     an alias before invoking.
     """
 
-    def __init__(self, node_def, given_alias=None, tags=None, hook_defs=None):
+    def __init__(
+        self,
+        node_def,
+        given_alias=None,
+        tags=None,
+        hook_defs=None,
+        execution_policy=None,
+    ):
         self.node_def = check.inst_param(node_def, "node_def", NodeDefinition)
         self.given_alias = check.opt_str_param(given_alias, "given_alias")
         self.tags = check.opt_inst_param(tags, "tags", frozentags)
         self.hook_defs = check.opt_set_param(hook_defs, "hook_defs", HookDefinition)
+        self.execution_policy = check.opt_inst_param(
+            execution_policy, "execution_policy", SolidExecutionPolicy
+        )
 
         if self.given_alias is not None:
             check_valid_name(self.given_alias)
@@ -404,14 +421,24 @@ class PendingNodeInvocation:
     def with_hooks(self, hook_defs):
         hook_defs = check.set_param(hook_defs, "hook_defs", of_type=HookDefinition)
         return PendingNodeInvocation(
-            self.node_def, self.given_alias, self.tags, hook_defs.union(self.hook_defs)
+            self.node_def,
+            self.given_alias,
+            self.tags,
+            hook_defs.union(self.hook_defs),
         )
 
 
 class InvokedNode(namedtuple("_InvokedNode", "node_name, node_def input_bindings tags hook_defs")):
     """The metadata about a solid invocation saved by the current composition context."""
 
-    def __new__(cls, node_name, node_def, input_bindings, tags=None, hook_defs=None):
+    def __new__(
+        cls,
+        node_name,
+        node_def,
+        input_bindings,
+        tags,
+        hook_defs,
+    ):
         return super(cls, InvokedNode).__new__(
             cls,
             check.str_param(node_name, "node_name"),

@@ -23,7 +23,7 @@ from dagster.utils import ensure_gen
 
 from .objects import TypeCheckData
 from .outputs import StepOutputHandle, UnresolvedStepOutputHandle
-from .utils import build_resources_for_manager
+from .utils import build_resources_for_manager, solid_execution_error_boundary
 
 if TYPE_CHECKING:
     from dagster.core.types.dagster_type import DagsterType
@@ -503,13 +503,13 @@ def _load_input_with_input_manager(input_manager: "InputManager", context: "Inpu
     from dagster.core.execution.context.system import StepExecutionContext
 
     step_context = cast(StepExecutionContext, context.step_context)
-    with user_code_error_boundary(
+    with solid_execution_error_boundary(
         DagsterExecutionLoadInputError,
-        control_flow_exceptions=[Failure, RetryRequested],
         msg_fn=lambda: (
             f'Error occurred while loading input "{context.name}" of '
             f'step "{step_context.step.key}":'
         ),
+        step_context=step_context,
         step_key=step_context.step.key,
         input_name=context.name,
     ):

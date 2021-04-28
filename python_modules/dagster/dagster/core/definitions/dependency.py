@@ -23,6 +23,7 @@ from dagster.utils import frozentags
 from .hook import HookDefinition
 from .input import FanInInputPointer, InputDefinition, InputMapping, InputPointer
 from .output import OutputDefinition
+from .policy import SolidExecutionPolicy
 from .utils import DEFAULT_OUTPUT, struct_to_string, validate_tags
 
 if TYPE_CHECKING:
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from .solid import NodeDefinition
 
 
-class SolidInvocation(namedtuple("Solid", "name alias tags hook_defs")):
+class SolidInvocation(namedtuple("Solid", "name alias tags hook_defs execution_policy")):
     """Identifies an instance of a solid in a pipeline dependency structure.
 
     Args:
@@ -78,12 +79,20 @@ class SolidInvocation(namedtuple("Solid", "name alias tags hook_defs")):
         alias: Optional[str] = None,
         tags: Dict[str, str] = None,
         hook_defs: AbstractSet[HookDefinition] = None,
+        execution_policy: Optional[SolidExecutionPolicy] = None,
     ):
-        name = check.str_param(name, "name")
-        alias = check.opt_str_param(alias, "alias")
-        tags = frozentags(check.opt_dict_param(tags, "tags", value_type=str, key_type=str))
-        hook_defs = frozenset(check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition))
-        return super(cls, SolidInvocation).__new__(cls, name, alias, tags, hook_defs)
+        return super().__new__(
+            cls,
+            name=check.str_param(name, "name"),
+            alias=check.opt_str_param(alias, "alias"),
+            tags=frozentags(check.opt_dict_param(tags, "tags", value_type=str, key_type=str)),
+            hook_defs=frozenset(
+                check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
+            ),
+            execution_policy=check.opt_inst_param(
+                execution_policy, "execution_policy", SolidExecutionPolicy
+            ),
+        )
 
 
 class Solid:
@@ -104,6 +113,7 @@ class Solid:
         graph_definition: "GraphDefinition",
         tags: Dict[str, str] = None,
         hook_defs: Optional[AbstractSet[HookDefinition]] = None,
+        execution_policy: Optional[SolidExecutionPolicy] = None,
     ):
         from .graph import GraphDefinition
         from .solid import NodeDefinition
@@ -117,6 +127,9 @@ class Solid:
         )
         self._additional_tags = validate_tags(tags)
         self._hook_defs = check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
+        self._policy = check.opt_inst_param(
+            execution_policy, "execution_policy", SolidExecutionPolicy
+        )
 
         input_handles = {}
         for name, input_def in self.definition.input_dict.items():
@@ -199,6 +212,10 @@ class Solid:
     @property
     def hook_defs(self) -> AbstractSet[HookDefinition]:
         return self._hook_defs
+
+    @property
+    def execution_policy(self):
+        return self._policy
 
 
 @whitelist_for_serdes

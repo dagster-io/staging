@@ -517,6 +517,7 @@ def _dep_key_of(solid: Solid) -> SolidInvocation:
         alias=solid.name,
         tags=solid.tags,
         hook_defs=solid.hook_defs,
+        execution_policy=solid.execution_policy,
     )
 
 
