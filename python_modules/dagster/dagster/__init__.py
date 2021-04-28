@@ -75,6 +75,7 @@ from dagster.core.definitions import (
     weekly_schedule,
 )
 from dagster.core.definitions.configurable import configured
+from dagster.core.definitions.policy import RetryPolicy
 from dagster.core.errors import (
     DagsterConfigMappingFunctionError,
     DagsterError,
@@ -211,6 +212,7 @@ __all__ = [
     "TextMetadataEntryData",
     "UrlMetadataEntryData",
     "make_values_resource",
+    "RetryPolicy",
     # Decorators
     "composite_solid",
     "executor",
