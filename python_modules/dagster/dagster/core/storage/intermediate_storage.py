@@ -2,7 +2,11 @@ import warnings
 from abc import ABC, abstractmethod, abstractproperty
 
 from dagster import check
-from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
+from dagster.core.definitions.events import (
+    EventMetadataEntry,
+    ObjectStoreOperation,
+    ObjectStoreOperationType,
+)
 from dagster.core.errors import DagsterObjectStoreError, DagsterStepOutputNotFoundError
 from dagster.core.execution.context.system import PlanExecutionContext
 from dagster.core.execution.plan.outputs import StepOutputHandle
@@ -59,12 +63,10 @@ class IntermediateStorageAdapter(IOManager):
             version=context.version,
         )
 
-        # Stopgap https://github.com/dagster-io/dagster/issues/3368
         if isinstance(res, ObjectStoreOperation):
-            context.log.debug(
+            yield EventMetadataEntry.text(
                 (
-                    'Stored output "{output_name}" in {object_store_name}object store{serialization_strategy_modifier} '
-                    "at {address}"
+                    'Stored output "{output_name}" in {object_store_name}object store{serialization_strategy_modifier}.'
                 ).format(
                     output_name=context.name,
                     object_store_name=res.object_store_name,
@@ -75,9 +77,10 @@ class IntermediateStorageAdapter(IOManager):
                         if res.serialization_strategy_name
                         else ""
                     ),
-                    address=res.key,
-                )
+                ),
+                label="object_store",
             )
+            yield EventMetadataEntry.path(path=res.key, label="filepath", description="hi hi")
 
     def load_input(self, context):
         step_context = context.step_context
