@@ -21,16 +21,19 @@ def test_solid_invocation():
 
 def test_solid_invocation_with_resources():
     @solid(required_resource_keys={"foo"})
-    def solid_requires_resources(_):
-        pass
+    def solid_requires_resources(context):
+        assert context.resources.foo == "bar"
+        return context.resources.foo
 
     # Ensure that a proper error is thrown when attempting to execute and no context is provided
     with pytest.raises(
         CheckError,
-        match='Solid "solid_requires_resources" has required resources. '
-        "Directly invoking solids that require resources is not yet supported.",
+        match='Resource "foo" is required for solid "solid_requires_resources", but no resource was '
+        "found.",
     ):
         solid_requires_resources()
+
+    assert solid_requires_resources.with_resources({"foo": "bar"})() == "bar"
 
 
 def test_solid_invocation_with_config():
@@ -138,7 +141,6 @@ def test_multiple_outputs_iterator():
 @pytest.mark.parametrize(
     "property_or_method_name,val_to_pass",
     [
-        ("resources", None),
         ("pipeline_run", None),
         ("instance", None),
         ("step_launcher", None),

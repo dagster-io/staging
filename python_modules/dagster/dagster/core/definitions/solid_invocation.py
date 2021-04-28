@@ -1,4 +1,5 @@
 import inspect
+import warnings
 
 from dagster import check
 from dagster.core.errors import DagsterSolidInvocationError, user_code_error_boundary
@@ -6,7 +7,10 @@ from dagster.core.errors import DagsterSolidInvocationError, user_code_error_bou
 
 def solid_invocation_result(solid_def, *args, **kwargs):
 
-    _check_context_requirements_fulfilled(solid_def)
+    resources = kwargs.get("__resources__")
+    kwargs = {k: v for k, v in kwargs.items() if k != "__resources__"}
+
+    _check_context_requirements_fulfilled(solid_def, resources)
 
     input_dict = _resolve_inputs(solid_def, args, kwargs)
 
@@ -14,7 +18,7 @@ def solid_invocation_result(solid_def, *args, **kwargs):
         DagsterSolidInvocationError,
         msg_fn=lambda: f'Error occurred while invoking solid "{solid_def.name}":',
     ):
-        output_dict = _execute_and_retrieve_outputs(solid_def, input_dict)
+        output_dict = _execute_and_retrieve_outputs(solid_def, input_dict, resources)
 
         if list(output_dict.keys()) == ["result"]:
             return output_dict["result"]
@@ -22,14 +26,26 @@ def solid_invocation_result(solid_def, *args, **kwargs):
         return output_dict
 
 
-def _check_context_requirements_fulfilled(solid_def):
+def _check_context_requirements_fulfilled(solid_def, resources):
     """Ensure that additional environmental information is not required in order to execute."""
+    from dagster.core.storage.io_manager import IOManager
+
+    resource_dict = resources._asdict() if resources else {}
+
     # TODO: Add to error message describing more clearly how to use invokable.
-    check.invariant(
-        not solid_def.required_resource_keys,
-        f'Solid "{solid_def.name}" has required resources. '
-        "Directly invoking solids that require resources is not yet supported.",
-    )
+    for key in solid_def.required_resource_keys:
+        check.invariant(
+            key in resource_dict,
+            f'Resource "{key}" is required for solid "{solid_def.name}", but no resource was '
+            "found. You can provide resources using the with_resources method on the solid.",
+        )
+
+    for key, resource in resource_dict.items():
+        if isinstance(resource, IOManager):
+            warnings.warn(
+                f'Provided an IO manager "{key}" when invoking solid "{solid_def.name}". '
+                "IO Managers are not used when directly invoking solids."
+            )
 
     check.invariant(
         not solid_def.config_schema.as_field().is_required,
@@ -60,7 +76,7 @@ def _resolve_inputs(solid_def, args, kwargs):
     return input_dict
 
 
-def _execute_and_retrieve_outputs(solid_def, input_dict):
+def _execute_and_retrieve_outputs(solid_def, input_dict, resources):
     from dagster.core.execution.plan.compute import gen_from_async_gen
     from dagster.core.execution.context.compute import DirectSolidExecutionContext
 
@@ -70,6 +86,7 @@ def _execute_and_retrieve_outputs(solid_def, input_dict):
     compute_iterator = solid_def.compute_fn(
         DirectSolidExecutionContext(
             solid_config=config_evr.value.get("config", {}),
+            resources=resources,
         ),
         input_dict,
     )

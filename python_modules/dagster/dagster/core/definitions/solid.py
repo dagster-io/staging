@@ -4,6 +4,7 @@ from dagster import check
 from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import DagsterType
+from dagster.utils import merge_dicts
 from dagster.utils.backcompat import experimental_arg_warning
 
 from .config import ConfigMapping
@@ -168,6 +169,17 @@ class SolidDefinition(NodeDefinition):
             positional_inputs=self.positional_inputs,
             version=self.version,
         )
+
+    def with_resources(self, resources: Dict[str, Any]) -> Callable[..., Any]:
+        from dagster.core.execution.build_resources import build_resources
+
+        with build_resources(resources) as resources:
+
+            def _invoke_with_resources(*args, **kwargs):
+                kwargs = merge_dicts(kwargs, {"__resources__": resources})
+                return self.__call__(*args, **kwargs)
+
+            return _invoke_with_resources
 
 
 class CompositeSolidDefinition(GraphDefinition):

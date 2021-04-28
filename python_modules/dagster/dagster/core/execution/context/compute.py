@@ -237,10 +237,13 @@ class DirectSolidExecutionContext(SolidExecutionContext):
     being invoked directly.
     """
 
-    def __init__(self, solid_config: Any):  # pylint: disable=super-init-not-called
+    def __init__(
+        self, solid_config: Any, resources: Resources
+    ):  # pylint: disable=super-init-not-called
         from dagster.core.execution.context_creation_pipeline import initialize_console_manager
 
         self._solid_config = solid_config
+        self._resources = resources
         self._log = initialize_console_manager(None)
         self._pdb: Optional[ForkedPdb] = None
 
@@ -250,7 +253,7 @@ class DirectSolidExecutionContext(SolidExecutionContext):
 
     @property
     def resources(self) -> Resources:
-        raise DagsterInvalidPropertyError(_property_msg("resources", "property"))
+        return self._resources
 
     @property
     def pipeline_run(self) -> PipelineRun:
