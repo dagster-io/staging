@@ -85,6 +85,7 @@ class SolidDefinition(NodeDefinition):
         required_resource_keys: Optional[Union[Set[str], FrozenSet[str]]] = None,
         positional_inputs: Optional[List[str]] = None,
         version: Optional[str] = None,
+        context_arg_provided: Optional[bool] = True,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
@@ -94,6 +95,8 @@ class SolidDefinition(NodeDefinition):
         self._version = check.opt_str_param(version, "version")
         if version:
             experimental_arg_warning("version", "SolidDefinition.__init__")
+
+        self._context_arg_provided = check.bool_param(context_arg_provided, "context_arg_provided")
 
         super(SolidDefinition, self).__init__(
             name=name,
