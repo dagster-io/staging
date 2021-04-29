@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.11.7
+
+### New
+
+* For pipelines with tags defined in code, display these tags in the Dagit playground.
+* On the Dagit asset list page, use a polling query to regularly refresh the asset list.
+* When viewing the Dagit asset list, persist the user’s preference between the flattened list view and the directory structure view.
+* Added `solid_exception` on `HookContext` which returns the actual exception object thrown in a failed solid. See the example “[Accessing failure information in a failure hook](https://docs.dagster.io/concepts/solids-pipelines/solid-hooks#accessing-failure-information-in-a-failure-hook)“ for more details.
+* Added `solid_output_values` on `HookContext` which returns the computed output values.
+* Added `make_values_resource` helper for defining a resource that passes in user-defined values. This is useful when you want multiple solids to share values. See the [example](https://docs.dagster.io/concepts/configuration/config-schema#passing-configuration-to-multiple-solids-in-a-pipeline) for more details.
+* StartupProbes can now be set to disabled in Helm charts. This is useful if you’re running on a version earlier than Kubernetes 1.16.
+### Bugfixes
+
+* Fixed an issue where partial re-execution was not referencing the right source run and failed to load the correct persisted outputs.
+* When running Dagit with `--path-prefix`, our color-coded favicons denoting the success or failure of a run were not loading properly. This has been fixed.
+* hooks and tags defined on solid invocations now work correctly when executing a pipeline with a solid subselection
+* Fixed an issue where heartbeats from the dagster-daemon process would not appear on the Status page in dagit until the process had been running for 30 seconds
+* When filtering runs, Dagit now suggests all “status:” values and other auto-completions in a scrolling list
+
+### Community Contributions
+
+* [Helm] The Dagit service port is now configurable (thanks @trevenrawr!)
+* [Docs] Cleanup & updating visual aids (thanks @keypointt!)
+
+### Experimental
+
+* [Dagster-GraphQL] Added an official Python Client for Dagster’s GraphQL API ([GH issue #2674](https://github.com/dagster-io/dagster/issues/2674)). Docs can be found [here](http://concepts/dagit/graphql-client).
+
+### Documentation
+
+* Fixed a confusingly-worded header of the Solids/Pipelines Testing page
+
 ## 0.11.6
 
 ### Breaking Changes
@@ -15,7 +47,7 @@
 * When viewing a run in Dagit, individual log line timestams now have permalinks. When loading a timestamp permalink, the log table will highlight and scroll directly to that line.
 * The default `config_schema` for all configurable objects - solids, resources, IO managers, composite solids, executors, loggers - is now `Any`.  This means that you can now use configuration without explicitly providing a `config_schema`. Refer to the docs for more details: https://docs.dagster.io/concepts/configuration/config-schema.
 * When launching an out of process run, resources are no longer initialized in the orchestrating process. This should give a performance boost for those using out of process execution with heavy resources (ie, spark context).
-* `input_defs` and `output_defs` on `@solid` will now flexibly combine data that can be inferred from the function signature that is not declared explicitly via `InputDefinition` / `OutputDefinition`. This allows for more concise defining of solids with reduced repetition of information. 
+* `input_defs` and `output_defs` on `@solid` will now flexibly combine data that can be inferred from the function signature that is not declared explicitly via `InputDefinition` / `OutputDefinition`. This allows for more concise defining of solids with reduced repetition of information.
 * [Helm] Postgres storage configuration now supports connection string parameter keywords.
 * The Status page in Dagit will now display errors that were surfaced in the `dagster-daemon` process within the last 5 minutes. Previously, it would only display errors from the last 30 seconds.
 * Hanging sensors and schedule functions will now raise a timeout exception after 60 seconds, instead of crashing the `dagster-daemon` process.
