@@ -18,16 +18,21 @@ def decorated_function_two_positionals_one_kwarg():
 
 
 def test_get_function_positional_parameters_ok():
-    assert not split_function_parameters(decorated_function_one_positional(), ["bar"], lambda _: "")
+    positional_params, _ = split_function_parameters(
+        decorated_function_one_positional(), [("bar", True)], lambda _: ""
+    )
+    assert not positional_params
 
 
 def test_get_function_positional_parameters_multiple():
-    non_positionals = split_function_parameters(
-        decorated_function_two_positionals_one_kwarg(), ["bar", "baz"], lambda _: ""
+    non_positionals, _ = split_function_parameters(
+        decorated_function_two_positionals_one_kwarg(), [("bar", True), ("baz", True)], lambda _: ""
     )
     assert {non_positional.name for non_positional in non_positionals} == {"qux"}
 
 
 def test_get_function_positional_parameters_invalid():
     with pytest.raises(DagsterInvalidDefinitionError, match="foo"):
-        split_function_parameters(decorated_function_one_positional(), ["bat"], lambda _: "foo")
+        split_function_parameters(
+            decorated_function_one_positional(), [("bat", True)], lambda _: "foo"
+        )

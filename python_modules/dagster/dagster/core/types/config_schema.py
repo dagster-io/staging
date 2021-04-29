@@ -171,7 +171,7 @@ def dagster_type_loader(
     from dagster.config.field import resolve_to_config_type
 
     config_type = resolve_to_config_type(config_schema)
-    EXPECTED_POSITIONALS = ["context", "*"]
+    EXPECTED_POSITIONALS = [("context", True), ("*", True)]
 
     def wrapper(func):
         error_lambda = lambda missing_positional: (

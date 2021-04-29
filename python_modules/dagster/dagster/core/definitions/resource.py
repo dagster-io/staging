@@ -157,12 +157,12 @@ class _ResourceDecoratorCallable:
     def __call__(self, resource_fn):
         check.callable_param(resource_fn, "resource_fn")
 
-        any_name = ["*"]
+        any_name = [("*", True)]
         error_lambda = (
             lambda _: f"@resource decorated function '{resource_fn.__name__}' expects a single "
             "positional argument."
         )
-        extras = split_function_parameters(resource_fn, any_name, error_lambda)
+        extras, _ = split_function_parameters(resource_fn, any_name, error_lambda)
 
         required_extras = list(filter(is_required_param, extras))
         if required_extras:
