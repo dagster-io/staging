@@ -313,7 +313,8 @@ class PartitionSetDefinition(
         "_PartitionSetDefinition",
         (
             "name pipeline_name partition_fn solid_selection mode "
-            "user_defined_run_config_fn_for_partition user_defined_tags_fn_for_partition"
+            "user_defined_run_config_fn_for_partition user_defined_tags_fn_for_partition "
+            "partition_params"
         ),
     )
 ):
@@ -323,8 +324,8 @@ class PartitionSetDefinition(
     Args:
         name (str): Name for this partition set
         pipeline_name (str): The name of the pipeline definition
-        partition_fn (Callable[void, List[Partition]]): User-provided function to define the set of
-            valid partition objects.
+        partition_fn (Optional[Callable[void, List[Partition]]]): User-provided function to define
+            the set of valid partition objects.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute with this partition. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The mode to apply when executing this partition. (default: 'default')
@@ -334,47 +335,56 @@ class PartitionSetDefinition(
         tags_fn_for_partition (Callable[[Partition], Optional[dict[str, str]]]): A function that
             takes a :py:class:`~dagster.Partition` and returns a list of key value pairs that will
             be added to the generated run for this partition.
+        partition_params (Optional[PartitionParams]): A set of parameters used to construct the set
+            of valid partition objects.
     """
 
     def __new__(
         cls,
         name,
         pipeline_name,
-        partition_fn,
+        partition_fn=None,
         solid_selection=None,
         mode=None,
         run_config_fn_for_partition=lambda _partition: {},
         tags_fn_for_partition=lambda _partition: {},
+        partition_params=None,
     ):
-        partition_fn_param_count = len(inspect.signature(partition_fn).parameters)
+        check.invariant(
+            partition_fn is not None or partition_params is not None,
+            "One of `partition_fn` or `partition_params` must be supplied.",
+        )
 
-        def _wrap_partition(x):
-            if isinstance(x, Partition):
-                return x
-            if isinstance(x, str):
-                return Partition(x)
-            raise DagsterInvalidDefinitionError(
-                "Expected <Partition> | <str>, received {type}".format(type=type(x))
-            )
+        if partition_fn is not None:
+            partition_fn_param_count = len(inspect.signature(partition_fn).parameters)
 
-        def _wrap_partition_fn(current_time=None):
-            if not current_time:
-                current_time = pendulum.now("UTC")
+            def _wrap_partition(x):
+                if isinstance(x, Partition):
+                    return x
+                if isinstance(x, str):
+                    return Partition(x)
+                raise DagsterInvalidDefinitionError(
+                    "Expected <Partition> | <str>, received {type}".format(type=type(x))
+                )
 
-            check.callable_param(partition_fn, "partition_fn")
+            def _wrap_partition_fn(current_time=None):
+                if not current_time:
+                    current_time = pendulum.now("UTC")
 
-            if partition_fn_param_count == 1:
-                obj_list = partition_fn(current_time)
-            else:
-                obj_list = partition_fn()
+                check.callable_param(partition_fn, "partition_fn")
 
-            return [_wrap_partition(obj) for obj in obj_list]
+                if partition_fn_param_count == 1:
+                    obj_list = partition_fn(current_time)
+                else:
+                    obj_list = partition_fn()
+
+                return [_wrap_partition(obj) for obj in obj_list]
 
         return super(PartitionSetDefinition, cls).__new__(
             cls,
             name=check_valid_name(name),
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            partition_fn=_wrap_partition_fn,
+            partition_fn=partition_fn,
             solid_selection=check.opt_nullable_list_param(
                 solid_selection, "solid_selection", of_type=str
             ),
@@ -384,6 +394,14 @@ class PartitionSetDefinition(
             ),
             user_defined_tags_fn_for_partition=check.callable_param(
                 tags_fn_for_partition, "tags_fn_for_partition"
+            ),
+            partition_params=check.opt_inst_param(
+                partition_params,
+                "partition_params",
+                PartitionParams,
+                default=DynamicPartitionParams(partition_fn=_wrap_partition_fn)
+                if partition_fn is not None
+                else None,
             ),
         )
 
@@ -399,7 +417,7 @@ class PartitionSetDefinition(
         return tags
 
     def get_partitions(self, current_time=None):
-        return self.partition_fn(current_time)
+        return self.partition_params.get_partitions(current_time)
 
     def get_partition(self, name):
         for partition in self.get_partitions():
