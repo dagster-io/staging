@@ -115,7 +115,9 @@ def schedule_partition_range(
 
             partition_time = execution_time_to_partition_fn(next_time)
 
-            if partition_time.timestamp() > end_timestamp:
+            if (
+                not inclusive and partition_time.timestamp() == end_timestamp
+            ) or partition_time.timestamp() > end_timestamp:
                 break
 
             if partition_time.timestamp() < _start.timestamp():
@@ -123,7 +125,7 @@ def schedule_partition_range(
 
             partitions.append(Partition(value=partition_time, name=partition_time.strftime(fmt)))
 
-        return partitions if inclusive else partitions[:-1]
+        return partitions
 
     return get_schedule_range_partitions
 
