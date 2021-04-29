@@ -2,11 +2,7 @@ import hashlib
 
 from dagster import check
 from dagster.config.config_type import ConfigType
-from dagster.core.decorator_utils import (
-    split_function_parameters,
-    validate_decorated_fn_positionals,
-)
-from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.decorator_utils import split_function_parameters
 from dagster.utils import ensure_gen
 from dagster.utils.backcompat import experimental_arg_warning
 
@@ -178,16 +174,14 @@ def dagster_type_loader(
     EXPECTED_POSITIONALS = ["context", "*"]
 
     def wrapper(func):
-        fn_positionals, _ = split_function_parameters(func, EXPECTED_POSITIONALS)
-        missing_positional = validate_decorated_fn_positionals(fn_positionals, EXPECTED_POSITIONALS)
-        if missing_positional:
-            raise DagsterInvalidDefinitionError(
-                "@dagster_type_loader '{solid_name}' decorated function does not have required positional "
-                "parameter '{missing_param}'. Solid functions should only have keyword arguments "
-                "that match input names and a first positional parameter named 'context'.".format(
-                    solid_name=func.__name__, missing_param=missing_positional
-                )
+        error_lambda = lambda missing_positional: (
+            "@dagster_type_loader '{solid_name}' decorated function does not have required positional "
+            "parameter '{missing_param}'. Solid functions should only have keyword arguments "
+            "that match input names and a first positional parameter named 'context'.".format(
+                solid_name=func.__name__, missing_param=missing_positional
             )
+        )
+        split_function_parameters(func, EXPECTED_POSITIONALS, error_lambda)
         return _create_type_loader_for_decorator(
             config_type, func, required_resource_keys, loader_version, external_version_fn
         )
