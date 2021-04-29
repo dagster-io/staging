@@ -268,27 +268,17 @@ class TimeBasedPartitionParams(
                 minutes=minute_difference,
             )
         elif self.schedule_type is ScheduleType.DAILY:
-            return (
-                lambda d: pendulum.instance(d)
-                .replace(hour=0, minute=0)
-                .subtract(
-                    days=self.offset,
-                )
+            return lambda d: pendulum.instance(d).subtract(
+                days=self.offset,
             )
         elif self.schedule_type is ScheduleType.WEEKLY:
             execution_day = cast(int, self.execution_day)
             day_difference = (execution_day - (self.start.weekday() + 1)) % 7
-            return (
-                lambda d: pendulum.instance(d)
-                .replace(hour=0, minute=0)
-                .subtract(weeks=self.offset, days=day_difference)
-            )
+            return lambda d: pendulum.instance(d).subtract(weeks=self.offset, days=day_difference)
         elif self.schedule_type is ScheduleType.MONTHLY:
             execution_day = cast(int, self.execution_day)
-            return (
-                lambda d: pendulum.instance(d)
-                .replace(hour=0, minute=0)
-                .subtract(months=self.offset, days=execution_day - 1)
+            return lambda d: pendulum.instance(d).subtract(
+                months=self.offset, days=execution_day - 1
             )
         else:
             check.assert_never(self.schedule_type)
