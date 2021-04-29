@@ -325,7 +325,7 @@ def test_different_days_in_different_timezones(external_repo_context):
             validate_run_started(
                 instance.get_runs()[0],
                 expected_datetime,
-                create_pendulum_time(2019, 2, 26, tz="US/Central"),
+                create_pendulum_time(2019, 2, 26, 23, tz="US/Central"),
             )
 
             # Verify idempotence
@@ -732,9 +732,9 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
             ]
 
             expected_partition_times = [
-                create_pendulum_time(2019, 3, 10, tz="US/Central"),
-                create_pendulum_time(2019, 3, 9, tz="US/Central"),
-                create_pendulum_time(2019, 3, 8, tz="US/Central"),
+                create_pendulum_time(2019, 3, 10, 3, 30, tz="US/Central"),
+                create_pendulum_time(2019, 3, 9, 3, 00, tz="US/Central"),
+                create_pendulum_time(2019, 3, 8, 2, 30, tz="US/Central"),
             ]
 
             partition_set_def = the_repo.get_partition_set_def(
@@ -824,9 +824,9 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
             ]
 
             expected_partition_times = [
-                create_pendulum_time(2019, 11, 3, tz="US/Central"),
-                create_pendulum_time(2019, 11, 2, tz="US/Central"),
-                create_pendulum_time(2019, 11, 1, tz="US/Central"),
+                create_pendulum_time(2019, 11, 3, 1, 30, tz="US/Central"),
+                create_pendulum_time(2019, 11, 2, 1, 30, tz="US/Central"),
+                create_pendulum_time(2019, 11, 1, 1, 30, tz="US/Central"),
             ]
 
             for i in range(3):

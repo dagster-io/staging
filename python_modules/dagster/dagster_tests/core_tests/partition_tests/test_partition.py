@@ -85,7 +85,9 @@ def test_time_partition_params_valid_execution_month():
 
 
 def test_time_partition_params_valid_partition_minutes_offset():
-    with pytest.raises(CheckError, match=r"Partition minutes offset .* must be greater than 0"):
+    with pytest.raises(
+        CheckError, match=r"Partition minutes offset .* must be greater than or equal to 0"
+    ):
         TimeBasedPartitionParams(
             start=datetime(year=2021, month=1, day=1),
             partition_minutes_offset=-1,
@@ -93,7 +95,9 @@ def test_time_partition_params_valid_partition_minutes_offset():
 
 
 def test_time_partition_params_valid_partition_hours_offset():
-    with pytest.raises(CheckError, match=r"Partition hours offset .* must be greater than 0"):
+    with pytest.raises(
+        CheckError, match=r"Partition hours offset .* must be greater than or equal to 0"
+    ):
         TimeBasedPartitionParams(
             start=datetime(year=2021, month=1, day=1),
             partition_hours_offset=-1,
@@ -101,7 +105,9 @@ def test_time_partition_params_valid_partition_hours_offset():
 
 
 def test_time_partition_params_valid_partition_days_offset():
-    with pytest.raises(CheckError, match=r"Partition days offset .* must be greater than 0"):
+    with pytest.raises(
+        CheckError, match=r"Partition days offset .* must be greater than or equal to 0"
+    ):
         TimeBasedPartitionParams(
             start=datetime(year=2021, month=1, day=1),
             partition_days_offset=-1,
@@ -109,7 +115,9 @@ def test_time_partition_params_valid_partition_days_offset():
 
 
 def test_time_partition_params_valid_partition_weeks_offset():
-    with pytest.raises(CheckError, match=r"Partition weeks offset .* must be greater than 0"):
+    with pytest.raises(
+        CheckError, match=r"Partition weeks offset .* must be greater than or equal to 0"
+    ):
         TimeBasedPartitionParams(
             start=datetime(year=2021, month=1, day=1),
             partition_weeks_offset=-1,
@@ -117,7 +125,9 @@ def test_time_partition_params_valid_partition_weeks_offset():
 
 
 def test_time_partition_params_valid_partition_months_offset():
-    with pytest.raises(CheckError, match=r"Partition months offset .* must be greater than 0"):
+    with pytest.raises(
+        CheckError, match=r"Partition months offset .* must be greater than or equal to 0"
+    ):
         TimeBasedPartitionParams(
             start=datetime(year=2021, month=1, day=1),
             partition_months_offset=-1,
@@ -136,6 +146,7 @@ def test_time_partition_params_valid_partition_months_offset():
     ids=[
         "no partition days offset",
         "partition days offset == 1",
+        "partition days offset > 1",
         "different start/end year",
         "leap year",
         "not leap year",
@@ -156,6 +167,14 @@ def test_time_partition_params_valid_partition_months_offset():
             datetime(year=2021, month=1, day=6, hour=1, minute=20),
             1,
             ["2021-01-01", "2021-01-02", "2021-01-03", "2021-01-04", "2021-01-05"],
+        ),
+        (
+            datetime(year=2021, month=1, day=1),
+            20,
+            1,
+            datetime(year=2021, month=1, day=6, hour=1, minute=20),
+            2,
+            ["2021-01-01", "2021-01-02", "2021-01-03", "2021-01-04"],
         ),
         (
             datetime(year=2020, month=12, day=29),
@@ -212,6 +231,7 @@ def test_time_partition_params_daily_partitions(
     ids=[
         "no partition months offset",
         "partition months offset == 1",
+        "partition months offset > 1",
         "execution day of month not within start/end range",
     ],
     argvalues=[
@@ -226,6 +246,12 @@ def test_time_partition_params_daily_partitions(
             datetime(year=2021, month=3, day=1, hour=1, minute=20),
             1,
             ["2021-01-01", "2021-02-01"],
+        ),
+        (
+            datetime(year=2021, month=1, day=1),
+            datetime(year=2021, month=3, day=1, hour=1, minute=20),
+            2,
+            ["2021-01-01"],
         ),
         (
             datetime(year=2021, month=1, day=3),
@@ -263,6 +289,7 @@ def test_time_partition_params_monthly_partitions(
     ids=[
         "no partition weeks offset",
         "partition weeks offset == 1",
+        "partition weeks offset > 1",
         "execution day of week not within start/end range",
     ],
     argvalues=[
@@ -277,6 +304,12 @@ def test_time_partition_params_monthly_partitions(
             datetime(year=2021, month=1, day=31, hour=1, minute=20),
             1,
             ["2021-01-03", "2021-01-10", "2021-01-17", "2021-01-24"],
+        ),
+        (
+            datetime(year=2021, month=1, day=1),
+            datetime(year=2021, month=1, day=31, hour=1, minute=20),
+            2,
+            ["2021-01-03", "2021-01-10", "2021-01-17"],
         ),
         (
             datetime(year=2021, month=1, day=4),
@@ -315,6 +348,7 @@ def test_time_partition_params_weekly_partitions(
     ids=[
         "no partition hours offset",
         "partition hours offset == 1",
+        "partition hours offset > 1",
         "execution hour not within start/end range",
         "Spring DST",
         "Spring DST with timezone",
@@ -345,6 +379,17 @@ def test_time_partition_params_weekly_partitions(
                 "2021-01-01-01:01+0000",
                 "2021-01-01-02:01+0000",
                 "2021-01-01-03:01+0000",
+            ],
+        ),
+        (
+            datetime(year=2021, month=1, day=1, hour=0),
+            datetime(year=2021, month=1, day=1, hour=4, minute=1),
+            None,
+            2,
+            [
+                "2021-01-01-00:01+0000",
+                "2021-01-01-01:01+0000",
+                "2021-01-01-02:01+0000",
             ],
         ),
         (
