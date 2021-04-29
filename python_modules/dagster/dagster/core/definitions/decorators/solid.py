@@ -1,6 +1,6 @@
 import inspect
 from functools import update_wrapper, wraps
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union, cast
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
@@ -8,9 +8,9 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.seven import funcsigs
 
 from ...decorator_utils import (
+    get_function_params,
+    missing_required_positionals,
     positional_arg_name_list,
-    split_function_parameters,
-    validate_decorated_fn_positionals,
 )
 from ..events import AssetMaterialization, ExpectationResult, Materialization, Output
 from ..inference import infer_input_props, infer_output_props
@@ -349,11 +349,8 @@ def resolve_checked_solid_fn_inputs(
         explicit_names = set(inp.name for inp in explicit_input_defs)
         nothing_names = set()
 
-    # Currently being super strict about naming. Might be a good idea to relax. Starting strict.
-    fn_positionals, input_args = split_function_parameters(compute_fn, expected_positionals)
+    missing_positional = missing_required_positionals(compute_fn, expected_positionals)
 
-    # Validate Positional Parameters
-    missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
     if missing_positional:
         raise DagsterInvalidDefinitionError(
             "{decorator_name} '{solid_name}' decorated function does not have required positional "
@@ -363,12 +360,14 @@ def resolve_checked_solid_fn_inputs(
             )
         )
 
-    # Validate non positional parameters
+    input_args = get_function_params(compute_fn, expected_positionals)
+
+    # Validate input arguments
     used_inputs = set()
     inputs_to_infer = set()
     has_kwargs = False
 
-    for param in input_args:
+    for param in cast(List[funcsigs.Parameter], input_args):
         if param.kind == funcsigs.Parameter.VAR_KEYWORD:
             has_kwargs = True
         elif param.kind == funcsigs.Parameter.VAR_POSITIONAL:

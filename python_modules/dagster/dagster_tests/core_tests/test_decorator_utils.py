@@ -1,7 +1,4 @@
-from dagster.core.decorator_utils import (
-    split_function_parameters,
-    validate_decorated_fn_positionals,
-)
+from dagster.core.decorator_utils import get_function_params, missing_required_positionals
 
 
 def decorated_function_one_positional():
@@ -18,24 +15,21 @@ def decorated_function_two_positionals_one_kwarg():
     return foo_kwarg
 
 
-def test_get_function_positional_parameters_ok():
-    positionals, non_positionals = split_function_parameters(
-        decorated_function_one_positional(), ["bar"]
+def test_one_required_positional_param():
+    positionals = ["bar"]
+    assert not missing_required_positionals(decorated_function_one_positional(), positionals)
+    assert not get_function_params(decorated_function_one_positional(), positionals)
+
+
+def test_required_positional_parameters_not_missing():
+    positionals = ["bar", "baz"]
+    assert not missing_required_positionals(
+        decorated_function_two_positionals_one_kwarg(), positionals
     )
-    validate_decorated_fn_positionals(positionals, ["bar"])
-    assert "bar" in {positional.name for positional in positionals}
-    assert not non_positionals
-
-
-def test_get_function_positional_parameters_multiple():
-    positionals, non_positionals = split_function_parameters(
-        decorated_function_two_positionals_one_kwarg(), ["bar", "baz"]
+    non_required_args = get_function_params(
+        decorated_function_two_positionals_one_kwarg(), positionals
     )
-    validate_decorated_fn_positionals(positionals, ["bar", "baz"])
-    assert {positional.name for positional in positionals} == {"bar", "baz"}
-    assert {non_positional.name for non_positional in non_positionals} == {"qux"}
 
+    assert {non_required_arg.name for non_required_arg in non_required_args} == {"qux"}
 
-def test_get_function_positional_parameters_invalid():
-    positionals, _ = split_function_parameters(decorated_function_one_positional(), ["bat"])
-    assert validate_decorated_fn_positionals(positionals, ["bat"]) == "bat"
+    assert missing_required_positionals(decorated_function_one_positional(), positionals) == "baz"
