@@ -3,7 +3,7 @@ import re
 import warnings
 from collections import namedtuple
 from enum import Enum
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey, DagsterInvalidEventMetadata
@@ -35,6 +35,30 @@ def validate_asset_key_string(s):
 
 def parse_asset_key_string(s):
     return list(filter(lambda x: x, re.split(ASSET_KEY_SPLIT_REGEX, s)))
+
+
+# for typing
+EventMetadataEntryData = Union[
+    TextMetadataEntryData,
+    UrlMetadataEntryData,
+    PathMetadataEntryData,
+    JsonMetadataEntryData,
+    MarkdownMetadataEntryData,
+    FloatMetadataEntryData,
+    IntMetadataEntryData,
+    PythonArtifactMetadataEntryData,
+]
+# for runtime checks
+EntryDataUnion = (
+    TextMetadataEntryData,
+    UrlMetadataEntryData,
+    PathMetadataEntryData,
+    JsonMetadataEntryData,
+    MarkdownMetadataEntryData,
+    FloatMetadataEntryData,
+    IntMetadataEntryData,
+    PythonArtifactMetadataEntryData,
+)
 
 
 def parse_metadata_entry(label, value):
@@ -105,27 +129,21 @@ class AssetKey(namedtuple("_AssetKey", "path")):
         def emit_metadata_solid(context, df):
             yield AssetMaterialization(
                 asset_key=AssetKey('flat_asset_key'),
-                metadata_entries=[
-                    EventMetadataEntry.text("Text-based metadata for this event", "text_metadata")
-                ],
+                metadata={"text_metadata": "Text-based metadata for this event"},
             )
 
         @solid
         def structured_asset_key_solid(context, df):
             yield AssetMaterialization(
                 asset_key=AssetKey(['parent', 'child', 'grandchild']),
-                metadata_entries=[
-                    EventMetadataEntry.text("Text-based metadata for this event", "text_metadata")
-                ],
+                metadata={"text_metadata": "Text-based metadata for this event"},
             )
 
         @solid
         def structured_asset_key_solid_2(context, df):
             yield AssetMaterialization(
                 asset_key=AssetKey(('parent', 'child', 'grandchild')),
-                metadata_entries=[
-                    EventMetadataEntry.text("Text-based metadata for this event", "text_metadata")
-                ],
+                metadata={"text_metadata": "Text-based metadata for this event"},
             )
 
     Args:
@@ -395,12 +413,11 @@ class EventMetadataEntry(namedtuple("_EventMetadataEntry", "label description en
     Args:
         label (str): Short display label for this metadata entry.
         description (Optional[str]): A human-readable description of this metadata entry.
-        entry_data (Union[TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData]):
-            Typed metadata entry data. The different types allow for customized display in tools
-            like dagit.
+        entry_data (EventMetadataEntryData): Typed metadata entry data. The different types allow
+            for customized display in tools like dagit.
     """
 
-    def __new__(cls, label, description, entry_data):
+    def __new__(cls, label: str, description: Optional[str], entry_data: EventMetadataEntryData):
         return super(EventMetadataEntry, cls).__new__(
             cls,
             check.str_param(label, "label"),
@@ -715,18 +732,6 @@ class IntMetadataEntryData(namedtuple("_IntMetadataEntryData", "value")):
         return super(IntMetadataEntryData, cls).__new__(cls, check.opt_int_param(value, "value"))
 
 
-EntryDataUnion = (
-    TextMetadataEntryData,
-    UrlMetadataEntryData,
-    PathMetadataEntryData,
-    JsonMetadataEntryData,
-    MarkdownMetadataEntryData,
-    PythonArtifactMetadataEntryData,
-    FloatMetadataEntryData,
-    IntMetadataEntryData,
-)
-
-
 class PartitionMetadataEntry(namedtuple("_PartitionMetadataEntry", "partition entry")):
     """Event containing an :py:class:`EventMetdataEntry` and the name of a partition that the entry
     applies to.
@@ -761,7 +766,7 @@ class Output(namedtuple("_Output", "value output_name metadata_entries")):
             "result")
         metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
             (Experimental) A set of metadata entries to attach to events related to this Output.
-        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, EventMetadataEntryData]]]):
             Arbitrary metadata about the failure.  Keys are displayed string labels.
     """
 
@@ -800,7 +805,7 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name 
             (default: "result")
         metadata_entries (Optional[Union[EventMetadataEntry, PartitionMetadataEntry]]):
             (Experimental) A set of metadata entries to attach to events related to this output.
-        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, EventMetadataEntryData]]]):
             (Experimental) Arbitrary metadata about the failure.  Keys are displayed string labels.
     """
 
@@ -846,7 +851,7 @@ class AssetMaterialization(
         tags (Optional[Dict[str, str]]): (Experimental) Tag metadata for a given asset
             materialization.  Used for search and organization of the asset entry in the asset
             catalog in Dagit.
-        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, EventMetadataEntryData]]]):
             Arbitrary metadata about the event.  Keys are displayed string labels.
     """
 
@@ -1004,7 +1009,7 @@ class ExpectationResult(
         description (Optional[str]): A longer human-readable description of the expectation.
         metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the
             expectation.
-        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, EventMetadataEntryData]]]):
             Arbitrary metadata about the event.  Keys are displayed string labels.
     """
 
@@ -1034,7 +1039,7 @@ class TypeCheck(namedtuple("_TypeCheck", "success description metadata_entries")
         description (Optional[str]): A human-readable description of the type check.
         metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the
             type check.
-        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, EventMetadataEntryData]]]):
             Arbitrary metadata about the event.  Keys are displayed string labels.
     """
 
@@ -1058,7 +1063,7 @@ class Failure(Exception):
         description (Optional[str]): A human-readable description of the failure.
         metadata_entries (Optional[List[EventMetadataEntry]]): Arbitrary metadata about the
             failure.
-        metadata (Optional[Dict[str, Union[str, float, int, Dict, TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData, PythonArtifactMetadataEntryData]]]):
+        metadata (Optional[Dict[str, Union[str, float, int, Dict, EventMetadataEntryData]]]):
             Arbitrary metadata about the failure.  Keys are displayed string labels.
     """
 
