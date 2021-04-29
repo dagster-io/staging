@@ -342,42 +342,50 @@ class PartitionSetDefinition(
         cls,
         name,
         pipeline_name,
-        partition_fn,
+        partition_fn=None,
         solid_selection=None,
         mode=None,
         run_config_fn_for_partition=lambda _partition: {},
         tags_fn_for_partition=lambda _partition: {},
         partition_params=None,
     ):
-        partition_fn_param_count = len(inspect.signature(partition_fn).parameters)
+        check.invariant(
+            partition_fn is not None or partition_params is not None,
+            "One of `partition_fn` or `partition_params` must be supplied.",
+        )
 
-        def _wrap_partition(x):
-            if isinstance(x, Partition):
-                return x
-            if isinstance(x, str):
-                return Partition(x)
-            raise DagsterInvalidDefinitionError(
-                "Expected <Partition> | <str>, received {type}".format(type=type(x))
-            )
+        if partition_fn is not None:
+            partition_fn_param_count = len(inspect.signature(partition_fn).parameters)
 
-        def _wrap_partition_fn(current_time=None):
-            if not current_time:
-                current_time = pendulum.now("UTC")
+            def _wrap_partition(x):
+                if isinstance(x, Partition):
+                    return x
+                if isinstance(x, str):
+                    return Partition(x)
+                raise DagsterInvalidDefinitionError(
+                    "Expected <Partition> | <str>, received {type}".format(type=type(x))
+                )
 
-            check.callable_param(partition_fn, "partition_fn")
+            def _wrap_partition_fn(current_time=None):
+                if not current_time:
+                    current_time = pendulum.now("UTC")
 
-            if partition_fn_param_count == 1:
-                obj_list = partition_fn(current_time)
-            else:
-                obj_list = partition_fn()
+                check.callable_param(partition_fn, "partition_fn")
 
-            return [_wrap_partition(obj) for obj in obj_list]
+                if partition_fn_param_count == 1:
+                    obj_list = partition_fn(current_time)
+                else:
+                    obj_list = partition_fn()
+
+                return [_wrap_partition(obj) for obj in obj_list]
+
+            partition_fn = _wrap_partition_fn
 
         return super(PartitionSetDefinition, cls).__new__(
             cls,
             name=check_valid_name(name),
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            partition_fn=_wrap_partition_fn,
+            partition_fn=partition_fn,
             solid_selection=check.opt_nullable_list_param(
                 solid_selection, "solid_selection", of_type=str
             ),
@@ -392,7 +400,9 @@ class PartitionSetDefinition(
                 partition_params,
                 "partition_params",
                 PartitionParams,
-                default=DynamicPartitionParams(partition_fn=_wrap_partition_fn),
+                default=DynamicPartitionParams(partition_fn=partition_fn)
+                if partition_fn is not None
+                else None,
             ),
         )
 
