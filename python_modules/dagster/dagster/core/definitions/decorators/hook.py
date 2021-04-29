@@ -2,15 +2,25 @@ from functools import update_wrapper
 from typing import TYPE_CHECKING, AbstractSet, Any, Callable, List, Optional, Union, cast
 
 from dagster import check
-from dagster.core.errors import DagsterInvalidDefinitionError
 
-from ...decorator_utils import split_function_parameters, validate_decorated_fn_positionals
+from ...decorator_utils import split_function_parameters
 from ..events import HookExecutionResult
 from ..hook import HookDefinition
 
 if TYPE_CHECKING:
     from dagster.core.execution.context.system import HookContext
     from dagster.core.events import DagsterEvent
+
+
+def _hook_missing_positional_error_msg(hook_name):
+    return lambda missing_positional: (
+        "'{hook_name}' decorated function does not have required positional "
+        "parameter '{missing_param}'. Hook functions should only have keyword arguments "
+        "that match input names and a first positional parameter named 'context' and "
+        "a second positional parameter named 'event_list'.".format(
+            hook_name=hook_name, missing_param=missing_positional
+        )
+    )
 
 
 class _Hook:
@@ -30,17 +40,10 @@ class _Hook:
             self.name = fn.__name__
 
         expected_positionals = ["context", "event_list"]
-        fn_positionals, _ = split_function_parameters(fn, expected_positionals)
-        missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
-        if missing_positional:
-            raise DagsterInvalidDefinitionError(
-                "'{hook_name}' decorated function does not have required positional "
-                "parameter '{missing_param}'. Hook functions should only have keyword arguments "
-                "that match input names and a first positional parameter named 'context' and "
-                "a second positional parameter named 'event_list'.".format(
-                    hook_name=fn.__name__, missing_param=missing_positional
-                )
-            )
+
+        split_function_parameters(
+            fn, expected_positionals, _hook_missing_positional_error_msg(fn.__name__)
+        )
 
         hook_def = HookDefinition(
             name=self.name,
@@ -134,16 +137,9 @@ def success_hook(
         check.callable_param(fn, "fn")
 
         expected_positionals = ["context"]
-        fn_positionals, _ = split_function_parameters(fn, expected_positionals)
-        missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
-        if missing_positional:
-            raise DagsterInvalidDefinitionError(
-                "@success_hook '{hook_name}' decorated function does not have required positional "
-                "parameter '{missing_param}'. Hook functions should only have keyword arguments "
-                "that match input names and a first positional parameter named 'context'.".format(
-                    hook_name=fn.__name__, missing_param=missing_positional
-                )
-            )
+        split_function_parameters(
+            fn, expected_positionals, _hook_missing_positional_error_msg(fn.__name__)
+        )
 
         if name is None or callable(name):
             _name = fn.__name__
@@ -205,16 +201,9 @@ def failure_hook(
         check.callable_param(fn, "fn")
 
         expected_positionals = ["context"]
-        fn_positionals, _ = split_function_parameters(fn, expected_positionals)
-        missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
-        if missing_positional:
-            raise DagsterInvalidDefinitionError(
-                "@failure_hook '{hook_name}' decorated function does not have required positional "
-                "parameter '{missing_param}'. Hook functions should only have keyword arguments "
-                "that match input names and a first positional parameter named 'context'.".format(
-                    hook_name=fn.__name__, missing_param=missing_positional
-                )
-            )
+        split_function_parameters(
+            fn, expected_positionals, _hook_missing_positional_error_msg(fn.__name__)
+        )
 
         if name is None or callable(name):
             _name = fn.__name__

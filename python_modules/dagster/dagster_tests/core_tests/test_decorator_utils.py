@@ -1,7 +1,6 @@
-from dagster.core.decorator_utils import (
-    split_function_parameters,
-    validate_decorated_fn_positionals,
-)
+import pytest
+from dagster.core.decorator_utils import split_function_parameters
+from dagster.core.errors import DagsterInvalidDefinitionError
 
 
 def decorated_function_one_positional():
@@ -19,23 +18,16 @@ def decorated_function_two_positionals_one_kwarg():
 
 
 def test_get_function_positional_parameters_ok():
-    positionals, non_positionals = split_function_parameters(
-        decorated_function_one_positional(), ["bar"]
-    )
-    validate_decorated_fn_positionals(positionals, ["bar"])
-    assert "bar" in {positional.name for positional in positionals}
-    assert not non_positionals
+    assert not split_function_parameters(decorated_function_one_positional(), ["bar"], lambda _: "")
 
 
 def test_get_function_positional_parameters_multiple():
-    positionals, non_positionals = split_function_parameters(
-        decorated_function_two_positionals_one_kwarg(), ["bar", "baz"]
+    non_positionals = split_function_parameters(
+        decorated_function_two_positionals_one_kwarg(), ["bar", "baz"], lambda _: ""
     )
-    validate_decorated_fn_positionals(positionals, ["bar", "baz"])
-    assert {positional.name for positional in positionals} == {"bar", "baz"}
     assert {non_positional.name for non_positional in non_positionals} == {"qux"}
 
 
 def test_get_function_positional_parameters_invalid():
-    positionals, _ = split_function_parameters(decorated_function_one_positional(), ["bat"])
-    assert validate_decorated_fn_positionals(positionals, ["bat"]) == "bat"
+    with pytest.raises(DagsterInvalidDefinitionError, match="foo"):
+        split_function_parameters(decorated_function_one_positional(), ["bat"], lambda _: "foo")
