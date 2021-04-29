@@ -56,15 +56,22 @@ class _Solid:
         else:
             output_defs = self.output_defs
 
-        resolved_input_defs, positional_inputs = resolve_checked_solid_fn_inputs(
+        (
+            resolved_input_defs,
+            positional_inputs,
+            context_arg_provided,
+        ) = resolve_checked_solid_fn_inputs(
             decorator_name="@solid",
             fn_name=self.name,
             compute_fn=fn,
             explicit_input_defs=self.input_defs,
             has_context_arg=True,
+            context_required=bool(self.required_resource_keys) or bool(self.config_schema),
             exclude_nothing=True,
         )
-        compute_fn = _create_solid_compute_wrapper(fn, resolved_input_defs, output_defs)
+        compute_fn = _create_solid_compute_wrapper(
+            fn, resolved_input_defs, output_defs, context_arg_provided
+        )
 
         solid_def = SolidDefinition(
             name=self.name,
@@ -283,7 +290,10 @@ async def _coerce_async_solid_to_async_gen(awaitable, context, output_defs):
 
 
 def _create_solid_compute_wrapper(
-    fn: Callable, input_defs: List[InputDefinition], output_defs: List[OutputDefinition]
+    fn: Callable,
+    input_defs: List[InputDefinition],
+    output_defs: List[OutputDefinition],
+    context_arg_provided: bool,
 ):
     check.callable_param(fn, "fn")
     check.list_param(input_defs, "input_defs", of_type=InputDefinition)
@@ -301,7 +311,7 @@ def _create_solid_compute_wrapper(
         for input_name in input_names:
             kwargs[input_name] = input_defs[input_name]
 
-        result = fn(context, **kwargs)
+        result = fn(context, **kwargs) if context_arg_provided else fn(**kwargs)
 
         if inspect.isgenerator(result):
             return result
@@ -321,14 +331,15 @@ def resolve_checked_solid_fn_inputs(
     compute_fn: Callable[..., Any],
     explicit_input_defs: List[InputDefinition],
     has_context_arg: bool,
+    context_required: bool,
     exclude_nothing: bool,  # should Nothing type inputs be excluded from compute_fn args
-) -> Tuple[List[InputDefinition], List[str]]:
+) -> Tuple[List[InputDefinition], List[str], bool]:
     """
     Validate provided input definitions and infer the remaining from the type signature of the compute_fn
     Returns the resolved set of InputDefinitions and the positions of input names (which is used
     during graph composition).
     """
-    expected_positionals = ["context"] if has_context_arg else []
+    expected_positionals = [("context", context_required)] if has_context_arg else []
 
     if exclude_nothing:
         explicit_names = set(
@@ -353,7 +364,7 @@ def resolve_checked_solid_fn_inputs(
         )
     )
     # Currently being super strict about naming. Might be a good idea to relax. Starting strict.
-    input_args = split_function_parameters(
+    input_args, skipped_positionals = split_function_parameters(
         compute_fn, expected_positionals, missing_positional_lambda
     )
 
@@ -397,7 +408,8 @@ def resolve_checked_solid_fn_inputs(
         )
 
     inferred_props = {
-        inferred.name: inferred for inferred in infer_input_props(compute_fn, has_context_arg)
+        inferred.name: inferred
+        for inferred in infer_input_props(compute_fn, has_context_arg and not skipped_positionals)
     }
     input_defs = []
     for input_def in explicit_input_defs:
@@ -415,4 +427,4 @@ def resolve_checked_solid_fn_inputs(
         if inferred.name in inputs_to_infer
     )
 
-    return input_defs, positional_arg_name_list(input_args)
+    return input_defs, positional_arg_name_list(input_args), not skipped_positionals

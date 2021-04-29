@@ -39,7 +39,7 @@ class _Hook:
         if not self.name:
             self.name = fn.__name__
 
-        expected_positionals = ["context", "event_list"]
+        expected_positionals = [("context", True), ("event_list", True)]
 
         split_function_parameters(
             fn, expected_positionals, _hook_missing_positional_error_msg(fn.__name__)
@@ -136,7 +136,7 @@ def success_hook(
 
         check.callable_param(fn, "fn")
 
-        expected_positionals = ["context"]
+        expected_positionals = [("context", True)]
         split_function_parameters(
             fn, expected_positionals, _hook_missing_positional_error_msg(fn.__name__)
         )
@@ -200,7 +200,7 @@ def failure_hook(
     def wrapper(fn: Callable[["HookContext"], Any]) -> Union[HookDefinition, _Hook]:
         check.callable_param(fn, "fn")
 
-        expected_positionals = ["context"]
+        expected_positionals = [("context", True)]
         split_function_parameters(
             fn, expected_positionals, _hook_missing_positional_error_msg(fn.__name__)
         )
