@@ -9,6 +9,7 @@ from dagster.seven import funcsigs
 
 from ...decorator_utils import (
     get_function_params,
+    get_valid_name_permutations,
     positional_arg_name_list,
     validate_expected_params,
 )
@@ -60,15 +61,22 @@ class _Solid:
         else:
             output_defs = self.output_defs
 
-        resolved_input_defs, positional_inputs = resolve_checked_solid_fn_inputs(
+        (
+            resolved_input_defs,
+            positional_inputs,
+            context_arg_provided,
+        ) = resolve_checked_solid_fn_inputs(
             decorator_name="@solid",
             fn_name=self.name,
             compute_fn=fn,
             explicit_input_defs=self.input_defs,
             has_context_arg=True,
+            context_required=bool(self.required_resource_keys) or bool(self.config_schema),
             exclude_nothing=True,
         )
-        compute_fn = _create_solid_compute_wrapper(fn, resolved_input_defs, output_defs)
+        compute_fn = _create_solid_compute_wrapper(
+            fn, resolved_input_defs, output_defs, context_arg_provided
+        )
 
         solid_def = SolidDefinition(
             name=self.name,
@@ -287,7 +295,10 @@ async def _coerce_async_solid_to_async_gen(awaitable, context, output_defs):
 
 
 def _create_solid_compute_wrapper(
-    fn: Callable, input_defs: List[InputDefinition], output_defs: List[OutputDefinition]
+    fn: Callable,
+    input_defs: List[InputDefinition],
+    output_defs: List[OutputDefinition],
+    context_arg_provided: bool,
 ):
     check.callable_param(fn, "fn")
     check.list_param(input_defs, "input_defs", of_type=InputDefinition)
@@ -305,7 +316,7 @@ def _create_solid_compute_wrapper(
         for input_name in input_names:
             kwargs[input_name] = input_defs[input_name]
 
-        result = fn(context, **kwargs)
+        result = fn(context, **kwargs) if context_arg_provided else fn(**kwargs)
 
         if inspect.isgenerator(result):
             return result
@@ -325,8 +336,9 @@ def resolve_checked_solid_fn_inputs(
     compute_fn: Callable[..., Any],
     explicit_input_defs: List[InputDefinition],
     has_context_arg: bool,
+    context_required: bool,
     exclude_nothing: bool,  # should Nothing type inputs be excluded from compute_fn args
-) -> Tuple[List[InputDefinition], List[str]]:
+) -> Tuple[List[InputDefinition], List[str], bool]:
     """
     Validate provided input definitions and infer the remaining from the type signature of the compute_fn
     Returns the resolved set of InputDefinitions and the positions of input names (which is used
@@ -351,18 +363,25 @@ def resolve_checked_solid_fn_inputs(
 
     params = get_function_params(compute_fn)
 
-    missing_param = validate_expected_params(params, expected_positionals)
+    is_context_provided = _is_context_provided(params)
 
-    if missing_param:
-        raise DagsterInvalidDefinitionError(
-            "{decorator_name} '{solid_name}' decorated function does not have required positional "
-            "parameter '{missing_param}'. Solid functions should only have keyword arguments "
-            "that match input names and a first positional parameter named 'context'.".format(
-                decorator_name=decorator_name, solid_name=fn_name, missing_param=missing_param
+    if context_required:
+
+        missing_param = validate_expected_params(params, expected_positionals)
+
+        if missing_param:
+            raise DagsterInvalidDefinitionError(
+                "{decorator_name} '{solid_name}' decorated function does not have required positional "
+                "parameter '{missing_param}'. Solid functions should only have keyword arguments "
+                "that match input names and a first positional parameter named 'context'.".format(
+                    decorator_name=decorator_name, solid_name=fn_name, missing_param=missing_param
+                )
             )
-        )
 
-    input_args = params[len(expected_positionals) :]
+        input_args = params[len(expected_positionals) :]
+
+    else:
+        input_args = params[1:] if is_context_provided else params
 
     # Validate input arguments
     used_inputs = set()
@@ -404,7 +423,7 @@ def resolve_checked_solid_fn_inputs(
         )
 
     inferred_props = {
-        inferred.name: inferred for inferred in infer_input_props(compute_fn, has_context_arg)
+        inferred.name: inferred for inferred in infer_input_props(compute_fn, is_context_provided)
     }
     input_defs = []
     for input_def in explicit_input_defs:
@@ -422,4 +441,10 @@ def resolve_checked_solid_fn_inputs(
         if inferred.name in inputs_to_infer
     )
 
-    return input_defs, positional_arg_name_list(input_args)
+    return input_defs, positional_arg_name_list(input_args), is_context_provided
+
+
+def _is_context_provided(params: List[funcsigs.Parameter]) -> bool:
+    if len(params) == 0:
+        return False
+    return params[0].name in get_valid_name_permutations("context")
