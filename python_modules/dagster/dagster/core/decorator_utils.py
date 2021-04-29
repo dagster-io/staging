@@ -1,4 +1,4 @@
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional, Tuple
 
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.seven import funcsigs
@@ -21,8 +21,10 @@ def _is_param_valid(param: funcsigs.Parameter, expected_positional: str) -> bool
 
 
 def split_function_parameters(
-    fn: Callable[..., Any], expected_positionals: List[str], error_msg_lambda: Callable[[str], str]
-) -> List[funcsigs.Parameter]:
+    fn: Callable[..., Any],
+    expected_positionals: List[Tuple[str, bool]],
+    error_msg_lambda: Callable[[str], str],
+) -> Tuple[List[funcsigs.Parameter], Optional[List[str]]]:
     """Validate the parameters of `fn` against an expected list of positional arguments.
 
     Args:
@@ -39,15 +41,24 @@ def split_function_parameters(
 
     fn_params = list(funcsigs.signature(fn).parameters.values())
     if len(fn_params) < len(expected_positionals):
-        raise DagsterInvalidDefinitionError(error_msg_lambda(expected_positionals[0]))
+        if any([is_required for _, is_required in expected_positionals]):
+            raise DagsterInvalidDefinitionError(error_msg_lambda(expected_positionals[0][0]))
+        else:
+            return fn_params, [
+                expected_positional for expected_positional, _ in expected_positionals
+            ]
 
     expected_idx = 0
-    for expected_positional in expected_positionals:
-        if not _is_param_valid(fn_params[expected_idx], expected_positional):
+    skipped_positionals = []
+    for expected_positional, positional_required in expected_positionals:
+        if _is_param_valid(fn_params[expected_idx], expected_positional):
+            expected_idx += 1
+        elif positional_required:
             raise DagsterInvalidDefinitionError(error_msg_lambda(expected_positional))
-        expected_idx += 1
+        else:
+            skipped_positionals.append(expected_positional)
 
-    return fn_params[expected_idx:]
+    return fn_params[expected_idx:], skipped_positionals
 
 
 def is_required_param(param):
