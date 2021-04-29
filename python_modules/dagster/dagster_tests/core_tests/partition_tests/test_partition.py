@@ -190,7 +190,7 @@ def test_time_based_partition_params_invariants(
             None,
             None,
             None,
-            ["2020-01-01", "2020-02-01"],
+            ["2020-01-01", "2020-02-01", "2020-03-01"],
         ),
         (
             ScheduleType.MONTHLY,
@@ -202,7 +202,7 @@ def test_time_based_partition_params_invariants(
             None,
             None,
             None,
-            ["2020-12-01", "2021-01-01"],
+            ["2020-12-01", "2021-01-01", "2021-02-01"],
         ),
         (
             ScheduleType.MONTHLY,
@@ -214,7 +214,7 @@ def test_time_based_partition_params_invariants(
             None,
             None,
             None,
-            [],
+            ["2020-03-01"],
         ),
         (
             ScheduleType.WEEKLY,
@@ -226,7 +226,7 @@ def test_time_based_partition_params_invariants(
             None,
             None,
             None,
-            ["2020-01-01", "2020-01-08", "2020-01-15"],
+            ["2020-01-01", "2020-01-08", "2020-01-15", "2020-01-22"],
         ),
         (
             ScheduleType.HOURLY,
