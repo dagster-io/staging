@@ -202,7 +202,6 @@ def fetch_repository_locations(workspace_request_context):
     )
 
     nodes = []
-
     for location_name in workspace_request_context.repository_location_names:
         node = (
             GrapheneRepositoryLocation(
