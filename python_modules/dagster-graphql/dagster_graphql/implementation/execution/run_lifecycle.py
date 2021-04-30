@@ -5,7 +5,7 @@ from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.host_representation import ExternalPipeline
 from dagster.core.instance import is_memoized_run
 from dagster.core.storage.pipeline_run import PipelineRunStatus
-from dagster.core.storage.tags import MEMOIZED_RUN_TAG, RESUME_RETRY_TAG
+from dagster.core.storage.tags import IDENTITY_TAG, MEMOIZED_RUN_TAG, RESUME_RETRY_TAG
 from dagster.core.utils import make_new_run_id
 from dagster.utils import merge_dicts
 from graphql.execution.base import ResolveInfo
@@ -65,7 +65,11 @@ def create_valid_pipeline_run(graphene_info, external_pipeline, execution_params
         step_keys_to_execute=step_keys_to_execute,
         known_state=known_state,
     )
+
     tags = merge_dicts(external_pipeline.tags, execution_params.execution_metadata.tags)
+    if hasattr(graphene_info.context.instance, "get_identity"):
+        identity = graphene_info.context.instance.get_identity()
+        tags = merge_dicts(tags, {IDENTITY_TAG: identity})
 
     pipeline_run = graphene_info.context.instance.create_run(
         pipeline_snapshot=external_pipeline.pipeline_snapshot,

@@ -178,6 +178,7 @@ class WorkspaceProcessContext:
     def __init__(
         self, instance: DagsterInstance, workspace: Workspace, version: Optional[str] = None
     ):
+
         # lazy import for perf
         from rx.subjects import Subject
 
