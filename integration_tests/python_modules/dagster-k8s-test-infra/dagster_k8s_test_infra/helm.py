@@ -855,6 +855,7 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
             "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
             "envSecrets": [{"name": TEST_SECRET_NAME}],
             "annotations": {"dagster-integration-tests": "daemon-pod-annotation"},
+            "heartbeatTolerance": 180,
         },
         # Used to set the environment variables in dagster.shared_env that determine the run config
         "pipelineRun": {"image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy}},
