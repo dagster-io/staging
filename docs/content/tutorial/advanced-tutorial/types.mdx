@@ -176,23 +176,11 @@ def less_simple_data_frame_type_check(_, value):
     return TypeCheck(
         success=True,
         description="LessSimpleDataFrame summary statistics",
-        metadata_entries=[
-            EventMetadataEntry.text(
-                str(len(value)),
-                "n_rows",
-                "Number of rows seen in the data frame",
-            ),
-            EventMetadataEntry.text(
-                str(len(value[0].keys()) if len(value) > 0 else 0),
-                "n_cols",
-                "Number of columns seen in the data frame",
-            ),
-            EventMetadataEntry.text(
-                str(list(value[0].keys()) if len(value) > 0 else []),
-                "column_names",
-                "Keys of columns seen in the data frame",
-            ),
-        ],
+        metadata={
+            "n_rows": len(value),
+            "n_cols": len(value[0].keys()) if len(value) > 0 else 0,
+            "column_names": str(list(value[0].keys()) if len(value) > 0 else []),
+        },
     )
 ```
 
