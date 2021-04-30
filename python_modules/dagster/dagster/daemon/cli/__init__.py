@@ -10,6 +10,7 @@ import pendulum
 from dagster import __version__
 from dagster.core.instance import DagsterInstance
 from dagster.daemon.controller import (
+    DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
     DagsterDaemonController,
     all_daemons_healthy,
     all_daemons_live,
@@ -24,7 +25,13 @@ from dagster.utils.interrupts import capture_interrupts, raise_interrupts_as
     name="run",
     help="Run any daemons configured on the DagsterInstance.",
 )
-def run_command():
+@click.option(
+    "--heartbeat-tolerance",
+    required=False,
+    default=DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
+    help="How long (in seconds) to allow a daemon to go without heartbeating before failing the dagster-daemon process.",
+)
+def run_command(heartbeat_tolerance):
     with capture_interrupts():
         with DagsterInstance.get() as instance:
             if instance.is_ephemeral:
@@ -34,7 +41,9 @@ def run_command():
                     "you have created a dagster.yaml file there."
                 )
 
-            with daemon_controller_from_instance(instance) as controller:
+            with daemon_controller_from_instance(
+                instance, heartbeat_tolerance_seconds=heartbeat_tolerance
+            ) as controller:
                 controller.check_daemon_loop()
 
 
