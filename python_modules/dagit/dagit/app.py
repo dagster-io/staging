@@ -166,7 +166,6 @@ def instantiate_app_with_views(
             schema=schema,
             graphiql=True,
             graphiql_template=PLAYGROUND_TEMPLATE,
-            executor=Executor(),
             context=context,
         ),
     )
