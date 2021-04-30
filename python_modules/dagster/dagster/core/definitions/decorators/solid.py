@@ -428,3 +428,69 @@ def resolve_checked_solid_fn_inputs(
     )
 
     return input_defs, positional_arg_name_list(input_args), not skipped_positionals
+
+
+def lambda_solid(
+    name: Union[Optional[str], Callable[..., Any]] = None,
+    description: Optional[str] = None,
+    input_defs: Optional[List[InputDefinition]] = None,
+    output_def: Optional[OutputDefinition] = None,
+) -> Union[_Solid, SolidDefinition]:
+    """Create a simple solid from the decorated function.
+
+    This shortcut allows the creation of simple solids that do not require
+    configuration and whose implementations do not require a
+    :py:class:`context <SolidExecutionContext>`.
+
+    Lambda solids take any number of inputs and produce a single output.
+
+    Inputs can be defined using :class:`InputDefinition` and passed to the ``input_defs`` argument
+    of this decorator, or inferred from the type signature of the decorated function.
+
+    The single output can be defined using :class:`OutputDefinition` and passed as the
+    ``output_def`` argument of this decorator, or its type can be inferred from the type signature
+    of the decorated function.
+
+    The body of the decorated function should return a single value, which will be yielded as the
+    solid's output.
+
+    Args:
+        name (str): Name of solid.
+        description (str): Solid description.
+        input_defs (List[InputDefinition]): List of input_defs.
+        output_def (OutputDefinition): The output of the solid. Defaults to
+            :class:`OutputDefinition() <OutputDefinition>`.
+
+    Examples:
+
+    .. code-block:: python
+
+        @lambda_solid
+        def hello_world():
+            return 'hello'
+
+        @lambda_solid(
+            input_defs=[InputDefinition(name='foo', str)],
+            output_def=OutputDefinition(str)
+        )
+        def hello_world(foo):
+            # explicitly type and name inputs and outputs
+            return foo
+
+        @lambda_solid
+        def hello_world(foo: str) -> str:
+            # same as above inferred from signature
+            return foo
+
+    """
+    if callable(name):
+        check.invariant(input_defs is None)
+        check.invariant(description is None)
+        return _Solid(output_defs=[output_def] if output_def else None)(name)
+
+    return _Solid(
+        name=name,
+        input_defs=input_defs,
+        output_defs=[output_def] if output_def else None,
+        description=description,
+    )
