@@ -1,5 +1,5 @@
 ---
-title: "Advanced: Dagster Types | Dagster"
+title: 'Advanced: Dagster Types | Dagster'
 description: Besides Python 3's typing system, Dagster provides a type system that helps users describe what kind of values their solids accept and produce.
 ---
 
@@ -9,7 +9,7 @@ description: Besides Python 3's typing system, Dagster provides a type system th
 
 ## Verifying Solid Outputs and Inputs
 
-Dagster lets developers express what they expect their solid inputs and outputs to look like through [Dagster Types](/\_apidocs/types).
+Dagster lets developers express what they expect their solid inputs and outputs to look like through [Dagster Types](/_apidocs/types).
 
 The dagster type system is gradual and optional - pipelines can run without types specified explicitly, and specifying types in some places doesn't require that types be specified everywhere.
 
@@ -94,10 +94,10 @@ dagit -f custom_types.py
 ```
 
 <Image
-alt="custom_types_figure_one.png"
-src="/images/tutorial/custom_types_figure_one.png"
-width={1680}
-height={946}
+  alt="custom_types_figure_one.png"
+  src="/images/tutorial/custom_types_figure_one.png"
+  width={1680}
+  height={946}
 />
 
 You can see that the output of `download_csv` (which by default has the name `result`) is marked to be of type `SimpleDataFrame`.
@@ -128,10 +128,10 @@ dagster.core.errors.DagsterTypeCheckDidNotPass: Type check failed for step outpu
 We will also see the error message in Dagit:
 
 <Image
-alt="custom_types_2_dagit_error_messasge.png"
-src="/images/tutorial/custom_types_2_dagit_error_message.png"
-width={2880}
-height={1596}
+  alt="custom_types_2_dagit_error_messasge.png"
+  src="/images/tutorial/custom_types_2_dagit_error_message.png"
+  width={2880}
+  height={1596}
 />
 
 <br />
@@ -176,23 +176,11 @@ def less_simple_data_frame_type_check(_, value):
     return TypeCheck(
         success=True,
         description="LessSimpleDataFrame summary statistics",
-        metadata_entries=[
-            EventMetadataEntry.text(
-                str(len(value)),
-                "n_rows",
-                "Number of rows seen in the data frame",
-            ),
-            EventMetadataEntry.text(
-                str(len(value[0].keys()) if len(value) > 0 else 0),
-                "n_cols",
-                "Number of columns seen in the data frame",
-            ),
-            EventMetadataEntry.text(
-                str(list(value[0].keys()) if len(value) > 0 else []),
-                "column_names",
-                "Keys of columns seen in the data frame",
-            ),
-        ],
+        metadata={
+            "n_rows": len(value),
+            "n_cols": len(value[0].keys()) if len(value) > 0 else 0,
+            "column_names": str(list(value[0].keys()) if len(value) > 0 else []),
+        },
     )
 ```
 
@@ -201,10 +189,10 @@ A <PyObject module="dagster" object="TypeCheck" displayText="TypeCheck" /> must 
 Dagit knows how to display and archive structured metadata of this kind for future review:
 
 <Image
-alt="custom_types_figure_two.png"
-src="/images/tutorial/custom_types_figure_two.png"
-width={1680}
-height={946}
+  alt="custom_types_figure_two.png"
+  src="/images/tutorial/custom_types_figure_two.png"
+  width={1680}
+  height={946}
 />
 
 <br />
