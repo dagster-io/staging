@@ -49,7 +49,7 @@ spec:
           imagePullPolicy: {{ .Values.dagsterDaemon.image.pullPolicy }}
           image: "{{ .Values.dagsterDaemon.image.repository }}:{{ .Values.dagsterDaemon.image.tag }}"
           command: ["dagster-daemon"]
-          args: ["run"]
+          args: ["run", "--heartbeat-tolerance", {{ .Values.dagsterDaemon.heratbeatTolerance }}]
           env:
             - name: DAGSTER_PG_PASSWORD
               valueFrom:

@@ -21,7 +21,7 @@ from dagster.daemon.types import DaemonHeartbeat, DaemonStatus
 from dagster.utils.interrupts import raise_interrupts_as
 
 # How long beyond the expected heartbeat will the daemon be considered healthy
-DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS = 60
+DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS = 300
 
 # Default interval at which daemons run
 DEFAULT_DAEMON_INTERVAL_SECONDS = 30
