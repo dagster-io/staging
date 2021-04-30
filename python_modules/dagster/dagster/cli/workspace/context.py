@@ -192,10 +192,13 @@ class WorkspaceProcessContext:
 
         self.version = version
 
+        self._repository_locations: Dict[str, RepositoryLocation] = {}
         self._initialize_repository_locations()
 
     def _initialize_repository_locations(self) -> None:
-        self._repository_locations: Dict[str, RepositoryLocation] = {}
+        previous_repository_locations = self._repository_locations.values()
+
+        self._repository_locations = {}
         for location in self._workspace.repository_locations:
             check.invariant(
                 self._repository_locations.get(location.name) is None,
@@ -204,10 +207,14 @@ class WorkspaceProcessContext:
                 ),
             )
 
-            location.add_state_subscriber(self._location_state_subscriber)
+            # Don't add state subscribers for locations that we are already subscribed to
+            if location not in previous_repository_locations:
+                location.add_state_subscriber(self._location_state_subscriber)
+
             self._repository_locations[location.name] = location
 
     def create_request_context(self) -> WorkspaceRequestContext:
+        self._initialize_repository_locations()
         return WorkspaceRequestContext(
             instance=self.instance,
             workspace_snapshot=self._workspace.create_snapshot(),
