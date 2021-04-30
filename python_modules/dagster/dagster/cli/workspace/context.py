@@ -189,28 +189,16 @@ class WorkspaceProcessContext:
             self._location_state_events_handler
         )
 
-        self.version = version
-
-        self._initialize_repository_locations()
-
-    def _initialize_repository_locations(self) -> None:
-        self._repository_locations: Dict[str, RepositoryLocation] = {}
         for location in self._workspace.repository_locations:
-            check.invariant(
-                self._repository_locations.get(location.name) is None,
-                'Cannot have multiple locations with the same name, got multiple "{name}"'.format(
-                    name=location.name,
-                ),
-            )
-
             location.add_state_subscriber(self._location_state_subscriber)
-            self._repository_locations[location.name] = location
+
+        self.version = version
 
     def create_request_context(self) -> WorkspaceRequestContext:
         return WorkspaceRequestContext(
             instance=self.instance,
             workspace_snapshot=self._workspace.create_snapshot(),
-            repository_locations_dict=self._repository_locations.copy(),
+            repository_locations_dict=self._workspace.repository_locations_dict.copy(),
             process_context=self,
             version=self.version,
         )
@@ -221,7 +209,7 @@ class WorkspaceProcessContext:
 
     @property
     def repository_locations(self) -> List[RepositoryLocation]:
-        return list(self._repository_locations.values())
+        return list(self._workspace.repository_locations())
 
     @property
     def location_state_events(self) -> "Subject":
@@ -248,13 +236,8 @@ class WorkspaceProcessContext:
         if self._workspace.has_repository_location(name):
             new_location = self._workspace.get_repository_location(name)
             new_location.add_state_subscriber(self._location_state_subscriber)
-            check.invariant(new_location.name == name)
-            self._repository_locations[name] = new_location
-        elif name in self._repository_locations:
-            del self._repository_locations[name]
 
         return self
 
     def reload_workspace(self) -> None:
         self._workspace.reload_workspace()
-        self._initialize_repository_locations()
