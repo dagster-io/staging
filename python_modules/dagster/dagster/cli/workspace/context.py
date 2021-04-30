@@ -189,10 +189,18 @@ class WorkspaceProcessContext:
             self._location_state_events_handler
         )
 
-        for location in self._workspace.repository_locations:
-            location.add_state_subscriber(self._location_state_subscriber)
+        self._previous_repository_locations = []
+        self.set_state_subscribers()
 
         self.version = version
+
+    def set_state_subscribers(self):
+        for location in self._workspace.repository_locations:
+            # Don't add state subscribers for locations that we are already subscribed to
+            if location not in self._previous_repository_locations:
+                location.add_state_subscriber(self._location_state_subscriber)
+
+        self._previous_repository_locations = self._workspace.repository_locations
 
     def create_request_context(self) -> WorkspaceRequestContext:
         return WorkspaceRequestContext(
@@ -241,3 +249,4 @@ class WorkspaceProcessContext:
 
     def reload_workspace(self) -> None:
         self._workspace.reload_workspace()
+        self.set_state_subscribers()
