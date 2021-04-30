@@ -156,7 +156,7 @@ class Workspace(IWorkspace):
 
     @property
     def repository_locations_dict(self):
-        return self._location_dict.values()
+        return self._location_dict
 
     @property
     def repository_locations(self):
