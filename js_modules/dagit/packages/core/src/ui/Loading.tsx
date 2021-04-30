@@ -38,7 +38,7 @@ export const Loading = <TData extends Record<string, any>>(props: ILoadingProps<
     };
   }, [isLoading]);
 
-  if (error) {
+  if (error && !error.networkError) {
     console.error(error);
     return (
       <Box padding={64} flex={{justifyContent: 'center'}}>
