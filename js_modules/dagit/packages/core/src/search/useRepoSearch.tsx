@@ -1,4 +1,4 @@
-import {gql, useQuery} from '@apollo/client';
+import {gql, useLazyQuery, useQuery} from '@apollo/client';
 import Fuse from 'fuse.js';
 import * as React from 'react';
 
@@ -107,6 +107,7 @@ const secondaryDataToSearchResults = (data?: SearchSecondaryQuery) => {
 };
 
 export const useRepoSearch = () => {
+  const [hasLoadedSecondaryData, setLoadedSecondaryData] = React.useState<boolean>(false);
   const {data: bootstrapData, loading: bootstrapLoading} = useQuery<SearchBootstrapQuery>(
     SEARCH_BOOTSTRAP_QUERY,
     {
@@ -114,12 +115,12 @@ export const useRepoSearch = () => {
     },
   );
 
-  const {data: secondaryData, loading: secondaryLoading} = useQuery<SearchSecondaryQuery>(
-    SEARCH_SECONDARY_QUERY,
-    {
-      fetchPolicy: 'cache-and-network',
-    },
-  );
+  const [
+    performQuery,
+    {data: secondaryData, loading: secondaryLoading},
+  ] = useLazyQuery<SearchSecondaryQuery>(SEARCH_SECONDARY_QUERY, {
+    fetchPolicy: 'cache-and-network',
+  });
 
   const bootstrapFuse = React.useMemo(() => bootstrapDataToSearchResults(bootstrapData), [
     bootstrapData,
@@ -127,15 +128,18 @@ export const useRepoSearch = () => {
   const secondaryFuse = React.useMemo(() => secondaryDataToSearchResults(secondaryData), [
     secondaryData,
   ]);
-
   const loading = bootstrapLoading || secondaryLoading;
   const performSearch = React.useCallback(
-    (queryString: string): Fuse.FuseResult<SearchResult>[] => {
+    (queryString: string, buildSecondary?: boolean): Fuse.FuseResult<SearchResult>[] => {
+      if ((queryString || buildSecondary) && !hasLoadedSecondaryData) {
+        setLoadedSecondaryData(true);
+        performQuery();
+      }
       const bootstrapResults = bootstrapFuse.search(queryString);
       const secondaryResults = secondaryFuse.search(queryString);
       return [...bootstrapResults, ...secondaryResults];
     },
-    [bootstrapFuse, secondaryFuse],
+    [bootstrapFuse, secondaryFuse, performQuery, hasLoadedSecondaryData, setLoadedSecondaryData],
   );
 
   return {loading, performSearch};
