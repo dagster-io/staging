@@ -17,16 +17,22 @@ from typing import (
 )
 
 from dagster import check
+from dagster.config.validate import process_config
 from dagster.core.definitions import (
     ExecutorDefinition,
     IntermediateStorageDefinition,
     ModeDefinition,
     PipelineDefinition,
 )
+from dagster.core.definitions.environment_configs import def_config_field
 from dagster.core.definitions.executor import check_cross_process_constraints
 from dagster.core.definitions.pipeline_base import IPipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
-from dagster.core.errors import DagsterError, DagsterUserCodeExecutionError
+from dagster.core.errors import (
+    DagsterError,
+    DagsterInvalidConfigError,
+    DagsterUserCodeExecutionError,
+)
 from dagster.core.events import DagsterEvent, PipelineInitFailureData
 from dagster.core.execution.memoization import validate_reexecution_memoization
 from dagster.core.execution.plan.plan import ExecutionPlan
@@ -86,19 +92,24 @@ def construct_intermediate_storage_data(
 
 
 def executor_def_from_config(
-    mode_definition: ModeDefinition, environment_config: EnvironmentConfig
+    instance: DagsterInstance,
+    mode_definition: ModeDefinition,
+    environment_config: EnvironmentConfig,
 ) -> ExecutorDefinition:
+    executor_defs = mode_definition.executor_defs or instance.executor_defs
     selected_executor = environment_config.execution.execution_engine_name
-    if selected_executor is None:
-        if len(mode_definition.executor_defs) == 1:
-            return mode_definition.executor_defs[0]
 
-        check.failed(
-            f"No executor selected but there are {len(mode_definition.executor_defs)} options."
-        )
+    if selected_executor is None:
+        # if len(executor_defs) == 1:
+        #     return executor_defs[0]
+
+        # check.failed(f"No executor selected but there are {len(executor_defs)} options.")
+
+        # temp
+        return executor_defs[0]
 
     else:
-        for executor_def in mode_definition.executor_defs:
+        for executor_def in executor_defs:
             if executor_def.name == selected_executor:
                 return executor_def
 
@@ -141,7 +152,7 @@ def create_context_creation_data(
 
     mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
     intermediate_storage_def = environment_config.intermediate_storage_def_for_mode(mode_def)
-    executor_def = executor_def_from_config(mode_def, environment_config)
+    executor_def = executor_def_from_config(instance, mode_def, environment_config)
 
     return ContextCreationData(
         pipeline=pipeline,
@@ -465,10 +476,26 @@ def create_intermediate_storage(
 
 def create_executor(context_creation_data: ContextCreationData) -> "Executor":
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
+    # deferred processing  - should only be done for instance provided executor defs
+
+    # I think the more fleshed out version of this is to break up "EnvironmentConfig" in to
+    # distinct types
+    raw_config = context_creation_data.environment_config.execution.execution_engine_config
+    config_evr = process_config(
+        context_creation_data.executor_def.config_field.config_type,
+        raw_config,
+    )
+    if not config_evr.success:
+        raise DagsterInvalidConfigError(
+            "yikes",
+            errors=config_evr.errors,
+            config_value=raw_config,
+        )
+    config = config_evr.value
     init_context = InitExecutorContext(
         pipeline=context_creation_data.pipeline,
         executor_def=context_creation_data.executor_def,
-        executor_config=context_creation_data.environment_config.execution.execution_engine_config,
+        executor_config=config,
         instance=context_creation_data.instance,
     )
     check_cross_process_constraints(init_context)

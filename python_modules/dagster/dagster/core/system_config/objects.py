@@ -154,9 +154,19 @@ class EnvironmentConfig(
             "intermediate storage",
         )
 
-        config_mapped_execution_configs = config_map_objects(
-            config_value, mode_def.executor_defs, "execution", ExecutorDefinition, "executor"
-        )
+        if mode_def.executor_defs:
+            execution_config = ExecutionConfig.from_dict(
+                config_map_objects(
+                    config_value,
+                    mode_def.executor_defs,
+                    "execution",
+                    ExecutorDefinition,
+                    "executor",
+                )
+            )
+        else:
+            # these two cases can be expressed with distinct types - maybe fork EnvironmentConfig the top
+            execution_config = ExecutionConfig.from_dict(config_value.get("execution"))
 
         resource_defs = pipeline_def.get_mode_definition(mode).resource_defs
         resource_configs = config_value.get("resources", {})
@@ -169,7 +179,7 @@ class EnvironmentConfig(
 
         return EnvironmentConfig(
             solids=solid_config_dict,
-            execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
+            execution=execution_config,
             intermediate_storage=IntermediateStorageConfig.from_dict(
                 config_mapped_intermediate_storage_configs
             ),
@@ -322,7 +332,7 @@ class ExecutionConfig(
             cls,
             execution_engine_name=check.opt_str_param(
                 execution_engine_name,
-                "execution_engine_name",  # "in_process"
+                "execution_engine_name",
             ),
             execution_engine_config=check.opt_dict_param(
                 execution_engine_config, "execution_engine_config", key_type=str
