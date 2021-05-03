@@ -189,10 +189,8 @@ class WorkspaceProcessContext:
             self._location_state_events_handler
         )
 
+        self.version = version
         self.set_state_subscribers()
-
-            location.add_state_subscriber(self._location_state_subscriber)
-            self._repository_locations[location.name] = location
 
     def set_state_subscribers(self):
         for location in self._workspace.repository_locations:
@@ -202,7 +200,7 @@ class WorkspaceProcessContext:
         return WorkspaceRequestContext(
             instance=self.instance,
             workspace_snapshot=self._workspace.create_snapshot(),
-            repository_locations_dict=self._repository_locations.copy(),
+            repository_locations_dict=self._workspace.repository_locations_dict.copy(),
             process_context=self,
             version=self.version,
         )
