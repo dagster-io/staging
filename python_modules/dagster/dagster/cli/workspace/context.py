@@ -191,9 +191,6 @@ class WorkspaceProcessContext:
 
         self.set_state_subscribers()
 
-            location.add_state_subscriber(self._location_state_subscriber)
-            self._repository_locations[location.name] = location
-
     def set_state_subscribers(self):
         for location in self._workspace.repository_locations:
             location.add_state_subscriber(self._location_state_subscriber)
