@@ -10,6 +10,7 @@ MAX_RECONNECT_ATTEMPTS = 10
 
 
 def watch_grpc_server_thread(
+    location_name,
     client,
     on_disconnect,
     on_reconnected,
@@ -47,6 +48,7 @@ def watch_grpc_server_thread(
     multiple times in order to be properly handle intermittent network failures.
     """
 
+    check.str_param(location_name, "location_name")
     check.inst_param(client, "client", DagsterGrpcClient)
     check.callable_param(on_disconnect, "on_disconnect")
     check.callable_param(on_reconnected, "on_reconnected")
@@ -76,7 +78,7 @@ def watch_grpc_server_thread(
                 set_server_id(new_server_id)
             elif curr != new_server_id:
                 set_server_id(new_server_id)
-                return on_updated(new_server_id)
+                return on_updated(location_name, new_server_id)
 
             shutdown_event.wait(watch_interval)
 
@@ -91,16 +93,16 @@ def watch_grpc_server_thread(
                 new_server_id = client.get_server_id(timeout=REQUEST_TIMEOUT)
                 if current_server_id() == new_server_id:
                     # Intermittent failure, was able to reconnect to the same server
-                    on_reconnected()
+                    on_reconnected(location_name)
                     return True
                 else:
-                    on_updated(new_server_id)
+                    on_updated(location_name, new_server_id)
                     set_server_id(new_server_id)
                     return False
             except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
                 attempts += 1
 
-        on_error()
+        on_error(location_name)
         return False
 
     while True:
@@ -108,13 +110,14 @@ def watch_grpc_server_thread(
             watch_for_changes()
             return
         except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
-            on_disconnect()
+            on_disconnect(location_name)
             reconnected_to_same_server = reconnect_loop()
             if not reconnected_to_same_server:
                 return
 
 
 def create_grpc_watch_thread(
+    location_name,
     client,
     on_disconnect=None,
     on_reconnected=None,
@@ -123,6 +126,7 @@ def create_grpc_watch_thread(
     watch_interval=None,
     max_reconnect_attempts=None,
 ):
+    check.str_param(location_name, "location_name")
     check.inst_param(client, "client", DagsterGrpcClient)
 
     noop = lambda *a: None
@@ -135,6 +139,7 @@ def create_grpc_watch_thread(
     thread = threading.Thread(
         target=watch_grpc_server_thread,
         args=[
+            location_name,
             client,
             on_disconnect,
             on_reconnected,

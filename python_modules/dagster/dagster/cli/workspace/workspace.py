@@ -3,6 +3,7 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import OrderedDict, namedtuple
 from contextlib import ExitStack
+from typing import List
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError, DagsterRepositoryLocationLoadError
@@ -11,6 +12,12 @@ from dagster.core.host_representation.grpc_server_registry import (
     GrpcServerRegistry,
     ProcessGrpcServerRegistry,
 )
+from dagster.core.host_representation.grpc_server_state_subscriber import (
+    LocationStateChangeEvent,
+    LocationStateChangeEventType,
+    LocationStateSubscriber,
+)
+from dagster.grpc.server_watcher import create_grpc_watch_thread
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 
@@ -63,6 +70,11 @@ class Workspace(IWorkspace):
 
     def __init__(self, workspace_load_target, grpc_server_registry=None):
         self._stack = ExitStack()
+
+        self._watch_thread_shutdown_events = {}
+        self._watch_threads = {}
+
+        self._state_subscribers: List[LocationStateSubscriber] = []
 
         from .cli_target import WorkspaceLoadTarget
 
@@ -129,14 +141,52 @@ class Workspace(IWorkspace):
                 grpc_server_registry=self._grpc_server_registry,
             )
 
+    def add_state_subscriber(self, subscriber):
+        self._state_subscribers.append(subscriber)
+
+    def _send_state_event_to_subscribers(self, event: LocationStateChangeEvent) -> None:
+        check.inst_param(event, "event", LocationStateChangeEvent)
+        for subscriber in self._state_subscribers:
+            subscriber.handle_event(event)
+
     def _load_location(self, location_name):
         if self._location_dict.get(location_name):
+            if location_name in self._watch_thread_shutdown_events:
+                self._watch_thread_shutdown_events[location_name].set()
+                self._watch_threads[location_name].join()
             del self._location_dict[location_name]
 
         if self._location_error_dict.get(location_name):
             del self._location_error_dict[location_name]
 
         origin = self._location_origin_dict[location_name]
+
+        if origin.supports_server_watch:
+            client = origin.create_client()
+            shutdown_event, watch_thread = create_grpc_watch_thread(
+                location_name,
+                client,
+                on_updated=lambda location_name, new_server_id: self._send_state_event_to_subscribers(
+                    LocationStateChangeEvent(
+                        LocationStateChangeEventType.LOCATION_UPDATED,
+                        location_name=location_name,
+                        message="Server has been updated.",
+                        server_id=new_server_id,
+                    )
+                ),
+                on_error=lambda location_name: self._send_state_event_to_subscribers(
+                    LocationStateChangeEvent(
+                        LocationStateChangeEventType.LOCATION_ERROR,
+                        location_name=location_name,
+                        message="Unable to reconnect to server. You can reload the server once it is "
+                        "reachable again",
+                    )
+                ),
+            )
+            self._watch_thread_shutdown_events[location_name] = shutdown_event
+            self._watch_threads[location_name] = watch_thread
+            watch_thread.start()
+
         try:
             location = self.create_location_from_origin(origin)
             self._location_dict[location_name] = location
@@ -182,9 +232,16 @@ class Workspace(IWorkspace):
         self._load_location(location_name)
 
     def reload_workspace(self):
+        self._cleanup_locations()
+        self._load_workspace()
+
+    def _cleanup_locations(self):
         for location in self.repository_locations:
             location.cleanup()
-        self._load_workspace()
+        for _, event in self._watch_thread_shutdown_events.items():
+            event.set()
+        for _, watch_thread in self._watch_threads.items():
+            watch_thread.join()
 
     def get_location(self, origin):
         location_name = origin.location_name
@@ -205,6 +262,5 @@ class Workspace(IWorkspace):
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
-        for location in self.repository_locations:
-            location.cleanup()
+        self._cleanup_locations()
         self._stack.close()
