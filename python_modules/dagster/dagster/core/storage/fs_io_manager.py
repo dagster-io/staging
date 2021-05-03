@@ -36,7 +36,15 @@ def fs_io_manager(init_context):
         def solid_b(context, df):
             return df[:5]
 
-        @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+        @pipeline(
+            mode_defs=[
+                ModeDefinition(
+                    resource_defs={
+                        "io_manager": fs_io_manager.configured({"base_path": "/my/base/path"})
+                    }
+                )
+            ]
+        )
         def pipe():
             solid_b(solid_a())
 
