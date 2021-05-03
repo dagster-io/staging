@@ -21,11 +21,11 @@ from dagster.daemon.controller import (
 from dagster.utils.interrupts import capture_interrupts, raise_interrupts_as
 
 
-def _get_heartbeat_tolerance():
+def _get_heartbeat_tolerance(heartbeat_tolerance=DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS):
     tolerance = os.getenv(
         "DAGSTER_DAEMON_HEARTBEAT_TOLERANCE",
     )
-    return int(tolerance) if tolerance else DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS
+    return int(tolerance) if tolerance else heartbeat_tolerance
 
 
 @click.command(
@@ -72,9 +72,14 @@ def health_check_command():
     default=DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
     help="How long (in seconds) to allow a daemon to go without heartbeating before failing the dagster-daemon process.",
 )
-def liveness_check_command():
+def liveness_check_command(heartbeat_tolerance):
     with DagsterInstance.get() as instance:
-        if all_daemons_live(instance, heartbeat_tolerance_seconds=_get_heartbeat_tolerance()):
+        if all_daemons_live(
+            instance,
+            heartbeat_tolerance_seconds=_get_heartbeat_tolerance(
+                heartbeat_tolerance=heartbeat_tolerance
+            ),
+        ):
             click.echo("Daemon live")
         else:
             click.echo("Daemon(s) not running")
