@@ -21,7 +21,7 @@ def wait_for_condition(fn, interval, timeout=60):
 
 def test_run_grpc_watch_thread():
     client = DagsterGrpcClient(port=8080)
-    shutdown_event, watch_thread = create_grpc_watch_thread(client)
+    shutdown_event, watch_thread = create_grpc_watch_thread("test_location", client)
 
     watch_thread.start()
     shutdown_event.set()
@@ -33,7 +33,8 @@ def test_grpc_watch_thread_server_update():
 
     called = {}
 
-    def on_updated(_):
+    def on_updated(location_name, _):
+        assert location_name == "test_location"
         called["yup"] = True
 
     # Create initial server
@@ -44,6 +45,7 @@ def test_grpc_watch_thread_server_update():
         client = DagsterGrpcClient(port=port)
         watch_interval = 1
         shutdown_event, watch_thread = create_grpc_watch_thread(
+            "test_location",
             client,
             on_updated=on_updated,
             watch_interval=watch_interval,
@@ -74,10 +76,12 @@ def test_grpc_watch_thread_server_reconnect():
 
     called = {}
 
-    def on_disconnect():
+    def on_disconnect(location_name):
+        assert location_name == "test_location"
         called["on_disconnect"] = True
 
-    def on_reconnected():
+    def on_reconnected(location_name):
+        assert location_name == "test_location"
         called["on_reconnected"] = True
 
     def should_not_be_called(*args, **kwargs):
@@ -90,6 +94,7 @@ def test_grpc_watch_thread_server_reconnect():
     client = DagsterGrpcClient(port=port)
     watch_interval = 1
     shutdown_event, watch_thread = create_grpc_watch_thread(
+        "test_location",
         client,
         on_disconnect=on_disconnect,
         on_reconnected=on_reconnected,
@@ -117,10 +122,13 @@ def test_grpc_watch_thread_server_error():
 
     called = {}
 
-    def on_disconnect():
+    def on_disconnect(location_name):
+        assert location_name == "test_location"
         called["on_disconnect"] = True
 
-    def on_error():
+    def on_error(location_name):
+        assert location_name == "test_location"
+
         called["on_error"] = True
 
     def should_not_be_called(*args, **kwargs):
@@ -134,6 +142,7 @@ def test_grpc_watch_thread_server_error():
     watch_interval = 1
     max_reconnect_attempts = 3
     shutdown_event, watch_thread = create_grpc_watch_thread(
+        "test_location",
         client,
         on_disconnect=on_disconnect,
         on_reconnected=should_not_be_called,
@@ -167,16 +176,20 @@ def test_grpc_watch_thread_server_complex_cycle():
 
     events = []
 
-    def on_disconnect():
+    def on_disconnect(location_name):
+        assert location_name == "test_location"
         events.append("on_disconnect")
 
-    def on_reconnected():
+    def on_reconnected(location_name):
+        assert location_name == "test_location"
         events.append("on_reconnected")
 
-    def on_updated(_):
+    def on_updated(location_name, _):
+        assert location_name == "test_location"
         events.append("on_updated")
 
-    def on_error():
+    def on_error(location_name):
+        assert location_name == "test_location"
         events.append("on_error")
 
     # Create initial server
@@ -187,6 +200,7 @@ def test_grpc_watch_thread_server_complex_cycle():
     watch_interval = 1  # This is a faster watch interval than we would use in practice
 
     shutdown_event, watch_thread = create_grpc_watch_thread(
+        "test_location",
         client,
         on_disconnect=on_disconnect,
         on_reconnected=on_reconnected,
@@ -231,16 +245,20 @@ def test_grpc_watch_thread_server_complex_cycle_2():
     events = []
     called = {}
 
-    def on_disconnect():
+    def on_disconnect(location_name):
+        assert location_name == "test_location"
         events.append("on_disconnect")
 
-    def on_reconnected():
+    def on_reconnected(location_name):
+        assert location_name == "test_location"
         events.append("on_reconnected")
 
-    def on_updated(_):
+    def on_updated(location_name, _):
+        assert location_name == "test_location"
         events.append("on_updated")
 
-    def on_error():
+    def on_error(location_name):
+        assert location_name == "test_location"
         called["on_error"] = True
         events.append("on_error")
 
@@ -252,6 +270,7 @@ def test_grpc_watch_thread_server_complex_cycle_2():
     watch_interval = 1  # This is a faster watch interval than we would use in practice
 
     shutdown_event, watch_thread = create_grpc_watch_thread(
+        "test_location",
         client,
         on_disconnect=on_disconnect,
         on_reconnected=on_reconnected,
@@ -292,16 +311,19 @@ def test_run_grpc_watch_without_server():
 
     called = {}
 
-    def on_disconnect():
+    def on_disconnect(location_name):
+        assert location_name == "test_location"
         called["on_disconnect"] = True
 
-    def on_error():
+    def on_error(location_name):
+        assert location_name == "test_location"
         called["on_error"] = True
 
     def should_not_be_called(*args, **kwargs):
         raise Exception("This method should not be called")
 
     shutdown_event, watch_thread = create_grpc_watch_thread(
+        "test_location",
         client,
         on_disconnect=on_disconnect,
         on_reconnected=should_not_be_called,
