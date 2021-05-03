@@ -17,8 +17,10 @@ from dagster.utils.backcompat import experimental
 def fs_io_manager(init_context):
     """Built-in filesystem IO manager that stores and retrieves values using pickling.
 
-    It allows users to specify a base directory where all the step outputs will be stored. It
-    serializes and deserializes output values using pickling and automatically constructs
+    Allows users to specify a base directory where all the step outputs will be stored. By
+    default, step outputs will be stored in the current working directory.
+
+    Serializes and deserializes output values using pickling and automatically constructs
     the filepaths for the assets.
 
     Example usage:
@@ -36,7 +38,15 @@ def fs_io_manager(init_context):
         def solid_b(context, df):
             return df[:5]
 
-        @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+        @pipeline(
+            mode_defs=[
+                ModeDefinition(
+                    resource_defs={
+                        "io_manager": fs_io_manager.configured({"base_path": "/my/base/path"})
+                    }
+                )
+            ]
+        )
         def pipe():
             solid_b(solid_a())
 
