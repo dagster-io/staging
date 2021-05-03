@@ -23,9 +23,14 @@ export const FeatureFlagsRoot = () => {
       <h4>Experimental Features</h4>
       <div>
         <Checkbox
-          label={'Debug Console Logging'}
+          label={'Debug console logging'}
           checked={flags.includes(FeatureFlag.DebugConsoleLogging)}
           onChange={() => toggleFlag(FeatureFlag.DebugConsoleLogging)}
+        />
+        <Checkbox
+          label={'Disable global search asset entries'}
+          checked={flags.includes(FeatureFlag.GlobalSearchAssetsDisabled)}
+          onChange={() => toggleFlag(FeatureFlag.GlobalSearchAssetsDisabled)}
         />
       </div>
     </div>

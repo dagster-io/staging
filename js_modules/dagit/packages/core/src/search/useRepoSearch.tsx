@@ -1,7 +1,8 @@
-import {gql, useQuery} from '@apollo/client';
+import {gql, useLazyQuery, useQuery} from '@apollo/client';
 import Fuse from 'fuse.js';
 import * as React from 'react';
 
+import {featureEnabled, FeatureFlag} from '../app/Util';
 import {buildRepoPath} from '../workspace/buildRepoAddress';
 import {workspacePath} from '../workspace/workspacePath';
 
@@ -114,19 +115,23 @@ export const useRepoSearch = () => {
     },
   );
 
-  const {data: secondaryData, loading: secondaryLoading} = useQuery<SearchSecondaryQuery>(
-    SEARCH_SECONDARY_QUERY,
-    {
-      fetchPolicy: 'cache-and-network',
-    },
-  );
+  const [
+    performQuery,
+    {data: secondaryData, loading: secondaryLoading},
+  ] = useLazyQuery<SearchSecondaryQuery>(SEARCH_SECONDARY_QUERY, {
+    fetchPolicy: 'cache-and-network',
+  });
 
   const bootstrapFuse = React.useMemo(() => bootstrapDataToSearchResults(bootstrapData), [
     bootstrapData,
   ]);
-  const secondaryFuse = React.useMemo(() => secondaryDataToSearchResults(secondaryData), [
-    secondaryData,
-  ]);
+  const secondaryFuse = React.useMemo(() => {
+    if (featureEnabled(FeatureFlag.GlobalSearchAssetsDisabled)) {
+      return new Fuse([]);
+    }
+    performQuery();
+    return secondaryDataToSearchResults(secondaryData);
+  }, [secondaryData, performQuery]);
 
   const loading = bootstrapLoading || secondaryLoading;
   const performSearch = React.useCallback(
