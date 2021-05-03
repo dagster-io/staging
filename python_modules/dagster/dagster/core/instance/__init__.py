@@ -499,6 +499,15 @@ class DagsterInstance:
     def run_launcher(self):
         return self._run_launcher
 
+    @property
+    def executor_defs(self):
+        from dagster.core.definitions.executor import in_process_executor, multiprocess_executor
+
+        if self.is_ephemeral:
+            return [in_process_executor]
+
+        return [in_process_executor, multiprocess_executor]
+
     # compute logs
 
     @property

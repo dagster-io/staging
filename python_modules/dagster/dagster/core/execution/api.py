@@ -714,6 +714,7 @@ def _get_execution_plan_from_run(
         run_config=pipeline_run.run_config,
         mode=pipeline_run.mode,
         step_keys_to_execute=pipeline_run.step_keys_to_execute,
+        instance=instance,
     )
 
 
@@ -723,6 +724,7 @@ def create_execution_plan(
     mode: Optional[str] = None,
     step_keys_to_execute: Optional[List[str]] = None,
     known_state: KnownExecutionState = None,
+    instance: Optional[DagsterInstance] = None,
 ) -> ExecutionPlan:
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
@@ -738,6 +740,7 @@ def create_execution_plan(
         resolved_run_config,
         step_keys_to_execute=step_keys_to_execute,
         known_state=known_state,
+        instance=instance,
     )
 
 

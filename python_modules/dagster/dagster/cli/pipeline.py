@@ -252,7 +252,7 @@ def execute_list_versions_command(instance, kwargs):
     run_config = get_run_config_from_file_list(config)
 
     resolved_run_config = ResolvedRunConfig.build(pipeline.get_definition(), run_config, mode=mode)
-    execution_plan = ExecutionPlan.build(pipeline, resolved_run_config)
+    execution_plan = ExecutionPlan.build(pipeline, resolved_run_config, instance)
 
     step_output_versions = resolve_step_output_versions(
         pipeline.get_definition(), execution_plan, resolved_run_config

@@ -157,6 +157,7 @@ class Manager:
             self.pipeline,
             resolved_run_config,
             step_keys_to_execute=pipeline_run.step_keys_to_execute,
+            instance=instance,
         )
 
         with scoped_pipeline_context(

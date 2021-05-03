@@ -86,6 +86,10 @@ class ExecutorDefinition(NamedConfigurableDefinition):
         return self._config_schema
 
     @property
+    def config_field(self) -> Field:
+        return self._config_schema.as_field()
+
+    @property
     def requirements(self):
         return self._requirements
 

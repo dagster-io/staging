@@ -2,7 +2,12 @@ from typing import Any, Dict, Iterator, List, NamedTuple, Optional, Set, Tuple
 
 from dagster.config import Field, Selector
 from dagster.config.config_type import ALL_CONFIG_BUILTINS, Array, ConfigType
-from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
+from dagster.config.field_utils import (
+    FIELD_NO_DEFAULT_PROVIDED,
+    Permissive,
+    Shape,
+    all_optional_type,
+)
 from dagster.config.iterate_types import iterate_config_types
 from dagster.core.definitions.executor import ExecutorDefinition, in_process_executor
 from dagster.core.definitions.input import InputDefinition
@@ -78,6 +83,9 @@ def define_logger_dictionary_cls(creation_data: RunConfigSchemaCreationData) -> 
 
 
 def define_execution_field(executor_defs: List[ExecutorDefinition]) -> Field:
+    if len(executor_defs) < 1:
+        return Field(Permissive())
+
     default_in_process = False
     for executor_def in executor_defs:
         if executor_def == in_process_executor:  # pylint: disable=comparison-with-callable

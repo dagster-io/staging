@@ -92,8 +92,8 @@ class ModeDefinition(
                 "intermediate_storage_defs",
                 of_type=IntermediateStorageDefinition,
             ),
-            executor_defs=check.list_param(
-                executor_defs if executor_defs else default_executors,
+            executor_defs=check.opt_list_param(
+                executor_defs,
                 "executor_defs",
                 of_type=ExecutorDefinition,
             ),

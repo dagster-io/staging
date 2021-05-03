@@ -89,11 +89,13 @@ class _PlanBuilder:
 
     def __init__(
         self,
+        instance: DagsterInstance,
         pipeline: IPipeline,
         resolved_run_config: ResolvedRunConfig,
         step_keys_to_execute: Optional[List[str]],
         known_state,
     ):
+        self.instance = check.inst_param(instance, "instance", DagsterInstance)
         self.pipeline = check.inst_param(pipeline, "pipeline", IPipeline)
         self.resolved_run_config = check.inst_param(
             resolved_run_config, "resolved_run_config", ResolvedRunConfig
@@ -148,8 +150,10 @@ class _PlanBuilder:
     def build(self) -> "ExecutionPlan":
         """Builds the execution plan"""
 
+        # temp - instance can be available here
         _check_io_manager_intermediate_storage(self.mode_definition, self.resolved_run_config)
         _check_persistent_storage_requirement(
+            self.instance,
             self.pipeline,
             self.mode_definition,
             self.resolved_run_config,
@@ -711,6 +715,7 @@ class ExecutionPlan(
         resolved_run_config: ResolvedRunConfig,
         step_keys_to_execute: Optional[List[str]] = None,
         known_state=None,
+        instance: DagsterInstance = None,
     ) -> "ExecutionPlan":
         """Here we build a new ExecutionPlan from a pipeline definition and the environment config.
 
@@ -724,8 +729,12 @@ class ExecutionPlan(
         check.inst_param(resolved_run_config, "resolved_run_config", ResolvedRunConfig)
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
         check.opt_inst_param(known_state, "known_state", KnownExecutionState)
+        instance = check.opt_inst_param(
+            instance, "instance", DagsterInstance, default=DagsterInstance.ephemeral()
+        )
 
         plan_builder = _PlanBuilder(
+            instance,
             pipeline,
             resolved_run_config=resolved_run_config,
             step_keys_to_execute=step_keys_to_execute,
@@ -903,6 +912,7 @@ def can_isolate_steps(pipeline_def: PipelineDefinition, mode_def: ModeDefinition
 
 
 def _check_persistent_storage_requirement(
+    instance: DagsterInstance,
     pipeline: IPipeline,
     mode_def: ModeDefinition,
     resolved_run_config: ResolvedRunConfig,
@@ -910,7 +920,7 @@ def _check_persistent_storage_requirement(
     from dagster.core.execution.context_creation_pipeline import executor_def_from_config
 
     pipeline_def = pipeline.get_definition()
-    executor_def = executor_def_from_config(mode_def, resolved_run_config)
+    executor_def = executor_def_from_config(instance, mode_def, resolved_run_config)
     if ExecutorRequirement.PERSISTENT_OUTPUTS not in executor_def.requirements:
         return
 

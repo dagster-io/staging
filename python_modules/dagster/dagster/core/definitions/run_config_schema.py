@@ -1,4 +1,4 @@
-from typing import Dict, NamedTuple
+from typing import Dict, NamedTuple, Optional
 
 from dagster import check
 from dagster.config.config_type import ConfigType
@@ -27,8 +27,7 @@ class RunConfigSchema(NamedTuple):
         return self.config_type_dict_by_key.values()
 
 
-def create_run_config_schema(pipeline_def, mode=None):
-    check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+def create_run_config_schema(pipeline_def: PipelineDefinition, mode: Optional[str] = None):
     mode = check.opt_str_param(mode, "mode", default=pipeline_def.get_default_mode_name())
 
     return pipeline_def.get_run_config_schema(mode)
