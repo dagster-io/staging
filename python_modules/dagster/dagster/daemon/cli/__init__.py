@@ -72,7 +72,7 @@ def health_check_command():
     default=DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
     help="How long (in seconds) to allow a daemon to go without heartbeating before failing the dagster-daemon process.",
 )
-def liveness_check_command():
+def liveness_check_command(heartbeat_tolerance):
     with DagsterInstance.get() as instance:
         if all_daemons_live(instance, heartbeat_tolerance_seconds=_get_heartbeat_tolerance()):
             click.echo("Daemon live")
