@@ -547,7 +547,7 @@ class SqlEventLogStorage(EventLogStorage):
             query = query.where(SqlEventLogStorageTable.c.id > after_query)
         if before_timestamp:
             query = query.where(
-                SqlEventLogStorageTable.c.timestamp < utc_datetime_from_timestamp(before_timestamp)
+                SqlEventLogStorageTable.c.timestamp < datetime.utcfromtimestamp(before_timestamp)
             )
 
         if limit:
