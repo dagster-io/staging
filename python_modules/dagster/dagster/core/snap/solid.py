@@ -91,7 +91,7 @@ def build_composite_solid_def_snap(comp_solid_def):
         output_def_snaps=list(map(build_output_def_snap, comp_solid_def.output_defs)),
         description=comp_solid_def.description,
         tags=comp_solid_def.tags,
-        required_resource_keys=sorted(list(comp_solid_def.required_resource_keys)),
+        # required_resource_keys=sorted(list(comp_solid_def.required_resource_keys)),
         config_field_snap=snap_from_field(
             "config", comp_solid_def.config_mapping.config_schema.as_field()
         )
@@ -129,7 +129,6 @@ def _check_solid_def_header_args(
     output_def_snaps,
     description,
     tags,
-    required_resource_keys,
     config_field_snap,
 ):
     return dict(
@@ -138,9 +137,6 @@ def _check_solid_def_header_args(
         output_def_snaps=check.list_param(output_def_snaps, "output_def_snaps", OutputDefSnap),
         description=check.opt_str_param(description, "description"),
         tags=check.dict_param(tags, "tags"),  # validate using validate_tags?
-        required_resource_keys=check.list_param(
-            required_resource_keys, "required_resource_keys", str
-        ),
         config_field_snap=check.opt_inst_param(
             config_field_snap, "config_field_snap", ConfigFieldSnap
         ),
@@ -179,7 +175,7 @@ def _get_output_snap(solid_def, name):
 class CompositeSolidDefSnap(
     namedtuple(
         "_CompositeSolidDefSnap",
-        "name input_def_snaps output_def_snaps description tags required_resource_keys "
+        "name input_def_snaps output_def_snaps description tags "
         "config_field_snap dep_structure_snapshot input_mapping_snaps output_mapping_snaps",
     )
 ):
@@ -190,7 +186,6 @@ class CompositeSolidDefSnap(
         output_def_snaps,
         description,
         tags,
-        required_resource_keys,
         config_field_snap,
         dep_structure_snapshot,
         input_mapping_snaps,
@@ -213,7 +208,6 @@ class CompositeSolidDefSnap(
                 output_def_snaps,
                 description,
                 tags,
-                required_resource_keys,
                 config_field_snap,
             ),
         )
@@ -259,13 +253,15 @@ class SolidDefSnap(
     ):
         return super(SolidDefSnap, cls).__new__(
             cls,
+            required_resource_keys=check.list_param(
+                required_resource_keys, "required_resource_keys", str
+            ),
             **_check_solid_def_header_args(
                 name,
                 input_def_snaps,
                 output_def_snaps,
                 description,
                 tags,
-                required_resource_keys,
                 config_field_snap,
             ),
         )
