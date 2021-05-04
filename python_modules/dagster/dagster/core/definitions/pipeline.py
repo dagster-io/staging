@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, AbstractSet, Any, Dict, FrozenSet, List, Optio
 from dagster import check
 from dagster.core.definitions.input import InputMapping
 from dagster.core.definitions.output import OutputMapping
+from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.definitions.solid import NodeDefinition
 from dagster.core.errors import (
     DagsterInvalidDefinitionError,
@@ -333,6 +334,13 @@ class PipelineDefinition(GraphDefinition):
     def available_modes(self) -> List[str]:
         return [mode_def.name for mode_def in self._mode_definitions]
 
+    def get_required_resource_defs_for_mode(self, mode: str) -> Dict[str, ResourceDefinition]:
+        return {
+            resource_key: resource
+            for resource_key, resource in self.get_mode_definition(mode).resource_defs.items()
+            if resource_key in self._resource_requirements[mode]
+        }
+
     @property
     def tags(self) -> Dict[str, Any]:
         return self._tags
@@ -615,28 +623,25 @@ def _checked_resource_reqs_for_mode(
     resource_reqs: Set[str] = set()
     mode_resources = set(mode_def.resource_defs.keys())
     for node_def in node_defs:
-        for required_resource in node_def.required_resource_keys:
-            resource_reqs.add(required_resource)
-            if required_resource not in mode_resources:
-                raise DagsterInvalidDefinitionError(
-                    (
-                        'Resource "{resource}" is required by solid def {node_def_name}, but is not '
-                        'provided by mode "{mode_name}".'
-                    ).format(
-                        resource=required_resource,
-                        node_def_name=node_def.name,
-                        mode_name=mode_def.name,
+        for solid_def in node_def.iterate_solid_defs():
+            for required_resource in solid_def.required_resource_keys:
+                resource_reqs.add(required_resource)
+                if required_resource not in mode_resources:
+                    raise DagsterInvalidDefinitionError(
+                        (
+                            f'Resource "{required_resource}" is required by solid def '
+                            f'{solid_def.name}, but is not provided by mode "{mode_def.name}".'
+                        )
                     )
-                )
 
-        for output_def in node_def.output_defs:
-            resource_reqs.add(output_def.io_manager_key)
-            if output_def.io_manager_key not in mode_resources:
-                raise DagsterInvalidDefinitionError(
-                    f'IO manager "{output_def.io_manager_key}" is required by output '
-                    f'"{output_def.name}" of solid def {node_def.name}, but is not '
-                    f'provided by mode "{mode_def.name}".'
-                )
+            for output_def in solid_def.output_defs:
+                resource_reqs.add(output_def.io_manager_key)
+                if output_def.io_manager_key not in mode_resources:
+                    raise DagsterInvalidDefinitionError(
+                        f'IO manager "{output_def.io_manager_key}" is required by output '
+                        f'"{output_def.name}" of solid def {solid_def.name}, but is not '
+                        f'provided by mode "{mode_def.name}".'
+                    )
 
     resource_reqs.update(
         _checked_type_resource_reqs_for_mode(
