@@ -76,6 +76,47 @@ date_partition_set = PartitionSetDefinition(
 )
 ```
 
+To add the partition set to the repository and view it in Dagit, you must first include it in the repository definition.
+
+```python file=/concepts/partitions_schedules_sensors/partition_definition.py startafter=start_repo_includ endbefore=end_repo_include
+@repository
+def my_repository():
+    return [
+        my_data_pipeline,
+        date_partition_set,
+    ]
+```
+
+## Creating Schedules from Partition Sets
+
+Dagster provides a number of decorators (@hourly_schedule, @daily_schedule, @weekly_schedule, @monthly_schedule) that produce [partitioned schedules](https://docs.dagster.io/concepts/partitions-schedules-sensors/schedules#partition-based-schedules). These conveniently produce both a partition set that defines the configuration space of a specific pipeline and a schedule that it runs against.
+
+In many cases, you may first want to define the partition set and then manually define a schedule for it. In order to do that, you must first define a partition selector which returns a Partition object or a list of Partition objects. Every time the schedule fires, a pipeline run will be submitted for each partition returned by this partition selector.
+
+```python file=/concepts/partitions_schedules_sensors/partition_definition.py startafter=start_manual_partition_schedule endbefore=end_manual_partition_schedule
+def random_partition(_, partition_set_definition):
+    # select a single, random partition
+    partitions = partition_set_definition.get_partitions()
+    return random.choice(partitions)
+
+
+my_schedule = my_partition_set.create_schedule_definition(
+    "my_schedule",
+    "5 0 * * *",
+    partition_selector=random_partition,
+    execution_timezone="US/Eastern",
+)
+
+
+@repository
+def my_repository_with_schedule():
+    return [
+        my_data_pipeline,
+        my_partition_set,
+        my_schedule,
+    ]
+```
+
 ## Partitions in Dagit
 
 ### The Partitions Tab
