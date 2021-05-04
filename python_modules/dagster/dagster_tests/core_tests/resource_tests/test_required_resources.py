@@ -19,6 +19,7 @@ from dagster import (
     solid,
     usable_as_dagster_type,
 )
+from dagster.core.definitions.configurable import configured
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.execution.api import execute_run
@@ -796,3 +797,55 @@ def test_extra_resources():
 
     # should work since B & BB's resources are not needed so missing config should be fine
     assert execute_pipeline(extra).success
+
+
+def test_extra_configured_resources():
+    @resource
+    def resource_a(_):
+        return "a"
+
+    @resource(config_schema=int)
+    def resource_b(_):
+        return "b"
+
+    @configured(resource_b, str)
+    def resource_b2(config):
+        assert False, "resource_b2 config mapping should not have been invoked"
+        return int(config)
+
+    @solid(required_resource_keys={"A"})
+    def echo(context):
+        return context.resources.A
+
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={
+                    "A": resource_a,
+                    "B": resource_b2,
+                }
+            )
+        ]
+    )
+    def extra():
+        echo()
+
+    assert execute_pipeline(extra).success
+
+
+def test_root_input_manager():
+    @solid
+    def start(_):
+        return 4
+
+    @solid(input_defs=[InputDefinition("x", root_manager_key="root_in")])
+    def end(_, x):
+        return x
+
+    # theoretically we could set this up to not require the root input managers
+    # unless the input is unsatisfied, but have to figure out a story for subsetting pipeline
+    with pytest.raises(DagsterInvalidDefinitionError, match='Root input manager "root_in"'):
+
+        @pipeline
+        def _invalid():
+            end(start())
