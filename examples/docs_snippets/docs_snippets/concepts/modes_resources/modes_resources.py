@@ -1,4 +1,7 @@
+# pylint: skip-file
+# pylint: disable-all
 # pylint: disable=unused-argument
+# flake8: noqa
 from dagster import ModeDefinition, ResourceDefinition, execute_pipeline, pipeline, resource, solid
 
 
@@ -78,3 +81,29 @@ def db_resource(init_context):
 
 
 # end_resource_config
+
+
+from pandas import Series
+from dagster import (
+    PythonObjectDagsterType,
+    make_python_type_usable_as_dagster_type,
+    InputDefinition,
+    solid,
+)
+
+DagsterSeries = PythonObjectDagsterType(Series)
+make_python_type_usable_as_dagster_type(DagsterSeries)
+
+
+@solid(input_defs=[InputDefinition("input1", DagsterSeries)])
+def my_solid_before(_, input1: Series):
+    ...
+
+
+from pandas import Series
+from dagster import solid
+
+
+@solid
+def my_solid_after(_, input1: Series):
+    ...
