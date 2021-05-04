@@ -76,6 +76,69 @@ date_partition_set = PartitionSetDefinition(
 )
 ```
 
+To add the partition set to the repository and view it in Dagit, you must first include it in the repository definition.
+
+```python file=/concepts/partitions_schedules_sensors/partition_definition.py startafter=start_repo_includ endbefore=end_repo_include
+@repository
+def my_repository():
+    return [
+        my_data_pipeline,
+        date_partition_set,
+    ]
+```
+
+## Creating Schedules from Partition Sets
+
+Dagster provides a number of decorators (<PyObject object="hourly_schedule" />, <PyObject object="daily_schedule" />, <PyObject object="weekly_schedule" />, <PyObject object="monthly_schedule" />) that produce [partitioned schedules](https://docs.dagster.io/concepts/partitions-schedules-sensors/schedules#partition-based-schedules). These conveniently produce both the partition set that defines the configuration space of a specific pipeline and the schedule that it runs against.
+
+In many cases, you may instead want to define the partition set and then manually define a schedule for it. In order to do that, you must first define a partition selector which returns a <PyObject object="Partition" /> object or a list of <PyObject object="Partition" /> objects. Every time the schedule fires, a pipeline run will be submitted for each partition returned by this partition selector.
+
+For partition sets consisting of `datetime` objects, the <PyObject object="identity_partition_selector" /> partition selector and the <PyObject object="create_offset_partition_selector" /> factory function might be useful.
+
+```python file=/concepts/partitions_schedules_sensors/partition_definition.py startafter=start_manual_partition_schedule endbefore=end_manual_partition_schedule
+weekday_partition_set = PartitionSetDefinition(
+    name="weekday_partition_set",
+    pipeline_name="my_data_pipeline",
+    partition_fn=lambda: [
+        Partition("Monday"),
+        Partition("Tuesday"),
+        Partition("Wednesday"),
+        Partition("Thursday"),
+        Partition("Friday"),
+        Partition("Saturday"),
+        Partition("Sunday"),
+    ],
+    run_config_fn_for_partition=_weekday_run_config_for_partition,
+)
+
+
+def weekday_partition_selector(
+    ctx: ScheduleExecutionContext, partition_set: PartitionSetDefinition
+) -> Union[Partition, List[Partition]]:
+    """Maps a schedule execution time to the corresponding partition or list of partitions that
+    should be executed at that time"""
+    partitions = partition_set.get_partitions(ctx.scheduled_execution_time)
+    weekday = ctx.scheduled_execution_time.weekday() if ctx.scheduled_execution_time else 0
+    return partitions[weekday]
+
+
+my_schedule = weekday_partition_set.create_schedule_definition(
+    "my_schedule",
+    "5 0 * * *",
+    partition_selector=weekday_partition_selector,
+    execution_timezone="US/Eastern",
+)
+
+
+@repository
+def my_repository_with_schedule():
+    return [
+        my_data_pipeline,
+        weekday_partition_set,
+        my_schedule,
+    ]
+```
+
 ## Partitions in Dagit
 
 ### The Partitions Tab
