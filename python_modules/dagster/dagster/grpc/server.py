@@ -352,6 +352,7 @@ class DagsterApiServer(DagsterApiServicer):
         )
 
     def ListRepositories(self, request, _context):
+        print("listing repos!")
         try:
             response = ListRepositoriesResponse(
                 self._repository_symbols_and_code_pointers.loadable_repository_symbols,
