@@ -3,12 +3,11 @@ import {Colors, Dialog, Button, Classes, MenuItem, Menu, Popover, Icon} from '@b
 import {Popover2} from '@blueprintjs/popover2';
 import qs from 'query-string';
 import * as React from 'react';
-import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
 import {AppContext} from '../app/AppContext';
 import {useViewport} from '../gantt/useViewport';
-import {useQueryPersistedState} from '../hooks/useQueryPersistedState';
+import {QueryPersistedStateConfig, useQueryPersistedState} from '../hooks/useQueryPersistedState';
 import {PIPELINE_EXPLORER_SOLID_HANDLE_FRAGMENT} from '../pipelines/PipelineExplorer';
 import {Box} from '../ui/Box';
 import {GraphQueryInput} from '../ui/GraphQueryInput';
@@ -77,31 +76,35 @@ const _backfillIdFromTags = (runTags: TokenizingFieldValue[]) => {
   return backfillId;
 };
 
+const PartitionRunSelectionQueryConfig: QueryPersistedStateConfig<PartitionRunSelection | null> = {
+  encode: (val) => ({partitionName: val?.partitionName, stepName: val?.stepName}),
+  decode: (qs) =>
+    qs.partitionName && qs.stepName
+      ? {partitionName: qs.partitionName, stepName: qs.stepName}
+      : null,
+};
+
+const DisplayOptionsQueryConfig: QueryPersistedStateConfig<DisplayOptions> = {
+  decode: (qs) => ({
+    showPrevious: qs.showPrevious === 'true',
+    colorizeByAge: qs.colorizeByAge === 'true',
+    showFailuresAndGapsOnly: qs.showFailuresAndGapsOnly === 'true',
+  }),
+  defaults: {
+    showPrevious: false,
+    colorizeByAge: false,
+    showFailuresAndGapsOnly: false,
+  },
+};
+
 export const PartitionRunMatrix: React.FC<PartitionRunMatrixProps> = (props) => {
   const {basePath} = React.useContext(AppContext);
   const {viewport, containerProps} = useViewport();
   const [colorizeSliceUnix, setColorizeSliceUnix] = React.useState(0);
   const [hovered, setHovered] = React.useState<PartitionRunSelection | null>(null);
-  const [focused, setFocused] = useQueryPersistedState<PartitionRunSelection | null>({
-    encode: (val) => ({partitionName: val?.partitionName, stepName: val?.stepName}),
-    decode: (qs) =>
-      qs.partitionName && qs.stepName
-        ? {partitionName: qs.partitionName, stepName: qs.stepName}
-        : null,
-  });
+  const [focused, setFocused] = useQueryPersistedState(PartitionRunSelectionQueryConfig);
   const [stepSort = '', setStepSort] = useQueryPersistedState<string>({queryKey: 'stepSort'});
-  const [options, setOptions] = useQueryPersistedState<DisplayOptions>({
-    decode: (qs) => ({
-      showPrevious: qs.showPrevious === 'true',
-      colorizeByAge: qs.colorizeByAge === 'true',
-      showFailuresAndGapsOnly: qs.showFailuresAndGapsOnly === 'true',
-    }),
-    defaults: {
-      showPrevious: false,
-      colorizeByAge: false,
-      showFailuresAndGapsOnly: false,
-    },
-  });
+  const [options, setOptions] = useQueryPersistedState(DisplayOptionsQueryConfig);
 
   // Retrieve the pipeline's structure
   const repositorySelector = repoAddressToSelector(props.repoAddress);

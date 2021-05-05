@@ -1,6 +1,5 @@
 import {gql} from '@apollo/client';
 import {Icon, Popover} from '@blueprintjs/core';
-import qs from 'query-string';
 import * as React from 'react';
 import * as yaml from 'yaml';
 
