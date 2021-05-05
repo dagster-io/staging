@@ -155,7 +155,7 @@ class ActiveExecution:
             for step_key, deps in new_step_deps.items():
                 self._pending[step_key] = deps
 
-            self._new_dyamic_mappings = False
+            self._new_dynamic_mappings = False
 
         for step_key, requirements in self._pending.items():
             # If any upstream deps failed - this is not executable
