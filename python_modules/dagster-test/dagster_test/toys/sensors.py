@@ -54,7 +54,6 @@ def get_toys_sensors():
                         "read_file": {"config": {"directory": directory_name, "filename": filename}}
                     }
                 },
-                cursor=str(mtime),
             )
 
     @sensor(pipeline_name="log_asset_pipeline")
@@ -78,8 +77,9 @@ def get_toys_sensors():
                     }
                 }
             },
-            cursor=str(record_id),
         )
+
+        context.update_cursor(str(record_id))
 
     bucket = os.environ.get("DAGSTER_TOY_SENSOR_S3_BUCKET")
 

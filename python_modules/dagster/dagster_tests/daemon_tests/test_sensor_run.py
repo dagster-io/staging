@@ -96,7 +96,8 @@ def skip_cursor_sensor(context):
     else:
         cursor = int(context.cursor) + 1
 
-    return SkipReason(cursor=str(cursor))
+    context.update_cursor(str(cursor))
+    return SkipReason()
 
 
 @sensor(pipeline_name="the_pipeline")
@@ -106,7 +107,8 @@ def run_cursor_sensor(context):
     else:
         cursor = int(context.cursor) + 1
 
-    return RunRequest(run_key=None, run_config={}, tags={}, cursor=str(cursor))
+    context.update_cursor(str(cursor))
+    return RunRequest(run_key=None, run_config={}, tags={})
 
 
 def _random_string(length):

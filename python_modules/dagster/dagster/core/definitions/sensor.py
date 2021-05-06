@@ -1,10 +1,12 @@
 import inspect
+from collections import namedtuple
 from contextlib import ExitStack
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.instance import DagsterInstance
 from dagster.core.instance.ref import InstanceRef
+from dagster.serdes import whitelist_for_serdes
 from dagster.utils import ensure_gen
 
 from .mode import DEFAULT_MODE_NAME
@@ -75,7 +77,17 @@ class SensorExecutionContext:
 
     @property
     def cursor(self):
+        """The cursor value for this sensor, which was set in an earlier sensor evaluation."""
         return self._cursor
+
+    def update_cursor(self, cursor):
+        """Updates the cursor value for this sensor, which will be provided on the context for the
+        next sensor evaluation.
+
+        Args:
+            cursor (Optional[str]):
+        """
+        self._cursor = check.opt_str_param(cursor, "cursor")
 
 
 class SensorDefinition:
@@ -163,16 +175,40 @@ class SensorDefinition:
         result = list(ensure_gen(self._evaluation_fn(context)))
 
         if not result or result == [None]:
-            return []
+            run_requests = []
+            skip_message = None
+        elif len(result) == 1:
+            item = result[0]
+            check.inst(item, (SkipReason, RunRequest))
+            run_requests = [item] if isinstance(item, RunRequest) else []
+            skip_message = item.skip_message if isinstance(item, SkipReason) else None
+        else:
+            check.is_list(result, of_type=RunRequest)
+            run_requests = result
+            skip_message = None
 
-        if len(result) == 1:
-            return check.is_list(result, of_type=(RunRequest, SkipReason))
-
-        return check.is_list(result, of_type=RunRequest)
+        return SensorExecutionData(run_requests, skip_message, context.cursor)
 
     @property
     def minimum_interval_seconds(self):
         return self._min_interval
+
+
+@whitelist_for_serdes
+class SensorExecutionData(namedtuple("_SensorExecutionData", "run_requests skip_message cursor")):
+    def __new__(cls, run_requests=None, skip_message=None, cursor=None):
+        check.opt_list_param(run_requests, "run_requests", RunRequest)
+        check.opt_str_param(skip_message, "skip_message")
+        check.opt_str_param(cursor, "cursor")
+        check.invariant(
+            not (run_requests and skip_message), "Found both skip data and run request data"
+        )
+        return super(SensorExecutionData, cls).__new__(
+            cls,
+            run_requests=run_requests,
+            skip_message=skip_message,
+            cursor=cursor,
+        )
 
 
 def wrap_sensor_evaluation(sensor_name, result):

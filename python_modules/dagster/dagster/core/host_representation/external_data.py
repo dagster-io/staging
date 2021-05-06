@@ -245,36 +245,6 @@ class ExternalSensorData(
 
 
 @whitelist_for_serdes
-class ExternalSensorExecutionData(
-    namedtuple("_ExternalSensorExecutionData", "run_requests skip_message cursor")
-):
-    def __new__(cls, run_requests=None, skip_message=None, cursor=None):
-        check.opt_list_param(run_requests, "run_requests", RunRequest)
-        check.opt_str_param(skip_message, "skip_message")
-        check.opt_str_param(cursor, "cursor")
-        check.invariant(
-            not (run_requests and skip_message), "Found both skip data and run request data"
-        )
-        return super(ExternalSensorExecutionData, cls).__new__(
-            cls,
-            run_requests=run_requests,
-            skip_message=skip_message,
-            cursor=cursor,
-        )
-
-    @staticmethod
-    def from_execution_data(tick_data):
-        check.opt_list_param(tick_data, "tick_data", (SkipReason, RunRequest))
-        return ExternalSensorExecutionData(
-            run_requests=[datum for datum in tick_data if isinstance(datum, RunRequest)],
-            skip_message=tick_data[0].skip_message
-            if tick_data and isinstance(tick_data[0], SkipReason)
-            else None,
-            cursor=tick_data[-1].cursor if tick_data else None,
-        )
-
-
-@whitelist_for_serdes
 class ExternalSensorExecutionErrorData(namedtuple("_ExternalSensorExecutionErrorData", "error")):
     def __new__(cls, error):
         return super(ExternalSensorExecutionErrorData, cls).__new__(

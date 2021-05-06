@@ -1,9 +1,7 @@
 from dagster import check
+from dagster.core.definitions.sensor import SensorExecutionData
 from dagster.core.errors import DagsterUserCodeProcessError
-from dagster.core.host_representation.external_data import (
-    ExternalSensorExecutionData,
-    ExternalSensorExecutionErrorData,
-)
+from dagster.core.host_representation.external_data import ExternalSensorExecutionErrorData
 from dagster.core.host_representation.handle import RepositoryHandle
 from dagster.grpc.types import SensorExecutionArgs
 
@@ -49,7 +47,7 @@ def sync_get_external_sensor_execution_data_grpc(
                 cursor=cursor,
             )
         ),
-        (ExternalSensorExecutionData, ExternalSensorExecutionErrorData),
+        (SensorExecutionData, ExternalSensorExecutionErrorData),
     )
 
     if isinstance(result, ExternalSensorExecutionErrorData):

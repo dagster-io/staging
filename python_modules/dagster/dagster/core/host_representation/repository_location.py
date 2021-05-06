@@ -67,8 +67,8 @@ if TYPE_CHECKING:
         ExternalScheduleExecutionData,
         ExternalScheduleExecutionErrorData,
     )
+    from dagster.core.definitions.sensor import SensorExecutionData
     from dagster.core.host_representation.external_data import (
-        ExternalSensorExecutionData,
         ExternalSensorExecutionErrorData,
     )
 
@@ -175,7 +175,7 @@ class RepositoryLocation(AbstractContextManager):
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
         cursor: Optional[str],
-    ) -> Union["ExternalSensorExecutionData", "ExternalSensorExecutionErrorData"]:
+    ) -> Union["SensorExecutionData", "ExternalSensorExecutionErrorData"]:
         pass
 
     @abstractproperty
@@ -399,7 +399,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
         cursor: Optional[str],
-    ) -> Union["ExternalSensorExecutionData", "ExternalSensorExecutionErrorData"]:
+    ) -> Union["SensorExecutionData", "ExternalSensorExecutionErrorData"]:
         return get_external_sensor_execution(
             self._recon_repo, instance.get_ref(), name, last_completion_time, last_run_key, cursor
         )
@@ -695,7 +695,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
         cursor: Optional[str],
-    ) -> "ExternalSensorExecutionData":
+    ) -> "SensorExecutionData":
         return sync_get_external_sensor_execution_data_grpc(
             self.client,
             instance,

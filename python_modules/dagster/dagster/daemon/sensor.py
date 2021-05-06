@@ -7,9 +7,9 @@ import pendulum
 from dagster import check, seven
 from dagster.cli.workspace.workspace import IWorkspace
 from dagster.core.definitions.run_request import JobType
+from dagster.core.definitions.sensor import SensorExecutionData
 from dagster.core.errors import DagsterError
 from dagster.core.host_representation import ExternalPipeline, PipelineSelector
-from dagster.core.host_representation.external_data import ExternalSensorExecutionData
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler.job import JobStatus, JobTickData, JobTickStatus, SensorJobData
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
@@ -72,10 +72,8 @@ class SensorLaunchContext:
         if cursor:
             self._tick = self._tick.with_cursor(cursor)
 
-    def add_run(self, run_id, run_key=None, cursor=None):
+    def add_run(self, run_id, run_key=None):
         self._tick = self._tick.with_run(run_id, run_key)
-        if cursor:
-            self._tick = self._tick.with_cursor(cursor)
 
     def _write(self):
         self._instance.update_job_tick(self._tick)
@@ -264,7 +262,7 @@ def _evaluate_sensor(
 
     yield
 
-    assert isinstance(sensor_runtime_data, ExternalSensorExecutionData)
+    assert isinstance(sensor_runtime_data, SensorExecutionData)
     if not sensor_runtime_data.run_requests:
         if sensor_runtime_data.skip_message:
             context.logger.info(
@@ -272,13 +270,12 @@ def _evaluate_sensor(
                 f"{sensor_runtime_data.skip_message}"
             )
             context.update_state(
-                JobTickStatus.SKIPPED, skip_reason=sensor_runtime_data.skip_message
+                JobTickStatus.SKIPPED,
+                skip_reason=sensor_runtime_data.skip_message,
+                cursor=sensor_runtime_data.cursor,
             )
         else:
             context.logger.info(f"Sensor returned false for {external_sensor.name}, skipping")
-            context.update_state(JobTickStatus.SKIPPED)
-
-        if sensor_runtime_data.cursor:
             context.update_state(JobTickStatus.SKIPPED, cursor=sensor_runtime_data.cursor)
 
         yield
@@ -304,8 +301,6 @@ def _evaluate_sensor(
 
         if isinstance(run, SkippedSensorRun):
             skipped_runs.append(run)
-            if run_request.cursor:
-                context.update_state(None, cursor=run_request.cursor)
             yield
             continue
 
@@ -333,7 +328,7 @@ def _evaluate_sensor(
 
         _check_for_debug_crash(sensor_debug_crash_flags, "RUN_LAUNCHED")
 
-        context.add_run(run_id=run.run_id, run_key=run_request.run_key, cursor=run_request.cursor)
+        context.add_run(run_id=run.run_id, run_key=run_request.run_key)
 
     if skipped_runs:
         run_keys = [skipped.run_key for skipped in skipped_runs]
@@ -344,9 +339,9 @@ def _evaluate_sensor(
         )
 
     if context.run_count:
-        context.update_state(JobTickStatus.SUCCESS)
+        context.update_state(JobTickStatus.SUCCESS, cursor=sensor_runtime_data.cursor)
     else:
-        context.update_state(JobTickStatus.SKIPPED)
+        context.update_state(JobTickStatus.SKIPPED, cursor=sensor_runtime_data.cursor)
 
     yield
 
