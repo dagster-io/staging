@@ -11,12 +11,16 @@ from dagster.cli.workspace.cli_target import WORKSPACE_TARGET_WARNING
 from dagster.core.instance import DagsterInstance, is_dagster_home_set
 from dagster.core.telemetry import START_DAGIT_WEBSERVER, log_action
 from dagster.utils import DEFAULT_WORKSPACE_YAML_FILENAME
-from gevent import pywsgi
+from gevent import monkey, pywsgi
 from geventwebsocket.handler import WebSocketHandler
 
 from .app import create_app_from_workspace
 from .telemetry import upload_logs
 from .version import __version__
+
+monkey.patch_all()
+
+
 
 
 def create_dagit_cli():

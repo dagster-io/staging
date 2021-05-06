@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from graphql.execution.executors.gevent import GeventExecutor as Executor
 from graphql_ws.constants import GQL_COMPLETE, GQL_DATA
 from graphql_ws.gevent import GeventSubscriptionServer, SubscriptionObserver
 from rx import Observable
@@ -15,6 +16,10 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
     def __init__(self, middleware=None, **kwargs):
         self.middleware = middleware or []
         super(DagsterSubscriptionServer, self).__init__(**kwargs)
+
+    def get_graphql_params(self, *args, **kwargs):
+        params = super(DagsterSubscriptionServer, self).get_graphql_params(*args, **kwargs)
+        return dict(params, executor=Executor())
 
     def execute(self, request_context, params):
         # https://github.com/graphql-python/graphql-ws/issues/7
