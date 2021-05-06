@@ -255,25 +255,42 @@ def resource(
     return _wrap
 
 
-class Resources:
-    """This class functions as a "tag" that we can use to type the namedtuple returned by
-    ScopedResourcesBuilder.build(). The way that we create the namedtuple returned by build() is
-    incompatible with type annotations on its own due to its dynamic attributes, so this tag class
-    provides a workaround."""
+class Resources(tuple):
+    def __new__(cls, resource_instance_dict, _is_generator):
+        return super(Resources, cls).__new__(cls, tuple(resource_instance_dict.values()))
+
+    def __init__(self, resource_instance_dict, is_generator):
+        self._is_generator = is_generator
+        self._resource_instance_dict = resource_instance_dict
+        super(Resources, self).__init__()
+
+    def _asdict(self):
+        return dict(self._resource_instance_dict)
+
+    def __getattr__(self, attr):
+        if attr in self._resource_instance_dict:
+            return self._resource_instance_dict[attr]
+        else:
+            raise DagsterUnknownResourceError(attr)
 
 
-class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_instance_dict")):
+class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_instance_dict is_gen")):
     """There are concepts in the codebase (e.g. solids, system storage) that receive
     only the resources that they have specified in required_resource_keys.
     ScopedResourcesBuilder is responsible for dynamically building a class with
     only those required resources and returning an instance of that class."""
 
-    def __new__(cls, resource_instance_dict: Optional[Dict[str, Any]] = None):
+    def __new__(
+        cls,
+        resource_instance_dict: Optional[Dict[str, Any]] = None,
+        is_gen: Optional[bool] = False,
+    ):
         return super(ScopedResourcesBuilder, cls).__new__(
             cls,
             resource_instance_dict=check.opt_dict_param(
                 resource_instance_dict, "resource_instance_dict", key_type=str
             ),
+            is_gen=check.bool_param(is_gen, "is_gen"),
         )
 
     def build(self, required_resource_keys: Optional[AbstractSet[str]]) -> Resources:
@@ -302,13 +319,7 @@ class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_inst
             if key in self.resource_instance_dict
         }
 
-        class _ScopedResources(
-            namedtuple("_ScopedResources", list(resource_instance_dict.keys())), Resources  # type: ignore[misc]
-        ):
-            def __getattr__(self, attr):
-                raise DagsterUnknownResourceError(attr)
-
-        return _ScopedResources(**resource_instance_dict)  # type: ignore[call-arg]
+        return Resources(resource_instance_dict, self.is_gen)
 
 
 def make_values_resource(**kwargs: Any) -> ResourceDefinition:
