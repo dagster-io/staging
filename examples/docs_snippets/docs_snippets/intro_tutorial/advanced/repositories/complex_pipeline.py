@@ -5,7 +5,7 @@ from dagster import execute_pipeline, pipeline, solid
 
 
 @solid
-def load_cereals(_):
+def load_cereals():
     dataset_path = os.path.join(os.path.dirname(__file__), "cereal.csv")
     with open(dataset_path, "r") as fd:
         cereals = [row for row in csv.DictReader(fd)]
@@ -13,20 +13,16 @@ def load_cereals(_):
 
 
 @solid
-def sort_by_calories(_, cereals):
-    sorted_cereals = list(
-        sorted(cereals, key=lambda cereal: cereal["calories"])
-    )
+def sort_by_calories(cereals):
+    sorted_cereals = list(sorted(cereals, key=lambda cereal: cereal["calories"]))
     least_caloric = sorted_cereals[0]["name"]
     most_caloric = sorted_cereals[-1]["name"]
     return (least_caloric, most_caloric)
 
 
 @solid
-def sort_by_protein(_, cereals):
-    sorted_cereals = list(
-        sorted(cereals, key=lambda cereal: cereal["protein"])
-    )
+def sort_by_protein(cereals):
+    sorted_cereals = list(sorted(cereals, key=lambda cereal: cereal["protein"]))
     least_protein = sorted_cereals[0]["name"]
     most_protein = sorted_cereals[-1]["name"]
     return (least_protein, most_protein)
