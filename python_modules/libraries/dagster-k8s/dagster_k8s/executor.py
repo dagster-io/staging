@@ -3,6 +3,7 @@ from typing import List
 
 import kubernetes
 from dagster import Field, StringSource, executor
+from dagster.builtins import Bool
 from dagster.core.definitions.executor import multiple_process_executor_requirements
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import IStepContext
@@ -16,6 +17,7 @@ from dagster.core.executor.step_delegating.step_handler import StepHandler
 from dagster.grpc.types import ExecuteStepArgs
 from dagster.serdes.serdes import serialize_dagster_namedtuple
 from dagster.utils import frozentags, merge_dicts
+from dagster_k8s.client import DagsterK8sError
 from dagster_k8s.job import (
     DagsterK8sJobConfig,
     construct_dagster_k8s_job,
@@ -45,12 +47,11 @@ class K8sStepHandler(StepHandler):
         step_contexts: List[IStepContext],
         known_state: KnownExecutionState,
     ):
-        assert len(step_contexts) == 1, "Launching multiple steps is not currently supported"
-        step_context = step_contexts[0]
+        step_keys = sorted([cxt.step.key for cxt in step_contexts])
 
         k8s_name_key = get_k8s_job_name(
             self.pipeline_context.plan_data.pipeline_run.run_id,
-            step_context.step.key,
+            "".join(step_keys),
         )
         job_name = "dagster-job-%s" % (k8s_name_key)
         pod_name = "dagster-job-%s" % (k8s_name_key)
@@ -58,7 +59,7 @@ class K8sStepHandler(StepHandler):
         execute_step_args = ExecuteStepArgs(
             pipeline_origin=self.pipeline_context.reconstructable_pipeline.get_python_origin(),
             pipeline_run_id=self.pipeline_context.pipeline_run.run_id,
-            step_keys_to_execute=[step_context.step.key],
+            step_keys_to_execute=step_keys,
             instance_ref=self.pipeline_context.instance.get_ref(),
             retry_mode=self.retries.for_inner_plan(),
             known_state=known_state,
@@ -86,12 +87,11 @@ class K8sStepHandler(StepHandler):
         step_contexts: List[IStepContext],
         known_state: KnownExecutionState,
     ):
-        assert len(step_contexts) == 1, "Checking multiple steps is not currently supported"
-        step_context = step_contexts[0]
+        step_keys = sorted([cxt.step.key for cxt in step_contexts])
 
         k8s_name_key = get_k8s_job_name(
             self.pipeline_context.plan_data.pipeline_run.run_id,
-            step_context.step.key,
+            "".join(step_keys),
         )
         job_name = "dagster-job-%s" % (k8s_name_key)
 
@@ -99,12 +99,17 @@ class K8sStepHandler(StepHandler):
             namespace=self._job_namespace, name=job_name
         )
         if job.status.failed:
-            step_failure_event = DagsterEvent.step_failure_event(
-                step_context=step_context,
-                step_failure_data=StepFailureData(error=None, user_failure_data=None),
-            )
+            # if running in isolation, raise failure for single step
+            if len(step_contexts) == 1:
+                step_failure_event = DagsterEvent.step_failure_event(
+                    step_context=step_contexts[0],
+                    step_failure_data=StepFailureData(error=None, user_failure_data=None),
+                )
 
-            return [step_failure_event]
+                return [step_failure_event]
+            else:
+                raise DagsterK8sError(f"Dagster K8s job failed: {job_name}")
+
         return []
 
     def terminate_steps(self, step_keys: List[str]):
@@ -120,7 +125,8 @@ class K8sStepHandler(StepHandler):
                 StringSource,
                 is_required=False,
                 default_value="default",
-            )
+            ),
+            "enable_step_isolation": Field(Bool, is_required=False, default_value=True),
         },
         {"retries": get_retries_config()},
     ),
@@ -146,5 +152,6 @@ def dagster_k8s_executor(init_context: InitExecutorContext) -> Executor:
             retries=RetryMode.DISABLED,  # Not currently supported
             job_config=job_config,
             job_namespace=exc_cfg.get("job_namespace"),
-        )
+        ),
+        enable_step_isolation=exc_cfg.get("enable_step_isolation"),
     )
