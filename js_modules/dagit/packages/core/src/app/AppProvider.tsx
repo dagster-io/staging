@@ -4,7 +4,7 @@ import '@blueprintjs/select/lib/css/blueprint-select.css';
 import '@blueprintjs/table/lib/css/table.css';
 import '@blueprintjs/popover2/lib/css/blueprint-popover2.css';
 
-import {split, ApolloLink, ApolloClient, ApolloProvider, HttpLink} from '@apollo/client';
+import {concat, split, ApolloLink, ApolloClient, ApolloProvider, HttpLink} from '@apollo/client';
 import {WebSocketLink} from '@apollo/client/link/ws';
 import {getMainDefinition} from '@apollo/client/utilities';
 import {Colors} from '@blueprintjs/core';
@@ -110,7 +110,17 @@ export const AppProvider: React.FC<Props> = (props) => {
       return forward(operation);
     });
 
-    const httpLink = new HttpLink({uri: httpURI});
+    const authMiddleware = new ApolloLink((operation, forward) => {
+      operation.setContext({
+        headers: {
+          authorization: 'sid@elementl.com',
+        },
+      });
+
+      return forward(operation);
+    });
+
+    const httpLink = concat(authMiddleware, new HttpLink({uri: httpURI}));
 
     const websocketLink = new WebSocketLink(websocketClient);
 
