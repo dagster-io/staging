@@ -36,7 +36,7 @@ class StepTiming(namedtuple("_StepTiming", "name started_at completed_at")):
 class NodeResult(
     namedtuple(
         "_NodeResult",
-        "node error status execution_time thread_id step_timings table fail warn skip",
+        "unique_id error status execution_time thread_id step_timings table fail warn skip",
     ),
 ):
     """The result of executing a dbt node (model).
@@ -45,7 +45,7 @@ class NodeResult(
     constructed from the JSON output of dbt commands.
 
     Attributes:
-        node (Dict[str, Any]): Details about the executed dbt node (model).
+        unique_id (Optional[str]): The unique identifier for the executed dbt node.
         error (Optional[str]): An error message if an error occurred.
         fail (Optional[Any]): The ``fail`` field from the results of the executed dbt node.
         warn (Optional[Any]): The ``warn`` field from the results of the executed dbt node.
@@ -62,7 +62,7 @@ class NodeResult(
 
     def __new__(
         cls,
-        node: Optional[Dict[str, Any]] = None,
+        unique_id: Optional[str] = None,
         error: Optional[str] = None,
         status: Optional[Union[str, int]] = None,
         execution_time: Optional[float] = None,
@@ -76,7 +76,7 @@ class NodeResult(
         step_timings = check.list_param(step_timings, "step_timings", of_type=StepTiming)
         return super().__new__(
             cls,
-            check.opt_dict_param(node, "node", key_type=str),
+            check.opt_str_param(unique_id, "unique_id"),
             check.opt_str_param(error, "error"),
             status,
             check.opt_float_param(execution_time, "execution_time"),
@@ -99,7 +99,13 @@ class NodeResult(
         Returns:
             NodeResult: An instance of :class:`NodeResult <dagster_dbt.NodeResult>`.
         """
-        node = check.opt_dict_elem(d, "node")
+        # When executing from the CLI, we get unique_id as a top level attribute
+        if "unique_id" in d:
+            unique_id = check.str_elem(d, "unique_id")
+        # When executing via RPC server, we get unique id within "node" schema
+        else:
+            node = check.dict_elem(d, "node")
+            unique_id = check.str_elem(node, "unique_id")
         error = check.opt_str_elem(d, "error")
         execution_time = check.float_elem(d, "execution_time")
         thread_id = check.opt_str_elem(d, "thread_id")
@@ -115,8 +121,8 @@ class NodeResult(
         table = check.opt_dict_elem(d, "table")
 
         return cls(
+            unique_id=unique_id,
             step_timings=step_timings,
-            node=node,
             error=error,
             execution_time=execution_time,
             thread_id=thread_id,
