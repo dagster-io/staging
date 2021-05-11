@@ -341,15 +341,21 @@ class TestEventLogStorage:
         assert [int(evt.message) for evt in watched] == [2, 3, 4]
 
     def test_event_log_storage_pagination(self, storage):
-        storage.store_event(create_test_event_log_record(str(0)))
-        storage.store_event(create_test_event_log_record(str(1)))
-        storage.store_event(create_test_event_log_record(str(2)))
+        # interleave two runs events to ensure pagination is not affected by other runs
+        storage.store_event(create_test_event_log_record("A"))
+        storage.store_event(create_test_event_log_record(str(0), run_id="other_run"))
+        storage.store_event(create_test_event_log_record("B"))
+        storage.store_event(create_test_event_log_record(str(1), run_id="other_run"))
+        storage.store_event(create_test_event_log_record("C"))
+        storage.store_event(create_test_event_log_record(str(2), run_id="other_run"))
+        storage.store_event(create_test_event_log_record("D"))
 
-        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID)) == 3
-        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, -1)) == 3
-        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, 0)) == 2
-        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, 1)) == 1
-        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, 2)) == 0
+        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID)) == 4
+        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, -1)) == 4
+        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, 0)) == 3
+        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, 1)) == 2
+        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, 2)) == 1
+        assert len(storage.get_logs_for_run(DEFAULT_RUN_ID, 3)) == 0
 
     def test_event_log_delete(self, storage):
         assert len(storage.get_logs_for_run(DEFAULT_RUN_ID)) == 0
