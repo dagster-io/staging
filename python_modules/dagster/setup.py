@@ -60,7 +60,7 @@ if __name__ == "__main__":
             # cli
             "click>=5.0,<8.0",
             "coloredlogs>=6.1, <=14.0",
-            "Jinja2",
+            "Jinja2<3.0",
             "PyYAML>=5.1",
             # core (not explicitly expressed atm)
             "alembic>=1.2.1",
@@ -76,6 +76,7 @@ if __name__ == "__main__":
             "sqlalchemy>=1.0",
             "toposort>=1.0",
             "watchdog>=0.8.3",
+            "Werkzeug<2.0.0",
             'psutil >= 1.0; platform_system=="Windows"',
             # https://github.com/mhammond/pywin32/issues/1439
             'pywin32 != 226; platform_system=="Windows"',
