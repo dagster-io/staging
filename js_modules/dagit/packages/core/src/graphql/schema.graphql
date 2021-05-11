@@ -487,6 +487,8 @@ enum DagsterEventType {
   HOOK_COMPLETED
   HOOK_ERRORED
   HOOK_SKIPPED
+  ALERT_START
+  ALERT_SUCCESS
 }
 
 interface StepEvent {
