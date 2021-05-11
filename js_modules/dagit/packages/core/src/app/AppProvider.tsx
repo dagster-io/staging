@@ -127,7 +127,7 @@ export const AppProvider: React.FC<Props> = (props) => {
       const authMiddleware = new ApolloLink((operation, forward) => {
         operation.setContext({
           headers: {
-            authorization: headerAuthToken,
+            'Dagster-Custom-Auth-Token': headerAuthToken,
           },
         });
 
