@@ -155,9 +155,6 @@ export const SIDEBAR_SOLID_DEFINITION_FRAGMENT = gql`
       key
       value
     }
-    requiredResources {
-      resourceKey
-    }
     outputDefinitions {
       name
       description
@@ -174,6 +171,9 @@ export const SIDEBAR_SOLID_DEFINITION_FRAGMENT = gql`
       }
     }
     ... on SolidDefinition {
+      requiredResources {
+        resourceKey
+      }
       configField {
         configType {
           ...ConfigTypeSchemaFragment
