@@ -27,7 +27,7 @@ from dagster.seven import JSONDecodeError
 from dagster.utils import merge_dicts, utc_datetime_from_timestamp
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from .base import RunStorage
+from .base import RunStorage, extract_runs_cursor
 from .migration import RUN_DATA_MIGRATIONS, RUN_PARTITIONS
 from .schema import (
     BulkActionsTable,
@@ -156,17 +156,26 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
     def _rows_to_runs(self, rows):
         return list(map(self._row_to_run, rows))
 
-    def _add_cursor_limit_to_query(self, query, cursor, limit):
+    def _add_cursor_limit_to_query(
+        self, query, before_cursor, limit, after_cursor, ascending=False
+    ):
         """ Helper function to deal with cursor/limit pagination args """
-
-        if cursor:
-            cursor_query = db.select([RunsTable.c.id]).where(RunsTable.c.run_id == cursor)
+        if before_cursor:
+            cursor_query = db.select([RunsTable.c.id]).where(RunsTable.c.run_id == before_cursor)
             query = query.where(RunsTable.c.id < cursor_query)
+
+        if after_cursor:
+            after_query = db.select([RunsTable.c.id]).where(RunsTable.c.run_id == after_cursor)
+            query = query.where(RunsTable.c.id > after_query)
+
+        if ascending:
+            query = query.order_by(RunsTable.c.id.asc())
+        else:
+            query = query.order_by(RunsTable.c.id.desc())
 
         if limit:
             query = query.limit(limit)
 
-        query = query.order_by(RunsTable.c.id.desc())
         return query
 
     def _add_filters_to_query(self, query, filters):
@@ -201,14 +210,24 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
         return query
 
-    def _runs_query(self, filters=None, cursor=None, limit=None, columns=None):
+    def _runs_query(
+        self,
+        filters=None,
+        before_cursor=None,
+        limit=None,
+        columns=None,
+        after_cursor=None,
+        ascending=False,
+    ):
 
         filters = check.opt_inst_param(
             filters, "filters", PipelineRunsFilter, default=PipelineRunsFilter()
         )
-        check.opt_str_param(cursor, "cursor")
+        check.opt_str_param(before_cursor, "cursor")
         check.opt_int_param(limit, "limit")
         check.opt_list_param(columns, "columns")
+        check.opt_str_param(after_cursor, "after_cursor")
+        check.opt_bool_param(ascending, "ascending")
 
         if columns is None:
             columns = ["run_body"]
@@ -224,14 +243,43 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             base_query = db.select(base_query_columns).select_from(RunsTable)
 
         query = self._add_filters_to_query(base_query, filters)
-        query = self._add_cursor_limit_to_query(query, cursor, limit)
+        query = self._add_cursor_limit_to_query(
+            query, before_cursor, limit, after_cursor, ascending
+        )
 
         return query
 
-    def get_runs(self, filters=None, cursor=None, limit=None):
-        query = self._runs_query(filters, cursor, limit)
+    def get_runs(
+        self,
+        filters=None,
+        before_cursor=None,
+        limit=None,
+        after_cursor=None,
+        ascending=False,
+        cursor=None,
+    ):
+
+        check.opt_inst_param(filters, "filters", PipelineRunsFilter)
+        check.opt_str_param(before_cursor, "before_cursor")
+        check.opt_int_param(limit, "limit")
+        check.opt_str_param(after_cursor, "after_cursor")
+        check.opt_bool_param(ascending, "ascending")
+        check.opt_str_param(cursor, "cursor")
+
+        before_cursor, after_cursor = extract_runs_cursor(
+            cursor, before_cursor, after_cursor, ascending
+        )
+
+        query = self._runs_query(
+            filters,
+            before_cursor=before_cursor,
+            limit=limit,
+            after_cursor=after_cursor,
+            ascending=ascending,
+        )
 
         rows = self.fetchall(query)
+
         return self._rows_to_runs(rows)
 
     def get_runs_count(self, filters=None):
@@ -359,7 +407,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
     def get_run_groups(self, filters=None, cursor=None, limit=None):
         # The runs that would be returned by calling RunStorage.get_runs with the same arguments
         runs = self._runs_query(
-            filters=filters, cursor=cursor, limit=limit, columns=["run_body", "run_id"]
+            filters=filters, before_cursor=cursor, limit=limit, columns=["run_body", "run_id"]
         ).alias("runs")
 
         # Gets us the run_id and associated root_run_id for every run in storage that is a

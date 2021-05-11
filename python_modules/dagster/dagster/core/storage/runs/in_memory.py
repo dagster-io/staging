@@ -13,7 +13,7 @@ from dagster.core.snap import (
 from dagster.utils import frozendict, merge_dicts
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from .base import RunStorage
+from .base import RunStorage, extract_runs_cursor
 
 
 class InMemoryRunStorage(RunStorage):
@@ -83,13 +83,34 @@ class InMemoryRunStorage(RunStorage):
         elif event.event_type == DagsterEventType.PIPELINE_CANCELED:
             self._runs[run_id] = self._runs[run_id].with_status(PipelineRunStatus.CANCELED)
 
-    def get_runs(self, filters=None, cursor=None, limit=None):
+    def get_runs(
+        self,
+        filters=None,
+        before_cursor=None,
+        limit=None,
+        after_cursor=None,
+        ascending=False,
+        cursor=None,
+    ):
         check.opt_inst_param(filters, "filters", PipelineRunsFilter)
-        check.opt_str_param(cursor, "cursor")
+        check.opt_str_param(before_cursor, "before_cursor")
         check.opt_int_param(limit, "limit")
+        check.opt_str_param(after_cursor, "after_cursor")
+        check.opt_bool_param(ascending, "ascending")
+        check.opt_str_param(cursor, "cursor")
+
+        before_cursor, after_cursor = extract_runs_cursor(
+            cursor, before_cursor, after_cursor, ascending
+        )
 
         if not filters:
-            return self._slice(list(self._runs.values())[::-1], cursor, limit)
+            return self._slice(
+                list(self._runs.values()),
+                before_cursor=before_cursor,
+                limit=limit,
+                after_cursor=after_cursor,
+                ascending=ascending,
+            )
 
         def run_filter(run):
             if filters.run_ids and run.run_id not in filters.run_ids:
@@ -111,30 +132,43 @@ class InMemoryRunStorage(RunStorage):
 
             return True
 
-        matching_runs = list(filter(run_filter, reversed(self._runs.values())))
-        return self._slice(matching_runs, cursor=cursor, limit=limit)
+        matching_runs = list(filter(run_filter, list(self._runs.values())))
+        return self._slice(
+            matching_runs,
+            before_cursor=before_cursor,
+            limit=limit,
+            after_cursor=after_cursor,
+            ascending=ascending,
+        )
 
     def get_runs_count(self, filters=None):
         check.opt_inst_param(filters, "filters", PipelineRunsFilter)
 
         return len(self.get_runs(filters))
 
-    def _slice(self, items, cursor, limit, key_fn=lambda _: _.run_id):
-        if cursor:
-            try:
-                index = next(i for i, item in enumerate(items) if key_fn(item) == cursor)
-            except StopIteration:
-                return []
-            start = index + 1
-        else:
-            start = 0
+    def _slice(
+        self,
+        items,
+        before_cursor,
+        limit,
+        key_fn=lambda _: _.run_id,
+        after_cursor=None,
+        ascending=False,
+    ):
+        start, end = 0, None
+        for i, item in enumerate(items):
+            if before_cursor and key_fn(item) == before_cursor:
+                end = i
+            if after_cursor and key_fn(item) == after_cursor:
+                start = i + 1
+        sliced = items[start:end]
+
+        sliced = sliced[::-1] if not ascending else sliced
 
         if limit:
-            end = start + limit
-        else:
-            end = None
+            sliced = sliced[:limit]
 
-        return list(items)[start:end]
+        return sliced
 
     def get_run_by_id(self, run_id):
         check.str_param(run_id, "run_id")
@@ -264,7 +298,7 @@ class InMemoryRunStorage(RunStorage):
             for backfill in self._bulk_actions.values()
             if not status or status == backfill.status
         ]
-        return self._slice(backfills[::-1], cursor, limit, key_fn=lambda _: _.backfill_id)
+        return self._slice(backfills, cursor, limit, key_fn=lambda _: _.backfill_id)
 
     def get_backfill(self, backfill_id):
         check.str_param(backfill_id, "backfill_id")
