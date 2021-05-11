@@ -3,6 +3,7 @@ version: "3.7"
 services:
   test-mysql-db:
     image: mysql:8
+    platform: linux/amd64
     container_name: test-mysql-db
     ports:
       - "3306:3306"
