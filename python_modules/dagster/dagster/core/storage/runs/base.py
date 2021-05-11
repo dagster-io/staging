@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, abstractmethod
 from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
@@ -42,7 +43,13 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
 
     @abstractmethod
     def get_runs(
-        self, filters: PipelineRunsFilter = None, cursor: str = None, limit: int = None
+        self,
+        filters: PipelineRunsFilter = None,
+        before_cursor: str = None,
+        limit: int = None,
+        after_cursor: str = None,
+        ascending: bool = False,
+        cursor: str = None,
     ) -> Iterable[PipelineRun]:
         """Return all the runs present in the storage that match the given filters.
 
@@ -50,8 +57,10 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
             filters (Optional[PipelineRunsFilter]) -- The
                 :py:class:`~dagster.core.storage.pipeline_run.PipelineRunsFilter` by which to filter
                 runs
-            cursor (Optional[str]): Starting cursor (run_id) of range of runs
+            before_cursor (Optional[str]): Ending cursor (run_id) of range of runs.
             limit (Optional[int]): Number of results to get. Defaults to infinite.
+            after_cursor (Optional[str]): Starting cursor (run_id) of range of runs.
+            ascending (Optional[bool]): Query order. Defaults to False.
 
         Returns:
             List[PipelineRun]
@@ -290,3 +299,16 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
     @abstractmethod
     def update_backfill(self, partition_backfill):
         """ Update a partition backfill in run storage """
+
+
+def extract_runs_cursor(cursor, before_cursor, after_cursor, ascending):
+    if cursor:
+        warnings.warn(
+            "Parameter `cursor` is a deprecated for `get_runs`. Use `before_cursor` or `after_cursor` instead"
+        )
+        if ascending and after_cursor is None:
+            after_cursor = cursor
+        if not ascending and before_cursor is None:
+            before_cursor = cursor
+
+    return before_cursor, after_cursor

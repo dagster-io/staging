@@ -971,9 +971,17 @@ class DagsterInstance:
         return self._run_storage.has_run(run_id)
 
     def get_runs(
-        self, filters: PipelineRunsFilter = None, cursor: str = None, limit: int = None
+        self,
+        filters: PipelineRunsFilter = None,
+        before_cursor: str = None,
+        limit: int = None,
+        after_cursor: str = None,
+        ascending: bool = False,
+        cursor: str = None,
     ) -> Iterable[PipelineRun]:
-        return self._run_storage.get_runs(filters, cursor, limit)
+        return self._run_storage.get_runs(
+            filters, before_cursor, limit, after_cursor, ascending, cursor=cursor
+        )
 
     def get_runs_count(self, filters: PipelineRunsFilter = None) -> int:
         return self._run_storage.get_runs_count(filters)
