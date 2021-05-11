@@ -124,9 +124,7 @@ class SqlPollingRunIdEventWatcherThread(threading.Thread):
         start_cursor = check.int_param(start_cursor, "start_cursor")
         callback = check.callable_param(callback, "callback")
         with self._callback_fn_list_lock:
-            # adjust start_cursor by 1 since start_cursor is passed-in 0-indexed
-            # https://github.com/dagster-io/dagster/issues/3621
-            self._callback_fn_list.append(CallbackAfterCursor(start_cursor + 1, callback))
+            self._callback_fn_list.append(CallbackAfterCursor(start_cursor, callback))
 
     def remove_callback(self, callback: Callable[[EventRecord], None]):
         """Observer has stopped watching this run;
@@ -156,14 +154,11 @@ class SqlPollingRunIdEventWatcherThread(threading.Thread):
         """
         # need to adjust cursor here as well because of 0-indexing
         # see https://github.com/dagster-io/dagster/issues/3621
-        cursor: int = 0
+        cursor = -1
         while not self._should_thread_exit.wait(POLLING_CADENCE):
-            index_to_event_log_dict: Dict[
-                int, EventRecord
-            ] = self._event_log_storage.get_logs_for_run_by_log_id(self._run_id, cursor=cursor - 1)
-            for (index, dagster_event) in index_to_event_log_dict.items():
-                cursor = max(cursor, index)
+            events = self._event_log_storage.get_logs_for_run(self._run_id, cursor=cursor)
+            cursor += len(events)
+            for event_record in events:
                 with self._callback_fn_list_lock:
                     for callback_with_cursor in self._callback_fn_list:
-                        if callback_with_cursor.start_cursor < index:
-                            callback_with_cursor.callback(dagster_event)
+                        callback_with_cursor.callback(event_record)
