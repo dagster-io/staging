@@ -343,6 +343,10 @@ class TestEventLogStorage:
     def test_event_log_storage_pagination(self, storage):
         storage.store_event(create_test_event_log_record(str(0)))
         storage.store_event(create_test_event_log_record(str(1)))
+
+        storage.store_event(create_test_event_log_record(str(0), run_id="other_run"))
+        storage.store_event(create_test_event_log_record(str(1), run_id="other_run"))
+
         storage.store_event(create_test_event_log_record(str(2)))
 
         assert len(storage.get_logs_for_run(DEFAULT_RUN_ID)) == 3
