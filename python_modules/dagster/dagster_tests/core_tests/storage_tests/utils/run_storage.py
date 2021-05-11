@@ -466,7 +466,6 @@ class TestRunStorage:
                 run_id=three, pipeline_name="some_pipeline", tags={"mytag": "hello"}
             )
         )
-
         all_runs = storage.get_runs()
         assert len(all_runs) == 3
         sliced_runs = storage.get_runs(cursor=three, limit=1)
@@ -488,6 +487,13 @@ class TestRunStorage:
         )
         assert len(sliced_runs) == 1
         assert sliced_runs[0].run_id == two
+
+        after_cursor_sliced_runs = storage.get_runs(after_cursor=three)
+        assert len(after_cursor_sliced_runs) == 0
+
+        after_cursor_sliced_runs = storage.get_runs(cursor=three, after_cursor=one)
+        assert len(after_cursor_sliced_runs) == 1
+        assert after_cursor_sliced_runs[0].run_id == two
 
     def test_fetch_by_status(self, storage):
         assert storage
