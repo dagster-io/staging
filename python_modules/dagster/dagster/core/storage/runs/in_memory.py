@@ -83,13 +83,13 @@ class InMemoryRunStorage(RunStorage):
         elif event.event_type == DagsterEventType.PIPELINE_CANCELED:
             self._runs[run_id] = self._runs[run_id].with_status(PipelineRunStatus.CANCELED)
 
-    def get_runs(self, filters=None, cursor=None, limit=None):
+    def get_runs(self, filters=None, cursor=None, limit=None, after_cursor=None):
         check.opt_inst_param(filters, "filters", PipelineRunsFilter)
         check.opt_str_param(cursor, "cursor")
         check.opt_int_param(limit, "limit")
 
         if not filters:
-            return self._slice(list(self._runs.values())[::-1], cursor, limit)
+            return self._slice(list(self._runs.values()), cursor, limit, after_cursor=after_cursor)
 
         def run_filter(run):
             if filters.run_ids and run.run_id not in filters.run_ids:
@@ -111,30 +111,25 @@ class InMemoryRunStorage(RunStorage):
 
             return True
 
-        matching_runs = list(filter(run_filter, reversed(self._runs.values())))
-        return self._slice(matching_runs, cursor=cursor, limit=limit)
+        matching_runs = list(filter(run_filter, self._runs.values()))
+        return self._slice(matching_runs, cursor=cursor, limit=limit, after_cursor=after_cursor)
 
     def get_runs_count(self, filters=None):
         check.opt_inst_param(filters, "filters", PipelineRunsFilter)
 
         return len(self.get_runs(filters))
 
-    def _slice(self, items, cursor, limit, key_fn=lambda _: _.run_id):
-        if cursor:
-            try:
-                index = next(i for i, item in enumerate(items) if key_fn(item) == cursor)
-            except StopIteration:
-                return []
-            start = index + 1
-        else:
-            start = 0
-
+    def _slice(self, items, cursor, limit, key_fn=lambda _: _.run_id, after_cursor=None):
+        sliced_items = [
+            item
+            for item in items
+            if (after_cursor is None or key_fn(item) > after_cursor)
+            and (cursor is None or key_fn(item) < cursor)
+        ]
         if limit:
-            end = start + limit
-        else:
-            end = None
+            sliced_items = sliced_items[:limit]
 
-        return list(items)[start:end]
+        return sliced_items
 
     def get_run_by_id(self, run_id):
         check.str_param(run_id, "run_id")

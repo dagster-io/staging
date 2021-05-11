@@ -156,12 +156,17 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
     def _rows_to_runs(self, rows):
         return list(map(self._row_to_run, rows))
 
-    def _add_cursor_limit_to_query(self, query, cursor, limit):
+    def _add_cursor_limit_to_query(self, query, cursor, limit, after_cursor):
         """ Helper function to deal with cursor/limit pagination args """
+        print(f"after_cursor: {after_cursor}")
 
         if cursor:
             cursor_query = db.select([RunsTable.c.id]).where(RunsTable.c.run_id == cursor)
             query = query.where(RunsTable.c.id < cursor_query)
+
+        if after_cursor:
+            after_query = db.select([RunsTable.c.id]).where(RunsTable.c.run_id == after_cursor)
+            query = query.where(RunsTable.c.id > after_query)
 
         if limit:
             query = query.limit(limit)
@@ -201,7 +206,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
         return query
 
-    def _runs_query(self, filters=None, cursor=None, limit=None, columns=None):
+    def _runs_query(self, filters=None, cursor=None, limit=None, columns=None, after_cursor=None):
 
         filters = check.opt_inst_param(
             filters, "filters", PipelineRunsFilter, default=PipelineRunsFilter()
@@ -209,6 +214,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         check.opt_str_param(cursor, "cursor")
         check.opt_int_param(limit, "limit")
         check.opt_list_param(columns, "columns")
+        check.opt_str_param(after_cursor, "after_cursor")
 
         if columns is None:
             columns = ["run_body"]
@@ -224,14 +230,15 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             base_query = db.select(base_query_columns).select_from(RunsTable)
 
         query = self._add_filters_to_query(base_query, filters)
-        query = self._add_cursor_limit_to_query(query, cursor, limit)
+        query = self._add_cursor_limit_to_query(query, cursor, limit, after_cursor)
 
         return query
 
-    def get_runs(self, filters=None, cursor=None, limit=None):
-        query = self._runs_query(filters, cursor, limit)
+    def get_runs(self, filters=None, cursor=None, limit=None, after_cursor=None):
+        query = self._runs_query(filters, cursor, limit, after_cursor=after_cursor)
 
         rows = self.fetchall(query)
+        print(after_cursor)
         return self._rows_to_runs(rows)
 
     def get_runs_count(self, filters=None):
