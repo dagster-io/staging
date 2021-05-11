@@ -128,6 +128,17 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
     def supports_reload(self):
         return True
 
+    def clear_grpc_endpoint(self, repository_location_origin):
+        check.inst_param(
+            repository_location_origin, "repository_location_origin", RepositoryLocationOrigin
+        )
+        with self._lock:
+            origin_id = repository_location_origin.get_id()
+            if origin_id in self._active_entries:
+                # Free the map entry for this origin so that _get_grpc_endpoint will create
+                # a new process
+                del self._active_entries[origin_id]
+
     def reload_grpc_endpoint(self, repository_location_origin):
         check.inst_param(
             repository_location_origin, "repository_location_origin", RepositoryLocationOrigin
