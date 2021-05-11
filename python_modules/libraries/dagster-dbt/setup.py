@@ -39,6 +39,7 @@ if __name__ == "__main__":
         extras_require={
             "test": [
                 "dbt>=0.17.0",
+                "Jinja2<3.0",
                 "matplotlib",
             ]
         },
