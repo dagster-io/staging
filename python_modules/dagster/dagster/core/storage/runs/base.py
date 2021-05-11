@@ -42,7 +42,11 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
 
     @abstractmethod
     def get_runs(
-        self, filters: PipelineRunsFilter = None, cursor: str = None, limit: int = None
+        self,
+        filters: PipelineRunsFilter = None,
+        cursor: str = None,
+        limit: int = None,
+        after_cursor: str = None,
     ) -> Iterable[PipelineRun]:
         """Return all the runs present in the storage that match the given filters.
 
@@ -50,8 +54,9 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
             filters (Optional[PipelineRunsFilter]) -- The
                 :py:class:`~dagster.core.storage.pipeline_run.PipelineRunsFilter` by which to filter
                 runs
-            cursor (Optional[str]): Starting cursor (run_id) of range of runs
+            cursor (Optional[str]): Starting cursor (run_id) of range of runs (descending).
             limit (Optional[int]): Number of results to get. Defaults to infinite.
+            after_cursor (Optional[str]): Starting cursor (run_id) of range of runs (ascending).
 
         Returns:
             List[PipelineRun]
