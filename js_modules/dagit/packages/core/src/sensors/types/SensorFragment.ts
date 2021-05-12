@@ -89,7 +89,7 @@ export interface SensorFragment {
   id: string;
   jobOriginId: string;
   name: string;
-  pipelineName: string;
+  pipelineName: string | null;
   solidSelection: (string | null)[] | null;
   mode: string;
   description: string | null;
