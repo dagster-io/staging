@@ -98,13 +98,13 @@ class SensorDefinition:
 
     Args:
         name (str): The name of the sensor to create.
-        pipeline_name (str): The name of the pipeline to execute when the sensor fires.
         evaluation_fn (Callable[[SensorExecutionContext]]): The core evaluation function for the
             sensor, which is run at an interval to determine whether a run should be launched or
             not. Takes a :py:class:`~dagster.SensorExecutionContext`.
 
             This function must return a generator, which must yield either a single SkipReason
             or one or more RunRequest objects.
+        pipeline_name (Optional[str]): The name of the pipeline to execute when the sensor fires.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute when the sensor runs. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The mode to apply when executing runs triggered by this sensor.
@@ -124,21 +124,23 @@ class SensorDefinition:
         "_description",
         "_evaluation_fn",
         "_min_interval",
+        "_is_monitor_sensor",
     ]
 
     def __init__(
         self,
         name,
-        pipeline_name,
         evaluation_fn,
+        pipeline_name=None,
         solid_selection=None,
         mode=None,
         minimum_interval_seconds=None,
         description=None,
+        _is_monitor_sensor=False,
     ):
 
         self._name = check_valid_name(name)
-        self._pipeline_name = check.str_param(pipeline_name, "pipeline_name")
+        self._pipeline_name = check.opt_str_param(pipeline_name, "pipeline_name")
         self._mode = check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME)
         self._solid_selection = check.opt_nullable_list_param(
             solid_selection, "solid_selection", of_type=str
@@ -148,6 +150,23 @@ class SensorDefinition:
         self._min_interval = check.opt_int_param(
             minimum_interval_seconds, "minimum_interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL
         )
+        self._is_monitor_sensor = check.opt_bool_param(
+            _is_monitor_sensor, "_is_monitor_sensor", default=False
+        )
+
+        if self._is_monitor_sensor:
+            # monitor sensors shouldn't target a pipeline
+            check.invariant(
+                self._pipeline_name is None,
+                f'SensorDefinition "{self._name}" is a system sensor which should not target a pipeline.',
+            )
+        else:
+            # regular sensors should target a pipeline
+            check.invariant(
+                self._pipeline_name is not None,
+                f'SensorDefinition "{self.name}" does not target any pipeline. '
+                "Please specify `pipeline_name`.",
+            )
 
     @property
     def name(self):
@@ -195,6 +214,10 @@ class SensorDefinition:
     @property
     def minimum_interval_seconds(self):
         return self._min_interval
+
+    @property
+    def is_monitor_sensor(self):
+        return self._is_monitor_sensor
 
 
 @whitelist_for_serdes

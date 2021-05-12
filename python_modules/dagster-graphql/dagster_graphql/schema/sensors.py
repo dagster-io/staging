@@ -18,13 +18,14 @@ class GrapheneSensor(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     jobOriginId = graphene.NonNull(graphene.String)
     name = graphene.NonNull(graphene.String)
-    pipelineName = graphene.NonNull(graphene.String)
+    pipelineName = graphene.String()
     solidSelection = graphene.List(graphene.String)
     mode = graphene.NonNull(graphene.String)
     sensorState = graphene.NonNull(GrapheneJobState)
     minIntervalSeconds = graphene.NonNull(graphene.Int)
     description = graphene.String()
     nextTick = graphene.Field(GrapheneFutureJobTick)
+    isMonitorSensor = graphene.NonNull(graphene.Boolean)
 
     class Meta:
         name = "Sensor"
@@ -50,10 +51,11 @@ class GrapheneSensor(graphene.ObjectType):
             mode=external_sensor.mode,
             minIntervalSeconds=external_sensor.min_interval_seconds,
             description=external_sensor.description,
+            isMonitorSensor=external_sensor.is_monitor_sensor,
         )
 
     def resolve_id(self, _):
-        return f"{self.name}:{self.pipelineName}"
+        return f"{self.name}:{self.pipelineName}" if self.pipelineName else self.name
 
     def resolve_sensorState(self, _graphene_info):
         return GrapheneJobState(self._sensor_state)
