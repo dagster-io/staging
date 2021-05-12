@@ -498,6 +498,10 @@ class ExternalSensor:
             return self._external_sensor_data.min_interval
         return DEFAULT_SENSOR_DAEMON_INTERVAL
 
+    @property
+    def no_target(self):
+        return self._external_sensor_data.no_target
+
     def get_external_origin(self):
         return self._handle.get_external_origin()
 
