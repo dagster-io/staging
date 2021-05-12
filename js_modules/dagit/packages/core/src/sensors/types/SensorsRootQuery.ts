@@ -106,7 +106,7 @@ export interface SensorsRootQuery_sensorsOrError_Sensors_results {
   id: string;
   jobOriginId: string;
   name: string;
-  pipelineName: string;
+  pipelineName: string | null;
   solidSelection: (string | null)[] | null;
   mode: string;
   description: string | null;
