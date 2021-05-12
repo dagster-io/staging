@@ -14,6 +14,7 @@ from .run_request import JobType, RunRequest, SkipReason
 from .utils import check_valid_name
 
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
+MONITOR_SENSOR_PREFIX = "SYSTEM_SENSOR"
 
 
 class SensorExecutionContext:
@@ -95,13 +96,13 @@ class SensorDefinition:
 
     Args:
         name (str): The name of the sensor to create.
-        pipeline_name (str): The name of the pipeline to execute when the sensor fires.
         evaluation_fn (Callable[[SensorExecutionContext]]): The core evaluation function for the
             sensor, which is run at an interval to determine whether a run should be launched or
             not. Takes a :py:class:`~dagster.SensorExecutionContext`.
 
             This function must return a generator, which must yield either a single SkipReason
             or one or more RunRequest objects.
+        pipeline_name (Optional[str]): The name of the pipeline to execute when the sensor fires.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute when the sensor runs. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The mode to apply when executing runs triggered by this sensor.
@@ -126,8 +127,8 @@ class SensorDefinition:
     def __init__(
         self,
         name,
-        pipeline_name,
         evaluation_fn,
+        pipeline_name=None,
         solid_selection=None,
         mode=None,
         minimum_interval_seconds=None,
@@ -135,7 +136,7 @@ class SensorDefinition:
     ):
 
         self._name = check_valid_name(name)
-        self._pipeline_name = check.str_param(pipeline_name, "pipeline_name")
+        self._pipeline_name = check.opt_str_param(pipeline_name, "pipeline_name")
         self._mode = check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME)
         self._solid_selection = check.opt_nullable_list_param(
             solid_selection, "solid_selection", of_type=str
