@@ -4,7 +4,7 @@ from typing import List
 import kubernetes
 from dagster import Field, StringSource, executor
 from dagster.core.definitions.executor import multiple_process_executor_requirements
-from dagster.core.events import DagsterEvent
+from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.execution.context.system import IStepContext
 from dagster.core.execution.plan.objects import StepFailureData
 from dagster.core.execution.plan.state import KnownExecutionState
@@ -40,30 +40,21 @@ class K8sStepHandler(StepHandler):
         self._job_config = job_config
         self._job_namespace = job_namespace
 
-    def launch_steps(
+    def launch_step(
         self,
-        step_contexts: List[IStepContext],
-        known_state: KnownExecutionState,
+        execute_step_args: ExecuteStepArgs,
     ):
-        assert len(step_contexts) == 1, "Launching multiple steps is not currently supported"
-        step_context = step_contexts[0]
+        assert (
+            len(execute_step_args.step_keys_to_execute) == 1
+        ), "Launching multiple steps is not currently supported"
+        step_key = execute_step_args.step_keys_to_execute[0]
 
         k8s_name_key = get_k8s_job_name(
-            self.pipeline_context.plan_data.pipeline_run.run_id,
-            step_context.step.key,
+            execute_step_args.pipeline_run_id,
+            step_key,
         )
         job_name = "dagster-job-%s" % (k8s_name_key)
         pod_name = "dagster-job-%s" % (k8s_name_key)
-
-        execute_step_args = ExecuteStepArgs(
-            pipeline_origin=self.pipeline_context.reconstructable_pipeline.get_python_origin(),
-            pipeline_run_id=self.pipeline_context.pipeline_run.run_id,
-            step_keys_to_execute=[step_context.step.key],
-            instance_ref=self.pipeline_context.instance.get_ref(),
-            retry_mode=self.retries.for_inner_plan(),
-            known_state=known_state,
-            should_verify_step=True,
-        )
 
         input_json = serialize_dagster_namedtuple(execute_step_args)
         args = ["dagster", "api", "execute_step", input_json]
@@ -83,15 +74,16 @@ class K8sStepHandler(StepHandler):
 
     def check_step_health(
         self,
-        step_contexts: List[IStepContext],
-        known_state: KnownExecutionState,
+        execute_step_args: ExecuteStepArgs,
     ):
-        assert len(step_contexts) == 1, "Checking multiple steps is not currently supported"
-        step_context = step_contexts[0]
+        assert (
+            len(execute_step_args.step_keys_to_execute) == 1
+        ), "Launching multiple steps is not currently supported"
+        step_key = execute_step_args.step_keys_to_execute[0]
 
         k8s_name_key = get_k8s_job_name(
-            self.pipeline_context.plan_data.pipeline_run.run_id,
-            step_context.step.key,
+            execute_step_args.pipeline_run_id,
+            step_key,
         )
         job_name = "dagster-job-%s" % (k8s_name_key)
 
@@ -99,15 +91,23 @@ class K8sStepHandler(StepHandler):
             namespace=self._job_namespace, name=job_name
         )
         if job.status.failed:
-            step_failure_event = DagsterEvent.step_failure_event(
-                step_context=step_context,
-                step_failure_data=StepFailureData(error=None, user_failure_data=None),
+            step_failure_event = DagsterEvent(
+                event_type_value=DagsterEventType.STEP_FAILURE.value,
+                pipeline_name=execute_step_args.pipeline_origin.pipeline_name,
+                step_key=step_key,
+                event_specific_data=StepFailureData(
+                    error=None,
+                    user_failure_data=None,
+                ),
             )
 
             return [step_failure_event]
         return []
 
-    def terminate_steps(self, step_keys: List[str]):
+    def terminate_step(
+        self,
+        execute_step_args: ExecuteStepArgs,
+    ):
         raise NotImplementedError()
 
 
