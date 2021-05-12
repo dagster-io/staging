@@ -10,7 +10,9 @@ from dagster import (
     lambda_solid,
     repository,
 )
+from dagster.check import CheckError
 from dagster.core.definitions import sensor
+from dagster.core.definitions.sensor import SensorDefinition
 
 
 def create_single_node_pipeline(name, called):
@@ -198,3 +200,31 @@ def test_bad_sensor():
         @repository
         def _some_repo():
             return [foo_sensor]
+
+
+def test_sensor_no_pipeline_name():
+
+    with pytest.raises(
+        CheckError,
+        match="Please specify `pipeline_name`",
+    ):
+        SensorDefinition(name="foo", evaluation_fn=lambda x: x)
+
+    with pytest.raises(
+        CheckError,
+        match="should not target a pipeline",
+    ):
+        SensorDefinition(
+            name="foo",
+            evaluation_fn=lambda x: x,
+            pipeline_name="foo_pipe",
+            _has_no_target=True,
+        )
+
+    foo_system_sensor = SensorDefinition(name="foo", evaluation_fn=lambda x: x, _has_no_target=True)
+
+    @repository
+    def foo_repo():
+        return [foo_system_sensor]
+
+    assert foo_repo.has_sensor_def("foo")
