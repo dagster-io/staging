@@ -186,7 +186,7 @@ export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_n
   id: string;
   jobOriginId: string;
   name: string;
-  pipelineName: string;
+  pipelineName: string | null;
   solidSelection: (string | null)[] | null;
   mode: string;
   description: string | null;

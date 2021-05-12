@@ -5,6 +5,7 @@ import pytest
 from dagster import (
     DagsterInvalidDefinitionError,
     PipelineDefinition,
+    SensorDefinition,
     SolidDefinition,
     daily_schedule,
     lambda_solid,
@@ -13,6 +14,7 @@ from dagster import (
     sensor,
     solid,
 )
+from dagster.check import CheckError
 from dagster.core.definitions.decorators.graph import graph
 
 
@@ -274,3 +276,25 @@ def test_bare_graph_with_resources():
         @repository
         def _test():
             return [bare]
+
+
+def test_sensor_no_pipeline_name():
+
+    with pytest.raises(
+        CheckError,
+        match="does not have any target",
+    ):
+        SensorDefinition(
+            name="foo",
+            evaluation_fn=lambda x: x,
+            pipeline_name="foo_pipe",
+            _no_target=True,
+        )
+
+    foo_system_sensor = SensorDefinition(name="foo", evaluation_fn=lambda x: x, _no_target=True)
+
+    @repository
+    def foo_repo():
+        return [foo_system_sensor]
+
+    assert foo_repo.has_sensor_def("foo")
