@@ -538,6 +538,8 @@ class RepositoryData:
 
     def _validate_sensor(self, sensor):
         pipelines = self.get_pipeline_names()
+        if sensor.is_pipeline_sensor:
+            return sensor
 
         if sensor.pipeline_name not in pipelines:
             raise DagsterInvalidDefinitionError(
