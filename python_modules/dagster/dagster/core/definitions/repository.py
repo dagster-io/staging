@@ -5,7 +5,7 @@ from dagster.utils import merge_dicts
 from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .schedule import ScheduleDefinition
-from .sensor import SensorDefinition
+from .sensor import MONITOR_SENSOR_PREFIX, SensorDefinition
 from .utils import check_valid_name
 
 VALID_REPOSITORY_DATA_DICT_KEYS = {
@@ -538,6 +538,19 @@ class RepositoryData:
 
     def _validate_sensor(self, sensor):
         pipelines = self.get_pipeline_names()
+        if sensor.name.startswith(MONITOR_SENSOR_PREFIX):
+            # monitor sensors shouldn't target a pipeline
+            if sensor.pipeline_name:
+                raise DagsterInvalidDefinitionError(
+                    f'SensorDefinition "{sensor.name}" is a system sensor which should not target a pipeline.',
+                )
+            return sensor
+
+        if sensor.pipeline_name is None:
+            raise DagsterInvalidDefinitionError(
+                f'SensorDefinition "{sensor.name}" does not target any pipeline. '
+                "Please specify `pipeline_name`."
+            )
 
         if sensor.pipeline_name not in pipelines:
             raise DagsterInvalidDefinitionError(
