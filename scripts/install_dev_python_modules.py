@@ -63,7 +63,7 @@ def main(quiet):
         "-e python_modules/libraries/dagster-celery",
         "-e python_modules/libraries/dagster-celery-docker",
         "-e python_modules/libraries/dagster-cron",
-        '-e "python_modules/libraries/dagster-dask[yarn,pbs,kube]"',
+        "-e python_modules/libraries/dagster-dask[yarn,pbs,kube]",
         "-e python_modules/libraries/dagster-datadog",
         "-e python_modules/libraries/dagster-dbt",
         "-e python_modules/libraries/dagster-docker",
@@ -100,13 +100,13 @@ def main(quiet):
         install_targets += [
             "-e python_modules/libraries/dagster-snowflake",
             "-e python_modules/libraries/dagstermill",
-            '-e "examples/airline_demo[full]"',
+            "-e examples/airline_demo[full]",
         ]
 
     # NOTE: These need to be installed as one long pip install command, otherwise pip will install
     # conflicting dependencies, which will break pip freeze snapshot creation during the integration
     # image build!
-    cmd = ["pip", "install"] + install_targets
+    cmd = ["pip", "install", "--use-deprecated=legacy-resolver"] + install_targets
     if quiet:
         cmd.append(quiet)
 
