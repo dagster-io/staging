@@ -236,7 +236,7 @@ class ExternalSensorData(
         return super(ExternalSensorData, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
-            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+            pipeline_name=check.opt_str_param(pipeline_name, "pipeline_name"),
             solid_selection=check.opt_nullable_list_param(solid_selection, "solid_selection", str),
             mode=check.opt_str_param(mode, "mode"),
             min_interval=check.opt_int_param(min_interval, "min_interval"),

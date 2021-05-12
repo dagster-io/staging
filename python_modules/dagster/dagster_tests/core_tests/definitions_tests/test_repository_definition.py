@@ -11,6 +11,7 @@ from dagster import (
     repository,
 )
 from dagster.core.definitions import sensor
+from dagster.core.definitions.sensor import MONITOR_SENSOR_PREFIX, SensorDefinition
 
 
 def create_single_node_pipeline(name, called):
@@ -198,3 +199,39 @@ def test_bad_sensor():
         @repository
         def _some_repo():
             return [foo_sensor]
+
+
+def test_sensor_no_pipeline_name():
+    foo_sensor = SensorDefinition(name="foo", evaluation_fn=lambda x: x)
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match="Please specify `pipeline_name`",
+    ):
+
+        @repository
+        def _some_repo():
+            return [foo_sensor]
+
+    bad_system_sensor = SensorDefinition(
+        name=f"{MONITOR_SENSOR_PREFIX}_foo", evaluation_fn=lambda x: x, pipeline_name="foo_pipe"
+    )
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match="should not target a pipeline",
+    ):
+
+        @repository
+        def _some_repo():
+            return [bad_system_sensor]
+
+    foo_system_sensor = SensorDefinition(
+        name=f"{MONITOR_SENSOR_PREFIX}_foo", evaluation_fn=lambda x: x
+    )
+
+    @repository
+    def foo_repo():
+        return [foo_system_sensor]
+
+    assert foo_repo.has_sensor_def(f"{MONITOR_SENSOR_PREFIX}_foo")
