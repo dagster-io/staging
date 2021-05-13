@@ -26,7 +26,6 @@ from ..errors import (
     GraphenePythonError,
 )
 from ..execution import GrapheneExecutionPlan
-from ..logs.compute_logs import GrapheneComputeLogs
 from ..logs.events import GraphenePipelineRunStepStats, GrapheneStepMaterializationEvent
 from ..repository_origin import GrapheneRepositoryOrigin
 from ..schedules.schedules import GrapheneSchedule
@@ -147,13 +146,6 @@ class GraphenePipelineRun(graphene.ObjectType):
     solidSelection = graphene.List(graphene.NonNull(graphene.String))
     stats = graphene.NonNull(GraphenePipelineRunStatsOrError)
     stepStats = non_null_list(GraphenePipelineRunStepStats)
-    computeLogs = graphene.Field(
-        graphene.NonNull(GrapheneComputeLogs),
-        stepKey=graphene.Argument(graphene.NonNull(graphene.String)),
-        description="""
-        Compute logs are the stdout/stderr logs for a given solid step computation
-        """,
-    )
     executionPlan = graphene.Field(GrapheneExecutionPlan)
     stepKeysToExecute = graphene.List(graphene.NonNull(graphene.String))
     runConfigYaml = graphene.NonNull(graphene.String)
@@ -204,9 +196,6 @@ class GraphenePipelineRun(graphene.ObjectType):
 
     def resolve_stepStats(self, graphene_info):
         return get_step_stats(graphene_info, self.run_id)
-
-    def resolve_computeLogs(self, _graphene_info, stepKey):
-        return GrapheneComputeLogs(runId=self.run_id, stepKey=stepKey)
 
     def resolve_executionPlan(self, graphene_info):
         if not (
