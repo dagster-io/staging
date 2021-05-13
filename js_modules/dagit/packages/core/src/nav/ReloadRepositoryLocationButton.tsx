@@ -12,7 +12,7 @@ import {
   ReloadRepositoryLocationMutationVariables,
 } from './types/ReloadRepositoryLocationMutation';
 
-type ReloadResult = {type: 'success'} | {type: 'error'; message: string};
+type ReloadResult = {type: 'success'} | {type: 'error'; message: string} | {type: 'loading'};
 type OnReload = (location: string, result: ReloadResult) => void;
 
 export const useRepositoryLocationReload = (location: string, onReload: OnReload = () => {}) => {
@@ -34,14 +34,14 @@ export const useRepositoryLocationReload = (location: string, onReload: OnReload
     setReloading(false);
 
     let loadFailure = null;
+    let loadStatus = null;
     switch (data?.reloadRepositoryLocation.__typename) {
       case 'RepositoryLocation':
-        break;
-      case 'RepositoryLocationLoadFailure':
-        loadFailure = data?.reloadRepositoryLocation.error.message;
+        loadStatus = data?.reloadRepositoryLocation.loadStatus;
         break;
       default:
-        loadFailure = data?.reloadRepositoryLocation.message;
+        loadFailure = data?.reloadRepositoryLocation.error.message;
+        loadStatus = data?.reloadRepositoryLocation.loadStatus;
         break;
     }
 
@@ -53,7 +53,7 @@ export const useRepositoryLocationReload = (location: string, onReload: OnReload
         intent: Intent.DANGER,
       });
       onReload(location, {type: 'error', message: loadFailure});
-    } else {
+    } else if (loadStatus == 'LOADED') {
       SharedToaster.show({
         message: 'Repository Location Reloaded',
         timeout: 3000,
@@ -61,6 +61,8 @@ export const useRepositoryLocationReload = (location: string, onReload: OnReload
         intent: Intent.SUCCESS,
       });
       onReload(location, {type: 'success'});
+    } else {
+      onReload(location, {type: 'loading'});
     }
 
     // Update run config localStorage, which may now be out of date.
@@ -128,6 +130,7 @@ const RELOAD_REPOSITORY_LOCATION_MUTATION = gql`
             name
           }
         }
+        loadStatus
       }
       ... on ReloadNotSupported {
         message
@@ -140,6 +143,7 @@ const RELOAD_REPOSITORY_LOCATION_MUTATION = gql`
         error {
           message
         }
+        loadStatus
       }
     }
   }
