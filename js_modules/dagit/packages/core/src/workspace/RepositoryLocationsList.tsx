@@ -60,9 +60,21 @@ const LocationStatus: React.FC<{locationOrError: LocationOrError; reloading: boo
       </>
     );
   }
+
+  if (
+    locationOrError.__typename === 'RepositoryLocation' &&
+    locationOrError.loadStatus != 'LOADING'
+  ) {
+    return (
+      <Tag minimal intent="success">
+        Loaded
+      </Tag>
+    );
+  }
+
   return (
-    <Tag minimal intent="success">
-      Loaded
+    <Tag minimal intent="primary">
+      Loading...
     </Tag>
   );
 };
