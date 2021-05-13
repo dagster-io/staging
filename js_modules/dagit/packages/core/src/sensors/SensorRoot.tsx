@@ -75,11 +75,13 @@ export const SensorRoot: React.FC<{
                 showRecent={true}
                 onHighlightRunIds={(runIds: string[]) => setSelectedRunIds(runIds)}
               />
-              <SensorPreviousRuns
-                repoAddress={repoAddress}
-                sensor={sensorOrError}
-                highlightedIds={selectedRunIds}
-              />
+              {!sensorOrError.isMonitorSensor && (
+                <SensorPreviousRuns
+                  repoAddress={repoAddress}
+                  sensor={sensorOrError}
+                  highlightedIds={selectedRunIds}
+                />
+              )}
             </Group>
           </Page>
         );

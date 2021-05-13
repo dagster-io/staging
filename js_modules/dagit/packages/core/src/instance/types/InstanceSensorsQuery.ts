@@ -184,6 +184,7 @@ export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_n
   minIntervalSeconds: number;
   nextTick: InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_sensors_nextTick | null;
   sensorState: InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_sensors_sensorState;
+  isMonitorSensor: boolean;
 }
 
 export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes {

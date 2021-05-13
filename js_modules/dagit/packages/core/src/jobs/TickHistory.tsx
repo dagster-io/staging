@@ -259,7 +259,13 @@ export const JobTickHistory = ({
         {selectedTick ? (
           <Box background={Colors.WHITE} padding={16} margin={{bottom: 16}}>
             {selectedTick.status === JobTickStatus.SUCCESS ? (
-              <RunList runIds={selectedTick?.runIds} />
+              <RunList
+                runIds={
+                  selectedTick.originRunIds.length
+                    ? selectedTick.originRunIds
+                    : selectedTick?.runIds
+                }
+              />
             ) : null}
             {selectedTick.status === JobTickStatus.SKIPPED ? (
               <Group direction="row" spacing={16}>
@@ -538,6 +544,7 @@ const JOB_TICK_HISTORY_QUERY = gql`
           timestamp
           skipReason
           runIds
+          originRunIds
           error {
             ...PythonErrorFragment
           }

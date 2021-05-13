@@ -96,4 +96,5 @@ export interface SensorFragment {
   minIntervalSeconds: number;
   nextTick: SensorFragment_nextTick | null;
   sensorState: SensorFragment_sensorState;
+  isMonitorSensor: boolean;
 }

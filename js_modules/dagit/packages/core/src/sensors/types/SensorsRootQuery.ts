@@ -113,6 +113,7 @@ export interface SensorsRootQuery_sensorsOrError_Sensors_results {
   minIntervalSeconds: number;
   nextTick: SensorsRootQuery_sensorsOrError_Sensors_results_nextTick | null;
   sensorState: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState;
+  isMonitorSensor: boolean;
 }
 
 export interface SensorsRootQuery_sensorsOrError_Sensors {

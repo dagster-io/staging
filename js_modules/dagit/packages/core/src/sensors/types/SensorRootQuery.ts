@@ -100,6 +100,7 @@ export interface SensorRootQuery_sensorOrError_Sensor {
   minIntervalSeconds: number;
   nextTick: SensorRootQuery_sensorOrError_Sensor_nextTick | null;
   sensorState: SensorRootQuery_sensorOrError_Sensor_sensorState;
+  isMonitorSensor: boolean;
 }
 
 export type SensorRootQuery_sensorOrError = SensorRootQuery_sensorOrError_SensorNotFoundError | SensorRootQuery_sensorOrError_Sensor;

@@ -19,6 +19,7 @@ export const SENSOR_FRAGMENT = gql`
       id
       ...JobStateFragment
     }
+    isMonitorSensor
   }
   ${JOB_STATE_FRAGMENT}
 `;
