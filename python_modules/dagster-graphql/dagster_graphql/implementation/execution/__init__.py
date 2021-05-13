@@ -148,20 +148,6 @@ def get_pipeline_run_observable(graphene_info, run_id, after=None):
     )
 
 
-def get_compute_log_observable(graphene_info, run_id, step_key, io_type, cursor=None):
-    from ...schema.logs.compute_logs import from_compute_log_file
-
-    check.inst_param(graphene_info, "graphene_info", ResolveInfo)
-    check.str_param(run_id, "run_id")
-    check.str_param(step_key, "step_key")
-    check.inst_param(io_type, "io_type", ComputeIOType)
-    check.opt_str_param(cursor, "cursor")
-
-    return graphene_info.context.instance.compute_log_manager.observable(
-        run_id, step_key, io_type, cursor
-    ).map(lambda update: from_compute_log_file(graphene_info, update))
-
-
 @capture_error
 def wipe_assets(graphene_info, asset_keys):
     from ...schema.roots.mutation import GrapheneAssetWipeSuccess

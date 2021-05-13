@@ -267,7 +267,6 @@ type PipelineRun {
   solidSelection: [String!]
   stats: PipelineRunStatsOrError!
   stepStats: [PipelineRunStepStats!]!
-  computeLogs(stepKey: String!): ComputeLogs!
   executionPlan: ExecutionPlan
   stepKeysToExecute: [String!]
   runConfigYaml: String!
@@ -366,21 +365,6 @@ type ExpectationResult implements DisplayableEvent {
   description: String
   metadataEntries: [EventMetadataEntry!]!
   success: Boolean!
-}
-
-type ComputeLogs {
-  runId: String!
-  stepKey: String!
-  stdout: ComputeLogFile
-  stderr: ComputeLogFile
-}
-
-type ComputeLogFile {
-  path: String!
-  data: String
-  cursor: Int!
-  size: Int!
-  downloadUrl: String
 }
 
 type ExecutionPlan {
@@ -1531,6 +1515,14 @@ type PipelineRunLogsSubscriptionFailure {
 }
 
 scalar Cursor
+
+type ComputeLogFile {
+  path: String!
+  data: String
+  cursor: Int!
+  size: Int!
+  downloadUrl: String
+}
 
 enum ComputeIOType {
   STDOUT

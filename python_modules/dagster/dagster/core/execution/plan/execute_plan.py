@@ -1,4 +1,5 @@
 import sys
+from contextlib import ExitStack
 from typing import Iterator, List, cast
 
 from dagster import check
@@ -55,9 +56,19 @@ def inner_plan_execution_iterator(
             )
 
             # capture all of the logs for this step
-            with pipeline_context.instance.compute_log_manager.watch(
-                step_context.pipeline_run, step_context.step.key
-            ):
+            with ExitStack() as stack:
+                if pipeline_context.instance.compute_log_manager.use_legacy_api:
+                    stack.enter_context(
+                        pipeline_context.instance.compute_log_manager.watch(
+                            step_context.pipeline_run, step_context.step.key
+                        )
+                    )
+                else:
+                    stack.enter_context(
+                        pipeline_context.instance.compute_log_manager.capture_logs(
+                            log_key=step_context.step.key, scope=step_context.pipeline_run.run_id
+                        )
+                    )
 
                 for step_event in check.generator(
                     _dagster_event_sequence_for_step(step_context, active_execution.retry_state)

@@ -1,5 +1,5 @@
 import atexit
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import namedtuple
 from contextlib import contextmanager
 from enum import Enum
@@ -36,6 +36,49 @@ class ComputeLogManager(ABC):
     steps of pipeline solids."""
 
     @contextmanager
+    def capture_logs(self, log_key, scope=None):
+        check.str_param(log_key, "log_key")
+        check.opt_str_param(scope, "scope")
+        if not self.use_legacy_api:
+            raise NotImplementedError()
+
+    @contextmanager
+    def get_logs(self, log_key, scope=None):
+        check.str_param(log_key, "log_key")
+        check.opt_str_param(scope, "scope")
+        if not self.use_legacy_api:
+            raise NotImplementedError()
+
+    def subscribe(self, log_key, on_notify, scope=None):
+        check.str_param(log_key, "log_key")
+        check.callable_param(on_notify, "on_notify")
+        check.opt_str_param(scope, "scope")
+        if not self.use_legacy_api:
+            raise NotImplementedError()
+
+    def has_logs(self, log_key, scope=None):
+        check.str_param(log_key, "log_key")
+        check.opt_str_param(scope, "scope")
+        if not self.use_legacy_api:
+            raise NotImplementedError()
+
+    def get_log_info(self, log_key, scope=None):
+        check.str_param(log_key, "log_key")
+        check.opt_str_param(scope, "scope")
+        if not self.use_legacy_api:
+            raise NotImplementedError()
+
+    @property
+    def use_legacy_api(self):
+        return True
+
+    ################################################################################################
+    #
+    # Legacy API methods
+    #
+    ################################################################################################
+
+    @contextmanager
     def watch(self, pipeline_run, step_key=None):
         """
         Watch the stdout/stderr for a given execution for a given run_id / step_key and persist it.
@@ -57,7 +100,6 @@ class ComputeLogManager(ABC):
         self.on_watch_finish(pipeline_run, step_key)
 
     @contextmanager
-    @abstractmethod
     def _watch_logs(self, pipeline_run, step_key=None):
         """
         Method to watch the stdout/stderr logs for a given run_id / step_key.  Kept separate from
@@ -83,7 +125,6 @@ class ComputeLogManager(ABC):
             str
         """
 
-    @abstractmethod
     def is_watch_completed(self, run_id, key):
         """Flag indicating when computation for a given execution step has completed.
 
@@ -95,7 +136,6 @@ class ComputeLogManager(ABC):
             Boolean
         """
 
-    @abstractmethod
     def on_watch_start(self, pipeline_run, step_key):
         """Hook called when starting to watch compute logs.
 
@@ -104,7 +144,6 @@ class ComputeLogManager(ABC):
             step_key (Optional[String]): The step_key for a compute step
         """
 
-    @abstractmethod
     def on_watch_finish(self, pipeline_run, step_key):
         """Hook called when computation for a given execution step is finished.
 
@@ -113,7 +152,6 @@ class ComputeLogManager(ABC):
             step_key (Optional[String]): The step_key for a compute step
         """
 
-    @abstractmethod
     def download_url(self, run_id, key, io_type):
         """Get a URL where the logs can be downloaded.
 
@@ -126,7 +164,6 @@ class ComputeLogManager(ABC):
             String
         """
 
-    @abstractmethod
     def read_logs_file(self, run_id, key, io_type, cursor=0, max_bytes=MAX_BYTES_FILE_READ):
         """Get compute log data for a given compute step.
 
@@ -152,7 +189,6 @@ class ComputeLogManager(ABC):
         """
         return True
 
-    @abstractmethod
     def on_subscribe(self, subscription):
         """Hook for managing streaming subscriptions for log data from `dagit`
 
