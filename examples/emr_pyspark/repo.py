@@ -28,12 +28,12 @@ def make_people(context) -> DataFrame:
 
 
 @solid(required_resource_keys={"pyspark_step_launcher"})
-def filter_over_50(_, people: DataFrame) -> DataFrame:
+def filter_over_50(people: DataFrame) -> DataFrame:
     return people.filter(people["age"] > 50)
 
 
 @solid(required_resource_keys={"pyspark_step_launcher"})
-def count_people(_, people: DataFrame) -> int:
+def count_people(people: DataFrame) -> int:
     return people.count()
 
 
