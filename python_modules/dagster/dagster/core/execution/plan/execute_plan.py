@@ -1,7 +1,7 @@
 import sys
+from contextlib import ExitStack
 from typing import Iterator, List, cast
 
-from contextlib import ExitStack
 from dagster import check
 from dagster.core.definitions import Failure, HookExecutionResult, RetryRequested
 from dagster.core.errors import (

@@ -1,7 +1,9 @@
+from contextlib import contextmanager
+
 from dagster import check
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
-from .compute_log_manager import MAX_BYTES_FILE_READ, ComputeLogFileData, ComputeLogManager
+from .compute_log_manager import ComputeLogData, ComputeLogManager
 
 
 class NoOpComputeLogManager(ComputeLogManager, ConfigurableClass):
@@ -20,28 +22,17 @@ class NoOpComputeLogManager(ComputeLogManager, ConfigurableClass):
     def from_config_value(inst_data, config_value):
         return NoOpComputeLogManager(inst_data=inst_data, **config_value)
 
-    def enabled(self, _pipeline_run, _step_key):
-        return False
-
-    def _watch_logs(self, pipeline_run, step_key=None):
+    @contextmanager
+    def capture_logs(self, namespace: str, log_key: str):
         pass
 
-    def is_watch_completed(self, run_id, key):
+    def get_logs(
+        self, namespace: str, log_key: str, cursor: str = None, max_file_bytes: str = None
+    ) -> ComputeLogData:
+        return ComputeLogData()
+
+    def is_capture_complete(self, namespace: str, log_key: str):
         return True
 
-    def on_watch_start(self, pipeline_run, step_key):
-        pass
-
-    def on_watch_finish(self, pipeline_run, step_key):
-        pass
-
-    def download_url(self, run_id, key, io_type):
-        return None
-
-    def read_logs_file(self, run_id, key, io_type, cursor=0, max_bytes=MAX_BYTES_FILE_READ):
-        return ComputeLogFileData(
-            path="{}.{}".format(key, io_type), data=None, cursor=0, size=0, download_url=None
-        )
-
-    def on_subscribe(self, subscription):
-        pass
+    def use_legacy_api(self) -> bool:
+        return True

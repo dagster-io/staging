@@ -3,6 +3,7 @@ import os
 import sys
 from collections import defaultdict
 from contextlib import contextmanager
+from typing import Optional, Tuple
 
 from dagster import Bool, Field, Float, StringSource, check
 from dagster.core.execution.compute_logs import mirror_stream_to_file
@@ -12,13 +13,11 @@ from dagster.utils import ensure_dir, touch_file
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers.polling import PollingObserver
 
-from typing import Tuple, Optional
-
 from .compute_log_manager import (
     MAX_BYTES_FILE_READ,
     ComputeIOType,
-    ComputeLogFileData,
     ComputeLogData,
+    ComputeLogFileData,
     ComputeLogManager,
     ComputeLogSubscription,
 )
