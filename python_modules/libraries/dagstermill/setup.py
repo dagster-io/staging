@@ -38,7 +38,7 @@ if __name__ == "__main__":
             "jupyter-client<6.1.13",
             "nbconvert>=5.4.0,<6.0.0",
             "scrapbook >=0.5.0",
-            "papermill>=1.0.0,<2.0.0",
+            "papermill>=1.0.0",
         ],
         extras_require={"test": ["matplotlib", "scikit-learn>=0.19.0"]},
         entry_points={"console_scripts": ["dagstermill = dagstermill.cli:main"]},
