@@ -3,12 +3,12 @@ import os
 import kubernetes
 from dagster import Field, StringSource, executor
 from dagster.core.definitions.executor import multiple_process_executor_requirements
-from dagster.core.events import DagsterEvent, DagsterEventType
-from dagster.core.execution.plan.objects import StepFailureData
+from dagster.core.events import DagsterEvent, DagsterEventType, PipelineFailureData
 from dagster.core.execution.retries import RetryMode, get_retries_config
 from dagster.core.executor.base import Executor
 from dagster.core.executor.init import InitExecutorContext
 from dagster.core.executor.step_delegating import StepDelegatingExecutor
+from dagster.core.executor.step_delegating.step_delegating_executor import StepIsolationMode
 from dagster.core.executor.step_delegating.step_handler import StepHandler
 from dagster.grpc.types import ExecuteStepArgs
 from dagster.serdes.serdes import serialize_dagster_namedtuple
@@ -41,14 +41,10 @@ class K8sStepHandler(StepHandler):
         self,
         execute_step_args: ExecuteStepArgs,
     ):
-        assert (
-            len(execute_step_args.step_keys_to_execute) == 1
-        ), "Launching multiple steps is not currently supported"
-        step_key = execute_step_args.step_keys_to_execute[0]
 
         k8s_name_key = get_k8s_job_name(
             execute_step_args.pipeline_run_id,
-            step_key,
+            "".join(sorted(execute_step_args.step_keys_to_execute)),
         )
         job_name = "dagster-job-%s" % (k8s_name_key)
         pod_name = "dagster-job-%s" % (k8s_name_key)
@@ -73,14 +69,10 @@ class K8sStepHandler(StepHandler):
         self,
         execute_step_args: ExecuteStepArgs,
     ):
-        assert (
-            len(execute_step_args.step_keys_to_execute) == 1
-        ), "Launching multiple steps is not currently supported"
-        step_key = execute_step_args.step_keys_to_execute[0]
 
         k8s_name_key = get_k8s_job_name(
             execute_step_args.pipeline_run_id,
-            step_key,
+            "".join(sorted(execute_step_args.step_keys_to_execute)),
         )
         job_name = "dagster-job-%s" % (k8s_name_key)
 
@@ -89,12 +81,10 @@ class K8sStepHandler(StepHandler):
         )
         if job.status.failed:
             step_failure_event = DagsterEvent(
-                event_type_value=DagsterEventType.STEP_FAILURE.value,
+                event_type_value=DagsterEventType.PIPELINE_FAILURE.value,
                 pipeline_name=execute_step_args.pipeline_origin.pipeline_name,
-                step_key=step_key,
-                event_specific_data=StepFailureData(
+                event_specific_data=PipelineFailureData(
                     error=None,
-                    user_failure_data=None,
                 ),
             )
 
@@ -119,7 +109,10 @@ class K8sStepHandler(StepHandler):
                 default_value="default",
             )
         },
-        {"retries": get_retries_config()},
+        {
+            "retries": get_retries_config(),
+            "step_isolation": Field(str, is_required=False, default_value="ENABLED"),
+        },
     ),
     requirements=multiple_process_executor_requirements(),
 )
@@ -143,5 +136,6 @@ def dagster_k8s_executor(init_context: InitExecutorContext) -> Executor:
             retries=RetryMode.DISABLED,  # Not currently supported
             job_config=job_config,
             job_namespace=exc_cfg.get("job_namespace"),
-        )
+        ),
+        step_isolation=StepIsolationMode(exc_cfg.get("step_isolation")),
     )

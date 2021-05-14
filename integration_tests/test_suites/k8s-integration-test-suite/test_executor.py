@@ -2,6 +2,7 @@ import os
 
 import pytest
 from dagster import check
+from dagster.core.executor.step_delegating.step_delegating_executor import StepIsolationMode
 from dagster.core.storage.tags import DOCKER_IMAGE_TAG
 from dagster.core.test_utils import create_run_for_test
 from dagster.utils import load_yaml_from_path, merge_dicts
@@ -20,8 +21,12 @@ from dagster_test.test_project import (
 
 
 @pytest.mark.integration
+@pytest.mark.parametrize("isolation_mode", StepIsolationMode)
 def test_k8s_run_launcher_default(
-    dagster_instance_for_k8s_run_launcher, helm_namespace_for_k8s_run_launcher, dagster_docker_image
+    dagster_instance_for_k8s_run_launcher,
+    helm_namespace_for_k8s_run_launcher,
+    dagster_docker_image,
+    isolation_mode,
 ):
     # sanity check that we have a K8sRunLauncher
     check.inst(dagster_instance_for_k8s_run_launcher.run_launcher, K8sRunLauncher)
@@ -43,6 +48,7 @@ def test_k8s_run_launcher_default(
                         "image_pull_policy": image_pull_policy(),
                         "env_config_maps": ["dagster-pipeline-env"]
                         + ([TEST_AWS_CONFIGMAP_NAME] if not IS_BUILDKITE else []),
+                        "step_isolation": isolation_mode.value,
                     }
                 }
             },
