@@ -1,5 +1,5 @@
 import atexit
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections import namedtuple
 from contextlib import contextmanager
 from enum import Enum
@@ -31,9 +31,37 @@ class ComputeLogFileData(namedtuple("ComputeLogFileData", "path data cursor size
         )
 
 
+class ComputeLogData(namedtuple("ComputeLogData", "stdout stderr cursor")):
+    def __new__(cls, stdout=None, stderr=None, cursor=None):
+        return super(ComputeLogData, cls).__new__(
+            cls,
+            stdout=check.opt_inst_param(stdout, "stdout", ComputeLogFileData),
+            stderr=check.opt_inst_param(stderr, "stderr", ComputeLogFileData),
+            cursor=check.opt_str_param(cursor, "cursor"),
+        )
+
+
 class ComputeLogManager(ABC):
     """Abstract base class for storing unstructured compute logs (stdout/stderr) from the compute
     steps of pipeline solids."""
+
+    @contextmanager
+    def capture_logs(self, namespace: str, log_key: str):
+        raise NotImplementedError()
+
+    def get_logs(
+        self, namespace: str, log_key: str, cursor: str = None, max_file_bytes: str = None
+    ) -> ComputeLogData:
+        raise NotImplementedError()
+
+    def is_capture_complete(self, namespace: str, log_key: str):
+        raise NotImplementedError()
+
+    def use_legacy_api(self) -> bool:
+        return True
+
+    def should_capture_run_by_step(self) -> bool:
+        return True
 
     @contextmanager
     def watch(self, pipeline_run, step_key=None):
@@ -57,7 +85,6 @@ class ComputeLogManager(ABC):
         self.on_watch_finish(pipeline_run, step_key)
 
     @contextmanager
-    @abstractmethod
     def _watch_logs(self, pipeline_run, step_key=None):
         """
         Method to watch the stdout/stderr logs for a given run_id / step_key.  Kept separate from
@@ -68,6 +95,7 @@ class ComputeLogManager(ABC):
             pipeline_run (PipelineRun): The pipeline run config
             step_key (Optional[String]): The step_key for a compute step
         """
+        raise NotImplementedError()
 
     def get_local_path(self, run_id, key, io_type):
         """Get the local path of the logfile for a given execution step.  This determines the
@@ -82,8 +110,8 @@ class ComputeLogManager(ABC):
         Returns:
             str
         """
+        raise NotImplementedError()
 
-    @abstractmethod
     def is_watch_completed(self, run_id, key):
         """Flag indicating when computation for a given execution step has completed.
 
@@ -95,7 +123,6 @@ class ComputeLogManager(ABC):
             Boolean
         """
 
-    @abstractmethod
     def on_watch_start(self, pipeline_run, step_key):
         """Hook called when starting to watch compute logs.
 
@@ -104,7 +131,6 @@ class ComputeLogManager(ABC):
             step_key (Optional[String]): The step_key for a compute step
         """
 
-    @abstractmethod
     def on_watch_finish(self, pipeline_run, step_key):
         """Hook called when computation for a given execution step is finished.
 
@@ -113,7 +139,6 @@ class ComputeLogManager(ABC):
             step_key (Optional[String]): The step_key for a compute step
         """
 
-    @abstractmethod
     def download_url(self, run_id, key, io_type):
         """Get a URL where the logs can be downloaded.
 
@@ -126,7 +151,6 @@ class ComputeLogManager(ABC):
             String
         """
 
-    @abstractmethod
     def read_logs_file(self, run_id, key, io_type, cursor=0, max_bytes=MAX_BYTES_FILE_READ):
         """Get compute log data for a given compute step.
 
@@ -152,7 +176,6 @@ class ComputeLogManager(ABC):
         """
         return True
 
-    @abstractmethod
     def on_subscribe(self, subscription):
         """Hook for managing streaming subscriptions for log data from `dagit`
 
@@ -197,10 +220,10 @@ class ComputeLogSubscription:
     are written
     """
 
-    def __init__(self, manager, run_id, key, io_type, cursor):
+    def __init__(self, manager, namespace, log_key, io_type, cursor):
         self.manager = manager
-        self.run_id = run_id
-        self.key = key
+        self._namespace = namespace
+        self._log_key = log_key
         self.io_type = io_type
         self.cursor = cursor
         self.observer = None
@@ -209,8 +232,22 @@ class ComputeLogSubscription:
     def __call__(self, observer):
         self.observer = observer
         self.fetch()
-        if self.manager.is_watch_completed(self.run_id, self.key):
-            self.complete()
+        if self.manager.use_legacy_api():
+            if self.manager.is_watch_completed(self._namespace, self._log_key):
+                self.complete()
+        else:
+            if self.manager.is_capture_complete(self._namespace, self._log_key):
+                self.complete()
+
+    @property
+    def run_id(self):
+        # for backcompat for child implementations that are accessing these properties directly
+        return self._namespace
+
+    @property
+    def key(self):
+        # for backcompat for child implementations that are accessing these properties directly
+        return self._log_key
 
     def fetch(self):
         if not self.observer:
@@ -218,17 +255,38 @@ class ComputeLogSubscription:
 
         should_fetch = True
         while should_fetch:
-            update = self.manager.read_logs_file(
-                self.run_id,
-                self.key,
-                self.io_type,
-                self.cursor,
-                max_bytes=MAX_BYTES_CHUNK_READ,
-            )
-            if not self.cursor or update.cursor != self.cursor:
-                self.observer.on_next(update)
-                self.cursor = update.cursor
-            should_fetch = update.data and len(update.data.encode("utf-8")) >= MAX_BYTES_CHUNK_READ
+            if self.manager.use_legacy_api():
+                update = self.manager.read_logs_file(
+                    self._namespace,
+                    self._log_key,
+                    self.io_type,
+                    self.cursor,
+                    max_bytes=MAX_BYTES_CHUNK_READ,
+                )
+                if not self.cursor or update.cursor != self.cursor:
+                    self.observer.on_next(update)
+                    self.cursor = update.cursor
+                should_fetch = (
+                    update.data and len(update.data.encode("utf-8")) >= MAX_BYTES_CHUNK_READ
+                )
+            else:
+                update = self.manager.get_logs(
+                    self._namespace,
+                    self._log_key,
+                    self.cursor,
+                    max_file_bytes=MAX_BYTES_CHUNK_READ,
+                )
+                if not self.cursor or update.cursor != self.cursor:
+                    file_data = (
+                        update.stdout if self.io_type == ComputeIOType.STDOUT else update.stderr
+                    )
+                    self.observer.on_next(file_data)
+                    should_fetch = (
+                        file_data
+                        and file_data.data
+                        and len(file_data.data.encode("utf-8")) >= MAX_BYTES_CHUNK_READ
+                    )
+                    self.cursor = update.cursor
 
     def complete(self):
         if not self.observer:

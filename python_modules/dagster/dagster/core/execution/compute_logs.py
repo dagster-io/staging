@@ -1,3 +1,4 @@
+import hashlib
 import io
 import os
 import subprocess
@@ -8,9 +9,10 @@ import uuid
 import warnings
 from contextlib import contextmanager
 
+from dagster.core.events.log import EventRecord
 from dagster.core.execution import poll_compute_logs, watch_orphans
 from dagster.serdes.ipc import interrupt_ipc_subprocess, open_ipc_subprocess
-from dagster.seven import IS_WINDOWS, wait_for_process
+from dagster.seven import IS_WINDOWS, json, wait_for_process
 from dagster.utils import ensure_file
 
 WIN_PY36_COMPUTE_LOG_DISABLED_MSG = """\u001b[33mWARNING: Compute log capture is disabled for the current environment. Set the environment variable `PYTHONLEGACYWINDOWSSTDIO` to enable.\n\u001b[0m"""
@@ -164,3 +166,25 @@ def _fileno(stream):
         return fd
 
     return None
+
+
+def compute_log_key_for_steps(steps):
+    if len(steps) == 1:
+        return steps[0].key
+    return hashlib.md5(json.dumps([step.key for step in steps]).encode("utf-8")).hexdigest()
+
+
+def build_record_from_event(dagster_event, pipeline_run):
+    import logging
+
+    return EventRecord(
+        message=dagster_event.message,
+        user_message=dagster_event.message,
+        level=logging.INFO,
+        pipeline_name=pipeline_run.pipeline_name,
+        run_id=pipeline_run.run_id,
+        error_info=None,
+        timestamp=time.time(),
+        step_key=dagster_event.step_key,
+        dagster_event=dagster_event,
+    )
