@@ -1,10 +1,12 @@
 import time
+from enum import Enum
 from typing import Dict, List
 
 from dagster import check
 from dagster.core.events import DagsterEvent, EngineEventData
 from dagster.core.execution.context.system import PlanOrchestrationContext
 from dagster.core.execution.plan.plan import ExecutionPlan
+from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.plan.step import ExecutionStep
 from dagster.core.execution.retries import RetryMode
 from dagster.grpc.types import ExecuteStepArgs
@@ -14,15 +16,23 @@ from ..base import Executor
 from .step_handler import StepHandler
 
 
+class StepIsolationMode(Enum):
+    DISABLED = "DISABLED"
+    ENABLED = "ENABLED"
+
+
 @experimental
 class StepDelegatingExecutor(Executor):
     def __init__(
         self,
         step_handler: StepHandler,
+        step_isolation: StepIsolationMode = StepIsolationMode.ENABLED,
         retries: RetryMode = RetryMode.DISABLED,
         sleep_seconds: float = 0.1,
     ):
+
         self._step_handler = step_handler
+        self._step_isolation = step_isolation
         self._retries = retries
         self._sleep_seconds = sleep_seconds
 
@@ -36,7 +46,7 @@ class StepDelegatingExecutor(Executor):
         return [event.dagster_event for event in events if event.is_dagster_event]
 
     def _get_execute_step_args(
-        self, pipeline_context, step_keys_to_execute, active_execution
+        self, pipeline_context, step_keys_to_execute, known_state
     ) -> ExecuteStepArgs:
         return ExecuteStepArgs(
             pipeline_origin=pipeline_context.reconstructable_pipeline.get_python_origin(),
@@ -44,7 +54,7 @@ class StepDelegatingExecutor(Executor):
             step_keys_to_execute=step_keys_to_execute,
             instance_ref=None,
             retry_mode=self.retries,
-            known_state=active_execution.get_known_state(),
+            known_state=known_state,
             should_verify_step=True,
         )
 
@@ -60,6 +70,16 @@ class StepDelegatingExecutor(Executor):
             EngineEventData(),
         )
 
+        if self._step_isolation == StepIsolationMode.ENABLED:
+            yield from self._execute_isolated(pipeline_context, execution_plan)
+        elif self._step_isolation == StepIsolationMode.DISABLED:
+            yield from self._execute_non_isolated(pipeline_context, execution_plan)
+        else:
+            raise NotImplementedError(f"Isolation mode {self._step_isolation} not supported")
+
+    def _execute_isolated(
+        self, pipeline_context: PlanOrchestrationContext, execution_plan: ExecutionPlan
+    ):
         with execution_plan.start(retry_mode=self.retries) as active_execution:
             stopping = False
             running_steps: Dict[str, ExecutionStep] = {}
@@ -76,7 +96,7 @@ class StepDelegatingExecutor(Executor):
                     for step_key in running_steps:
                         self._step_handler.terminate_step(
                             self._get_execute_step_args(
-                                pipeline_context, [step_key], active_execution
+                                pipeline_context, [step_key], active_execution.get_known_state()
                             )
                         )
 
@@ -89,7 +109,7 @@ class StepDelegatingExecutor(Executor):
                     events.extend(
                         self._step_handler.check_step_health(
                             self._get_execute_step_args(
-                                pipeline_context, [step_key], active_execution
+                                pipeline_context, [step_key], active_execution.get_known_state()
                             )
                         )
                     )
@@ -114,7 +134,54 @@ class StepDelegatingExecutor(Executor):
                 for step in active_execution.get_steps_to_execute():
                     running_steps[step.key] = step
                     self._step_handler.launch_step(
-                        self._get_execute_step_args(pipeline_context, [step.key], active_execution)
+                        self._get_execute_step_args(
+                            pipeline_context, [step.key], active_execution.get_known_state()
+                        )
                     )
 
                 time.sleep(self._sleep_seconds)
+
+    def _execute_non_isolated(
+        self, pipeline_context: PlanOrchestrationContext, execution_plan: ExecutionPlan
+    ):
+        yield DagsterEvent.engine_event(
+            pipeline_context,
+            "Launching all steps",
+            EngineEventData(),
+        )
+        self._step_handler.launch_step(
+            self._get_execute_step_args(
+                pipeline_context,
+                execution_plan.step_keys_to_execute,
+                KnownExecutionState.derive_from_logs([]),
+            )
+        )
+
+        running_steps = set(execution_plan.step_keys_to_execute)
+
+        while running_steps:
+            events = self._pop_events(
+                pipeline_context.plan_data.instance,
+                pipeline_context.plan_data.pipeline_run.run_id,
+            )
+
+            events.extend(
+                self._step_handler.check_step_health(
+                    self._get_execute_step_args(
+                        pipeline_context, execution_plan.step_keys_to_execute, None
+                    )
+                )
+            )
+
+            for dagster_event in events:
+                yield dagster_event
+
+                if (
+                    dagster_event.is_step_success
+                    or dagster_event.is_step_failure
+                    or dagster_event.is_step_skipped
+                ):
+                    assert isinstance(dagster_event.step_key, str)
+                    running_steps.discard(dagster_event.step_key)
+
+            time.sleep(self._sleep_seconds)
