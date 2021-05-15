@@ -108,7 +108,7 @@ def get_toys_sensors():
             )
 
     @pipeline_failure_monitor
-    def slack_on_pipeline_failure(context: MonitorSensorContext):
+    def slack_on_pipeline_failure_2(context: MonitorSensorContext):
 
         base_url = "http://localhost:3000"
 
@@ -120,7 +120,7 @@ def get_toys_sensors():
         message = "\n".join(
             [
                 f'Pipeline "{context.pipeline_run.pipeline_name}" failed.',
-                f"error: {context.events[0].message}",
+                f"error: {context.event.message}",
                 f"mode: {context.pipeline_run.mode}",
                 f"run_page_url: {run_page_url}",
             ]
@@ -131,4 +131,4 @@ def get_toys_sensors():
             blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": message}}],
         )
 
-    return [toy_file_sensor, toy_asset_sensor, toy_s3_sensor, slack_on_pipeline_failure]
+    return [toy_file_sensor, toy_asset_sensor, toy_s3_sensor, slack_on_pipeline_failure_2]

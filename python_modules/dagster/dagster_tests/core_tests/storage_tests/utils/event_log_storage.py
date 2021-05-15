@@ -951,3 +951,73 @@ class TestEventLogStorage:
         assert step_stats[0].status == StepEventStatus.FAILURE
         assert step_stats[0].end_time > step_stats[0].start_time
         assert step_stats[0].attempts == 4
+
+    def test_get_event_records(self, storage):
+        # @solid
+        # def return_one(_):
+        #     return 1
+
+        # def _solids():
+        #     return_one()
+        asset_key = AssetKey(["path", "to", "asset_one"])
+
+        @solid
+        def materialize_one(_):
+            yield AssetMaterialization(
+                asset_key=asset_key,
+                metadata={
+                    "text": "hello",
+                    "json": {"hello": "world"},
+                    "one_float": 1.0,
+                    "one_int": 1,
+                },
+            )
+            yield Output(1)
+
+        def _solids():
+            materialize_one()
+
+        events, result = _synthesize_events(_solids)
+
+        for event in events:
+            storage.store_event(event)
+
+        all_records = storage.get_event_records()
+        import ipdb
+
+        ipdb.set_trace()
+
+        # dagster-3.7.4 $ pytest python_modules/dagster/dagster_tests/core_tests/storage_tests/test_event_log.py::TestSqliteEventLogStorage::test_get_event_records -svv
+        # ^ TODO: doesnt work!
+
+        # all logs returned in descending order
+        assert all_records
+        max_record_num = len(all_records) - 1
+        assert [r[0] for r in all_records] == list(range(max_record_num, -1, -1))
+        assert _event_types([all_records[0][1]]) == [DagsterEventType.PIPELINE_SUCCESS]
+        assert _event_types([all_records[-1][1]]) == [DagsterEventType.PIPELINE_START]
+
+        # before cursor
+        assert not list(filter(lambda r: r[0] >= 5, storage.get_event_records(before_cursor=5)))
+        assert [
+            id for id, _ in storage.get_event_records(before_cursor=5, ascending=True, limit=3)
+        ] == [0, 1, 2]
+        assert [
+            id for id, _ in storage.get_event_records(before_cursor=5, ascending=False, limit=3)
+        ] == [4, 3, 2]
+
+        # after cursor
+        assert not list(filter(lambda r: r[0] <= 2, storage.get_event_records(after_cursor=2)))
+        assert [
+            id for id, _ in storage.get_event_records(after_cursor=2, ascending=True, limit=3)
+        ] == [3, 4, 5]
+        assert [
+            id for id, _ in storage.get_event_records(after_cursor=2, ascending=False, limit=3)
+        ] == [max_record_num, max_record_num - 1, max_record_num - 2]
+
+        # of_type
+        filtered_records = storage.get_event_records(of_type=DagsterEventType.PIPELINE_SUCCESS)
+        assert _event_types([r[1] for r in filtered_records]) == [DagsterEventType.PIPELINE_SUCCESS]
+        # import ipdb
+
+        # ipdb.set_trace()

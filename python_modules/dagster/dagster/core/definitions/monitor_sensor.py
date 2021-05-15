@@ -14,18 +14,18 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 
 
 class MonitorSensorContext:
-    def __init__(self, sensor_name, pipeline_run, events):
+    def __init__(self, sensor_name, pipeline_run, event):
         self._sensor_name = sensor_name
         self._pipeline_run = pipeline_run
-        self._events = events
+        self._event = event
 
     @property
     def pipeline_run(self):
         return self._pipeline_run
 
     @property
-    def events(self):
-        return self._events
+    def event(self):
+        return self._event
 
 
 def pipeline_failure_monitor(
@@ -68,20 +68,35 @@ def pipeline_failure_monitor(
             sensor_name = name
 
         def _wrapped_fn(context: SensorExecutionContext):
-            # depends on https://dagster.phacility.com/D7613
-            # avoid unnecessary evaluation evaluation
-            # when the daemon is down, bc we persist the cursor info, we can go back to where we
-            # left and backfill alerts for the qualified runs (up to 5) during the downtime
-            runs = context.instance.get_runs(after_cursor=context.cursor, ascending=True, limit=5)
-            if len(runs) == 0:
+            # when it's the first time we run the sensor, we don't want to invoke the user code for
+            # all qualified historical events. instead, we only react to the most recent 5 events
+            if context.cursor is None:
+                records = context.instance.event_log_storage.get_event_records(
+                    ascending=False,
+                    limit=5,
+                    of_type=dagster_event_type,
+                )
+                # reverse the order so the cursor can be updated in ascending order
+                records = records[::-1]
+            else:
+                # avoid unnecessary evaluation evaluation
+                # when the daemon is down, bc we persist the cursor info, we can go back to where we
+                # left and backfill alerts for the qualified events (up to 5) during the downtime
+                records = context.instance.event_log_storage.get_event_records(
+                    after_cursor=int(context.cursor),
+                    ascending=True,
+                    limit=5,
+                    of_type=dagster_event_type,
+                )
+            if len(records) == 0:
                 yield SkipReason(f"No qualified runs found (after cursor={context.cursor})")
                 return
 
-            for pipeline_run in runs:
-                events = context.instance.all_logs(pipeline_run.run_id, dagster_event_type)
-
-                if len(events) == 0:
-                    context.update_cursor(pipeline_run.run_id)
+            for (record_id, record) in records:
+                pipeline_run = context.instance.get_run_by_id(record.run_id)
+                if not pipeline_run:
+                    # can't find run, the run may have been cleaned up. update the cursor
+                    context.update_cursor(str(record_id))
                     continue
 
                 try:
@@ -89,8 +104,8 @@ def pipeline_failure_monitor(
                         MonitorSensorExecutionError,
                         lambda: f'Error occurred during the execution "{sensor_name}".',
                     ):
-                        # one user code invocation maps to N qualified events
-                        fn(MonitorSensorContext(sensor_name, pipeline_run, events))
+                        # 1 event invokes 1 user code invocation
+                        fn(MonitorSensorContext(sensor_name, pipeline_run, record.dagster_event))
                 except MonitorSensorExecutionError as monitor_sensor_execution_error:
                     # log to the original pipeline run
                     context.instance.report_engine_event(
@@ -111,8 +126,10 @@ def pipeline_failure_monitor(
                         [EventMetadataEntry.text(sensor_name, "from")]
                     ),
                 )
+                # move cursor to the current row id in the event table
+                context.update_cursor(str(record_id))
                 # yield MonitorRequest to indicate the execution success so
-                # the sensor machinery would update cursor and job state with the origin_run_id
+                # the sensor machinery would update job state with the origin_run_id
                 yield MonitorRequest(
                     origin_run_id=pipeline_run.run_id,
                     message=f'Finished the execution of "{sensor_name}" for run {pipeline_run.run_id}.',

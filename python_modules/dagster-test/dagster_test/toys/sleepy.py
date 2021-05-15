@@ -62,6 +62,11 @@ def total(_, in_1, in_2, in_3, in_4):
     return in_1 + in_2 + in_3 + in_4
 
 
+@solid
+def will_fail(_, i):
+    raise Exception()
+
+
 @pipeline(
     description=(
         "Demo diamond-shaped pipeline that has four-path parallel structure of solids.  Execute "
@@ -81,9 +86,11 @@ def total(_, in_1, in_2, in_3, in_4):
 def sleepy_pipeline():
     giver_res = giver()
 
-    total(
-        in_1=sleeper(units=giver_res.out_1),
-        in_2=sleeper(units=giver_res.out_2),
-        in_3=sleeper(units=giver_res.out_3),
-        in_4=sleeper(units=giver_res.out_4),
+    will_fail(
+        total(
+            in_1=sleeper(units=giver_res.out_1),
+            in_2=sleeper(units=giver_res.out_2),
+            in_3=sleeper(units=giver_res.out_3),
+            in_4=sleeper(units=giver_res.out_4),
+        )
     )

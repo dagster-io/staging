@@ -274,7 +274,7 @@ def _evaluate_sensor(
                 )
                 context.update_state(
                     JobTickStatus.SUCCESS,
-                    cursor=monitor_request.origin_run_id,
+                    cursor=sensor_runtime_data.cursor,
                 )
         elif sensor_runtime_data.skip_message:
             context.logger.info(

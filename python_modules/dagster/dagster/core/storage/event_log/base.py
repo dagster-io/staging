@@ -103,6 +103,17 @@ class EventLogStorage(ABC, MayHaveInstanceWeakref):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
 
     @abstractmethod
+    def get_event_records(
+        self,
+        before_cursor: int = None,
+        after_cursor: int = None,
+        limit: int = None,
+        ascending: bool = False,
+        of_type: DagsterEventType = None,
+    ) -> Iterable[Tuple[int, EventRecord]]:
+        pass
+
+    @abstractmethod
     def has_asset_key(self, asset_key: AssetKey) -> bool:
         pass
 
