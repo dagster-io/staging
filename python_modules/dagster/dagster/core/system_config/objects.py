@@ -212,6 +212,37 @@ class EnvironmentConfig(
             )
         )
 
+    def to_dict(self) -> Dict[str, Any]:
+
+        solid_configs = {}
+        for solid_name, solid_config in self.solids.items():
+            solid_configs[solid_name] = {
+                "config": solid_config.config,
+                "inputs": solid_config.inputs,
+                "outputs": solid_config.outputs.config,
+            }
+
+        execution_config = {
+            self.execution.execution_engine_name: self.execution.execution_engine_config
+        }
+
+        intermediate_storage_config = {
+            self.intermediate_storage.intermediate_storage_name: self.intermediate_storage.intermediate_storage_config
+        }
+
+        resource_configs = {
+            resource_name: {"config": resource_config.config}
+            for resource_name, resource_config in self.resources.items()
+        }
+
+        return {
+            "solids": solid_configs,
+            "execution": execution_config,
+            "storage": intermediate_storage_config,
+            "resources": resource_configs,
+            "loggers": self.loggers,
+        }
+
 
 def run_config_storage_field_backcompat(run_config: Dict[str, Any]) -> Dict[str, Any]:
     """This method will be removed after "storage" is removed in run config.
