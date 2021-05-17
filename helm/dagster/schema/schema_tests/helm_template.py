@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import time
 from dataclasses import dataclass
 from pprint import pprint
 from tempfile import NamedTemporaryFile
@@ -9,6 +10,8 @@ from typing import Any, List, Optional
 import yaml
 from kubernetes.client.api_client import ApiClient
 from schema.charts.dagster.values import DagsterHelmValues
+
+RETRIES = 3
 
 
 def git_repo_root():
@@ -42,7 +45,15 @@ class HelmTemplate:
             if self.output:
                 command += ["--show-only", self.output]
 
-            templates = subprocess.check_output(command)
+            templates = b""
+
+            for _ in range(RETRIES):
+                try:
+                    templates = subprocess.check_output(command)
+                    break
+                except subprocess.CalledProcessError:
+                    time.sleep(2)
+                    continue
 
             print("\n--- Helm Templates ---")  # pylint: disable=print-call
             print(templates.decode())  # pylint: disable=print-call

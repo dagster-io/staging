@@ -28,7 +28,7 @@ def helm_lint_steps() -> List[dict]:
             "helm lint helm/dagster --with-subcharts --strict",
         )
         .on_integration_image(SupportedPython.V3_7)
-        .with_retry(1)
+        .with_retry(2)
         .build(),
         StepBuilder(":helm: dagster dependency build")
         .run(
@@ -47,7 +47,7 @@ def helm_steps() -> List[dict]:
         os.path.join("helm", "dagster", "schema"),
         buildkite_label="dagster-helm-schema",
         upload_coverage=False,
-        retries=1,
+        retries=2,
     ).get_tox_build_steps()
 
     return tests
