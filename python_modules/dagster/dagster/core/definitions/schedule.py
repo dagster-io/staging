@@ -67,6 +67,19 @@ class ScheduleExecutionContext:
         return self._scheduled_execution_time
 
 
+def build_schedule_context(
+    instance: DagsterInstance, scheduled_execution_time: Optional[datetime] = None
+) -> ScheduleExecutionContext:
+
+    check.inst_param(instance, "instance", DagsterInstance)
+    return ScheduleExecutionContext(
+        instance_ref=instance.get_ref(),
+        scheduled_execution_time=check.opt_inst_param(
+            scheduled_execution_time, "scheduled_execution_time", datetime
+        ),
+    )
+
+
 class ScheduleDefinition:
     """Define a schedule that targets a pipeline
 
