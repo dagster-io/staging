@@ -33,7 +33,15 @@ Execution context
 
 .. autoclass:: SolidExecutionContext
    :members:
-   :inherited-members:  
+   :inherited-members:
+
+
+Validating Execution
+--------------------
+.. currentmodule:: dagster
+
+.. autofunction:: validate_run_config
+
 
 Reconstructable pipelines
 -------------------------
