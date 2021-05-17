@@ -5,6 +5,7 @@ from dagster import check
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.utils.backcompat import experimental_class_warning
 from gql import Client, gql
+from gql.transport import Transport
 from gql.transport.requests import RequestsHTTPTransport
 
 from .client_queries import (
@@ -38,7 +39,12 @@ class DagsterGraphQLClient:
 
     """
 
-    def __init__(self, hostname: str, port_number: Optional[int] = None):
+    def __init__(
+        self,
+        hostname: str,
+        port_number: Optional[int] = None,
+        transport: Optional[Transport] = None,
+    ):
         experimental_class_warning(self.__class__.__name__)
         self._hostname = check.str_param(hostname, "hostname")
         self._port_number = check.opt_int_param(port_number, "port_number")
@@ -47,7 +53,12 @@ class DagsterGraphQLClient:
             + (f"{self._hostname}:{self._port_number}" if self._port_number else self._hostname)
             + "/graphql"
         )
-        self._transport = RequestsHTTPTransport(url=self._url, use_json=True)
+        self._transport = check.opt_inst_param(
+            transport,
+            "transport",
+            Transport,
+            default=RequestsHTTPTransport(url=self._url, use_json=True),
+        )
         self._client = Client(transport=self._transport, fetch_schema_from_transport=True)
 
     def _execute(self, query: str, variables: Optional[Dict[str, Any]] = None):
@@ -83,6 +94,7 @@ class DagsterGraphQLClient:
         run_config: Optional[Any] = None,
         mode: Optional[str] = None,
         preset: Optional[str] = None,
+        tags: Optional[Dict[str, str]] = None,
     ) -> str:
         """Submits a Pipeline with attached configuration for execution.
 
@@ -103,6 +115,7 @@ class DagsterGraphQLClient:
                 defined any custom modes for your pipeline, the default mode is "default". Defaults to None.
             preset (Optional[str], optional): The name of a pre-defined preset to use instead of a
                 run config. Defaults to None.
+            tags (Optional[Dict[str, str]], optional): A set of tags to add to the pipeline execution.
 
         Raises:
             DagsterGraphQLClientError("InvalidStepError", invalid_step_key): the pipeline has an invalid step
@@ -126,6 +139,7 @@ class DagsterGraphQLClient:
         check.str_param(pipeline_name, "pipeline_name")
         check.opt_str_param(mode, "mode")
         check.opt_str_param(preset, "preset")
+        check.opt_dict_param(tags, "tags", key_type=str, value_type=str)
         check.invariant(
             (mode is not None and run_config is not None) or preset is not None,
             "Either a mode and run_config or a preset must be specified in order to "
@@ -165,6 +179,9 @@ class DagsterGraphQLClient:
                 **variables["executionParams"],
                 "runConfigData": run_config,
                 "mode": mode,
+                "executionMetadata": {"tags": [{"key": k, "value": v} for k, v in tags.items()]}
+                if tags
+                else {},
             }
 
         res_data: Dict[str, Any] = self._execute(CLIENT_SUBMIT_PIPELINE_RUN_MUTATION, variables)

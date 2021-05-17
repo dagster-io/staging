@@ -41,6 +41,26 @@ def test_preset_success(mock_client: MockClient):
 
 
 @python_client_test_suite
+def test_tags_success(mock_client: MockClient):
+    response = {
+        "launchPipelineExecution": {
+            "__typename": "LaunchPipelineRunSuccess",
+            "run": {"runId": EXPECTED_RUN_ID},
+        }
+    }
+    mock_client.mock_gql_client.execute.return_value = response
+    actual_run_id = mock_client.python_client.submit_pipeline_execution(
+        "bar",
+        repository_location_name="baz",
+        repository_name="quuz",
+        run_config={},
+        mode="default",
+        tags={"my_tag": "a", "my_other_tag": "b"},
+    )
+    assert actual_run_id == EXPECTED_RUN_ID
+
+
+@python_client_test_suite
 def test_no_location_or_repo_provided_success(mock_client: MockClient):
     repo_loc_name, repo_name, pipeline_name = "bar", "baz", "quux"
     other_repo_name, other_pipeline_name = "other repo", "my_pipeline"
