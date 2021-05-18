@@ -4,6 +4,7 @@ from datetime import datetime
 import pendulum
 from croniter import croniter
 from dagster import check
+from dagster.core.definitions.target import RepoRelativeTarget
 from dagster.core.errors import (
     DagsterInvalidDefinitionError,
     ScheduleExecutionError,
@@ -17,6 +18,7 @@ from dagster.utils import ensure_gen, merge_dicts
 
 from .mode import DEFAULT_MODE_NAME
 from .run_request import JobType, RunRequest, SkipReason
+from .target import RepoRelativeTarget
 from .utils import check_valid_name
 
 
@@ -108,11 +110,9 @@ class ScheduleDefinition:
 
     __slots__ = [
         "_name",
-        "_pipeline_name",
+        "_target",
         "_tags_fn",
         "_run_config_fn",
-        "_mode",
-        "_solid_selection",
         "_description",
         "_cron_schedule",
         "_environment_vars",
@@ -130,7 +130,7 @@ class ScheduleDefinition:
         tags=None,
         tags_fn=None,
         solid_selection=None,
-        mode="default",
+        mode=None,
         should_execute=None,
         environment_vars=None,
         execution_timezone=None,
@@ -144,11 +144,15 @@ class ScheduleDefinition:
             )
 
         self._name = check_valid_name(name)
-        self._pipeline_name = check.str_param(pipeline_name, "pipeline_name")
-        self._mode = check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME)
-        self._solid_selection = check.opt_nullable_list_param(
-            solid_selection, "solid_selection", of_type=str
+
+        self._target = RepoRelativeTarget(
+            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+            mode=check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME),
+            solid_selection=check.opt_nullable_list_param(
+                solid_selection, "solid_selection", of_type=str
+            ),
         )
+
         self._description = check.opt_str_param(description, "description")
 
         self._cron_schedule = check.str_param(cron_schedule, "cron_schedule")
@@ -241,7 +245,7 @@ class ScheduleDefinition:
 
     @property
     def pipeline_name(self):
-        return self._pipeline_name
+        return self._target.pipeline_name
 
     @property
     def job_type(self):
@@ -249,11 +253,11 @@ class ScheduleDefinition:
 
     @property
     def solid_selection(self):
-        return self._solid_selection
+        return self._target.solid_selection
 
     @property
     def mode(self):
-        return self._mode
+        return self._target.mode
 
     @property
     def description(self):
