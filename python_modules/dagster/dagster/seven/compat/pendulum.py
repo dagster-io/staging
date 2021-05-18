@@ -1,9 +1,14 @@
+"""pylint option block-disable"""
+
 from contextlib import contextmanager
 
 import packaging.version
 import pendulum
 
-_IS_PENDULUM_2 = packaging.version.parse(pendulum.__version__).major == 2
+try:
+    _IS_PENDULUM_2 = packaging.version.parse(pendulum.__version__).major >= 2  # type: ignore[union-attr]
+except AttributeError:
+    _IS_PENDULUM_2 = False
 
 
 @contextmanager
@@ -34,9 +39,14 @@ def create_pendulum_time(year, month, day, *args, **kwargs):
     )
 
 
-PendulumDateTime = (
-    pendulum.DateTime if _IS_PENDULUM_2 else pendulum.Pendulum  # pylint: disable=no-member
-)
+if _IS_PENDULUM_2:
+    # pylint: disable=no-member
+    PendulumDateTime = pendulum.DateTime  # type: ignore[attr-defined]
+else:
+    # pylint:disable=no-member
+    PendulumDateTime = pendulum.Pendulum  # type: ignore[attr-defined] type: ignore[misc]
+    
+    
 
 # Workaround for issues with .in_tz() in pendulum:
 # https://github.com/sdispater/pendulum/issues/535
