@@ -8,7 +8,10 @@ from dagster import (
     SolidDefinition,
     daily_schedule,
     lambda_solid,
+    pipeline,
     repository,
+    schedule,
+    solid,
 )
 from dagster.core.definitions import sensor
 
@@ -198,3 +201,43 @@ def test_bad_sensor():
         @repository
         def _some_repo():
             return [foo_sensor]
+
+
+def test_direct_schedule_target():
+    @solid
+    def wow():
+        return "wow"
+
+    @pipeline
+    def pipe():
+        wow()
+
+    @schedule(cron_schedule="* * * * *", target=pipe)
+    def direct_schedule(_):
+        return {}
+
+    @repository
+    def test():
+        return [direct_schedule]
+
+    assert test
+
+
+def test_direct_sensor_target():
+    @solid
+    def wow():
+        return "wow"
+
+    @pipeline
+    def pipe():
+        wow()
+
+    @sensor(target=pipe)
+    def direct_sensor(_):
+        return {}
+
+    @repository
+    def test():
+        return [direct_sensor]
+
+    assert test

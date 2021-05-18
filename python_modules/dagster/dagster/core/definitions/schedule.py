@@ -18,7 +18,7 @@ from dagster.utils import ensure_gen, merge_dicts
 
 from .mode import DEFAULT_MODE_NAME
 from .run_request import JobType, RunRequest, SkipReason
-from .target import RepoRelativeTarget
+from .target import DirectTarget, RepoRelativeTarget
 from .utils import check_valid_name
 
 
@@ -124,7 +124,7 @@ class ScheduleDefinition:
         self,
         name,
         cron_schedule,
-        pipeline_name,
+        pipeline_name=None,
         run_config=None,
         run_config_fn=None,
         tags=None,
@@ -136,6 +136,7 @@ class ScheduleDefinition:
         execution_timezone=None,
         execution_fn=None,
         description=None,
+        target=None,
     ):
 
         if not croniter.is_valid(cron_schedule):
@@ -145,13 +146,16 @@ class ScheduleDefinition:
 
         self._name = check_valid_name(name)
 
-        self._target = RepoRelativeTarget(
-            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            mode=check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME),
-            solid_selection=check.opt_nullable_list_param(
-                solid_selection, "solid_selection", of_type=str
-            ),
-        )
+        if target is not None:
+            self._target = DirectTarget(target)
+        else:
+            self._target = RepoRelativeTarget(
+                pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+                mode=check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME),
+                solid_selection=check.opt_nullable_list_param(
+                    solid_selection, "solid_selection", of_type=str
+                ),
+            )
 
         self._description = check.opt_str_param(description, "description")
 
@@ -313,3 +317,12 @@ class ScheduleDefinition:
             )
             for data in result
         ]
+
+    def has_loadable_target(self):
+        return isinstance(self._target, DirectTarget)
+
+    def load_target(self):
+        if isinstance(self._target, DirectTarget):
+            return self._target.load()
+
+        check.failed("Target is not loadable")

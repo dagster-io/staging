@@ -11,7 +11,7 @@ from dagster.utils import ensure_gen
 
 from .mode import DEFAULT_MODE_NAME
 from .run_request import JobType, RunRequest, SkipReason
-from .target import RepoRelativeTarget
+from .target import DirectTarget, RepoRelativeTarget
 from .utils import check_valid_name
 
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
@@ -134,17 +134,21 @@ class SensorDefinition:
         mode=None,
         minimum_interval_seconds=None,
         description=None,
+        target=None,
     ):
 
         self._name = check_valid_name(name)
 
-        self._target = RepoRelativeTarget(
-            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            mode=check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME),
-            solid_selection=check.opt_nullable_list_param(
-                solid_selection, "solid_selection", of_type=str
-            ),
-        )
+        if target is not None:
+            self._target = DirectTarget(target)
+        else:
+            self._target = RepoRelativeTarget(
+                pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+                mode=check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME),
+                solid_selection=check.opt_nullable_list_param(
+                    solid_selection, "solid_selection", of_type=str
+                ),
+            )
 
         self._description = check.opt_str_param(description, "description")
         self._evaluation_fn = check.callable_param(evaluation_fn, "evaluation_fn")
@@ -198,6 +202,15 @@ class SensorDefinition:
     @property
     def minimum_interval_seconds(self):
         return self._min_interval
+
+    def has_loadable_target(self):
+        return isinstance(self._target, DirectTarget)
+
+    def load_target(self):
+        if isinstance(self._target, DirectTarget):
+            return self._target.load()
+
+        check.failed("Target is not loadable")
 
 
 @whitelist_for_serdes
