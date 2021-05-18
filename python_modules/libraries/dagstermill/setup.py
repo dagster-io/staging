@@ -34,12 +34,9 @@ if __name__ == "__main__":
             # https://github.com/nteract/papermill/issues/519,
             # https://github.com/ipython/ipykernel/issues/568
             "ipykernel>=4.9.0,!=5.4.0,!=5.4.1",
-            # jupyter-client 6.1.13 and beyond breaks with current other pins
-            "jupyter-client<6.1.13",
-            "nbconvert>=5.4.0,<6.0.0",
-            "scrapbook >=0.5.0",
-            "papermill>=1.0.0,<2.0.0",
+            "scrapbook>=0.5.0",
+            "papermill>=1.0.0",
         ],
-        extras_require={"test": ["matplotlib", "scikit-learn>=0.19.0"]},
+        extras_require={"test": ["matplotlib", "nbconvert", "scikit-learn>=0.19.0"]},
         entry_points={"console_scripts": ["dagstermill = dagstermill.cli:main"]},
     )
