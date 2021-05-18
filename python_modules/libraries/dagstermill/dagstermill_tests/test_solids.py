@@ -13,6 +13,7 @@ from dagster.core.test_utils import instance_for_test
 from dagster.utils import file_relative_path, safe_tempfile_path
 from dagstermill import DagstermillError, define_dagstermill_solid
 from jupyter_client.kernelspec import NoSuchKernel
+from nbclient.exceptions import CellExecutionError
 from nbconvert.preprocessors import ExecutePreprocessor
 from papermill import PapermillExecutionError
 
@@ -225,7 +226,7 @@ def test_notebook_dag():
 
 @pytest.mark.notebook_test
 def test_error_notebook():
-    with pytest.raises(PapermillExecutionError) as exc:
+    with pytest.raises((PapermillExecutionError, CellExecutionError)) as exc:
         with exec_for_test("error_pipeline") as result:
             pass
 

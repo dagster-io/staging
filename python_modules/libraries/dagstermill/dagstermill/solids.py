@@ -27,16 +27,29 @@ from dagster.serdes import pack_value
 from dagster.seven import get_system_temp_directory
 from dagster.utils import mkdir_p, safe_tempfile_path
 from dagster.utils.error import serializable_error_info_from_exc_info
+from nbclient.exceptions import CellExecutionError
 from papermill.engines import papermill_engines
 from papermill.exceptions import PapermillExecutionError
 from papermill.iorw import load_notebook_node, write_ipynb
-from papermill.parameterize import _find_first_tagged_cell_index
 
-from .engine import DagstermillNBConvertEngine
+try:
+    from .engine import DagstermillNBConvertEngine as DagstermillEngine
+except ImportError:
+    from .engine import DagstermillNBClientEngine as DagstermillEngine
+
 from .errors import DagstermillError
 from .serialize import read_value, write_value
 from .translator import RESERVED_INPUT_NAMES, DagsterTranslator
 
+# https://github.com/nteract/papermill/blob/17d4bbb3960c30c263bca835e48baf34322a3530/papermill/parameterize.py
+def _find_first_tagged_cell_index(nb, tag):
+    parameters_indices = []
+    for idx, cell in enumerate(nb.cells):
+        if tag in cell.metadata.tags:
+            parameters_indices.append(idx)
+    if not parameters_indices:
+        return -1
+    return parameters_indices[0]
 
 # This is based on papermill.parameterize.parameterize_notebook
 # Typically, papermill injects the injected-parameters cell *below* the parameters cell
@@ -178,7 +191,7 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                 write_ipynb(nb_no_parameters, parameterized_notebook_path)
 
                 try:
-                    papermill_engines.register("dagstermill", DagstermillNBConvertEngine)
+                    papermill_engines.register("dagstermill", DagstermillEngine)
                     papermill.execute_notebook(
                         input_path=parameterized_notebook_path,
                         output_path=executed_notebook_path,
@@ -217,7 +230,9 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                     )
 
                     # pylint: disable=no-member
-                    if isinstance(ex, PapermillExecutionError) and (
+                    # compat: papermill 1.x throws a PapermillExecutionError,
+                    #         2.x throws a CellExecutionError
+                    if isinstance(ex, (PapermillExecutionError, CellExecutionError)) and (
                         ex.ename == "RetryRequested" or ex.ename == "Failure"
                     ):
                         step_execution_context.log.warn(
