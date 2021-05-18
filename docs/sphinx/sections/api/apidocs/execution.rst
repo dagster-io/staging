@@ -33,10 +33,16 @@ Execution context
 
 .. autoclass:: SolidExecutionContext
    :members:
-   :inherited-members:  
+   :inherited-members:
+
+.. currentmodule:: dagster.experimental
+
+.. autofunction:: build_solid_context
 
 Reconstructable pipelines
 -------------------------
+.. currentmodule:: dagster
+
 .. autoclass:: reconstructable
    :members:
 
