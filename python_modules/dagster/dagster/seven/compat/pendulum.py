@@ -3,8 +3,10 @@ from contextlib import contextmanager
 import packaging.version
 import pendulum
 
-_IS_PENDULUM_2 = packaging.version.parse(pendulum.__version__).major == 2
-
+try:
+    _IS_PENDULUM_2 = packaging.version.parse(pendulum.__version__).major >= 2
+except AttributeError:
+    _IS_PENDULUM_2 = False
 
 @contextmanager
 def mock_pendulum_timezone(override_timezone):
