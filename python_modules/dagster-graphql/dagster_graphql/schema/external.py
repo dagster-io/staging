@@ -1,6 +1,6 @@
 import graphene
 from dagster import check
-from dagster.cli.workspace.workspace import WorkspaceLocationLoadStatus
+from dagster.cli.workspace.workspace import RepositoryLocationMetadata, WorkspaceLocationLoadStatus
 from dagster.core.host_representation import (
     ExternalRepository,
     GrpcServerRepositoryLocation,
@@ -48,15 +48,36 @@ class GrapheneRepositoryLocationLoadStatus(graphene.Enum):
             check.failed(f"Invalid location load status: {python_status}")
 
 
+class GrapheneRepositoryLocationMetadata(graphene.ObjectType):
+    containerImage = graphene.String()
+    updatedTimestamp = graphene.NonNull(graphene.Float)
+
+    class Meta:
+        name = "RepositoryLocationMetadata"
+
+    def __init__(self, metadata):
+        check.inst_param(metadata, "metadata", RepositoryLocationMetadata)
+        super().__init__(
+            containerImage=metadata.container_image,
+            updatedTimestamp=metadata.updated_timestamp,
+        )
+
+
 class GrapheneRepositoryLocationLoading(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     name = graphene.NonNull(graphene.String)
+    metadata = graphene.NonNull(GrapheneRepositoryLocationMetadata)
 
     class Meta:
         name = "RepositoryLocationLoading"
 
     def resolve_id(self, _):
         return self.name
+
+    def resolve_metadata(self, graphene_info):
+        return GrapheneRepositoryLocationMetadata(
+            graphene_info.context.get_location_metadata(self.name)
+        )
 
     def __init__(self, name):
         super().__init__(name=name)
@@ -70,15 +91,13 @@ class GrapheneRepositoryLocation(graphene.ObjectType):
     repositories = non_null_list(lambda: GrapheneRepository)
     server_id = graphene.String()
     loadStatus = graphene.NonNull(GrapheneRepositoryLocationLoadStatus)
+    metadata = graphene.NonNull(GrapheneRepositoryLocationMetadata)
 
     class Meta:
         name = "RepositoryLocation"
 
-    def __init__(self, location, load_status):
+    def __init__(self, location):
         self._location = check.inst_param(location, "location", RepositoryLocation)
-        self._load_status = check.inst_param(
-            load_status, "load_status", WorkspaceLocationLoadStatus
-        )
         environment_path = (
             location.origin.loadable_target_origin.executable_path
             if isinstance(location.origin, ManagedGrpcPythonEnvRepositoryLocationOrigin)
@@ -101,15 +120,21 @@ class GrapheneRepositoryLocation(graphene.ObjectType):
     def resolve_id(self, _):
         return self.name
 
+    def resolve_loadStatus(self, graphene_info):
+        return GrapheneRepositoryLocationLoadStatus.from_python_status(
+            graphene_info.context.get_load_status(self.name)
+        )
+
+    def resolve_metadata(self, graphene_info):
+        return GrapheneRepositoryLocationMetadata(
+            graphene_info.context.get_location_metadata(self.name)
+        )
+
     def resolve_repositories(self, _graphene_info):
         return [
             GrapheneRepository(repository, self._location)
             for repository in self._location.get_repositories().values()
         ]
-
-    def resolve_loadStatus(self, _graphene_info):
-        # Returns LOADING if the location is in the process of updating
-        return GrapheneRepositoryLocationLoadStatus.from_python_status(self._load_status)
 
 
 class GrapheneRepository(graphene.ObjectType):
@@ -143,9 +168,7 @@ class GrapheneRepository(graphene.ObjectType):
         return GrapheneRepositoryOrigin(origin)
 
     def resolve_location(self, _graphene_info):
-        return GrapheneRepositoryLocation(
-            self._repository_location, WorkspaceLocationLoadStatus.LOADED
-        )
+        return GrapheneRepositoryLocation(self._repository_location)
 
     def resolve_schedules(self, graphene_info):
 
@@ -196,6 +219,7 @@ class GrapheneRepositoryLocationLoadFailure(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     name = graphene.NonNull(graphene.String)
     error = graphene.NonNull(GraphenePythonError)
+    metadata = graphene.NonNull(GrapheneRepositoryLocationMetadata)
 
     # Returns LOADING if the location is in the process of updating
     loadStatus = graphene.NonNull(GrapheneRepositoryLocationLoadStatus)
@@ -203,17 +227,26 @@ class GrapheneRepositoryLocationLoadFailure(graphene.ObjectType):
     class Meta:
         name = "RepositoryLocationLoadFailure"
 
-    def __init__(self, name, error, load_status):
+    def __init__(self, name, error):
         check.str_param(name, "name")
         check.inst_param(error, "error", SerializableErrorInfo)
         super().__init__(
             name=name,
             error=GraphenePythonError(error),
-            loadStatus=GrapheneRepositoryLocationLoadStatus.from_python_status(load_status),
         )
 
     def resolve_id(self, _):
         return self.name
+
+    def resolve_loadStatus(self, graphene_info):
+        return GrapheneRepositoryLocationLoadStatus.from_python_status(
+            graphene_info.context.get_load_status(self.name)
+        )
+
+    def resolve_metadata(self, graphene_info):
+        return GrapheneRepositoryLocationMetadata(
+            graphene_info.context.get_location_metadata(self.name)
+        )
 
 
 class GrapheneRepositoryLocationOrLoadFailure(graphene.Union):
