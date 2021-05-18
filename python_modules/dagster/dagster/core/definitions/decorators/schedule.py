@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 import pendulum
 from dagster import check
 from dagster.core.definitions.partition import PartitionScheduleDefinition, PartitionSetDefinition
+from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.utils.partitions import (
     DEFAULT_DATE_FORMAT,
@@ -27,7 +28,7 @@ if TYPE_CHECKING:
 
 def schedule(
     cron_schedule: str,
-    pipeline_name: str,
+    pipeline_name: Optional[str] = None,
     name: Optional[str] = None,
     tags: Optional[Dict[str, Any]] = None,
     tags_fn: Optional[Callable[["ScheduleExecutionContext"], Optional[Dict[str, str]]]] = None,
@@ -37,6 +38,7 @@ def schedule(
     environment_vars: Optional[Dict[str, str]] = None,
     execution_timezone: Optional[str] = None,
     description: Optional[str] = None,
+    job: Optional[PipelineDefinition] = None,
 ) -> Callable[[Callable[["ScheduleExecutionContext"], Dict[str, Any]]], ScheduleDefinition]:
     """Create a schedule.
 
@@ -69,6 +71,7 @@ def schedule(
         execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works
             with DagsterDaemonScheduler, and must be set when using that scheduler.
         description (Optional[str]): A human-readable description of the schedule.
+        job (Optional[PipelineDefinition]): Experimental
     """
 
     def inner(fn: Callable[["ScheduleExecutionContext"], Dict[str, Any]]) -> ScheduleDefinition:
@@ -89,6 +92,7 @@ def schedule(
             environment_vars=environment_vars,
             execution_timezone=execution_timezone,
             description=description,
+            job=job,
         )
 
     return inner
