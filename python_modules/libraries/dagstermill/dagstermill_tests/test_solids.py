@@ -12,9 +12,9 @@ from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.test_utils import instance_for_test
 from dagster.utils import file_relative_path, safe_tempfile_path
 from dagstermill import DagstermillError, define_dagstermill_solid
+from dagstermill.compat import ExecutionError
 from jupyter_client.kernelspec import NoSuchKernel
 from nbconvert.preprocessors import ExecutePreprocessor
-from papermill import PapermillExecutionError
 
 try:
     import dagster_pandas as _
@@ -225,7 +225,7 @@ def test_notebook_dag():
 
 @pytest.mark.notebook_test
 def test_error_notebook():
-    with pytest.raises(PapermillExecutionError) as exc:
+    with pytest.raises(ExecutionError) as exc:
         with exec_for_test("error_pipeline") as result:
             pass
 
