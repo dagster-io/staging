@@ -198,6 +198,28 @@ def build_solid_context(
     config: Optional[Any] = None,
     instance: Optional[DagsterInstance] = None,
 ) -> DirectSolidExecutionContext:
+    """Builds solid execution context from provided parameters.
+
+    ``build_solid_context`` can be used as either a function or context manager. If there is a
+    provided resource that is a context manager, then ``build_solid_context`` must be used as a
+    context manager.
+
+    Args:
+        resources (Optional[Dict[str, Any]]): The resources to provide to the context. These can be
+            either values or resource definitions.
+        config (Optional[Any]): The solid config to provide to the context.
+        instance (Optional[DagsterInstance]): The dagster instance configured for the context.
+            Defaults to DagsterInstance.ephemeral().
+
+    Examples:
+        .. code-block: python
+
+            context = build_solid_context()
+            solid_to_invoke(context)
+
+            with build_solid_context(resources={"foo": context_manager_resource}) as context:
+                solid_to_invoke(context)
+    """
     return DirectSolidExecutionContext(
         resources_dict=check.opt_dict_param(resources, "resources", key_type=str),
         solid_config=config,
