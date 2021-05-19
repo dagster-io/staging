@@ -1,24 +1,15 @@
-from collections import namedtuple
-from typing import AbstractSet, Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 from dagster import check
 from dagster.core.definitions.pipeline import PipelineDefinition
-from dagster.core.definitions.resource import ResourceDefinition, ScopedResourcesBuilder
+from dagster.core.definitions.resource import IContainsGenerator, ResourceDefinition, Resources
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.pipeline_run import PipelineRun
 
 
-class InitResourceContext(
-    namedtuple(
-        "InitResourceContext",
-        (
-            "resource_config resource_def log_manager resources "
-            "instance pipeline_def_for_backwards_compat "
-            "pipeline_run"
-        ),
-    )
-):
+class InitResourceContext:
     """Resource-specific initialization context.
 
     Attributes:
@@ -36,42 +27,96 @@ class InitResourceContext(
             outside of execution context, this will be None.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         resource_config: Any,
-        resource_def: ResourceDefinition,
+        resource_def: Optional[ResourceDefinition] = None,
         pipeline_run: Optional[PipelineRun] = None,
         log_manager: Optional[DagsterLogManager] = None,
-        resource_instance_dict: Optional[Dict[str, Any]] = None,
-        required_resource_keys: Optional[AbstractSet[str]] = None,
+        resources: Optional[Union[Resources, Dict[str, Any]]] = None,
         instance: Optional[DagsterInstance] = None,
         pipeline_def_for_backwards_compat: Optional[PipelineDefinition] = None,
     ):
-        check.opt_dict_param(resource_instance_dict, "resource_instance_dict")
-        required_resource_keys = check.opt_set_param(
-            required_resource_keys, "required_resource_keys"
-        )
+        from dagster.core.execution.build_resources import build_resources
+        from dagster.core.execution.api import ephemeral_instance_if_missing
 
-        scoped_resources_builder = ScopedResourcesBuilder(resource_instance_dict)
+        self._resource_config = resource_config
+        self._resource_def = resource_def
+        self._log_manager = log_manager
 
-        return super(InitResourceContext, cls).__new__(
-            cls,
-            resource_config,
-            check.inst_param(resource_def, "resource_def", ResourceDefinition),
-            check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
-            resources=scoped_resources_builder.build(required_resource_keys),
-            instance=check.opt_inst_param(instance, "instance", DagsterInstance),
-            pipeline_def_for_backwards_compat=check.opt_inst_param(
-                pipeline_def_for_backwards_compat,
-                "pipeline_def_for_backwards_compat",
-                PipelineDefinition,
-            ),
-            pipeline_run=check.opt_inst_param(pipeline_run, "pipeline_run", PipelineRun),
+        self._instance_provided = (
+            check.opt_inst_param(instance, "instance", DagsterInstance) is not None
         )
+        # Construct ephemeral instance if missing
+        self._instance_cm = ephemeral_instance_if_missing(instance)
+        # Pylint can't infer that the ephemeral_instance context manager has an __enter__ method,
+        # so ignore lint error
+        self._instance = self._instance_cm.__enter__()  # pylint: disable=no-member
+
+        # If we are provided with a Resources instance, then we do not need to initialize
+        if isinstance(resources, Resources):
+            self._resources_cm = None
+            self._resources = resources
+        else:
+            self._resources_cm = build_resources(
+                check.opt_dict_param(resources, "resources", key_type=str), instance=self._instance
+            )
+            self._resources = self._resources_cm.__enter__()  # pylint: disable=no-member
+            self._resources_contain_cm = isinstance(self._resources, IContainsGenerator)
+
+        self._pipeline_def_for_backwards_compat = pipeline_def_for_backwards_compat
+        self._pipeline_run = pipeline_run
+
+        self._cm_scope_entered = False
+
+    def __enter__(self):
+        self._cm_scope_entered = True
+        return self
+
+    def __exit__(self, *exc):
+        self._resources_cm.__exit__(*exc)  # pylint: disable=no-member
+        if self._instance_provided:
+            self._instance_cm.__exit__(*exc)  # pylint: disable=no-member
+
+    def __del__(self):
+        if self._resources_contain_cm and not self._cm_scope_entered:
+            self._resources_cm.__exit__(None, None, None)  # pylint: disable=no-member
+        if self._instance_provided and not self._cm_scope_entered:
+            self._instance_cm.__exit__(None, None, None)  # pylint: disable=no-member
 
     @property
-    def log(self) -> DagsterLogManager:
-        return self.log_manager
+    def resource_config(self) -> Any:
+        return self._resource_config
+
+    @property
+    def resource_def(self) -> Optional[ResourceDefinition]:
+        return self._resource_def
+
+    @property
+    def resources(self) -> Optional[Resources]:
+        if self._resources_cm and self._resources_contain_cm and not self._cm_scope_entered:
+            raise DagsterInvariantViolationError(
+                "At least one provided resource is a generator, but attempting to access "
+                "resources outside of context manager scope. You can use the following syntax to "
+                "open a context manager: `with build_resource_context(...) as context:`"
+            )
+        return self._resources
+
+    @property
+    def instance(self) -> Optional[DagsterInstance]:
+        return self._instance
+
+    @property
+    def pipeline_def_for_backwards_compat(self) -> Optional[PipelineDefinition]:
+        return self._pipeline_def_for_backwards_compat
+
+    @property
+    def pipeline_run(self) -> Optional[PipelineRun]:
+        return self._pipeline_run
+
+    @property
+    def log(self) -> Optional[DagsterLogManager]:
+        return self._log_manager
 
     @property
     def run_id(self) -> Optional[str]:
@@ -82,6 +127,20 @@ class InitResourceContext(
             resource_config=config,
             resource_def=self.resource_def,
             pipeline_run=self.pipeline_run,
-            log_manager=self.log_manager,
+            log_manager=self.log,
             instance=self.instance,
         )
+
+
+def build_resource_context(
+    config: Optional[Dict[str, Any]] = None,
+    resource_def: Optional[ResourceDefinition] = None,
+    resources: Optional[Dict[str, Any]] = None,
+    instance: Optional[DagsterInstance] = None,
+) -> InitResourceContext:
+    return InitResourceContext(
+        resource_config=check.opt_dict_param(config, "config", key_type=str),
+        resource_def=check.opt_inst_param(resource_def, "resource_def", ResourceDefinition),
+        instance=check.opt_inst_param(instance, "instance", DagsterInstance),
+        resources=check.opt_dict_param(resources, "resources", key_type=str),
+    )
