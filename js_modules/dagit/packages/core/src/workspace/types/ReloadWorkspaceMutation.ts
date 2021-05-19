@@ -8,6 +8,10 @@
 // GraphQL mutation operation: ReloadWorkspaceMutation
 // ====================================================
 
+export interface ReloadWorkspaceMutation_reloadWorkspace_ReadOnlyError {
+  __typename: "ReadOnlyError";
+}
+
 export interface ReloadWorkspaceMutation_reloadWorkspace_RepositoryLocationConnection_nodes_RepositoryLocationLoading {
   __typename: "RepositoryLocationLoading";
 }
@@ -62,7 +66,7 @@ export interface ReloadWorkspaceMutation_reloadWorkspace_PythonError {
   cause: ReloadWorkspaceMutation_reloadWorkspace_PythonError_cause | null;
 }
 
-export type ReloadWorkspaceMutation_reloadWorkspace = ReloadWorkspaceMutation_reloadWorkspace_RepositoryLocationConnection | ReloadWorkspaceMutation_reloadWorkspace_PythonError;
+export type ReloadWorkspaceMutation_reloadWorkspace = ReloadWorkspaceMutation_reloadWorkspace_ReadOnlyError | ReloadWorkspaceMutation_reloadWorkspace_RepositoryLocationConnection | ReloadWorkspaceMutation_reloadWorkspace_PythonError;
 
 export interface ReloadWorkspaceMutation {
   reloadWorkspace: ReloadWorkspaceMutation_reloadWorkspace;
