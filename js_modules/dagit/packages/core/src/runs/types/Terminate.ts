@@ -10,6 +10,10 @@ import { TerminatePipelinePolicy } from "./../../types/globalTypes";
 // GraphQL mutation operation: Terminate
 // ====================================================
 
+export interface Terminate_terminatePipelineExecution_ReadOnlyError {
+  __typename: "ReadOnlyError";
+}
+
 export interface Terminate_terminatePipelineExecution_TerminatePipelineExecutionFailure {
   __typename: "TerminatePipelineExecutionFailure";
   message: string;
@@ -37,7 +41,7 @@ export interface Terminate_terminatePipelineExecution_PythonError {
   message: string;
 }
 
-export type Terminate_terminatePipelineExecution = Terminate_terminatePipelineExecution_TerminatePipelineExecutionFailure | Terminate_terminatePipelineExecution_PipelineRunNotFoundError | Terminate_terminatePipelineExecution_TerminatePipelineExecutionSuccess | Terminate_terminatePipelineExecution_PythonError;
+export type Terminate_terminatePipelineExecution = Terminate_terminatePipelineExecution_ReadOnlyError | Terminate_terminatePipelineExecution_TerminatePipelineExecutionFailure | Terminate_terminatePipelineExecution_PipelineRunNotFoundError | Terminate_terminatePipelineExecution_TerminatePipelineExecutionSuccess | Terminate_terminatePipelineExecution_PythonError;
 
 export interface Terminate {
   terminatePipelineExecution: Terminate_terminatePipelineExecution;
