@@ -20,6 +20,15 @@ export const ASSET_QUERY = gql`
               status
               pipelineName
               pipelineSnapshotId
+              repositoryOrigin {
+                id
+                repositoryLocationName
+                repositoryName
+              }
+              tags {
+                key
+                value
+              }
             }
           }
           materializationEvent {
