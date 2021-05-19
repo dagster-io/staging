@@ -202,12 +202,6 @@ def my_schedule_definition(_):
 
     fmt = DEFAULT_MONTHLY_FORMAT
 
-    execution_time_to_partition_fn = (
-        lambda d: pendulum.instance(d)
-        .replace(hour=0, minute=0)
-        .subtract(months=partition_months_offset, days=execution_day_of_month - 1)
-    )
-
     def inner(fn: Callable[[datetime.datetime], Dict[str, Any]]) -> PartitionScheduleDefinition:
         check.callable_param(fn, "fn")
 
@@ -222,6 +216,17 @@ def my_schedule_definition(_):
             )
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
+        partition_params = TimeBasedPartitionParams(
+            start=start_date,
+            execution_minute=execution_time.minute,
+            execution_hour=execution_time.hour,
+            execution_day_of_month=execution_day_of_month,
+            end=end_date,
+            fmt=fmt,
+            timezone=execution_timezone,
+            partition_months_offset=partition_months_offset,
+        )
+
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
             pipeline_name=pipeline_name,
@@ -229,16 +234,7 @@ def my_schedule_definition(_):
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
-            partition_params=TimeBasedPartitionParams(
-                start=start_date,
-                execution_minute=execution_time.minute,
-                execution_hour=execution_time.hour,
-                execution_day_of_month=execution_day_of_month,
-                end=end_date,
-                fmt=fmt,
-                timezone=execution_timezone,
-                partition_months_offset=partition_months_offset,
-            ),
+            partition_params=partition_params,
         )
 
         return partition_set.create_schedule_definition(
@@ -247,7 +243,7 @@ def my_schedule_definition(_):
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=execution_time_to_partition_fn
+                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn()
             ),
             execution_timezone=execution_timezone,
             description=description,
@@ -355,14 +351,6 @@ def my_schedule_definition(_):
 
     fmt = DEFAULT_DATE_FORMAT
 
-    day_difference = (execution_day_of_week - (start_date.weekday() + 1)) % 7
-
-    execution_time_to_partition_fn = (
-        lambda d: pendulum.instance(d)
-        .replace(hour=0, minute=0)
-        .subtract(weeks=partition_weeks_offset, days=day_difference)
-    )
-
     def inner(fn: Callable[[datetime.datetime], Dict[str, Any]]) -> PartitionScheduleDefinition:
         check.callable_param(fn, "fn")
 
@@ -377,6 +365,17 @@ def my_schedule_definition(_):
             )
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
+        partition_params = TimeBasedPartitionParams(
+            start=start_date,
+            execution_minute=execution_time.minute,
+            execution_hour=execution_time.hour,
+            execution_day_of_week=execution_day_of_week,
+            end=end_date,
+            fmt=fmt,
+            timezone=execution_timezone,
+            partition_weeks_offset=partition_weeks_offset,
+        )
+
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
             pipeline_name=pipeline_name,
@@ -384,16 +383,7 @@ def my_schedule_definition(_):
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
-            partition_params=TimeBasedPartitionParams(
-                start=start_date,
-                execution_minute=execution_time.minute,
-                execution_hour=execution_time.hour,
-                execution_day_of_week=execution_day_of_week,
-                end=end_date,
-                fmt=fmt,
-                timezone=execution_timezone,
-                partition_weeks_offset=partition_weeks_offset,
-            ),
+            partition_params=partition_params,
         )
 
         return partition_set.create_schedule_definition(
@@ -402,7 +392,7 @@ def my_schedule_definition(_):
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=execution_time_to_partition_fn,
+                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn(),
             ),
             execution_timezone=execution_timezone,
             description=description,
@@ -500,14 +490,6 @@ def my_schedule_definition(_):
 
     fmt = DEFAULT_DATE_FORMAT
 
-    execution_time_to_partition_fn = (
-        lambda d: pendulum.instance(d)
-        .replace(hour=0, minute=0)
-        .subtract(
-            days=partition_days_offset,
-        )
-    )
-
     def inner(fn: Callable[[datetime.datetime], Dict[str, Any]]) -> PartitionScheduleDefinition:
         check.callable_param(fn, "fn")
 
@@ -521,6 +503,16 @@ def my_schedule_definition(_):
                 Callable[[datetime.datetime], Optional[Dict[str, str]]], tags_fn_for_date
             )
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
+
+        partition_params = TimeBasedPartitionParams(
+            start=start_date,
+            execution_minute=execution_time.minute,
+            execution_hour=execution_time.hour,
+            end=end_date,
+            fmt=fmt,
+            timezone=execution_timezone,
+            partition_days_offset=partition_days_offset,
+        )
 
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
@@ -546,7 +538,7 @@ def my_schedule_definition(_):
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=execution_time_to_partition_fn,
+                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn(),
             ),
             execution_timezone=execution_timezone,
             description=description,
@@ -658,10 +650,6 @@ def my_schedule_definition(_):
         else DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE
     )
 
-    execution_time_to_partition_fn = lambda d: pendulum.instance(d).subtract(
-        hours=partition_hours_offset, minutes=(execution_time.minute - start_date.minute) % 60
-    )
-
     def inner(fn: Callable[[datetime.datetime], Dict[str, Any]]) -> PartitionScheduleDefinition:
         check.callable_param(fn, "fn")
 
@@ -676,6 +664,15 @@ def my_schedule_definition(_):
             )
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
+        partition_params = TimeBasedPartitionParams(
+            start=start_date,
+            execution_minute=execution_time.minute,
+            end=end_date,
+            fmt=fmt,
+            timezone=execution_timezone,
+            partition_hours_offset=partition_hours_offset,
+        )
+
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
             pipeline_name=pipeline_name,
@@ -683,14 +680,7 @@ def my_schedule_definition(_):
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
-            partition_params=TimeBasedPartitionParams(
-                start=start_date,
-                execution_hour=execution_time.hour,
-                end=end_date,
-                fmt=fmt,
-                timezone=execution_timezone,
-                partition_hours_offset=partition_hours_offset,
-            ),
+            partition_params=partition_params,
         )
 
         return partition_set.create_schedule_definition(
@@ -699,7 +689,7 @@ def my_schedule_definition(_):
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=execution_time_to_partition_fn,
+                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn(),
             ),
             execution_timezone=execution_timezone,
             description=description,

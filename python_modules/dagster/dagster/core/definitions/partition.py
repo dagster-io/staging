@@ -107,7 +107,10 @@ def schedule_partition_range(
         else:
             _end = pendulum.instance(_end, tz=tz)
 
-        end_timestamp = _end.timestamp()
+        # apply offset to end time
+        end_with_offset = execution_time_to_partition_fn(_end)
+
+        end_timestamp = end_with_offset.timestamp()
 
         partitions = []
         for next_time in schedule_execution_time_iterator(_start.timestamp(), cron_schedule, tz):
@@ -122,7 +125,7 @@ def schedule_partition_range(
 
             partitions.append(Partition(value=partition_time, name=partition_time.strftime(fmt)))
 
-        return partitions if inclusive else partitions[:-1]
+        return partitions
 
     return _get_schedule_range_partitions
 
@@ -223,24 +226,24 @@ class TimeBasedPartitionParams(
             f'Execution month "{execution_day_of_month}" must be between 1 and 12.',
         )
         check.invariant(
-            partition_minutes_offset is None or partition_minutes_offset > 0,
-            f'Partition minutes offset "{partition_minutes_offset}" must be greater than 0.',
+            partition_minutes_offset is None or partition_minutes_offset >= 0,
+            f'Partition minutes offset "{partition_minutes_offset}" must be greater than or equal to 0.',
         )
         check.invariant(
-            partition_hours_offset is None or partition_hours_offset > 0,
-            f'Partition hours offset "{partition_hours_offset}" must be greater than 0.',
+            partition_hours_offset is None or partition_hours_offset >= 0,
+            f'Partition hours offset "{partition_hours_offset}" must be greater than or equal to 0.',
         )
         check.invariant(
-            partition_days_offset is None or partition_days_offset > 0,
-            f'Partition days offset "{partition_days_offset}" must be greater than 0.',
+            partition_days_offset is None or partition_days_offset >= 0,
+            f'Partition days offset "{partition_days_offset}" must be greater than or equal to 0.',
         )
         check.invariant(
-            partition_weeks_offset is None or partition_weeks_offset > 0,
-            f'Partition weeks offset "{partition_weeks_offset}" must be greater than 0.',
+            partition_weeks_offset is None or partition_weeks_offset >= 0,
+            f'Partition weeks offset "{partition_weeks_offset}" must be greater than or equal to 0.',
         )
         check.invariant(
-            partition_months_offset is None or partition_months_offset > 0,
-            f'Partition months offset "{partition_months_offset}" must be greater than 0.',
+            partition_months_offset is None or partition_months_offset >= 0,
+            f'Partition months offset "{partition_months_offset}" must be greater than or equal to 0.',
         )
 
         return super(TimeBasedPartitionParams, cls).__new__(
@@ -270,7 +273,7 @@ class TimeBasedPartitionParams(
             cron_schedule=self._get_cron_schedule(),
             fmt=self.fmt,
             timezone=self.timezone,
-            execution_time_to_partition_fn=self._get_execution_time_to_partition_fn(),
+            execution_time_to_partition_fn=self.get_execution_time_to_partition_fn(),
             inclusive=self._inclusive(),
         )
 
@@ -300,7 +303,7 @@ class TimeBasedPartitionParams(
 
         return cron_schedule
 
-    def _get_execution_time_to_partition_fn(self) -> Callable[[datetime], datetime]:
+    def get_execution_time_to_partition_fn(self) -> Callable[[datetime], datetime]:
         return lambda d: pendulum.instance(d).subtract(
             months=self.partition_months_offset,
             weeks=self.partition_weeks_offset,
