@@ -220,14 +220,16 @@ CUSTOM_BUILD_CONTEXTMANAGERS = {
 }
 
 
-def list_images():
+def list_images(base_path=None):
     """List all images that we manage.
 
     Returns:
         List[DagsterDockerImage]: A list of all images managed by this tool.
     """
 
-    images_path = os.path.join(os.path.dirname(__file__), "images")
+    base_path = base_path or os.path.dirname(__file__)
+
+    images_path = os.path.join(base_path, "images")
     image_folders = [f.name for f in os.scandir(images_path) if f.is_dir()]
 
     images = []
@@ -239,8 +241,8 @@ def list_images():
     return images
 
 
-def get_image(name):
+def get_image(name, base_path=None):
     """Retrieve the image information from the list defined above."""
-    image = next((img for img in list_images() if img.image == name), None)
+    image = next((img for img in list_images(base_path=base_path) if img.image == name), None)
     check.invariant(image is not None, "could not find image {}".format(name))
     return image
