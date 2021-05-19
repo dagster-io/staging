@@ -1,8 +1,9 @@
 from contextlib import suppress
 
-from dagster import SensorExecutionContext, execute_pipeline, pipeline, reconstructable, solid
+from dagster import execute_pipeline, pipeline, reconstructable, solid
 from dagster.core.definitions.run_request import RunRequest
 from dagster.core.test_utils import instance_for_test
+from dagster.experimental import build_sensor_context
 from docs_snippets.concepts.partitions_schedules_sensors.sensors.sensor_alert import (
     failure_alert_pipeline,
     pipeline_failure_sensor,
@@ -65,14 +66,9 @@ def test_pipeline_failure_sensor_has_request():
                 instance=instance,
             )
 
-        with SensorExecutionContext(
-            instance_ref=instance.get_ref(),
-            last_run_key=None,
-            last_completion_time=None,
-            cursor=None,
-        ) as context:
-            requests = pipeline_failure_sensor.get_execution_data(context)
-            assert len(requests) == 1
+        context = build_sensor_context(instance)
+        requests = pipeline_failure_sensor.get_execution_data(context)
+        assert len(requests) == 1
 
 
 def test_pipeline_failure_sensor_has_no_request():
@@ -83,11 +79,6 @@ def test_pipeline_failure_sensor_has_no_request():
             instance=instance,
         )
 
-        with SensorExecutionContext(
-            instance_ref=instance.get_ref(),
-            last_run_key=None,
-            last_completion_time=None,
-            cursor=None,
-        ) as context:
-            requests = pipeline_failure_sensor.get_execution_data(context)
-            assert len(requests) == 0
+        context = build_sensor_context(instance)
+        requests = pipeline_failure_sensor.get_execution_data(context)
+        assert len(requests) == 0
