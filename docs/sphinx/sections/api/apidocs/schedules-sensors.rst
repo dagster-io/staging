@@ -35,3 +35,7 @@ Sensors
 
 .. autoclass:: SensorDefinition
 .. autoclass:: SensorExecutionContext
+
+.. currentmodule:: dagster.experimental
+
+.. autofunction:: build_sensor_context
