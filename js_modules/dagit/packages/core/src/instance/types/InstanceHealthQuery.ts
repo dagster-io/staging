@@ -44,6 +44,12 @@ export interface InstanceHealthQuery_instance {
   daemonHealth: InstanceHealthQuery_instance_daemonHealth;
 }
 
+export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
+}
+
 export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation {
   __typename: "RepositoryLocation";
   id: string;
@@ -51,11 +57,18 @@ export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocati
   serverId: string | null;
   name: string;
   loadStatus: RepositoryLocationLoadStatus;
+  metadata: InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_metadata;
 }
 
 export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_error {
   __typename: "PythonError";
   message: string;
+}
+
+export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
 }
 
 export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure {
@@ -64,12 +77,20 @@ export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocati
   name: string;
   error: InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_error;
   loadStatus: RepositoryLocationLoadStatus;
+  metadata: InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_metadata;
+}
+
+export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
 }
 
 export interface InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading {
   __typename: "RepositoryLocationLoading";
   id: string;
   name: string;
+  metadata: InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading_metadata;
 }
 
 export type InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes = InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation | InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure | InstanceHealthQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading;

@@ -48,6 +48,10 @@ const ROOT_REPOSITORIES_QUERY = gql`
           ... on RepositoryLocation {
             id
             loadStatus
+            metadata {
+              containerImage
+              updatedTimestamp
+            }
             isReloadSupported
             serverId
             name
@@ -73,10 +77,18 @@ const ROOT_REPOSITORIES_QUERY = gql`
             error {
               ...PythonErrorFragment
             }
+            metadata {
+              containerImage
+              updatedTimestamp
+            }
           }
           ... on RepositoryLocationLoading {
             id
             name
+            metadata {
+              containerImage
+              updatedTimestamp
+            }
           }
         }
       }
@@ -99,6 +111,10 @@ export const REPOSITORY_LOCATIONS_FRAGMENT = gql`
           serverId
           name
           loadStatus
+          metadata {
+            containerImage
+            updatedTimestamp
+          }
         }
         ... on RepositoryLocationLoadFailure {
           id
@@ -107,10 +123,18 @@ export const REPOSITORY_LOCATIONS_FRAGMENT = gql`
             message
           }
           loadStatus
+          metadata {
+            containerImage
+            updatedTimestamp
+          }
         }
         ... on RepositoryLocationLoading {
           id
           name
+          metadata {
+            containerImage
+            updatedTimestamp
+          }
         }
       }
     }

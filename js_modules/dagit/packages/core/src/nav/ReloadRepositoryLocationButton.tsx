@@ -134,6 +134,10 @@ const RELOAD_REPOSITORY_LOCATION_MUTATION = gql`
           }
         }
         loadStatus
+        metadata {
+          containerImage
+          updatedTimestamp
+        }
       }
       ... on ReloadNotSupported {
         message
@@ -147,6 +151,10 @@ const RELOAD_REPOSITORY_LOCATION_MUTATION = gql`
           message
         }
         loadStatus
+        metadata {
+          containerImage
+          updatedTimestamp
+        }
       }
     }
   }

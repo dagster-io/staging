@@ -4,6 +4,7 @@ import React from 'react';
 
 import {DISABLED_MESSAGE, usePermissions} from '../app/Permissions';
 import {PythonErrorInfo} from '../app/PythonErrorInfo';
+import {Timestamp} from '../app/time/Timestamp';
 import {useRepositoryLocationReload} from '../nav/ReloadRepositoryLocationButton';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -12,6 +13,8 @@ import {Table} from '../ui/Table';
 
 import {WorkspaceContext} from './WorkspaceContext';
 import {RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes as LocationOrError} from './types/RootRepositoriesQuery';
+
+const TIME_FORMAT = {showSeconds: true, showTimezone: true};
 
 const LocationStatus: React.FC<{locationOrError: LocationOrError}> = (props) => {
   const {locationOrError} = props;
@@ -115,15 +118,24 @@ export const RepositoryLocationsList = () => {
       <thead>
         <tr>
           <th>Repository location</th>
-          <th colSpan={2}>Status</th>
+          <th>Status</th>
+          <th>Image</th>
+          <th colSpan={2}>Updated</th>
         </tr>
       </thead>
       <tbody>
         {locations.map((location) => (
           <tr key={location.name}>
-            <td style={{width: '30%'}}>{location.name}</td>
-            <td style={{width: '20%'}}>
+            <td style={{width: '20%'}}>{location.name}</td>
+            <td style={{width: '10%'}}>
               <LocationStatus locationOrError={location} />
+            </td>
+            <td style={{width: '20%'}}>{location.metadata.containerImage}</td>
+            <td style={{width: '20%'}}>
+              <Timestamp
+                timestamp={{unix: location.metadata.updatedTimestamp}}
+                timeFormat={TIME_FORMAT}
+              />
             </td>
             <td style={{width: '100%'}}>
               <ReloadButton location={location.name} />

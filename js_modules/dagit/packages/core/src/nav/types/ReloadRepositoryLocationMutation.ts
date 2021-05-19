@@ -23,11 +23,18 @@ export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_Repos
   pipelines: ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation_repositories_pipelines[];
 }
 
+export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
+}
+
 export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation {
   __typename: "RepositoryLocation";
   id: string;
   repositories: ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation_repositories[];
   loadStatus: RepositoryLocationLoadStatus;
+  metadata: ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation_metadata;
 }
 
 export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReloadNotSupported {
@@ -45,11 +52,18 @@ export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_Repos
   message: string;
 }
 
+export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationLoadFailure_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
+}
+
 export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationLoadFailure {
   __typename: "RepositoryLocationLoadFailure";
   id: string;
   error: ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationLoadFailure_error;
   loadStatus: RepositoryLocationLoadStatus;
+  metadata: ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationLoadFailure_metadata;
 }
 
 export type ReloadRepositoryLocationMutation_reloadRepositoryLocation = ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation | ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReloadNotSupported | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationNotFound | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationLoadFailure;

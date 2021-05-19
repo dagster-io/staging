@@ -10,6 +10,12 @@ import { RepositoryLocationLoadStatus } from "./../../types/globalTypes";
 // GraphQL query operation: RootRepositoriesQuery
 // ====================================================
 
+export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
+}
+
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_pipelines {
   __typename: "Pipeline";
   id: string;
@@ -49,6 +55,7 @@ export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLoca
   __typename: "RepositoryLocation";
   id: string;
   loadStatus: RepositoryLocationLoadStatus;
+  metadata: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_metadata;
   isReloadSupported: boolean;
   serverId: string | null;
   name: string;
@@ -68,18 +75,32 @@ export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLoca
   cause: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_error_cause | null;
 }
 
+export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
+}
+
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure {
   __typename: "RepositoryLocationLoadFailure";
   id: string;
   name: string;
   loadStatus: RepositoryLocationLoadStatus;
   error: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_error;
+  metadata: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_metadata;
+}
+
+export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading_metadata {
+  __typename: "RepositoryLocationMetadata";
+  containerImage: string | null;
+  updatedTimestamp: number;
 }
 
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading {
   __typename: "RepositoryLocationLoading";
   id: string;
   name: string;
+  metadata: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading_metadata;
 }
 
 export type RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes = RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation | RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure | RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading;
