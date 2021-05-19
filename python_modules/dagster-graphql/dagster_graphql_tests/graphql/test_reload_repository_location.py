@@ -146,7 +146,9 @@ class TestReloadWorkspace(
 
 class TestReloadRepositoriesOutOfProcess(
     make_graphql_context_test_suite(
-        context_variants=[GraphQLContextVariant.non_launchable_in_memory_instance_managed_grpc_env()]
+        context_variants=[
+            GraphQLContextVariant.non_launchable_in_memory_instance_managed_grpc_env()
+        ]
     )
 ):
     def test_out_of_process_reload_location(self, graphql_context):
