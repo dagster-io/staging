@@ -36,6 +36,23 @@ export const PERMISSIONS_ALLOW_ALL: Permissions = {
   cancel_partition_backfill: true,
 };
 
+export const PERMISSIONS_READ_ONLY: Permissions = {
+  launch_pipeline_execution: false,
+  launch_pipeline_reexecution: false,
+  reconcile_scheduler_state: false,
+  start_schedule: false,
+  stop_running_schedule: false,
+  start_sensor: false,
+  stop_sensor: false,
+  terminate_pipeline_execution: false,
+  delete_pipeline_run: false,
+  reload_repository_location: false,
+  reload_workspace: false,
+  wipe_assets: false,
+  launch_partition_backfill: false,
+  cancel_partition_backfill: false,
+};
+
 export const DISABLED_MESSAGE = 'Disabled by your administrator';
 
 export const usePermissions = () => {
