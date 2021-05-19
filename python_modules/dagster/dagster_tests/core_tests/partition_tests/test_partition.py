@@ -6,11 +6,24 @@ from dagster.check import CheckError
 from dagster.core.definitions.partition import (
     DynamicPartitionParams,
     Partition,
-    ScheduleType,
+    PartitionParams,
     StaticPartitionParams,
     TimeBasedPartitionParams,
 )
 from dagster.utils.partitions import DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE
+
+
+def assert_generated_partitions(partition_params: PartitionParams, expected_partitions: List[str]):
+    generated_partitions = partition_params.get_partitions(current_time=None)
+
+    assert all(
+        isinstance(generated_partition, Partition) for generated_partition in generated_partitions
+    )
+    assert len(generated_partitions) == len(expected_partitions)
+    for generated_partition, expected_partition_name in zip(
+        generated_partitions, expected_partitions
+    ):
+        assert generated_partition.name == expected_partition_name
 
 
 @pytest.mark.parametrize(
@@ -23,313 +36,389 @@ def test_static_partition_params(partitions: List[Partition]):
     assert partition_params.get_partitions(current_time=None) == partitions
 
 
-@pytest.mark.parametrize(
-    argnames=["schedule_type", "start", "execution_day", "end", "error_message_regex"],
-    ids=[
-        "start should be before end",
-        "hourly partitions, execution day should not be provided",
-        "daily partitions, execution day should not be provided",
-        "weekly partitions, execution day should be between 0 and 6",
-        "monthly partitions, execution day should be between 1 and 31",
-    ],
-    argvalues=[
-        (
-            ScheduleType.DAILY,
-            datetime(year=2021, month=1, day=3),
-            None,
-            datetime(year=2021, month=1, day=1),
-            r"Selected date range start .* is after date range end",
-        ),
-        (
-            ScheduleType.HOURLY,
-            datetime(year=2021, month=1, day=1),
-            1,
-            datetime(year=2021, month=1, day=3),
-            "Execution day should not be provided",
-        ),
-        (
-            ScheduleType.DAILY,
-            datetime(year=2021, month=1, day=1),
-            1,
-            datetime(year=2021, month=1, day=3),
-            "Execution day should not be provided",
-        ),
-        (
-            ScheduleType.WEEKLY,
-            datetime(year=2021, month=1, day=1),
-            7,
-            datetime(year=2021, month=2, day=1),
-            "Execution day .* must be between 0 and 6",
-        ),
-        (
-            ScheduleType.MONTHLY,
-            datetime(year=2021, month=1, day=1),
-            0,
-            datetime(year=2021, month=2, day=1),
-            "Execution day .* must be between 1 and 31",
-        ),
-    ],
-)
-def test_time_based_partition_params_invariants(
-    schedule_type: ScheduleType,
-    start: datetime,
-    execution_day: Optional[int],
-    end: Optional[datetime],
-    error_message_regex: str,
-):
-    with pytest.raises(CheckError, match=error_message_regex):
+def test_time_partition_params_valid_start_and_end():
+    with pytest.raises(CheckError, match=r"Selected date range start .* is after date range end"):
         TimeBasedPartitionParams(
-            schedule_type=schedule_type,
-            start=start,
-            execution_day=execution_day,
-            execution_time=None,
-            end=end,
-            fmt=None,
-            inclusive=None,
-            timezone=None,
-            offset=None,
+            start=datetime(year=2021, month=1, day=3),
+            end=datetime(year=2021, month=1, day=1),
+        )
+
+
+def test_time_partition_params_valid_execution_minute():
+    with pytest.raises(CheckError, match=r"Execution minute .* must be between 0 and 59"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            execution_minute=60,
+        )
+
+
+def test_time_partition_params_valid_execution_hour():
+    with pytest.raises(CheckError, match=r"Execution hour .* must be between 0 and 23"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            execution_hour=24,
+        )
+
+
+def test_time_partition_params_valid_execution_day_of_week():
+    with pytest.raises(CheckError, match=r"Execution day of week .* must be between 0 and 6"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            execution_day_of_week=7,
+        )
+
+
+def test_time_partition_params_valid_execution_day_of_month():
+    with pytest.raises(CheckError, match=r"Execution day of month .* must be between 1 and 31"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            execution_day_of_month=0,
+        )
+
+
+def test_time_partition_params_valid_execution_month():
+    with pytest.raises(CheckError, match=r"Execution month .* must be between 1 and 12"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            execution_month=0,
+        )
+
+
+def test_time_partition_params_valid_partition_minutes_offset():
+    with pytest.raises(CheckError, match=r"Partition minutes offset .* must be greater than 0"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            partition_minutes_offset=-1,
+        )
+
+
+def test_time_partition_params_valid_partition_hours_offset():
+    with pytest.raises(CheckError, match=r"Partition hours offset .* must be greater than 0"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            partition_hours_offset=-1,
+        )
+
+
+def test_time_partition_params_valid_partition_days_offset():
+    with pytest.raises(CheckError, match=r"Partition days offset .* must be greater than 0"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            partition_days_offset=-1,
+        )
+
+
+def test_time_partition_params_valid_partition_weeks_offset():
+    with pytest.raises(CheckError, match=r"Partition weeks offset .* must be greater than 0"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            partition_weeks_offset=-1,
+        )
+
+
+def test_time_partition_params_valid_partition_months_offset():
+    with pytest.raises(CheckError, match=r"Partition months offset .* must be greater than 0"):
+        TimeBasedPartitionParams(
+            start=datetime(year=2021, month=1, day=1),
+            partition_months_offset=-1,
         )
 
 
 @pytest.mark.parametrize(
     argnames=[
-        "schedule_type",
         "start",
-        "execution_day",
-        "execution_time",
+        "execution_minute",
+        "execution_hour",
         "end",
-        "fmt",
-        "inclusive",
-        "timezone",
-        "offset",
+        "partition_days_offset",
         "expected_partitions",
     ],
     ids=[
-        "daily partitions, not inclusive",
-        "daily partitions, inclusive",
-        "daily partitions, different start/end year",
-        "daily partitions, leap year",
-        "daily partitions, not leap year",
-        "monthly partitions",
-        "monthly partitions, different start/end year",
-        "monthly partitions, start/end not at least a month apart",
-        "weekly partitions",
-        "hourly partitions, Spring DST",
-        "hourly partitions, Spring DST with timezone",
-        "hourly partitions, Fall DST",
-        "hourly partitions, Fall DST with timezone",
+        "no partition days offset",
+        "partition days offset == 1",
+        "different start/end year",
+        "leap year",
+        "not leap year",
     ],
     argvalues=[
         (
-            ScheduleType.DAILY,
-            datetime(year=2020, month=1, day=1),
+            datetime(year=2021, month=1, day=1),
+            20,
+            1,
+            datetime(year=2021, month=1, day=6, hour=1, minute=20),
             None,
-            None,
-            datetime(year=2020, month=1, day=6),
-            None,
-            False,
-            None,
-            None,
-            ["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04", "2020-01-05"],
+            ["2021-01-01", "2021-01-02", "2021-01-03", "2021-01-04", "2021-01-05", "2021-01-06"],
         ),
         (
-            ScheduleType.DAILY,
-            datetime(year=2020, month=1, day=1),
-            None,
-            None,
-            datetime(year=2020, month=1, day=6, hour=1),
-            None,
-            True,
-            None,
-            None,
-            ["2020-01-01", "2020-01-02", "2020-01-03", "2020-01-04", "2020-01-05", "2020-01-06"],
+            datetime(year=2021, month=1, day=1),
+            20,
+            1,
+            datetime(year=2021, month=1, day=6, hour=1, minute=20),
+            1,
+            ["2021-01-01", "2021-01-02", "2021-01-03", "2021-01-04", "2021-01-05"],
         ),
         (
-            ScheduleType.DAILY,
             datetime(year=2020, month=12, day=29),
+            20,
+            1,
+            datetime(year=2021, month=1, day=3, hour=1, minute=20),
             None,
-            None,
-            datetime(year=2021, month=1, day=3),
-            None,
-            None,
-            None,
-            None,
-            ["2020-12-29", "2020-12-30", "2020-12-31", "2021-01-01", "2021-01-02"],
+            ["2020-12-29", "2020-12-30", "2020-12-31", "2021-01-01", "2021-01-02", "2021-01-03"],
         ),
         (
-            ScheduleType.DAILY,
             datetime(year=2020, month=2, day=28),
+            20,
+            1,
+            datetime(year=2020, month=3, day=3, hour=1, minute=20),
             None,
-            None,
-            datetime(year=2020, month=3, day=3),
-            None,
-            None,
-            None,
-            None,
-            ["2020-02-28", "2020-02-29", "2020-03-01", "2020-03-02"],
+            ["2020-02-28", "2020-02-29", "2020-03-01", "2020-03-02", "2020-03-03"],
         ),
         (
-            ScheduleType.DAILY,
-            datetime(year=2019, month=2, day=28),
+            datetime(year=2021, month=2, day=28),
+            20,
+            1,
+            datetime(year=2021, month=3, day=3, hour=1, minute=20),
             None,
+            ["2021-02-28", "2021-03-01", "2021-03-02", "2021-03-03"],
+        ),
+    ],
+)
+def test_time_partition_params_daily_partitions(
+    start: datetime,
+    execution_minute: int,
+    execution_hour: int,
+    end: datetime,
+    partition_days_offset: Optional[int],
+    expected_partitions: List[str],
+):
+    partition_params = TimeBasedPartitionParams(
+        start=start,
+        execution_minute=execution_minute,
+        execution_hour=execution_hour,
+        end=end,
+        partition_days_offset=partition_days_offset,
+    )
+
+    assert_generated_partitions(partition_params, expected_partitions)
+
+
+@pytest.mark.parametrize(
+    argnames=[
+        "start",
+        "end",
+        "partition_months_offset",
+        "expected_partitions",
+    ],
+    ids=[
+        "no partition months offset",
+        "partition months offset == 1",
+        "execution day of month not within start/end range",
+    ],
+    argvalues=[
+        (
+            datetime(year=2021, month=1, day=1),
+            datetime(year=2021, month=3, day=1, hour=1, minute=20),
             None,
-            datetime(year=2019, month=3, day=3),
-            None,
-            None,
-            None,
-            None,
-            ["2019-02-28", "2019-03-01", "2019-03-02"],
+            ["2021-01-01", "2021-02-01", "2021-03-01"],
         ),
         (
-            ScheduleType.MONTHLY,
-            datetime(year=2020, month=1, day=1),
-            None,
-            None,
-            datetime(year=2020, month=3, day=6),
-            None,
-            None,
-            None,
-            None,
-            ["2020-01-01", "2020-02-01"],
+            datetime(year=2021, month=1, day=1),
+            datetime(year=2021, month=3, day=1, hour=1, minute=20),
+            1,
+            ["2021-01-01", "2021-02-01"],
         ),
         (
-            ScheduleType.MONTHLY,
-            datetime(year=2020, month=12, day=1),
+            datetime(year=2021, month=1, day=3),
+            datetime(year=2021, month=1, day=31),
             None,
+            [],
+        ),
+    ],
+)
+def test_time_partition_params_monthly_partitions(
+    start: datetime,
+    end: datetime,
+    partition_months_offset: Optional[int],
+    expected_partitions: List[str],
+):
+    partition_params = TimeBasedPartitionParams(
+        start=start,
+        execution_minute=20,
+        execution_hour=1,
+        execution_day_of_month=1,
+        end=end,
+        partition_months_offset=partition_months_offset,
+    )
+
+    assert_generated_partitions(partition_params, expected_partitions)
+
+
+@pytest.mark.parametrize(
+    argnames=[
+        "start",
+        "end",
+        "partition_weeks_offset",
+        "expected_partitions",
+    ],
+    ids=[
+        "no partition weeks offset",
+        "partition weeks offset == 1",
+        "execution day of week not within start/end range",
+    ],
+    argvalues=[
+        (
+            datetime(year=2021, month=1, day=1),
+            datetime(year=2021, month=1, day=31, hour=1, minute=20),
             None,
-            datetime(year=2021, month=2, day=6),
-            None,
-            None,
-            None,
-            None,
-            ["2020-12-01", "2021-01-01"],
+            ["2021-01-03", "2021-01-10", "2021-01-17", "2021-01-24", "2021-01-31"],
         ),
         (
-            ScheduleType.MONTHLY,
-            datetime(year=2020, month=2, day=12),
+            datetime(year=2021, month=1, day=1),
+            datetime(year=2021, month=1, day=31, hour=1, minute=20),
+            1,
+            ["2021-01-03", "2021-01-10", "2021-01-17", "2021-01-24"],
+        ),
+        (
+            datetime(year=2021, month=1, day=4),
+            datetime(year=2021, month=1, day=9),
+            None,
+            [],
+        ),
+    ],
+)
+def test_time_partition_params_weekly_partitions(
+    start: datetime,
+    end: datetime,
+    partition_weeks_offset: Optional[int],
+    expected_partitions: List[str],
+):
+    partition_params = TimeBasedPartitionParams(
+        start=start,
+        execution_minute=20,
+        execution_hour=1,
+        execution_day_of_week=0,
+        end=end,
+        partition_weeks_offset=partition_weeks_offset,
+    )
+
+    assert_generated_partitions(partition_params, expected_partitions)
+
+
+@pytest.mark.parametrize(
+    argnames=[
+        "start",
+        "end",
+        "timezone",
+        "partition_hours_offset",
+        "expected_partitions",
+    ],
+    ids=[
+        "no partition hours offset",
+        "partition hours offset == 1",
+        "execution hour not within start/end range",
+        "Spring DST",
+        "Spring DST with timezone",
+        "Fall DST",
+        "Fall DST with timezone",
+    ],
+    argvalues=[
+        (
+            datetime(year=2021, month=1, day=1, hour=0),
+            datetime(year=2021, month=1, day=1, hour=4, minute=1),
             None,
             None,
-            datetime(year=2020, month=3, day=11),
+            [
+                "2021-01-01-00:01+0000",
+                "2021-01-01-01:01+0000",
+                "2021-01-01-02:01+0000",
+                "2021-01-01-03:01+0000",
+                "2021-01-01-04:01+0000",
+            ],
+        ),
+        (
+            datetime(year=2021, month=1, day=1, hour=0),
+            datetime(year=2021, month=1, day=1, hour=4, minute=1),
             None,
-            None,
+            1,
+            [
+                "2021-01-01-00:01+0000",
+                "2021-01-01-01:01+0000",
+                "2021-01-01-02:01+0000",
+                "2021-01-01-03:01+0000",
+            ],
+        ),
+        (
+            datetime(year=2021, month=1, day=1, hour=0, minute=2),
+            datetime(year=2021, month=1, day=1, hour=0, minute=59),
             None,
             None,
             [],
         ),
         (
-            ScheduleType.WEEKLY,
-            datetime(year=2020, month=1, day=1),
+            datetime(year=2021, month=3, day=14, hour=1),
+            datetime(year=2021, month=3, day=14, hour=4, minute=1),
             None,
-            None,
-            datetime(year=2020, month=1, day=27),
-            None,
-            None,
-            None,
-            None,
-            ["2020-01-01", "2020-01-08", "2020-01-15"],
-        ),
-        (
-            ScheduleType.HOURLY,
-            datetime(year=2019, month=3, day=10, hour=1),
-            None,
-            None,
-            datetime(year=2019, month=3, day=10, hour=4),
-            DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
-            True,
-            "UTC",
             None,
             [
-                "2019-03-10-01:00+0000",
-                "2019-03-10-02:00+0000",
-                "2019-03-10-03:00+0000",
-                "2019-03-10-04:00+0000",
+                "2021-03-14-01:01+0000",
+                "2021-03-14-02:01+0000",
+                "2021-03-14-03:01+0000",
+                "2021-03-14-04:01+0000",
             ],
         ),
         (
-            ScheduleType.HOURLY,
-            datetime(year=2019, month=3, day=10, hour=1),
-            None,
-            None,
-            datetime(year=2019, month=3, day=10, hour=4),
-            DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
-            True,
+            datetime(year=2021, month=3, day=14, hour=1),
+            datetime(year=2021, month=3, day=14, hour=4, minute=1),
             "US/Central",
             None,
-            ["2019-03-10-01:00-0600", "2019-03-10-03:00-0500", "2019-03-10-04:00-0500"],
+            ["2021-03-14-01:01-0600", "2021-03-14-03:01-0500", "2021-03-14-04:01-0500"],
         ),
         (
-            ScheduleType.HOURLY,
-            datetime(year=2019, month=11, day=3, hour=0),
+            datetime(year=2021, month=11, day=7, hour=0),
+            datetime(year=2021, month=11, day=7, hour=4, minute=1),
             None,
-            None,
-            datetime(year=2019, month=11, day=3, hour=3),
-            DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
-            True,
-            "UTC",
             None,
             [
-                "2019-11-03-00:00+0000",
-                "2019-11-03-01:00+0000",
-                "2019-11-03-02:00+0000",
-                "2019-11-03-03:00+0000",
+                "2021-11-07-00:01+0000",
+                "2021-11-07-01:01+0000",
+                "2021-11-07-02:01+0000",
+                "2021-11-07-03:01+0000",
+                "2021-11-07-04:01+0000",
             ],
         ),
         (
-            ScheduleType.HOURLY,
-            datetime(year=2019, month=11, day=3, hour=0),
-            None,
-            None,
-            datetime(year=2019, month=11, day=3, hour=3),
-            DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
-            True,
+            datetime(year=2021, month=11, day=7, hour=0),
+            datetime(year=2021, month=11, day=7, hour=4, minute=1),
             "US/Central",
             None,
             [
-                "2019-11-03-00:00-0500",
-                "2019-11-03-01:00-0500",
-                "2019-11-03-01:00-0600",
-                "2019-11-03-02:00-0600",
-                "2019-11-03-03:00-0600",
+                "2021-11-07-00:01-0500",
+                "2021-11-07-01:01-0500",
+                "2021-11-07-01:01-0600",
+                "2021-11-07-02:01-0600",
+                "2021-11-07-03:01-0600",
+                "2021-11-07-04:01-0600",
             ],
         ),
     ],
 )
-def test_time_based_partition_params(
-    schedule_type: ScheduleType,
+def test_time_partition_params_hourly_partitions(
     start: datetime,
-    execution_day: Optional[int],
-    execution_time: Optional[time],
-    end: Optional[datetime],
-    fmt: Optional[str],
-    inclusive: Optional[bool],
+    end: datetime,
     timezone: Optional[str],
-    offset: Optional[int],
+    partition_hours_offset: Optional[int],
     expected_partitions: List[str],
 ):
     partition_params = TimeBasedPartitionParams(
-        schedule_type=schedule_type,
         start=start,
-        execution_day=execution_day,
-        execution_time=execution_time,
+        execution_minute=1,
         end=end,
-        fmt=fmt,
-        inclusive=inclusive,
         timezone=timezone,
-        offset=offset,
+        fmt=DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
+        partition_hours_offset=partition_hours_offset,
     )
 
-    generated_partitions = partition_params.get_partitions(current_time=None)
-
-    assert all(
-        isinstance(generated_partition, Partition) for generated_partition in generated_partitions
-    )
-    assert len(generated_partitions) == len(expected_partitions)
-    assert all(
-        generated_partition.name == expected_partition_name
-        for generated_partition, expected_partition_name in zip(
-            generated_partitions, expected_partitions
-        )
-    )
+    assert_generated_partitions(partition_params, expected_partitions)
 
 
 @pytest.mark.parametrize(

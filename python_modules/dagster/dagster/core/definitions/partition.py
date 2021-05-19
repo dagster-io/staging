@@ -128,17 +128,18 @@ def schedule_partition_range(
     return _get_schedule_range_partitions
 
 
-class ScheduleType(Enum):
-    HOURLY = "HOURLY"
-    DAILY = "DAILY"
-    WEEKLY = "WEEKLY"
-    MONTHLY = "MONTHLY"
-
-
 class PartitionParams(ABC):
     @abstractmethod
     def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
-        ...
+        """Retrieve the partitions at a given evaluation time.
+
+        Args:
+            current_time (Optional[datetime]): The evaluation time when generating the partitions.
+
+        Returns:
+            List[Partition]: A list of :py:class:`~dagster.Partition` repesenting logical slices
+                of a pipeline's work.
+        """
 
 
 class StaticPartitionParams(
@@ -158,73 +159,105 @@ class TimeBasedPartitionParams(
     NamedTuple(
         "_TimeBasedPartitionParams",
         [
-            ("schedule_type", ScheduleType),
             ("start", datetime),
-            ("execution_day", Optional[int]),
-            ("execution_time", time),
+            ("execution_minute", Optional[int]),
+            ("execution_hour", Optional[int]),
+            ("execution_day_of_week", Optional[int]),
+            ("execution_day_of_month", Optional[int]),
+            ("execution_month", Optional[int]),
             ("end", Optional[datetime]),
             ("fmt", Optional[str]),
-            ("inclusive", Optional[bool]),
             ("timezone", Optional[str]),
-            ("offset", Optional[int]),
+            ("partition_minutes_offset", Optional[int]),
+            ("partition_hours_offset", Optional[int]),
+            ("partition_days_offset", Optional[int]),
+            ("partition_weeks_offset", Optional[int]),
+            ("partition_months_offset", Optional[int]),
         ],
     ),
 ):
     def __new__(
         cls,
-        schedule_type: ScheduleType,
         start: datetime,
-        execution_day: Optional[int],
-        execution_time: Optional[time],
-        end: Optional[datetime],
-        fmt: Optional[str],
-        inclusive: Optional[bool],
-        timezone: Optional[str],
-        offset: Optional[int],
+        execution_minute: Optional[int] = None,
+        execution_hour: Optional[int] = None,
+        execution_day_of_week: Optional[int] = None,
+        execution_day_of_month: Optional[int] = None,
+        execution_month: Optional[int] = None,
+        end: Optional[datetime] = None,
+        fmt: Optional[str] = None,
+        timezone: Optional[str] = None,
+        partition_minutes_offset: Optional[int] = None,
+        partition_hours_offset: Optional[int] = None,
+        partition_days_offset: Optional[int] = None,
+        partition_weeks_offset: Optional[int] = None,
+        partition_months_offset: Optional[int] = None,
     ):
-        if end is not None:
-            check.invariant(
-                start <= end,
-                f'Selected date range start "{start}" '
-                f'is after date range end "{end}"'.format(
-                    start=start.strftime(fmt) if fmt is not None else start,
-                    end=cast(datetime, end).strftime(fmt) if fmt is not None else end,
-                ),
-            )
-        if schedule_type in [ScheduleType.HOURLY, ScheduleType.DAILY]:
-            check.invariant(
-                not execution_day,
-                f'Execution day should not be provided for schedule type "{schedule_type}"',
-            )
-        elif schedule_type is ScheduleType.WEEKLY:
-            execution_day = execution_day if execution_day is not None else 0
-            check.invariant(
-                execution_day is not None and 0 <= execution_day <= 6,
-                f'Execution day "{execution_day}" must be between 0 and 6 for '
-                f'schedule type "{schedule_type}"',
-            )
-        elif schedule_type is ScheduleType.MONTHLY:
-            execution_day = execution_day if execution_day is not None else 1
-            check.invariant(
-                execution_day is not None and 1 <= execution_day <= 31,
-                f'Execution day "{execution_day}" must be between 1 and 31 for '
-                f'schedule type "{schedule_type}"',
-            )
+        check.invariant(
+            end is None or start <= end,
+            f'Selected date range start "{start}" '
+            f'is after date range end "{end}"'.format(
+                start=start.strftime(fmt) if fmt is not None else start,
+                end=cast(datetime, end).strftime(fmt) if fmt is not None else end,
+            ),
+        )
+        check.invariant(
+            execution_minute is None or 0 <= execution_minute <= 59,
+            f'Execution minute "{execution_minute}" must be between 0 and 59.',
+        )
+        check.invariant(
+            execution_hour is None or 0 <= execution_hour <= 23,
+            f'Execution hour "{execution_hour}" must be between 0 and 23.',
+        )
+        check.invariant(
+            execution_day_of_week is None or 0 <= execution_day_of_week <= 6,
+            f'Execution day of week "{execution_day_of_week}" must be between 0 and 6.',
+        )
+        check.invariant(
+            execution_day_of_month is None or 1 <= execution_day_of_month <= 31,
+            f'Execution day of month "{execution_day_of_month}" must be between 1 and 31.',
+        )
+        check.invariant(
+            execution_month is None or 1 <= execution_month <= 12,
+            f'Execution month "{execution_day_of_month}" must be between 1 and 12.',
+        )
+        check.invariant(
+            partition_minutes_offset is None or partition_minutes_offset > 0,
+            f'Partition minutes offset "{partition_minutes_offset}" must be greater than 0.',
+        )
+        check.invariant(
+            partition_hours_offset is None or partition_hours_offset > 0,
+            f'Partition hours offset "{partition_hours_offset}" must be greater than 0.',
+        )
+        check.invariant(
+            partition_days_offset is None or partition_days_offset > 0,
+            f'Partition days offset "{partition_days_offset}" must be greater than 0.',
+        )
+        check.invariant(
+            partition_weeks_offset is None or partition_weeks_offset > 0,
+            f'Partition weeks offset "{partition_weeks_offset}" must be greater than 0.',
+        )
+        check.invariant(
+            partition_months_offset is None or partition_months_offset > 0,
+            f'Partition months offset "{partition_months_offset}" must be greater than 0.',
+        )
 
         return super(TimeBasedPartitionParams, cls).__new__(
             cls,
-            check.inst_param(schedule_type, "schedule_type", ScheduleType),
             check.inst_param(start, "start", datetime),
-            check.opt_int_param(
-                execution_day,
-                "execution_day",
-            ),
-            check.opt_inst_param(execution_time, "execution_time", time, time(0, 0)),
+            check.opt_int_param(execution_minute, "execution_minute"),
+            check.opt_int_param(execution_hour, "execution_hour"),
+            check.opt_int_param(execution_day_of_week, "execution_day_of_week"),
+            check.opt_int_param(execution_day_of_month, "execution_day_of_month"),
+            check.opt_int_param(execution_month, "execution_month"),
             check.opt_inst_param(end, "end", datetime),
             check.opt_str_param(fmt, "fmt", default=DEFAULT_DATE_FORMAT),
-            check.opt_bool_param(inclusive, "inclusive", default=False),
             check.opt_str_param(timezone, "timezone", default="UTC"),
-            check.opt_int_param(offset, "offset", default=1),
+            check.opt_int_param(partition_minutes_offset, "partition_minutes_offset", 0),
+            check.opt_int_param(partition_hours_offset, "partition_hours_offset", 0),
+            check.opt_int_param(partition_days_offset, "partition_days_offset", 0),
+            check.opt_int_param(partition_weeks_offset, "partition_weeks_offset", 0),
+            check.opt_int_param(partition_months_offset, "partition_months_offset", 0),
         )
 
     def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
@@ -233,63 +266,47 @@ class TimeBasedPartitionParams(
         partition_fn = schedule_partition_range(
             start=self.start,
             end=self.end,
-            cron_schedule=self.get_cron_schedule(),
+            cron_schedule=self._get_cron_schedule(),
             fmt=self.fmt,
             timezone=self.timezone,
-            execution_time_to_partition_fn=self.get_execution_time_to_partition_fn(),
-            inclusive=self.inclusive,
+            execution_time_to_partition_fn=self._get_execution_time_to_partition_fn(),
+            inclusive=self._inclusive(),
         )
 
         return partition_fn(current_time=current_time)
 
-    def get_cron_schedule(self) -> str:
-        minute = self.execution_time.minute
-        hour = self.execution_time.hour
-        day = self.execution_day
+    def _inclusive(self):
+        return not any(
+            (
+                self.partition_minutes_offset,
+                self.partition_hours_offset,
+                self.partition_days_offset,
+                self.partition_weeks_offset,
+                self.partition_months_offset,
+            )
+        )
 
-        if self.schedule_type is ScheduleType.HOURLY:
-            return f"{minute} * * * *"
-        elif self.schedule_type is ScheduleType.DAILY:
-            return f"{minute} {hour} * * *"
-        elif self.schedule_type is ScheduleType.WEEKLY:
-            return f"{minute} {hour} * * {day}"
-        elif self.schedule_type is ScheduleType.MONTHLY:
-            return f"{minute} {hour} {day} * *"
-        else:
-            check.assert_never(self.schedule_type)
+    def _get_cron_schedule(self) -> str:
+        minute = self.execution_minute if self.execution_minute is not None else "*"
+        hour = self.execution_hour if self.execution_hour is not None else "*"
+        day_of_week = self.execution_day_of_week if self.execution_day_of_week is not None else "*"
+        day_of_month = (
+            self.execution_day_of_month if self.execution_day_of_month is not None else "*"
+        )
+        month = self.execution_month if self.execution_month is not None else "*"
 
-    def get_execution_time_to_partition_fn(self) -> Callable[[datetime], datetime]:
-        if self.schedule_type is ScheduleType.HOURLY:
-            minute_difference = self.execution_time.minute - self.start.minute % 60
-            return lambda d: pendulum.instance(d).subtract(
-                hours=self.offset,
-                minutes=minute_difference,
-            )
-        elif self.schedule_type is ScheduleType.DAILY:
-            return (
-                lambda d: pendulum.instance(d)
-                .replace(hour=0, minute=0)
-                .subtract(
-                    days=self.offset,
-                )
-            )
-        elif self.schedule_type is ScheduleType.WEEKLY:
-            execution_day = cast(int, self.execution_day)
-            day_difference = (execution_day - (self.start.weekday() + 1)) % 7
-            return (
-                lambda d: pendulum.instance(d)
-                .replace(hour=0, minute=0)
-                .subtract(weeks=self.offset, days=day_difference)
-            )
-        elif self.schedule_type is ScheduleType.MONTHLY:
-            execution_day = cast(int, self.execution_day)
-            return (
-                lambda d: pendulum.instance(d)
-                .replace(hour=0, minute=0)
-                .subtract(months=self.offset, days=execution_day - 1)
-            )
-        else:
-            check.assert_never(self.schedule_type)
+        cron_schedule = f"{minute} {hour} {day_of_month} {month} {day_of_week}"
+
+        return cron_schedule
+
+    def _get_execution_time_to_partition_fn(self) -> Callable[[datetime], datetime]:
+        return lambda d: pendulum.instance(d).subtract(
+            months=self.partition_months_offset,
+            weeks=self.partition_weeks_offset,
+            days=self.partition_days_offset,
+            hours=self.partition_hours_offset,
+            minutes=self.partition_minutes_offset,
+        )
 
 
 class DynamicPartitionParams(
