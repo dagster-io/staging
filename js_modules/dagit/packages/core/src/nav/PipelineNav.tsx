@@ -2,6 +2,7 @@ import {IconName, Tab, Tabs, Colors} from '@blueprintjs/core';
 import React from 'react';
 import {Link, useRouteMatch} from 'react-router-dom';
 
+import {usePermissions} from '../app/Permissions';
 import {
   explorerPathFromString,
   explorerPathToString,
@@ -43,7 +44,8 @@ const pipelineTabs: {[key: string]: TabConfig} = {
   },
 };
 
-const currentOrder = ['overview', 'definition', 'playground', 'runs', 'partitions'];
+const tabOrder = ['overview', 'definition', 'playground', 'runs', 'partitions'];
+const limitedTabOrder = ['overview', 'definition', 'runs', 'partitions'];
 
 export function tabForPipelinePathComponent(component?: string): TabConfig {
   const tabList = Object.keys(pipelineTabs);
@@ -79,6 +81,7 @@ interface Props {
 
 export const PipelineNav: React.FC<Props> = (props) => {
   const {repoAddress} = props;
+  const {canLaunchPipelineExecution} = usePermissions();
   const repo = useRepository(repoAddress);
   const match = useRouteMatch<{tab?: string; selector: string}>([
     '/workspace/:repoPath/pipelines/:selector/:tab?',
@@ -86,12 +89,13 @@ export const PipelineNav: React.FC<Props> = (props) => {
 
   const active = tabForPipelinePathComponent(match!.params.tab);
   const explorerPath = explorerPathFromString(match!.params.selector);
+  const order = canLaunchPipelineExecution ? tabOrder : limitedTabOrder;
 
   const hasPartitionSet = repo?.repository.partitionSets
     .map((x) => x.pipelineName)
     .includes(explorerPath.pipelineName);
 
-  const tabs = currentOrder
+  const tabs = order
     .filter((key) => hasPartitionSet || key !== 'partitions')
     .map(tabForKey(repoAddress, explorerPath));
 
