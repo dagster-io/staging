@@ -10,6 +10,10 @@ import { LaunchBackfillParams, EvaluationErrorReason } from "./../../types/globa
 // GraphQL mutation operation: LaunchPartitionBackfill
 // ====================================================
 
+export interface LaunchPartitionBackfill_launchPartitionBackfill_ReadOnlyError {
+  __typename: "ReadOnlyError";
+}
+
 export interface LaunchPartitionBackfill_launchPartitionBackfill_LaunchBackfillSuccess {
   __typename: "LaunchBackfillSuccess";
   backfillId: string;
@@ -77,7 +81,7 @@ export interface LaunchPartitionBackfill_launchPartitionBackfill_PipelineConfigV
   errors: LaunchPartitionBackfill_launchPartitionBackfill_PipelineConfigValidationInvalid_errors[];
 }
 
-export type LaunchPartitionBackfill_launchPartitionBackfill = LaunchPartitionBackfill_launchPartitionBackfill_LaunchBackfillSuccess | LaunchPartitionBackfill_launchPartitionBackfill_PartitionSetNotFoundError | LaunchPartitionBackfill_launchPartitionBackfill_PythonError | LaunchPartitionBackfill_launchPartitionBackfill_InvalidStepError | LaunchPartitionBackfill_launchPartitionBackfill_InvalidOutputError | LaunchPartitionBackfill_launchPartitionBackfill_PipelineNotFoundError | LaunchPartitionBackfill_launchPartitionBackfill_PipelineRunConflict | LaunchPartitionBackfill_launchPartitionBackfill_ConflictingExecutionParamsError | LaunchPartitionBackfill_launchPartitionBackfill_PresetNotFoundError | LaunchPartitionBackfill_launchPartitionBackfill_PipelineConfigValidationInvalid;
+export type LaunchPartitionBackfill_launchPartitionBackfill = LaunchPartitionBackfill_launchPartitionBackfill_ReadOnlyError | LaunchPartitionBackfill_launchPartitionBackfill_LaunchBackfillSuccess | LaunchPartitionBackfill_launchPartitionBackfill_PartitionSetNotFoundError | LaunchPartitionBackfill_launchPartitionBackfill_PythonError | LaunchPartitionBackfill_launchPartitionBackfill_InvalidStepError | LaunchPartitionBackfill_launchPartitionBackfill_InvalidOutputError | LaunchPartitionBackfill_launchPartitionBackfill_PipelineNotFoundError | LaunchPartitionBackfill_launchPartitionBackfill_PipelineRunConflict | LaunchPartitionBackfill_launchPartitionBackfill_ConflictingExecutionParamsError | LaunchPartitionBackfill_launchPartitionBackfill_PresetNotFoundError | LaunchPartitionBackfill_launchPartitionBackfill_PipelineConfigValidationInvalid;
 
 export interface LaunchPartitionBackfill {
   launchPartitionBackfill: LaunchPartitionBackfill_launchPartitionBackfill;

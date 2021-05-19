@@ -9,7 +9,7 @@
 // ====================================================
 
 export interface Delete_deletePipelineRun_DeletePipelineRunSuccess {
-  __typename: "DeletePipelineRunSuccess";
+  __typename: "DeletePipelineRunSuccess" | "ReadOnlyError";
 }
 
 export interface Delete_deletePipelineRun_PythonError {

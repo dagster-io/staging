@@ -10,6 +10,10 @@ import { RepositoryLocationLoadStatus } from "./../../types/globalTypes";
 // GraphQL mutation operation: ReloadRepositoryLocationMutation
 // ====================================================
 
+export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReadOnlyError {
+  __typename: "ReadOnlyError";
+}
+
 export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation_repositories_pipelines {
   __typename: "Pipeline";
   id: string;
@@ -52,7 +56,7 @@ export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_Repos
   loadStatus: RepositoryLocationLoadStatus;
 }
 
-export type ReloadRepositoryLocationMutation_reloadRepositoryLocation = ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation | ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReloadNotSupported | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationNotFound | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationLoadFailure;
+export type ReloadRepositoryLocationMutation_reloadRepositoryLocation = ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReadOnlyError | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation | ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReloadNotSupported | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationNotFound | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationLoadFailure;
 
 export interface ReloadRepositoryLocationMutation {
   reloadRepositoryLocation: ReloadRepositoryLocationMutation_reloadRepositoryLocation;
