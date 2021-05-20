@@ -20,16 +20,14 @@ interface DaemonLabelProps {
 const DaemonLabel = (props: DaemonLabelProps) => {
   const {daemon} = props;
   switch (daemon.daemonType) {
-    case 'SCHEDULER':
-      return <div>Scheduler</div>;
-    case 'SENSOR':
-      return <div>Sensors</div>;
     case 'QUEUED_RUN_COORDINATOR':
-      return <div>Run queue</div>;
-    case 'BACKFILL':
-      return <div>Backfill</div>;
+      return <div>Run Queue</div>;
     default:
-      return <div>{daemon.daemonType}</div>;
+      return (
+        <div style={{textTransform: 'capitalize'}}>
+          {daemon.daemonType?.replace('_', ' ').toLowerCase()}
+        </div>
+      );
   }
 };
 
