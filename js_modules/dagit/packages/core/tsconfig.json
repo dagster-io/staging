@@ -2,11 +2,7 @@
   "compilerOptions": {
     "module": "esnext",
     "target": "es5",
-    "lib": [
-      "es6",
-      "dom",
-      "esnext.asynciterable"
-    ],
+    "lib": ["es6", "dom", "esnext.asynciterable", "ESNext.String"],
     "sourceMap": true,
     "allowJs": true,
     "jsx": "react",
@@ -18,10 +14,7 @@
     "strictNullChecks": true,
     "suppressImplicitAnyIndexErrors": true,
     "allowSyntheticDefaultImports": true,
-    "types": [
-      "jest",
-      "node"
-    ],
+    "types": ["jest", "node"],
     "skipLibCheck": true,
     "esModuleInterop": true,
     "strict": false,
@@ -41,9 +34,5 @@
     "scripts",
     "webpack"
   ],
-  "include": [
-    "src",
-    "types",
-    "typings.d.ts"
-  ]
+  "include": ["src", "types", "typings.d.ts"]
 }
