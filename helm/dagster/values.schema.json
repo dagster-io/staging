@@ -1697,6 +1697,16 @@
                     "title": "Enabled",
                     "type": "boolean"
                 },
+                "module": {
+                    "title": "Module",
+                    "default": "QueuedRunCoordinator",
+                    "type": "string"
+                },
+                "class": {
+                    "title": "Class",
+                    "default": "dagster.core.run_coordinator",
+                    "type": "string"
+                },
                 "config": {
                     "title": "Config",
                     "type": "object"
