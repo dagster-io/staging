@@ -1,7 +1,7 @@
 import csv
 import os
 
-from dagster import execute_pipeline, execute_solid, pipeline, solid
+from dagster import execute_pipeline, pipeline, solid, build_solid_context
 
 
 @solid
@@ -12,9 +12,7 @@ def hello_cereal(context):
         # Read the rows in using the standard csv library
         cereals = [row for row in csv.DictReader(fd)]
 
-    context.log.info(
-        "Found {n_cereals} cereals".format(n_cereals=len(cereals))
-    )
+    context.log.info("Found {n_cereals} cereals".format(n_cereals=len(cereals)))
 
     return cereals
 
@@ -31,9 +29,8 @@ if __name__ == "__main__":
 
 # start_hello_cereal_with_tests_marker_0
 def test_hello_cereal_solid():
-    res = execute_solid(hello_cereal)
-    assert res.success
-    assert len(res.output_value()) == 77
+    context = build_solid_context()
+    assert hello_cereal(context) == 77
 
 
 def test_hello_cereal_pipeline():
