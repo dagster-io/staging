@@ -2,11 +2,46 @@ import datetime
 
 from dagster import (
     PresetDefinition,
+    build_schedule_context,
     daily_schedule,
     hourly_schedule,
     monthly_schedule,
+    pipeline,
+    solid,
+    validate_run_config,
     weekly_schedule,
 )
+from dagster.core.test_utils import instance_for_test
+
+
+@hourly_schedule(
+    pipeline_name="test_pipeline",
+    start_date=datetime.datetime(2020, 1, 1),
+    execution_time=datetime.time(hour=0, minute=25),
+    execution_timezone="US/Central",
+)
+def my_hourly_schedule(date):
+    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d %H")}}}}
+
+
+@solid(config_schema={"date": datetime.datetime})
+def process_data_for_date(context):
+    return context.solid_config["date"]
+
+
+@pipeline
+def test_pipeline():
+    process_data_for_date()
+
+
+# start_test_schedule
+def test_hourly_schedule():
+    with instance_for_test() as instance:
+        result = my_hourly_schedule.get_execution_data(build_schedule_context(instance=instance))
+        assert validate_run_config(test_pipeline, result.run_config)
+
+
+# end_test_schedule
 
 # start_hourly_schedule
 
