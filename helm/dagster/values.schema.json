@@ -1697,6 +1697,14 @@
                     "title": "Enabled",
                     "type": "boolean"
                 },
+                "module": {
+                    "title": "Module",
+                    "type": "string"
+                },
+                "class": {
+                    "title": "Class",
+                    "type": "string"
+                },
                 "config": {
                     "title": "Config",
                     "type": "object"
@@ -1704,6 +1712,8 @@
             },
             "required": [
                 "enabled",
+                "module",
+                "class",
                 "config"
             ]
         },
