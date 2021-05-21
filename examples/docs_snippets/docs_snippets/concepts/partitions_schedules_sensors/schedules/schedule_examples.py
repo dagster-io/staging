@@ -2,11 +2,48 @@ import datetime
 
 from dagster import (
     PresetDefinition,
+    build_schedule_context,
     daily_schedule,
     hourly_schedule,
     monthly_schedule,
+    pipeline,
+    solid,
+    validate_run_config,
     weekly_schedule,
 )
+from dagster.core.test_utils import instance_for_test
+
+
+@solid(config_schema={"date": str})
+def process_data_for_date(context):
+    return context.solid_config["date"]
+
+
+@pipeline
+def pipeline_for_test():
+    process_data_for_date()
+
+
+# start_test_schedule
+@hourly_schedule(
+    pipeline_name="test_pipeline",
+    start_date=datetime.datetime(2020, 1, 1),
+    execution_time=datetime.time(hour=0, minute=25),
+    execution_timezone="US/Central",
+)
+def hourly_schedule_to_test(date):
+    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d %H")}}}}
+
+
+def test_hourly_schedule():
+    with instance_for_test() as instance:
+        for run_request in hourly_schedule_to_test.get_execution_data(
+            build_schedule_context(instance=instance)
+        ):
+            assert validate_run_config(pipeline_for_test, run_request.run_config)
+
+
+# end_test_schedule
 
 # start_hourly_schedule
 
@@ -71,7 +108,11 @@ def my_monthly_schedule(date):
 
 # end_monthly_schedule
 
-preset = PresetDefinition("test_preset", mode="basic", run_config={})
+preset = PresetDefinition(
+    "test_preset",
+    mode="basic",
+    run_config={"solids": {"process_data_for_date": {"config": {"date": ""}}}},
+)
 
 # start_preset
 
@@ -102,7 +143,9 @@ def my_preset_schedule(_date):
 )
 def my_modified_preset_schedule(date):
     modified_run_config = preset.run_config.copy()
-    modified_run_config["date"] = date.strftime("%Y-%m-%d")
+    modified_run_config["solids"]["process_data_for_date"]["config"]["date"] = date.strftime(
+        "%Y-%m-%d"
+    )
     return modified_run_config
 
 
