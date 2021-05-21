@@ -8,10 +8,10 @@ description: IO Managers determine how to store solid outputs and load solid inp
 IO Managers are user-provided objects that store solid outputs and load them as inputs to downstream solids.
 
 <Image
-alt="IO Manager Diagram"
-src="/images/io-managers.png"
-width={3200}
-height={1040}
+  alt="IO Manager Diagram"
+  src="/images/io-managers.png"
+  width={3200}
+  height={1040}
 />
 
 ## Relevant APIs
@@ -39,10 +39,10 @@ on a filesystem.
 Each solid output can have its own IOManager, or multiple solid outputs can share an IOManager. The IOManager that's used for handling a particular solid output is automatically used for loading it in downstream solids.
 
 <Image
-alt="two-io-managers"
-src="/images/concepts/two-io-managers.png"
-width={3200}
-height={1040}
+  alt="two-io-managers"
+  src="/images/concepts/two-io-managers.png"
+  width={3200}
+  height={1040}
 />
 
 <!-- https://excalidraw.com/#json=4546514944786432,52cpcHHoWfzOMro2eFC6MQ -->
@@ -300,4 +300,4 @@ class DataframeTableIOManagerWithMetadata(IOManager):
 
 Any entries yielded this way will be attached to the `Handled Output` event for this output.
 
-Additionally, if you have specified that this `handle_output` function will be writing to an asset by defining a `get_output_asset_key` function, these metadata entries will also be attached to the materialization event created for that asset. You can learn more about this functionality in the \[Asset Docs].
+Additionally, if you have specified that this `handle_output` function will be writing to an asset by defining a `get_output_asset_key` function, these metadata entries will also be attached to the materialization event created for that asset. You can learn more about this functionality in the [Asset Docs](/concepts/assets/asset-materializations).
