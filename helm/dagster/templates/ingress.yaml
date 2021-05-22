@@ -31,6 +31,30 @@ spec:
               serviceName: {{ .serviceName }}
               servicePort: {{ .servicePort }}
           {{- end }}
+        - host: {{ .Values.ingress.dagit.host }}
+
+    {{- if .Values.dagit.enableReadOnly }}
+    - host: {{ .Values.ingress.readOnlyDagit.host }}
+      http:
+        paths:
+          {{- range .Values.ingress.readOnlyDagit.precedingPaths }}
+          - path: {{ .path }}
+            backend:
+              serviceName: {{ .serviceName }}
+              servicePort: {{ .servicePort }}
+          {{- end }}
+          - path: {{ .Values.ingress.readOnlyDagit.path | default "/*" }}
+            backend:
+              serviceName: {{ include "dagster.readOnlyDagit.fullname" . }}
+              servicePort: {{ .Values.readOnlyDagit.service.port | default 80 }}
+          {{- range .Values.ingress.readOnlyDagit.succeedingPaths }}
+          - path: {{ .path }}
+            backend:
+              serviceName: {{ .serviceName }}
+              servicePort: {{ .servicePort }}
+          {{- end }}
+    {{end}}
+
     {{- if .Values.flower.enabled }}
     - host: {{ .Values.ingress.flower.host }}
       http:
