@@ -44,55 +44,55 @@ export interface InstanceSensorsQuery_instance {
   daemonHealth: InstanceSensorsQuery_instance_daemonHealth;
 }
 
-export interface InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation {
+export interface InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries_displayMetadata {
+  __typename: "RepositoryMetadata";
+  key: string;
+  value: string;
+}
+
+export interface InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries_location {
   __typename: "RepositoryLocation";
   id: string;
   isReloadSupported: boolean;
   serverId: string | null;
   name: string;
-  loadStatus: RepositoryLocationLoadStatus;
 }
 
-export interface InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_error {
+export interface InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries_loadError {
   __typename: "PythonError";
   message: string;
 }
 
-export interface InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure {
-  __typename: "RepositoryLocationLoadFailure";
+export interface InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries {
+  __typename: "WorkspaceLocationEntry";
   id: string;
   name: string;
-  error: InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure_error;
   loadStatus: RepositoryLocationLoadStatus;
+  displayMetadata: InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries_displayMetadata[];
+  updatedTimestamp: number;
+  location: InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries_location | null;
+  loadError: InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries_loadError | null;
 }
 
-export interface InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading {
-  __typename: "RepositoryLocationLoading";
-  id: string;
-  name: string;
+export interface InstanceSensorsQuery_workspaceOrError_WorkspaceConnection {
+  __typename: "WorkspaceConnection";
+  locationEntries: InstanceSensorsQuery_workspaceOrError_WorkspaceConnection_locationEntries[];
 }
 
-export type InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes = InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation | InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoadFailure | InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocationLoading;
-
-export interface InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection {
-  __typename: "RepositoryLocationConnection";
-  nodes: InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes[];
-}
-
-export interface InstanceSensorsQuery_repositoryLocationsOrError_PythonError_cause {
+export interface InstanceSensorsQuery_workspaceOrError_PythonError_cause {
   __typename: "PythonError";
   message: string;
   stack: string[];
 }
 
-export interface InstanceSensorsQuery_repositoryLocationsOrError_PythonError {
+export interface InstanceSensorsQuery_workspaceOrError_PythonError {
   __typename: "PythonError";
   message: string;
   stack: string[];
-  cause: InstanceSensorsQuery_repositoryLocationsOrError_PythonError_cause | null;
+  cause: InstanceSensorsQuery_workspaceOrError_PythonError_cause | null;
 }
 
-export type InstanceSensorsQuery_repositoryLocationsOrError = InstanceSensorsQuery_repositoryLocationsOrError_RepositoryLocationConnection | InstanceSensorsQuery_repositoryLocationsOrError_PythonError;
+export type InstanceSensorsQuery_workspaceOrError = InstanceSensorsQuery_workspaceOrError_WorkspaceConnection | InstanceSensorsQuery_workspaceOrError_PythonError;
 
 export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_location {
   __typename: "RepositoryLocation";
@@ -314,7 +314,7 @@ export type InstanceSensorsQuery_unloadableJobStatesOrError = InstanceSensorsQue
 
 export interface InstanceSensorsQuery {
   instance: InstanceSensorsQuery_instance;
-  repositoryLocationsOrError: InstanceSensorsQuery_repositoryLocationsOrError;
+  workspaceOrError: InstanceSensorsQuery_workspaceOrError;
   repositoriesOrError: InstanceSensorsQuery_repositoriesOrError;
   unloadableJobStatesOrError: InstanceSensorsQuery_unloadableJobStatesOrError;
 }

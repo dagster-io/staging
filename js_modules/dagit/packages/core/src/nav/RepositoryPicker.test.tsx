@@ -9,13 +9,14 @@ import {RepositoryPicker} from './RepositoryPicker';
 
 describe('RepositoryPicker', () => {
   const defaultMocks = {
-    RepositoryLocationOrLoadFailure: () => ({
-      __typename: 'RepositoryLocation',
+    WorkspaceLocationEntry: () => ({
+      __typename: 'WorkspaceLocationEntry',
+      loadError: null,
     }),
-    RepositoryLocationsOrError: () => ({
-      __typename: 'RepositoryLocationConnection',
+    WorkspaceOrError: () => ({
+      __typename: 'WorkspaceConnection',
     }),
-    RepositoryLocationConnection: () => ({
+    WorkspaceConnection: () => ({
       nodes: () => new MockList(1),
     }),
     RepositoryLocation: () => ({
