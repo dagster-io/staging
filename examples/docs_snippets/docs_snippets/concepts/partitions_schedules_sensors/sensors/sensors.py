@@ -1,6 +1,8 @@
 """isort:skip_file"""
 
 from dagster import repository, SkipReason
+from dagster.core.test_utils import instance_for_test
+from dagster import build_sensor_context, validate_run_config
 
 
 # start_sensor_pipeline_marker
@@ -39,6 +41,25 @@ def my_directory_sensor(_context):
 
 
 # end_directory_sensor_marker
+
+
+# start_sensor_testing
+@sensor(pipeline_name="log_file_pipeline")
+def sensor_to_test(_context):
+    yield RunRequest(
+        run_key="foo",
+        run_config={"solids": {"process_file": {"config": {"filename": "foo"}}}},
+    )
+
+
+def test_sensor():
+    with instance_for_test() as instance:
+        requests = sensor_to_test.get_execution_data(build_sensor_context(instance=instance))
+        for run_request in requests.run_requests:
+            assert validate_run_config(log_file_pipeline, run_request.run_config)
+
+
+# end_sensor_testing
 
 
 def isolated_run_request():
