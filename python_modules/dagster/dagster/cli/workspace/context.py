@@ -70,7 +70,11 @@ class WorkspaceRequestContext(NamedTuple):
         return [entry.load_error for entry in self.workspace_snapshot.values() if entry.load_error]
 
     def get_repository_location(self, name: str) -> RepositoryLocation:
-        return self.workspace_snapshot[name].repository_location
+        repository_location = self.workspace_snapshot[name].repository_location
+        assert isinstance(
+            repository_location, RepositoryLocation
+        ), f"Couldn't get repository location for {name}"
+        return repository_location
 
     def get_load_status(self, name: str) -> WorkspaceLocationLoadStatus:
         return self.workspace_snapshot[name].load_status
@@ -79,7 +83,11 @@ class WorkspaceRequestContext(NamedTuple):
         return self.get_repository_location_error(name) != None
 
     def get_repository_location_error(self, name: str) -> "SerializableErrorInfo":
-        return self.workspace_snapshot[name].load_error
+        load_error = self.workspace_snapshot[name].load_error
+        assert isinstance(
+            load_error, SerializableErrorInfo
+        ), f"No load error for workspace snapshot {name}"
+        return load_error
 
     def has_repository_location(self, name: str) -> bool:
         return self.get_repository_location(name) != None
