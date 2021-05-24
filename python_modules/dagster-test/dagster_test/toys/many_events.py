@@ -7,7 +7,7 @@ from dagster import (
     Output,
     OutputDefinition,
     file_relative_path,
-    pipeline,
+    graph,
     solid,
 )
 
@@ -39,12 +39,12 @@ def create_raw_file_solid(name):
             name
         ),
     )
-    def raw_file_solid(_context):
+    def raw_file_solid(context):
         yield AssetMaterialization(
             asset_key="table_info",
             metadata={"table_path": EventMetadata.path("/path/to/{}.raw".format(name))},
         )
-        yield do_expectation(_context, name)
+        yield do_expectation(context, name)
         yield Output(name)
 
     return raw_file_solid
@@ -75,7 +75,7 @@ def input_name_for_raw_file(raw_file):
     output_defs=[OutputDefinition(Nothing)],
     description="Load a bunch of raw tables from corresponding files",
 )
-def many_table_materializations(_context):
+def many_table_materializations():
     with open(file_relative_path(__file__, MARKDOWN_EXAMPLE), "r") as f:
         md_str = f.read()
         for table in raw_tables:
@@ -100,7 +100,7 @@ def many_table_materializations(_context):
     "where it emits a bunch of tables and then say an expectation on each table, "
     "all in one solid",
 )
-def many_materializations_and_passing_expectations(_context):
+def many_materializations_and_passing_expectations():
     tables = [
         "users",
         "groups",
@@ -131,7 +131,7 @@ def many_materializations_and_passing_expectations(_context):
     output_defs=[],
     description="A solid that just does a couple inline expectations, one of which fails",
 )
-def check_users_and_groups_one_fails_one_succeeds(_context):
+def check_users_and_groups_one_fails_one_succeeds():
     yield ExpectationResult(
         success=True,
         label="user_expectations",
@@ -166,12 +166,12 @@ def check_users_and_groups_one_fails_one_succeeds(_context):
     output_defs=[],
     description="A solid that just does a couple inline expectations",
 )
-def check_admins_both_succeed(_context):
+def check_admins_both_succeed():
     yield ExpectationResult(success=True, label="Group admins check out")
     yield ExpectationResult(success=True, label="Event admins check out")
 
 
-@pipeline(
+@graph(
     description=(
         "Demo pipeline that yields AssetMaterializations and ExpectationResults, along with the "
         "various forms of metadata that can be attached to them."

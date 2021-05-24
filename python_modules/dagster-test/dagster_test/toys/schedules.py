@@ -5,6 +5,8 @@ from dagster import PartitionSetDefinition, ScheduleExecutionContext
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.utils.partitions import date_partition_range
 
+from .many_events import many_events
+
 
 def _fetch_runs_by_partition(instance, partition_set_def, status_filters=None):
     # query runs db for this partition set
@@ -160,7 +162,7 @@ def get_toys_schedules():
         ScheduleDefinition(
             name="many_events_every_min",
             cron_schedule="* * * * *",
-            pipeline_name="many_events",
+            job=many_events,
             run_config_fn=lambda _: {"intermediate_storage": {"filesystem": {}}},
             execution_timezone=_toys_tz_info(),
         ),

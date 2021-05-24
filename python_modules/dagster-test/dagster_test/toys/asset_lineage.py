@@ -10,12 +10,11 @@ from dagster import (
     EventMetadata,
     EventMetadataEntry,
     Field,
-    ModeDefinition,
     Output,
     OutputDefinition,
     Partition,
     PartitionSetDefinition,
-    pipeline,
+    graph,
     solid,
 )
 from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
@@ -178,7 +177,10 @@ def daily_top_action(_, df1, df2):
     return Output(df, metadata={"data": EventMetadata.md(df.to_markdown())})
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"my_db_io_manager": my_db_io_manager})])
+@graph
 def asset_lineage_pipeline():
     reviews, comments = split_action_types(download_data())
     daily_top_action(top_10_reviews(reviews), top_10_comments(comments))
+
+
+asset_lineage_pipeline = asset_lineage_pipeline.to_job({"my_db_io_manager": my_db_io_manager})

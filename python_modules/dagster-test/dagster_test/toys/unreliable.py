@@ -1,6 +1,6 @@
 from random import random
 
-from dagster import Field, pipeline, solid
+from dagster import Field, graph, solid
 
 DEFAULT_EXCEPTION_RATE = 0.3
 
@@ -20,7 +20,7 @@ def unreliable(context, num):
     return num
 
 
-@pipeline(description="Demo pipeline of chained solids that fail with a configurable probability.")
+@graph(description="Demo pipeline of chained solids that fail with a configurable probability.")
 def unreliable_pipeline():
     one = unreliable.alias("one")
     two = unreliable.alias("two")

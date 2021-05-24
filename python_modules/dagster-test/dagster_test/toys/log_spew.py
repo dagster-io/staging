@@ -1,6 +1,6 @@
 import time
 
-from dagster import InputDefinition, Output, OutputDefinition, pipeline, solid
+from dagster import InputDefinition, Output, OutputDefinition, graph, solid
 
 
 def nonce_solid(name, n_inputs, n_outputs):
@@ -32,9 +32,7 @@ def nonce_solid(name, n_inputs, n_outputs):
     return solid_fn
 
 
-@pipeline(
-    description="Demo pipeline that spits out different types of log messages to the event log."
-)
+@graph(description="Demo pipeline that spits out different types of log messages to the event log.")
 def log_spew():
     one_in_one_out = nonce_solid("one_in_one_out", 1, 1)
     two_in_one_out = nonce_solid("two_in_one_out", 2, 1)

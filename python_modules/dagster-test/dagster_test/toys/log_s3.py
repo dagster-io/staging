@@ -1,4 +1,4 @@
-from dagster import AssetKey, AssetMaterialization, EventMetadata, Field, Output, pipeline, solid
+from dagster import AssetKey, AssetMaterialization, EventMetadata, Field, Output, graph, solid
 
 
 @solid(
@@ -19,6 +19,6 @@ def read_s3_key(context):
     yield Output(path)
 
 
-@pipeline(description="Demo pipeline that spits out some file info, given a path")
+@graph(description="Demo pipeline that spits out some file info, given a path")
 def log_s3_pipeline():
     read_s3_key()

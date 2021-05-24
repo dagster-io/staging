@@ -174,18 +174,3 @@ def error_monster():
     start = emit_num.alias("start")()
     middle = num_to_str.alias("middle")(num=start)
     str_to_num.alias("end")(string=middle)
-
-
-if __name__ == "__main__":
-    result = execute_pipeline(
-        error_monster,
-        {
-            "solids": {
-                "start": {"config": {"throw_in_solid": False, "return_wrong_type": False}},
-                "middle": {"config": {"throw_in_solid": False, "return_wrong_type": True}},
-                "end": {"config": {"throw_in_solid": False, "return_wrong_type": False}},
-            },
-            "resources": {"errorable_resource": {"config": {"throw_on_resource_init": False}}},
-        },
-    )
-    print("Pipeline Success: ", result.success)

@@ -6,11 +6,10 @@ from random import random
 from dagster import (
     AssetMaterialization,
     InputDefinition,
-    ModeDefinition,
     Nothing,
     OutputDefinition,
     fs_io_manager,
-    pipeline,
+    graph,
     solid,
 )
 from dagster.utils.partitions import DEFAULT_DATE_FORMAT
@@ -91,13 +90,12 @@ def make_solid(
     return made_solid
 
 
-@pipeline(
+@graph(
     description=(
         "Demo pipeline that simulates updating tables of users and video views and training a "
         "video recommendation model. The growth of execution-time and data-throughput follows"
         "a sigmoidal curve."
     ),
-    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})],
 )
 def longitudinal_pipeline():
     ingest_raw_video_views = make_solid(
@@ -140,3 +138,6 @@ def longitudinal_pipeline():
     video_views = update_video_views_table(ingest_raw_video_views())
     users = update_users_table(ingest_raw_users())
     train_video_recommender_model([video_views, users])
+
+
+longitudinal_pipeline = longitudinal_pipeline.to_job({"io_manager": fs_io_manager})

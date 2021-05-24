@@ -1,13 +1,14 @@
-from dagster import repository
+from dagster import repository, ExperimentalWarning  # isort:skip
+import warnings  # isort:skip
+
+warnings.filterwarnings("ignore", category=ExperimentalWarning)
+
 from dagster_test.toys.asset_lineage import asset_lineage_partition_set, asset_lineage_pipeline
 from dagster_test.toys.branches import branch_pipeline
 from dagster_test.toys.composition import composition
 from dagster_test.toys.dynamic import dynamic_pipeline
 from dagster_test.toys.error_monster import error_monster
 from dagster_test.toys.hammer import hammer_pipeline
-from dagster_test.toys.log_asset import log_asset_pipeline
-from dagster_test.toys.log_file import log_file_pipeline
-from dagster_test.toys.log_s3 import log_s3_pipeline
 from dagster_test.toys.log_spew import log_spew
 from dagster_test.toys.longitudinal import longitudinal_pipeline
 from dagster_test.toys.many_events import many_events
@@ -26,9 +27,6 @@ def toys_repository():
             composition,
             error_monster,
             hammer_pipeline,
-            log_asset_pipeline,
-            log_file_pipeline,
-            log_s3_pipeline,
             log_spew,
             longitudinal_pipeline,
             many_events,
