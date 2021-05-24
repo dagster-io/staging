@@ -55,7 +55,6 @@ const ROOT_REPOSITORIES_QUERY = gql`
           updatedTimestamp
           location {
             id
-            loadStatus
             isReloadSupported
             serverId
             name

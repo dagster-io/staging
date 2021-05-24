@@ -14,7 +14,59 @@ from dagster_graphql.test.utils import execute_dagster_graphql
 
 from .graphql_context_test_suite import GraphQLContextVariant, make_graphql_context_test_suite
 
-# import dagster.api.utils
+RELOAD_REPOSITORY_LOCATION_QUERY = """
+mutation ($repositoryLocationName: String!) {
+   reloadRepositoryLocation(repositoryLocationName: $repositoryLocationName) {
+      __typename
+      ... on WorkspaceLocationEntry {
+        id
+        name
+        loadStatus
+        location {
+            name
+            repositories {
+            name
+            displayMetadata {
+                key
+                value
+            }
+            }
+            isReloadSupported
+        }
+        loadError {
+            message
+        }
+      }
+   }
+}
+"""
+
+RELOAD_WORKSPACE_QUERY = """
+mutation {
+   reloadWorkspace {
+      __typename
+      ... on WorkspaceConnection {
+        locationEntries {
+          __typename
+          id
+          name
+          loadStatus
+          location {
+            id
+            name
+            repositories {
+              name
+            }
+            isReloadSupported
+          }
+          loadError {
+            message
+          }
+        }
+      }
+  }
+}
+"""
 
 
 class TestReloadWorkspace(
@@ -28,13 +80,13 @@ class TestReloadWorkspace(
         assert result
         assert result.data
         assert result.data["reloadWorkspace"]
-        assert result.data["reloadWorkspace"]["__typename"] == "RepositoryLocationConnection"
+        assert result.data["reloadWorkspace"]["__typename"] == "WorkspaceConnection"
 
-        nodes = result.data["reloadWorkspace"]["nodes"]
+        nodes = result.data["reloadWorkspace"]["locationEntries"]
 
         assert len(nodes) == 2
 
-        assert all([node["__typename"] == "RepositoryLocation" for node in nodes])
+        assert all([node.get("location") for node in nodes])
 
         original_origins = location_origins_from_yaml_paths(
             [file_relative_path(__file__, "multi_location.yaml")]
@@ -53,18 +105,13 @@ class TestReloadWorkspace(
             assert result
             assert result.data
             assert result.data["reloadWorkspace"]
-            assert result.data["reloadWorkspace"]["__typename"] == "RepositoryLocationConnection"
+            assert result.data["reloadWorkspace"]["__typename"] == "WorkspaceConnection"
 
-            nodes = result.data["reloadWorkspace"]["nodes"]
+            nodes = result.data["reloadWorkspace"]["locationEntries"]
 
             assert len(nodes) == 1
 
-            assert all(
-                [
-                    node["__typename"] == "RepositoryLocation" and node["loadStatus"] == "LOADED"
-                    for node in nodes
-                ]
-            )
+            assert all([node.get("location") and node["loadStatus"] == "LOADED" for node in nodes])
 
             # Simulate adding an origin with an error, reload
 
@@ -84,9 +131,9 @@ class TestReloadWorkspace(
             assert result
             assert result.data
             assert result.data["reloadWorkspace"]
-            assert result.data["reloadWorkspace"]["__typename"] == "RepositoryLocationConnection"
+            assert result.data["reloadWorkspace"]["__typename"] == "WorkspaceConnection"
 
-            nodes = result.data["reloadWorkspace"]["nodes"]
+            nodes = result.data["reloadWorkspace"]["locationEntries"]
             assert len(nodes) == 3
 
             assert (
@@ -94,15 +141,12 @@ class TestReloadWorkspace(
                     [
                         node
                         for node in nodes
-                        if node["__typename"] == "RepositoryLocation"
-                        and node["loadStatus"] == "LOADED"
+                        if node.get("location") and node["loadStatus"] == "LOADED"
                     ]
                 )
                 == 2
             )
-            failures = [
-                node for node in nodes if node["__typename"] == "RepositoryLocationLoadFailure"
-            ]
+            failures = [node for node in nodes if node.get("loadError")]
             assert len(failures) == 1
             assert failures[0]["name"] == "error_location"
             assert failures[0]["loadStatus"] == "LOADED"
@@ -114,13 +158,11 @@ class TestReloadWorkspace(
 
             result = execute_dagster_graphql(graphql_context, RELOAD_WORKSPACE_QUERY)
 
-            nodes = result.data["reloadWorkspace"]["nodes"]
+            nodes = result.data["reloadWorkspace"]["locationEntries"]
             assert len(nodes) == 4
 
-            assert len([node for node in nodes if node["__typename"] == "RepositoryLocation"]) == 3
-            failures = [
-                node for node in nodes if node["__typename"] == "RepositoryLocationLoadFailure"
-            ]
+            assert len([node for node in nodes if node.get("location")]) == 3
+            failures = [node for node in nodes if node.get("loadError")]
             assert len(failures) == 1
 
             assert "location_copy" in [node["name"] for node in nodes]
@@ -132,13 +174,11 @@ class TestReloadWorkspace(
 
             result = execute_dagster_graphql(graphql_context, RELOAD_WORKSPACE_QUERY)
 
-            nodes = result.data["reloadWorkspace"]["nodes"]
+            nodes = result.data["reloadWorkspace"]["locationEntries"]
             assert len(nodes) == 4
 
-            assert len([node for node in nodes if node["__typename"] == "RepositoryLocation"]) == 3
-            failures = [
-                node for node in nodes if node["__typename"] == "RepositoryLocationLoadFailure"
-            ]
+            assert len([node for node in nodes if node.get("location")]) == 3
+            failures = [node for node in nodes if node.get("loadError")]
             assert len(failures) == 1
 
             assert "new_location_name" in [node["name"] for node in nodes]
@@ -159,13 +199,13 @@ class TestReloadRepositoriesOutOfProcess(
         assert result
         assert result.data
         assert result.data["reloadRepositoryLocation"]
-        assert result.data["reloadRepositoryLocation"]["__typename"] == "RepositoryLocation"
+        assert result.data["reloadRepositoryLocation"]["__typename"] == "WorkspaceLocationEntry"
         assert result.data["reloadRepositoryLocation"]["name"] == "test"
-        repositories = result.data["reloadRepositoryLocation"]["repositories"]
+        repositories = result.data["reloadRepositoryLocation"]["location"]["repositories"]
         assert len(repositories) == 1
         assert repositories[0]["name"] == "test_repo"
 
-        assert result.data["reloadRepositoryLocation"]["isReloadSupported"] is True
+        assert result.data["reloadRepositoryLocation"]["location"]["isReloadSupported"] is True
 
         with mock.patch(
             # note it where the function is *used* that needs to mocked, not
@@ -206,7 +246,7 @@ class TestReloadRepositoriesOutOfProcess(
                 assert cli_command_mock.call_count == 1
                 assert external_repository_mock.call_count == 1
 
-                repositories = result.data["reloadRepositoryLocation"]["repositories"]
+                repositories = result.data["reloadRepositoryLocation"]["location"]["repositories"]
                 assert len(repositories) == 1
                 assert repositories[0]["name"] == "new_repo"
 
@@ -218,12 +258,12 @@ class TestReloadRepositoriesOutOfProcess(
         assert result
         assert result.data
         assert result.data["reloadRepositoryLocation"]
-        assert result.data["reloadRepositoryLocation"]["__typename"] == "RepositoryLocation"
+        assert result.data["reloadRepositoryLocation"]["location"]
         assert result.data["reloadRepositoryLocation"]["name"] == "test"
-        repositories = result.data["reloadRepositoryLocation"]["repositories"]
+        repositories = result.data["reloadRepositoryLocation"]["location"]["repositories"]
         assert len(repositories) == 1
         assert repositories[0]["name"] == "test_repo"
-        assert result.data["reloadRepositoryLocation"]["isReloadSupported"] is True
+        assert result.data["reloadRepositoryLocation"]["location"]["isReloadSupported"] is True
 
         with mock.patch(
             # note it where the function is *used* that needs to mocked, not
@@ -242,14 +282,11 @@ class TestReloadRepositoriesOutOfProcess(
             assert result
             assert result.data
             assert result.data["reloadRepositoryLocation"]
-            assert (
-                result.data["reloadRepositoryLocation"]["__typename"]
-                == "RepositoryLocationLoadFailure"
-            )
+            assert result.data["reloadRepositoryLocation"]["loadError"]
             assert result.data["reloadRepositoryLocation"]["name"] == "test"
             assert (
                 "Mocked repository load failure"
-                in result.data["reloadRepositoryLocation"]["error"]["message"]
+                in result.data["reloadRepositoryLocation"]["loadError"]["message"]
             )
 
             # Verify failure is idempotent
@@ -262,14 +299,11 @@ class TestReloadRepositoriesOutOfProcess(
             assert result
             assert result.data
             assert result.data["reloadRepositoryLocation"]
-            assert (
-                result.data["reloadRepositoryLocation"]["__typename"]
-                == "RepositoryLocationLoadFailure"
-            )
+            assert result.data["reloadRepositoryLocation"]["loadError"]
             assert result.data["reloadRepositoryLocation"]["name"] == "test"
             assert (
                 "Mocked repository load failure"
-                in result.data["reloadRepositoryLocation"]["error"]["message"]
+                in result.data["reloadRepositoryLocation"]["loadError"]["message"]
             )
 
         # can be reloaded again successfully
@@ -282,71 +316,13 @@ class TestReloadRepositoriesOutOfProcess(
         assert result
         assert result.data
         assert result.data["reloadRepositoryLocation"]
-        assert result.data["reloadRepositoryLocation"]["__typename"] == "RepositoryLocation"
+        assert result.data["reloadRepositoryLocation"]["location"]
         assert result.data["reloadRepositoryLocation"]["name"] == "test"
         assert result.data["reloadRepositoryLocation"]["loadStatus"] == "LOADED"
-        repositories = result.data["reloadRepositoryLocation"]["repositories"]
+        repositories = result.data["reloadRepositoryLocation"]["location"]["repositories"]
         assert len(repositories) == 1
         assert repositories[0]["name"] == "test_repo"
-        assert result.data["reloadRepositoryLocation"]["isReloadSupported"] is True
-
-
-RELOAD_REPOSITORY_LOCATION_QUERY = """
-mutation ($repositoryLocationName: String!) {
-   reloadRepositoryLocation(repositoryLocationName: $repositoryLocationName) {
-      __typename
-      ... on RepositoryLocation {
-        name
-        repositories {
-          name
-          displayMetadata {
-            key
-            value
-          }
-        }
-        isReloadSupported
-        loadStatus
-      }
-      ... on RepositoryLocationLoadFailure {
-          name
-          error {
-              message
-          }
-          loadStatus
-      }
-   }
-}
-"""
-
-RELOAD_WORKSPACE_QUERY = """
-mutation {
-   reloadWorkspace {
-      __typename
-      ... on RepositoryLocationConnection {
-        nodes {
-          __typename
-          ... on RepositoryLocation {
-            id
-            name
-            loadStatus
-            repositories {
-              name
-            }
-            isReloadSupported
-          }
-          ... on RepositoryLocationLoadFailure {
-            id
-            name
-            loadStatus
-            error {
-              message
-            }
-          }
-        }
-      }
-    }
-}
-"""
+        assert result.data["reloadRepositoryLocation"]["location"]["isReloadSupported"] is True
 
 
 class TestReloadRepositoriesManagedGrpc(
@@ -364,11 +340,11 @@ class TestReloadRepositoriesManagedGrpc(
         assert result
         assert result.data
         assert result.data["reloadRepositoryLocation"]
-        assert result.data["reloadRepositoryLocation"]["__typename"] == "RepositoryLocation"
+        assert result.data["reloadRepositoryLocation"]["location"]
         assert result.data["reloadRepositoryLocation"]["name"] == "test"
         assert result.data["reloadRepositoryLocation"]["loadStatus"] == "LOADED"
 
-        repositories = result.data["reloadRepositoryLocation"]["repositories"]
+        repositories = result.data["reloadRepositoryLocation"]["location"]["repositories"]
         assert len(repositories) == 1
         assert repositories[0]["name"] == "test_repo"
 
@@ -381,4 +357,4 @@ class TestReloadRepositoriesManagedGrpc(
             or "package_name" in metadata_dict
         )
 
-        assert result.data["reloadRepositoryLocation"]["isReloadSupported"] is True
+        assert result.data["reloadRepositoryLocation"]["location"]["isReloadSupported"] is True

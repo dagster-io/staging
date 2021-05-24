@@ -35,7 +35,7 @@ export const useReloadWorkspace = () => {
       return;
     }
 
-    const {nodes} = data.reloadWorkspace;
+    const {locationEntries} = data.reloadWorkspace;
     SharedToaster.show({
       message: 'Workspace reloaded',
       timeout: 3000,
@@ -43,9 +43,9 @@ export const useReloadWorkspace = () => {
       intent: Intent.SUCCESS,
     });
 
-    const reposToInvalidate = nodes.reduce((accum, location) => {
-      if (location.__typename === 'RepositoryLocation') {
-        return [...accum, ...location.repositories];
+    const reposToInvalidate = locationEntries.reduce((accum, locationEntry) => {
+      if (locationEntry.location) {
+        return [...accum, ...locationEntry.location.repositories];
       }
       return accum;
     }, []);
@@ -60,9 +60,13 @@ export const useReloadWorkspace = () => {
 const RELOAD_WORKSPACE_MUTATION = gql`
   mutation ReloadWorkspaceMutation {
     reloadWorkspace {
-      ... on RepositoryLocationConnection {
-        nodes {
-          ... on RepositoryLocation {
+      ... on WorkspaceConnection {
+        locationEntries {
+          __typename
+          name
+          id
+          loadStatus
+          location {
             id
             repositories {
               id
@@ -73,11 +77,8 @@ const RELOAD_WORKSPACE_MUTATION = gql`
               }
             }
           }
-          ... on RepositoryLocationLoadFailure {
-            id
-            error {
-              message
-            }
+          loadError {
+            message
           }
         }
       }
