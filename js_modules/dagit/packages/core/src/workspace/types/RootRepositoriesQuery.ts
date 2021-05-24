@@ -54,7 +54,6 @@ export interface RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_node
 export interface RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes_locationOrLoadError_RepositoryLocation {
   __typename: "RepositoryLocation";
   id: string;
-  loadStatus: RepositoryLocationLoadStatus;
   isReloadSupported: boolean;
   serverId: string | null;
   name: string;
