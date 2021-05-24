@@ -109,11 +109,9 @@ class WorkspaceRequestContext(NamedTuple):
         )
 
     def get_full_external_pipeline(self, selector: PipelineSelector) -> ExternalPipeline:
-        return (
-            self.get_repository_location(selector.location_name)
-            .get_repository(selector.repository_name)
-            .get_full_external_pipeline(selector.pipeline_name)
-        )
+        return self.get_repository_location(selector.location_name).get_repository(
+            selector.repository_name
+        ).get_full_external_pipeline(selector.pipeline_name)
 
     def get_external_execution_plan(
         self,
@@ -123,9 +121,7 @@ class WorkspaceRequestContext(NamedTuple):
         step_keys_to_execute: List[str],
         known_state: KnownExecutionState,
     ) -> ExternalExecutionPlan:
-        return self.get_repository_location(
-            external_pipeline.handle.location_name
-        ).get_external_execution_plan(
+        return self.get_repository_location(external_pipeline.handle.location_name).get_external_execution_plan(
             external_pipeline=external_pipeline,
             run_config=run_config,
             mode=mode,
@@ -160,7 +156,9 @@ class WorkspaceRequestContext(NamedTuple):
     ) -> Union["ExternalPartitionNamesData", "ExternalPartitionExecutionErrorData"]:
         return self.get_repository_location(
             repository_handle.repository_location.name
-        ).get_external_partition_names(repository_handle, partition_set_name)
+        ).get_external_partition_names(
+            repository_handle, partition_set_name
+        )
 
     def get_external_partition_set_execution_param_data(
         self,
