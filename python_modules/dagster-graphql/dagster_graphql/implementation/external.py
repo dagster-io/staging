@@ -196,23 +196,16 @@ def fetch_repository_location(workspace_request_context, location_name):
         GrapheneRepositoryLocationLoading,
     )
 
-    load_status = workspace_request_context.get_load_status(location_name)
     if workspace_request_context.has_repository_location(location_name):
         return GrapheneRepositoryLocation(
             workspace_request_context.get_repository_location(location_name),
-            load_status,
         )
     elif workspace_request_context.has_repository_location_error(location_name):
         return GrapheneRepositoryLocationLoadFailure(
             location_name,
             workspace_request_context.get_repository_location_error(location_name),
-            load_status,
         )
     else:
-        check.invariant(
-            load_status == WorkspaceLocationLoadStatus.LOADING,
-            f"Location {location_name} was not in a loaded, error, or loading state",
-        )
         return GrapheneRepositoryLocationLoading(location_name)
 
 
@@ -230,3 +223,19 @@ def fetch_repository_locations(workspace_request_context):
     ]
 
     return GrapheneRepositoryLocationConnection(nodes=nodes)
+
+
+@capture_error
+def fetch_workspace(workspace_request_context):
+    from ..schema.external import GrapheneWorkspaceConnection, GrapheneWorkspaceLocationEntry
+
+    check.inst_param(
+        workspace_request_context, "workspace_request_context", WorkspaceRequestContext
+    )
+
+    nodes = [
+        GrapheneWorkspaceLocationEntry(entry)
+        for entry in workspace_request_context.workspace_snapshot.values()
+    ]
+
+    return GrapheneWorkspaceConnection(locationEntries=nodes)
