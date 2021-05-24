@@ -4,10 +4,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "dagster.dagit.fullname" . }}
+  name: {{ include "dagster.dagit.fullname" . }} {{- if .dagitReadOnly -}} -read-only {{- end }}
   labels:
     {{- include "dagster.labels" . | nindent 4 }}
-    component: dagit
+    component: dagit {{- if .dagitReadOnly -}} -read-only {{- end }}
   annotations:
     {{- range $key, $value := .Values.dagit.annotations }}
     {{ $key }}: {{ $value | squote }}
@@ -17,12 +17,12 @@ spec:
   selector:
     matchLabels:
       {{- include "dagster.selectorLabels" . | nindent 6 }}
-      component: dagit
+      component: dagit {{- if .dagitReadOnly -}} -read-only {{- end }}
   template:
     metadata:
       labels:
         {{- include "dagster.selectorLabels" . | nindent 8 }}
-        component: dagit
+        component: dagit {{- if .dagitReadOnly -}} -read-only {{- end }}
       annotations:
         checksum/dagster-workspace: {{ include (print $.Template.BasePath "/configmap-workspace.yaml") . | sha256sum }}
         checksum/dagster-instance: {{ include (print $.Template.BasePath "/configmap-instance.yaml") . | sha256sum }}
@@ -60,7 +60,7 @@ spec:
           command: [
             "/bin/bash",
             "-c",
-            "{{ template "dagster.dagit.dagitCommand" $ }} {{ .dagitExtraCommandArgs -}}"
+            "{{ template "dagster.dagit.dagitCommand" $ }} {{ if .dagitReadOnly -}} --read-only {{- end -}}"
           ]
           env:
             - name: DAGSTER_PG_PASSWORD
