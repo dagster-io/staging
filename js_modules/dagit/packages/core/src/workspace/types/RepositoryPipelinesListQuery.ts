@@ -14,6 +14,11 @@ export interface RepositoryPipelinesListQuery_repositoryOrError_PythonError {
   __typename: "PythonError";
 }
 
+export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_modes {
+  __typename: "Mode";
+  name: string;
+}
+
 export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_runs {
   __typename: "PipelineRun";
   id: string;
@@ -38,6 +43,7 @@ export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipel
   id: string;
   description: string | null;
   name: string;
+  modes: RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_modes[];
   runs: RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_runs[];
   schedules: RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_schedules[];
   sensors: RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_sensors[];

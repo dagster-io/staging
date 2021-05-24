@@ -4,6 +4,7 @@ import React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
+import {featureEnabled, FeatureFlag} from '../app/Util';
 import {Box} from '../ui/Box';
 import {DagsterRepoOption} from '../workspace/WorkspaceContext';
 import {buildRepoPath} from '../workspace/buildRepoAddress';
@@ -22,6 +23,8 @@ interface RepositoryContentListProps {
 type Item = {
   to: string;
   label: string;
+  labelEl?: React.ReactNode;
+  repoPath: string;
 };
 
 export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
@@ -32,7 +35,7 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
 }) => {
   const client = useApolloClient();
   const [type, setType] = React.useState<'pipelines' | 'solids'>('pipelines');
-  const [selectedSolids, setSelectedSolids] = React.useState(() => []);
+  const [selectedSolids, setSelectedSolids] = React.useState<Item[]>(() => []);
 
   const pipelineTab = tabForPipelinePathComponent(tab);
 
@@ -55,53 +58,59 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
       );
 
       const results = await Promise.all(promises);
-      const allSolids = Array.prototype.concat
-        .apply(
-          [],
-          results.map((result) => {
-            if (result.data.repositoryOrError.__typename === 'Repository') {
-              const name = result.data.repositoryOrError.name;
-              const location = result.data.repositoryOrError.location.name;
-              const solids = result.data.repositoryOrError.usedSolids;
-              return solids.map((solid) => ({
-                to: workspacePath(name, location, `/solids/${solid.definition.name}`),
-                label: solid.definition.name,
-                repoPath: buildRepoPath(name, location),
-              }));
-            }
-            return [];
-          }),
-        )
-        .sort((a: Item, b: Item) =>
-          a.label.toLocaleLowerCase().localeCompare(b.label.toLocaleLowerCase()),
-        );
+      const items: Item[] = [];
+      for (const result of results) {
+        if (result.data.repositoryOrError.__typename === 'Repository') {
+          const name = result.data.repositoryOrError.name;
+          const location = result.data.repositoryOrError.location.name;
+          const solids = result.data.repositoryOrError.usedSolids;
+          items.push(
+            ...solids.map((solid) => ({
+              to: workspacePath(name, location, `/solids/${solid.definition.name}`),
+              label: solid.definition.name,
+              repoPath: buildRepoPath(name, location),
+            })),
+          );
+        }
+      }
 
-      setSelectedSolids(allSolids);
+      setSelectedSolids(items);
     };
 
     fetchSolids();
   }, [client, repos, type]);
 
   const selectedPipelines = React.useMemo(() => {
-    return repos
-      .reduce(
-        (accum, repo) => [
-          ...accum,
-          ...repo.repository.pipelines
-            .map((pipeline) => pipeline.name)
-            .map((p) => ({
-              to: workspacePath(
-                repo.repository.name,
-                repo.repositoryLocation.name,
-                `/pipelines/${p}/${tab === 'partitions' ? 'overview' : pipelineTab.pathComponent}`,
-              ),
-              label: p,
-              repoPath: buildRepoPath(repo.repository.name, repo.repositoryLocation.name),
-            })),
-        ],
-        [],
-      )
-      .sort((a, b) => a.label.toLocaleLowerCase().localeCompare(b.label.toLocaleLowerCase()));
+    const items: Item[] = [];
+    const showModeTuples = featureEnabled(FeatureFlag.PipelineModeTuples);
+
+    for (const repo of repos) {
+      for (const pipeline of repo.repository.pipelines) {
+        for (const mode of pipeline.modes) {
+          items.push({
+            to: workspacePath(
+              repo.repository.name,
+              repo.repositoryLocation.name,
+              `/pipelines/${pipeline.name}:${mode.name}/${
+                tab === 'partitions' ? 'overview' : pipelineTab.pathComponent
+              }`,
+            ),
+            label: showModeTuples ? `${pipeline.name}:${mode.name}` : pipeline.name,
+            labelEl: showModeTuples && (
+              <span>
+                {pipeline.name}
+                {mode.name !== 'default' ? <span style={{opacity: 0.6}}> : {mode.name}</span> : ''}
+              </span>
+            ),
+            repoPath: buildRepoPath(repo.repository.name, repo.repositoryLocation.name),
+          });
+          if (!showModeTuples) {
+            break;
+          }
+        }
+      }
+    }
+    return items;
   }, [pipelineTab.pathComponent, repos, tab]);
 
   const items = type === 'pipelines' ? selectedPipelines : selectedSolids;
@@ -132,17 +141,21 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
         </ButtonGroup>
       </Box>
       <Items>
-        {items.map((p) => (
-          <Item
-            key={p.to}
-            data-tooltip={p.label}
-            data-tooltip-style={p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle}
-            className={`${p.label === selector && p.repoPath === repoPath ? 'selected' : ''}`}
-            to={p.to}
-          >
-            {p.label}
-          </Item>
-        ))}
+        {items
+          .sort((a, b) => a.label.toLocaleLowerCase().localeCompare(b.label.toLocaleLowerCase()))
+          .map((p) => (
+            <Item
+              key={p.to}
+              data-tooltip={p.label}
+              data-tooltip-style={
+                p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle
+              }
+              className={`${p.label === selector && p.repoPath === repoPath ? 'selected' : ''}`}
+              to={p.to}
+            >
+              {p.labelEl || p.label}
+            </Item>
+          ))}
       </Items>
     </Box>
   );
