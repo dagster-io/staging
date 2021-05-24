@@ -10,11 +10,17 @@ import { RepositoryLocationLoadStatus } from "./../../types/globalTypes";
 // GraphQL query operation: RootRepositoriesQuery
 // ====================================================
 
+export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_pipelines_modes {
+  __typename: "Mode";
+  name: string;
+}
+
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_pipelines {
   __typename: "Pipeline";
   id: string;
   name: string;
   pipelineSnapshotId: string;
+  modes: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_pipelines_modes[];
 }
 
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_partitionSets {

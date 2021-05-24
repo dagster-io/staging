@@ -10,7 +10,7 @@ import {Table} from '../ui/Table';
 import {Caption} from '../ui/Text';
 import {repoAddressAsString} from '../workspace/repoAddressAsString';
 import {RepoAddress} from '../workspace/types';
-import {workspacePathFromAddress} from '../workspace/workspacePath';
+import {workspacePathFromAddress, workspacePipelinePath} from '../workspace/workspacePath';
 
 import {PipelineTableFragment} from './types/PipelineTableFragment';
 
@@ -39,7 +39,14 @@ export const PipelineTable: React.FC<Props> = (props) => {
           <tr key={`${pipeline.name}-${repoAddressAsString(repoAddress)}`}>
             <td>
               <Group direction="column" spacing={4}>
-                <Link to={workspacePathFromAddress(repoAddress, `/pipelines/${pipeline.name}`)}>
+                <Link
+                  to={workspacePipelinePath(
+                    repoAddress.name,
+                    repoAddress.location,
+                    pipeline.name,
+                    pipeline.modes[0].name,
+                  )}
+                >
                   <span style={{fontWeight: 500}}>{pipeline.name}</span>
                 </Link>
                 {showRepo ? <Caption>{repoAddressAsString(repoAddress)}</Caption> : null}
@@ -107,6 +114,9 @@ export const PIPELINE_TABLE_FRAGMENT = gql`
     id
     description
     name
+    modes {
+      name
+    }
     runs(limit: 5) {
       id
       runId

@@ -58,6 +58,9 @@ const ROOT_REPOSITORIES_QUERY = gql`
                 id
                 name
                 pipelineSnapshotId
+                modes {
+                  name
+                }
               }
               partitionSets {
                 id

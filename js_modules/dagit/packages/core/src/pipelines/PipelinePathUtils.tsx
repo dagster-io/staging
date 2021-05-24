@@ -5,6 +5,7 @@ import {FontFamily} from '../ui/styles';
 
 export interface PipelineExplorerPath {
   pipelineName: string;
+  pipelineMode: string;
   snapshotId?: string;
   solidsQuery: string;
   pathSolids: string[];
@@ -14,7 +15,9 @@ export function explorerPathToString(path: PipelineExplorerPath) {
   const root = [
     path.pipelineName,
     path.snapshotId ? `@${path.snapshotId}` : ``,
-    path.solidsQuery ? `:${path.solidsQuery}` : ``,
+    ':',
+    path.pipelineMode,
+    path.solidsQuery ? `~${path.solidsQuery}` : ``,
   ].join('');
 
   return `${root}/${path.pathSolids.join('/')}`;
@@ -22,11 +25,18 @@ export function explorerPathToString(path: PipelineExplorerPath) {
 
 export function explorerPathFromString(path: string) {
   const [root, ...pathSolids] = path.split('/');
-  const match = /^([^:@]+)@?([^:]+)?:?(.*)$/.exec(root);
-  const [, pipelineName, snapshotId, solidsQuery] = [...(match || []), '', '', ''];
+  const match = /^([^:@~]+)@?([^:~]+)?:([^:~]+)~?(.*)$/.exec(root);
+  const [, pipelineName, snapshotId, pipelineMode, solidsQuery] = [
+    ...(match || []),
+    '',
+    '',
+    '',
+    '',
+  ];
 
   return {
     pipelineName,
+    pipelineMode,
     snapshotId,
     solidsQuery,
     pathSolids,
@@ -35,10 +45,12 @@ export function explorerPathFromString(path: string) {
 
 export const PipelineSnapshotLink: React.FunctionComponent<{
   pipelineName: string;
+  pipelineMode: string;
   snapshotId: string;
 }> = (props) => {
   const snapshotLink = `/instance/snapshots/${explorerPathToString({
     pipelineName: props.pipelineName,
+    pipelineMode: props.pipelineMode,
     snapshotId: props.snapshotId,
     solidsQuery: '',
     pathSolids: [],

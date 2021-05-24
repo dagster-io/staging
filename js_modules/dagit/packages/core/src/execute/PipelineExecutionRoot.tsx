@@ -10,12 +10,13 @@ import {
   applyCreateSession,
   useStorage,
 } from '../app/LocalStorage';
+import {featureEnabled, FeatureFlag} from '../app/Util';
 import {CONFIG_EDITOR_RUN_CONFIG_SCHEMA_FRAGMENT} from '../configeditor/ConfigEditorUtils';
 import {useDocumentTitle} from '../hooks/useDocumentTitle';
 import {explorerPathFromString} from '../pipelines/PipelinePathUtils';
 import {repoAddressToSelector} from '../workspace/repoAddressToSelector';
 import {RepoAddress} from '../workspace/types';
-import {workspacePathFromAddress} from '../workspace/workspacePath';
+import {workspacePipelinePath} from '../workspace/workspacePath';
 
 import {
   CONFIG_EDITOR_GENERATOR_PARTITION_SETS_FRAGMENT,
@@ -42,10 +43,15 @@ interface Props {
 
 export const PipelineExecutionRoot: React.FC<Props> = (props) => {
   const {pipelinePath, repoAddress} = props;
-  const {pipelineName, snapshotId} = explorerPathFromString(pipelinePath);
-  useDocumentTitle(`Pipeline: ${pipelineName}`);
+  const {pipelineName, pipelineMode, snapshotId} = explorerPathFromString(pipelinePath);
+  useDocumentTitle(`Pipeline: ${pipelineName}:${pipelineMode}`);
 
-  const [data, onSave] = useStorage(repoAddress.name || '', pipelineName);
+  const [data, onSave] = useStorage(
+    repoAddress.name || '',
+    featureEnabled(FeatureFlag.PipelineModeTuples)
+      ? `${pipelineName}:${pipelineMode}`
+      : pipelineName,
+  );
 
   const session = data.sessions[data.current];
   const pipelineSelector = {
@@ -57,7 +63,13 @@ export const PipelineExecutionRoot: React.FC<Props> = (props) => {
   if (snapshotId) {
     return (
       <Redirect
-        to={workspacePathFromAddress(repoAddress, `/pipelines/${pipelineName}/playground`)}
+        to={workspacePipelinePath(
+          repoAddress.name,
+          repoAddress.location,
+          pipelineName,
+          pipelineMode,
+          `/playground`,
+        )}
       />
     );
   }
@@ -157,6 +169,9 @@ export const PipelineExecutionRoot: React.FC<Props> = (props) => {
                     onSaveSession={(changes) => onSaveSession(data.current, changes)}
                     onCreateSession={(initial) => onSave(applyCreateSession(data, initial))}
                     pipeline={pipelineOrError}
+                    pipelineMode={
+                      featureEnabled(FeatureFlag.PipelineModeTuples) ? pipelineMode : undefined
+                    }
                     partitionSets={partitionSetsOrError}
                     runConfigSchemaOrError={configSchemaOrError}
                     currentSession={session}

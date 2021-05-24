@@ -159,7 +159,15 @@ def str_to_num(context, string):
                 "errorable_resource": define_errorable_resource(),
                 "io_manager": errorable_io_manager,
             },
+        ),
+        ModeDefinition(
+            name="safe_mode",
+            resource_defs={
+                "errorable_resource": define_errorable_resource(),
+                "io_manager": errorable_io_manager,
+            },
         )
+
     ],
     preset_defs=[
         PresetDefinition.from_pkg_resources(
