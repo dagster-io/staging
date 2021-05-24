@@ -425,6 +425,8 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
             self._get_source_run_id(step_output_handle),
             log_manager=self.log,
             step_context=self,
+            scoped_resources_builder=self.scoped_resources_builder,
+            mode_def=self.mode_def,
         )
 
     def for_input_manager(
