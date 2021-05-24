@@ -69,7 +69,7 @@ class WorkspaceRequestContext(NamedTuple):
     def repository_location_errors(self) -> List["SerializableErrorInfo"]:
         return [entry.load_error for entry in self.workspace_snapshot.values() if entry.load_error]
 
-    def get_repository_location(self, name: str) -> RepositoryLocation:
+    def get_repository_location(self, name: str) -> Optional[RepositoryLocation]:
         return self.workspace_snapshot[name].repository_location
 
     def get_load_status(self, name: str) -> WorkspaceLocationLoadStatus:
@@ -78,7 +78,7 @@ class WorkspaceRequestContext(NamedTuple):
     def has_repository_location_error(self, name: str) -> bool:
         return self.get_repository_location_error(name) != None
 
-    def get_repository_location_error(self, name: str) -> "SerializableErrorInfo":
+    def get_repository_location_error(self, name: str) -> Optional["SerializableErrorInfo"]:
         return self.workspace_snapshot[name].load_error
 
     def has_repository_location(self, name: str) -> bool:
@@ -109,11 +109,13 @@ class WorkspaceRequestContext(NamedTuple):
         )
 
     def get_full_external_pipeline(self, selector: PipelineSelector) -> ExternalPipeline:
-        return (
-            self.get_repository_location(selector.location_name)
-            .get_repository(selector.repository_name)
-            .get_full_external_pipeline(selector.pipeline_name)
-        )
+        repository_location = self.get_repository_location(selector.location_name)
+        assert isinstance(
+            repository_location, RepositoryLocation
+        ), f"Couldn't get repository for {selector.location_name}"
+        return repository_location.get_repository(
+            selector.repository_name
+        ).get_full_external_pipeline(selector.pipeline_name)
 
     def get_external_execution_plan(
         self,
@@ -123,9 +125,11 @@ class WorkspaceRequestContext(NamedTuple):
         step_keys_to_execute: List[str],
         known_state: KnownExecutionState,
     ) -> ExternalExecutionPlan:
-        return self.get_repository_location(
-            external_pipeline.handle.location_name
-        ).get_external_execution_plan(
+        repository_location = self.get_repository_location(external_pipeline.handle.location_name)
+        assert isinstance(
+            repository_location, RepositoryLocation
+        ), f"Couldn't get repository for {external_pipeline.handle.location_name}"
+        return repository_location.get_external_execution_plan(
             external_pipeline=external_pipeline,
             run_config=run_config,
             mode=mode,
@@ -136,9 +140,14 @@ class WorkspaceRequestContext(NamedTuple):
     def get_external_partition_config(
         self, repository_handle: RepositoryHandle, partition_set_name: str, partition_name: str
     ) -> Union["ExternalPartitionConfigData", "ExternalPartitionExecutionErrorData"]:
-        return self.get_repository_location(
+        repository_location = self.get_repository_location(
             repository_handle.repository_location.name
-        ).get_external_partition_config(
+        )
+        assert isinstance(
+            repository_location, RepositoryLocation
+        ), f"Couldn't get repository for {repository_handle.repository_location.name}"
+
+        return repository_location.get_external_partition_config(
             repository_handle=repository_handle,
             partition_set_name=partition_set_name,
             partition_name=partition_name,
@@ -147,9 +156,14 @@ class WorkspaceRequestContext(NamedTuple):
     def get_external_partition_tags(
         self, repository_handle: RepositoryHandle, partition_set_name: str, partition_name: str
     ) -> Union["ExternalPartitionTagsData", "ExternalPartitionExecutionErrorData"]:
-        return self.get_repository_location(
+        repository_location = self.get_repository_location(
             repository_handle.repository_location.name
-        ).get_external_partition_tags(
+        )
+        assert isinstance(
+            repository_location, RepositoryLocation
+        ), f"Couldn't get repository for {repository_handle.repository_location.name}"
+
+        return repository_location.get_external_partition_tags(
             repository_handle=repository_handle,
             partition_set_name=partition_set_name,
             partition_name=partition_name,
@@ -158,9 +172,15 @@ class WorkspaceRequestContext(NamedTuple):
     def get_external_partition_names(
         self, repository_handle: RepositoryHandle, partition_set_name: str
     ) -> Union["ExternalPartitionNamesData", "ExternalPartitionExecutionErrorData"]:
-        return self.get_repository_location(
+        repository_location = self.get_repository_location(
             repository_handle.repository_location.name
-        ).get_external_partition_names(repository_handle, partition_set_name)
+        )
+        assert isinstance(
+            repository_location, RepositoryLocation
+        ), f"Couldn't get repository for {repository_handle.repository_location.name}"
+        return repository_location.get_external_partition_names(
+            repository_handle, partition_set_name
+        )
 
     def get_external_partition_set_execution_param_data(
         self,
@@ -168,9 +188,14 @@ class WorkspaceRequestContext(NamedTuple):
         partition_set_name: str,
         partition_names: List[str],
     ) -> Union["ExternalPartitionSetExecutionParamData", "ExternalPartitionExecutionErrorData"]:
-        return self.get_repository_location(
+        repository_location = self.get_repository_location(
             repository_handle.repository_location.name
-        ).get_external_partition_set_execution_param_data(
+        )
+        assert isinstance(
+            repository_location, RepositoryLocation
+        ), f"Couldn't get repository for {repository_handle.repository_location.name}"
+
+        return repository_location.get_external_partition_set_execution_param_data(
             repository_handle=repository_handle,
             partition_set_name=partition_set_name,
             partition_names=partition_names,
