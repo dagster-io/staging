@@ -46,9 +46,9 @@ export const useReloadWorkspace = () => {
       intent: Intent.SUCCESS,
     });
 
-    const reposToInvalidate = nodes.reduce((accum, location) => {
-      if (location.__typename === 'RepositoryLocation') {
-        return [...accum, ...location.repositories];
+    const reposToInvalidate = nodes.reduce((accum, locationEntry) => {
+      if (locationEntry.locationOrLoadError?.__typename === 'RepositoryLocation') {
+        return [...accum, ...locationEntry.locationOrLoadError.repositories];
       }
       return accum;
     }, [] as Repository[]);
@@ -63,22 +63,26 @@ export const useReloadWorkspace = () => {
 const RELOAD_WORKSPACE_MUTATION = gql`
   mutation ReloadWorkspaceMutation {
     reloadWorkspace {
-      ... on RepositoryLocationConnection {
+      ... on WorkspaceConnection {
         nodes {
-          ... on RepositoryLocation {
-            id
-            repositories {
+          __typename
+          name
+          id
+          loadStatus
+          locationOrLoadError {
+            __typename
+            ... on RepositoryLocation {
               id
-              name
-              pipelines {
+              repositories {
                 id
                 name
+                pipelines {
+                  id
+                  name
+                }
               }
             }
-          }
-          ... on RepositoryLocationLoadFailure {
-            id
-            error {
+            ... on PythonError {
               message
             }
           }
