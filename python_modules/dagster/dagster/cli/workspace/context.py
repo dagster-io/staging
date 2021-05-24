@@ -69,7 +69,7 @@ class WorkspaceRequestContext(NamedTuple):
     def repository_location_errors(self) -> List["SerializableErrorInfo"]:
         return [entry.load_error for entry in self.workspace_snapshot.values() if entry.load_error]
 
-    def get_repository_location(self, name: str) -> RepositoryLocation:
+    def get_repository_location(self, name: str) -> Optional[RepositoryLocation]:
         return self.workspace_snapshot[name].repository_location
 
     def get_load_status(self, name: str) -> WorkspaceLocationLoadStatus:
@@ -78,7 +78,7 @@ class WorkspaceRequestContext(NamedTuple):
     def has_repository_location_error(self, name: str) -> bool:
         return self.get_repository_location_error(name) != None
 
-    def get_repository_location_error(self, name: str) -> "SerializableErrorInfo":
+    def get_repository_location_error(self, name: str) -> Optional["SerializableErrorInfo"]:
         return self.workspace_snapshot[name].load_error
 
     def has_repository_location(self, name: str) -> bool:
@@ -168,9 +168,14 @@ class WorkspaceRequestContext(NamedTuple):
         partition_set_name: str,
         partition_names: List[str],
     ) -> Union["ExternalPartitionSetExecutionParamData", "ExternalPartitionExecutionErrorData"]:
-        return self.get_repository_location(
+        repository_location = self.get_repository_location(
             repository_handle.repository_location.name
-        ).get_external_partition_set_execution_param_data(
+        )
+        assert (
+            repository_location is not None
+        ), f"Couldn't find repository for {repository_handle.repository_location.name}"
+
+        return repository_location.get_external_partition_set_execution_param_data(
             repository_handle=repository_handle,
             partition_set_name=partition_set_name,
             partition_names=partition_names,
