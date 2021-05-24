@@ -17,21 +17,19 @@ const fuseOptions = {
 };
 
 const bootstrapDataToSearchResults = (data?: SearchBootstrapQuery) => {
-  if (
-    !data?.repositoryLocationsOrError ||
-    data?.repositoryLocationsOrError?.__typename !== 'RepositoryLocationConnection'
-  ) {
+  if (!data?.workspaceOrError || data?.workspaceOrError?.__typename !== 'WorkspaceConnection') {
     return new Fuse([]);
   }
 
-  const {nodes} = data.repositoryLocationsOrError;
+  const {nodes} = data.workspaceOrError;
   const manyRepos = nodes.length > 1;
 
-  const allEntries = nodes.reduce((accum, repoLocation) => {
-    if (repoLocation.__typename !== 'RepositoryLocation') {
+  const allEntries = nodes.reduce((accum, locationEntry) => {
+    if (!locationEntry.location) {
       return accum;
     }
 
+    const repoLocation = locationEntry.location;
     const repos = repoLocation.repositories;
     return [
       ...accum,
@@ -144,12 +142,13 @@ export const useRepoSearch = () => {
 
 const SEARCH_BOOTSTRAP_QUERY = gql`
   query SearchBootstrapQuery {
-    repositoryLocationsOrError {
+    workspaceOrError {
       __typename
-      ... on RepositoryLocationConnection {
+      ... on WorkspaceConnection {
         nodes {
           __typename
-          ... on RepositoryLocation {
+          id
+          location {
             id
             name
             repositories {

@@ -245,4 +245,4 @@ def fetch_workspace(workspace_request_context):
         for entry in workspace_request_context.workspace_snapshot.values()
     ]
 
-    return GrapheneWorkspaceConnection(locationEntries=nodes)
+    return GrapheneWorkspaceConnection(nodes=nodes)

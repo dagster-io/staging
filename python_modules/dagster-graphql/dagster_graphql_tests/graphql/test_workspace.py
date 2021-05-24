@@ -15,7 +15,7 @@ query {
    workspaceOrError {
       __typename
       ... on WorkspaceConnection {
-        locationEntries {
+        nodes {
           __typename
           id
           name
@@ -84,7 +84,7 @@ class TestLoadWorkspace(
                 result.data
             )
 
-            nodes = result.data["workspaceOrError"]["locationEntries"]
+            nodes = result.data["workspaceOrError"]["nodes"]
 
             assert len(nodes) == 3
 

@@ -293,7 +293,7 @@ class GrapheneRepositoryLocationConnection(graphene.ObjectType):
 
 
 class GrapheneWorkspaceConnection(graphene.ObjectType):
-    locationEntries = non_null_list(GrapheneWorkspaceLocationEntry)
+    nodes = non_null_list(GrapheneWorkspaceLocationEntry)
 
     class Meta:
         name = "WorkspaceConnection"

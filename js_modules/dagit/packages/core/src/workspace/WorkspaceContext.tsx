@@ -10,16 +10,16 @@ import {findRepoContainingPipeline} from './findRepoContainingPipeline';
 import {RepoAddress} from './types';
 import {
   RootRepositoriesQuery,
-  RootRepositoriesQuery_repositoryLocationsOrError_PythonError,
-  RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes,
-  RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation,
-  RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories,
+  RootRepositoriesQuery_workspaceOrError_PythonError,
+  RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes,
+  RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes_location,
+  RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes_location_repositories,
 } from './types/RootRepositoriesQuery';
 
-type Repository = RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories;
-type RepositoryLocation = RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation;
-type RepositoryLocationNode = RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes;
-type RepositoryError = RootRepositoriesQuery_repositoryLocationsOrError_PythonError;
+type Repository = RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes_location_repositories;
+type RepositoryLocation = RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes_location;
+type RepositoryLocationNode = RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes;
+type RepositoryError = RootRepositoriesQuery_workspaceOrError_PythonError;
 
 export interface DagsterRepoOption {
   repositoryLocation: RepositoryLocation;
@@ -29,7 +29,7 @@ export interface DagsterRepoOption {
 type WorkspaceState = {
   error: RepositoryError | null;
   loading: boolean;
-  locations: RepositoryLocationNode[];
+  nodes: RepositoryLocationNode[];
   allRepos: DagsterRepoOption[];
   refetch: () => Promise<ApolloQueryResult<RootRepositoriesQuery>>;
 };
@@ -40,12 +40,20 @@ export const WorkspaceContext = React.createContext<WorkspaceState>(
 
 const ROOT_REPOSITORIES_QUERY = gql`
   query RootRepositoriesQuery {
-    repositoryLocationsOrError {
+    workspaceOrError {
       __typename
-      ... on RepositoryLocationConnection {
+      ... on WorkspaceConnection {
         nodes {
           __typename
-          ... on RepositoryLocation {
+          id
+          name
+          loadStatus
+          displayMetadata {
+            key
+            value
+          }
+          updatedTimestamp
+          location {
             id
             loadStatus
             isReloadSupported
@@ -66,17 +74,8 @@ const ROOT_REPOSITORIES_QUERY = gql`
               ...RepositoryInfoFragment
             }
           }
-          ... on RepositoryLocationLoadFailure {
-            id
-            name
-            loadStatus
-            error {
-              ...PythonErrorFragment
-            }
-          }
-          ... on RepositoryLocationLoading {
-            id
-            name
+          loadError {
+            ...PythonErrorFragment
           }
         }
       }
@@ -88,29 +87,27 @@ const ROOT_REPOSITORIES_QUERY = gql`
 `;
 
 export const REPOSITORY_LOCATIONS_FRAGMENT = gql`
-  fragment RepositoryLocationsFragment on RepositoryLocationsOrError {
+  fragment RepositoryLocationsFragment on WorkspaceOrError {
     __typename
-    ... on RepositoryLocationConnection {
+    ... on WorkspaceConnection {
       nodes {
         __typename
-        ... on RepositoryLocation {
+        id
+        name
+        loadStatus
+        displayMetadata {
+          key
+          value
+        }
+        updatedTimestamp
+        location {
           id
           isReloadSupported
           serverId
           name
-          loadStatus
         }
-        ... on RepositoryLocationLoadFailure {
-          id
-          name
-          error {
-            message
-          }
-          loadStatus
-        }
-        ... on RepositoryLocationLoading {
-          id
-          name
+        loadError {
+          message
         }
       }
     }
@@ -135,25 +132,26 @@ const useWorkspaceState = () => {
     fetchPolicy: 'cache-and-network',
   });
 
-  const locations = React.useMemo(() => {
-    return data?.repositoryLocationsOrError.__typename === 'RepositoryLocationConnection'
-      ? data?.repositoryLocationsOrError.nodes
+  const nodes = React.useMemo(() => {
+    return data?.workspaceOrError.__typename === 'WorkspaceConnection'
+      ? data?.workspaceOrError.nodes
       : [];
   }, [data]);
 
   const {options, error} = React.useMemo(() => {
     let options: DagsterRepoOption[] = [];
-    if (!data || !data.repositoryLocationsOrError) {
+    if (!data || !data.workspaceOrError) {
       return {options, error: null};
     }
-    if (data.repositoryLocationsOrError.__typename === 'PythonError') {
-      return {options, error: data.repositoryLocationsOrError};
+    if (data.workspaceOrError.__typename === 'PythonError') {
+      return {options, error: data.workspaceOrError};
     }
 
-    options = data.repositoryLocationsOrError.nodes.reduce((accum, repositoryLocation) => {
-      if (repositoryLocation.__typename !== 'RepositoryLocation') {
+    options = data.workspaceOrError.nodes.reduce((accum, locationEntry) => {
+      if (!locationEntry.location) {
         return accum;
       }
+      const repositoryLocation = locationEntry.location;
       const reposForLocation = repositoryLocation.repositories.map((repository) => {
         return {repository, repositoryLocation};
       });
@@ -167,7 +165,7 @@ const useWorkspaceState = () => {
     refetch,
     loading,
     error,
-    locations,
+    nodes,
     allRepos: options,
     repoPath,
   };

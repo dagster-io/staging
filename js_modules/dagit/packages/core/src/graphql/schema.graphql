@@ -742,7 +742,7 @@ type RepositoryLocationLoading {
 union WorkspaceOrError = WorkspaceConnection | PythonError
 
 type WorkspaceConnection {
-  locationEntries: [WorkspaceLocationEntry!]!
+  nodes: [WorkspaceLocationEntry!]!
 }
 
 type WorkspaceLocationEntry {
