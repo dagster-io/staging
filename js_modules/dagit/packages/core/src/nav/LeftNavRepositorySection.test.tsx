@@ -8,14 +8,24 @@ import {LAST_REPO_KEY, LeftNavRepositorySection, REPO_KEYS} from './LeftNavRepos
 
 describe('Repository options', () => {
   const defaultMocks = {
-    RepositoryLocationsOrError: () => ({
-      __typename: 'RepositoryLocationConnection',
+    WorkspaceOrError: () => ({
+      __typename: 'WorkspaceConnection',
     }),
-    RepositoryLocationConnection: () => ({
+    WorkspaceConnection: () => ({
       nodes: () => new MockList(1),
     }),
-    RepositoryLocationOrLoadFailure: () => ({
+    WorkspaceLocationEntry: () => ({
+      __typename: 'WorkspaceLocationEntry',
+      locationOrLoadError: {
+        __typename: 'RepositoryLocation',
+        name: () => 'bar',
+        repositories: () => new MockList(1),
+      },
+    }),
+    RepositoryLocationOrLoadError: () => ({
       __typename: 'RepositoryLocation',
+      name: () => 'bar',
+      repositories: () => new MockList(1),
     }),
     RepositoryLocation: () => ({
       name: () => 'bar',
@@ -78,25 +88,33 @@ describe('Repository options', () => {
 
     const mocks = {
       ...defaultMocks,
-      RepositoryLocationConnection: () => ({
+      WorkspaceConnection: () => ({
         nodes: () => [
           {
-            __typename: 'RepositoryLocation',
+            __typename: 'WorkspaceLocationEntry',
             name: locationOne,
-            repositories: () =>
-              new MockList(1, () => ({
-                name: repoOne,
-                pipelines: () => new MockList(2),
-              })),
+            locationOrLoadError: {
+              __typename: 'RepositoryLocation',
+              name: locationOne,
+              repositories: () =>
+                new MockList(1, () => ({
+                  name: repoOne,
+                  pipelines: () => new MockList(2),
+                })),
+            },
           },
           {
-            __typename: 'RepositoryLocation',
+            __typename: 'WorkspaceLocationEntry',
             name: locationTwo,
-            repositories: () =>
-              new MockList(1, () => ({
-                name: repoTwo,
-                pipelines: () => new MockList(4),
-              })),
+            locationOrLoadError: {
+              __typename: 'RepositoryLocation',
+              name: locationTwo,
+              repositories: () =>
+                new MockList(1, () => ({
+                  name: repoTwo,
+                  pipelines: () => new MockList(4),
+                })),
+            },
           },
         ],
       }),

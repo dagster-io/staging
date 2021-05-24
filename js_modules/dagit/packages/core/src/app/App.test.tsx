@@ -30,22 +30,26 @@ describe('App', () => {
       name: () => 'my_location',
       repositories: () => new MockList(1),
     }),
-    RepositoryLocationConnection: () => ({
+    WorkspaceConnection: () => ({
       nodes: () => new MockList(1),
     }),
-    RepositoryLocationsOrError: () => ({
-      __typename: 'RepositoryLocationConnection',
+    WorkspaceOrError: () => ({
+      __typename: 'WorkspaceConnection',
       nodes: () => new MockList(1),
-    }),
-    RepositoryLocationLoadFailure: () => ({
-      id: () => 'failed',
     }),
     RepositoryOrigin: () => ({
       repositoryName: () => 'my_repository',
       repositoryLocationName: () => 'my_location',
     }),
-    RepositoryLocationOrLoadFailure: () => ({
-      __typename: 'RepositoryLocation',
+    WorkspaceLocationEntry: () => ({
+      __typename: 'WorkspaceLocationEntry',
+      locationOrLoadError: {
+        __typename: 'RepositoryLocation',
+        environmentPath: () => 'what then',
+        id: () => 'my_location',
+        name: () => 'my_location',
+        repositories: () => new MockList(1),
+      },
     }),
     SchedulesOrError: () => ({
       __typename: 'Schedules',

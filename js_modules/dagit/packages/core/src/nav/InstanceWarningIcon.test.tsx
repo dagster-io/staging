@@ -9,13 +9,19 @@ import {InstanceWarningIcon} from './InstanceWarningIcon';
 
 describe('InstanceWarningIcon', () => {
   const defaultMocks = {
-    RepositoryLocationsOrError: () => ({
-      __typename: 'RepositoryLocationConnection',
+    WorkspaceOrError: () => ({
+      __typename: 'WorkspaceConnection',
     }),
-    RepositoryLocationConnection: () => ({
-      nodes: () => new MockList(2),
+    WorkspaceConnection: () => ({
+      nodes: () => new MockList(1),
     }),
-    RepositoryLocationOrLoadFailure: () => ({
+    WorkspaceLocationEntry: () => ({
+      __typename: 'WorkspaceLocationEntry',
+      locationOrLoadError: {
+        __typename: 'RepositoryLocation',
+      },
+    }),
+    RepositoryLocationOrLoadError: () => ({
       __typename: 'RepositoryLocation',
     }),
     DaemonHealth: () => ({
@@ -34,8 +40,12 @@ describe('InstanceWarningIcon', () => {
   it('displays if any repo errors', async () => {
     const mocks = {
       ...defaultMocks,
-      RepositoryLocationOrLoadFailure: () => ({
-        __typename: 'RepositoryLocationLoadFailure',
+      WorkspaceLocationEntry: () => ({
+        __typename: 'WorkspaceLocationEntry',
+        locationOrLoadError: () => ({
+          __typename: 'PythonError',
+          message: () => 'Failure',
+        }),
       }),
     };
     render(<Test mocks={mocks} />);
