@@ -9,3 +9,10 @@ ignore_errors = True
 
 [mypy-dagster.grpc.__generated__.*]
 ignore_errors = True
+
+[mypy-dagster.*.alembic.versions]
+ignore_errors = True
+
+# https://github.com/python/mypy/issues/4008
+[dagster.generate.new_project.setup]
+ignore_errors = True
