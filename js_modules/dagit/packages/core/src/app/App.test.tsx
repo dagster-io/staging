@@ -24,12 +24,34 @@ describe('App', () => {
       name: () => 'my_location',
       repositories: () => new MockList(1),
     }),
-    RepositoryLocationLoadFailure: () => ({
-      id: () => 'failed',
+    WorkspaceOrError: () => ({
+      __typename: 'WorkspaceConnection',
+      nodes: () => new MockList(1),
     }),
     RepositoryOrigin: () => ({
       repositoryName: () => 'my_repository',
       repositoryLocationName: () => 'my_location',
+    }),
+    WorkspaceLocationEntry: () => ({
+      locationOrLoadError: {
+        __typename: 'RepositoryLocation',
+        environmentPath: () => 'what then',
+        id: () => 'my_location',
+        name: () => 'my_location',
+        repositories: () => new MockList(1),
+      },
+    }),
+    SchedulesOrError: () => ({
+      __typename: 'Schedules',
+    }),
+    Schedules: () => ({
+      results: () => new MockList(1),
+    }),
+    SensorsOrError: () => ({
+      __typename: 'Sensors',
+    }),
+    Sensors: () => ({
+      results: () => new MockList(1),
     }),
     SolidDefinition: () => ({
       configField: null,

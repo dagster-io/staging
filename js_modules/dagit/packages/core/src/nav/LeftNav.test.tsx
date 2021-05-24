@@ -8,8 +8,28 @@ import {LeftNav} from './LeftNav';
 
 describe('LeftNav', () => {
   const defaultMocks = {
-    RepositoryLocationConnection: () => ({
+    WorkspaceOrError: () => ({
+      __typename: 'WorkspaceConnection',
+    }),
+    WorkspaceConnection: () => ({
       nodes: () => new MockList(2),
+    }),
+    WorkspaceLocationEntry: () => ({
+      locationOrLoadError: {
+        __typename: 'RepositoryLocation',
+      },
+    }),
+    SchedulesOrError: () => ({
+      __typename: 'Schedules',
+    }),
+    Schedules: () => ({
+      results: () => new MockList(1),
+    }),
+    SensorsOrError: () => ({
+      __typename: 'Sensors',
+    }),
+    Sensors: () => ({
+      results: () => new MockList(1),
     }),
   };
 
@@ -33,8 +53,11 @@ describe('LeftNav', () => {
     it('shows the error message when repo location errors are found', async () => {
       const mocks = {
         ...defaultMocks,
-        RepositoryLocationOrLoadFailure: () => ({
-          __typename: 'RepositoryLocationLoadFailure',
+        WorkspaceLocationEntry: () => ({
+          locationOrLoadError: () => ({
+            __typename: 'PythonError',
+            message: () => 'error_message',
+          }),
         }),
       };
 
