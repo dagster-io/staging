@@ -12,9 +12,7 @@ def hello_cereal(context):
         # Read the rows in using the standard csv library
         cereals = [row for row in csv.DictReader(fd)]
 
-    context.log.info(
-        "Found {n_cereals} cereals".format(n_cereals=len(cereals))
-    )
+    context.log.info("Found {n_cereals} cereals".format(n_cereals=len(cereals)))
 
     return cereals
 
@@ -32,7 +30,7 @@ if __name__ == "__main__":
 # start_hello_cereal_with_tests_marker_0
 def test_hello_cereal_solid():
     context = build_solid_context()
-    assert hello_cereal(context) == 77
+    assert len(hello_cereal(context)) == 77
 
 
 def test_hello_cereal_pipeline():
