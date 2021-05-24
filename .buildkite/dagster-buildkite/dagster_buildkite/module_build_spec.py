@@ -140,8 +140,15 @@ class ModuleBuildSpec(
             tests.append(
                 StepBuilder(f":mypy: {package}")
                 .run(
-                    "pip install mypy==0.790",
-                    f"mypy --config-file mypy/config {self.directory}",
+                    "pip install mypy==0.812",
+                    # https://github.com/buildkite/agent/issues/1102
+                    (
+                        "mypy --config-file mypy/config "
+                        "--exclude 'setup.py$$' "
+                        "--exclude 'alembic/versions/[0-9a-z_]*.py$$' "
+                        "--exclude 'alembic/env.py$$' "
+                        f"{self.directory}"
+                    ),
                 )
                 .on_integration_image(SupportedPython.V3_7)
                 .build()
