@@ -164,13 +164,4 @@ def get_toys_schedules():
             run_config_fn=lambda _: {"intermediate_storage": {"filesystem": {}}},
             execution_timezone=_toys_tz_info(),
         ),
-        ScheduleDefinition(
-            name="error_monster_every_min",
-            cron_schedule="* * * * *",
-            pipeline_name="error_monster",
-            mode="safe_mode",
-            run_config_fn=lambda _: {"intermediate_storage": {"filesystem": {}}},
-            execution_timezone=_toys_tz_info(),
-        ),
-
     ]
