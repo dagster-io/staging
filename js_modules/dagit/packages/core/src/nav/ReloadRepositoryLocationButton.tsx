@@ -36,12 +36,11 @@ export const useRepositoryLocationReload = (location: string, onReload: OnReload
     let loadFailure = null;
     let loadStatus = null;
     switch (data?.reloadRepositoryLocation.__typename) {
-      case 'RepositoryLocation':
+      case 'WorkspaceLocationEntry':
         loadStatus = data?.reloadRepositoryLocation.loadStatus;
-        break;
-      case 'RepositoryLocationLoadFailure':
-        loadStatus = data?.reloadRepositoryLocation.loadStatus;
-        loadFailure = data?.reloadRepositoryLocation.error.message;
+        if (data?.reloadRepositoryLocation.locationOrLoadError?.__typename === 'PythonError') {
+          loadFailure = data?.reloadRepositoryLocation.locationOrLoadError.message;
+        }
         break;
       default:
         loadFailure = data?.reloadRepositoryLocation.message;
@@ -70,8 +69,9 @@ export const useRepositoryLocationReload = (location: string, onReload: OnReload
 
     // Update run config localStorage, which may now be out of date.
     const repositories =
-      data?.reloadRepositoryLocation.__typename === 'RepositoryLocation'
-        ? data.reloadRepositoryLocation.repositories
+      data?.reloadRepositoryLocation.__typename === 'WorkspaceLocationEntry' &&
+      data.reloadRepositoryLocation.location
+        ? data.reloadRepositoryLocation.location.repositories
         : [];
 
     invalidateConfigs(repositories);
@@ -123,17 +123,27 @@ const RELOAD_REPOSITORY_LOCATION_MUTATION = gql`
   mutation ReloadRepositoryLocationMutation($location: String!) {
     reloadRepositoryLocation(repositoryLocationName: $location) {
       __typename
-      ... on RepositoryLocation {
+      ... on WorkspaceLocationEntry {
         id
-        repositories {
-          id
-          name
-          pipelines {
+        name
+        loadStatus
+        locationOrLoadError {
+          __typename
+          ... on RepositoryLocation {
             id
-            name
+            repositories {
+              id
+              name
+              pipelines {
+                id
+                name
+              }
+            }
+          }
+          ... on PythonError {
+            message
           }
         }
-        loadStatus
       }
       ... on ReadOnlyError {
         message
@@ -143,13 +153,6 @@ const RELOAD_REPOSITORY_LOCATION_MUTATION = gql`
       }
       ... on RepositoryLocationNotFound {
         message
-      }
-      ... on RepositoryLocationLoadFailure {
-        id
-        error {
-          message
-        }
-        loadStatus
       }
     }
   }
