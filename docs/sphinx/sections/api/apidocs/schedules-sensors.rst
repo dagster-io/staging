@@ -32,6 +32,8 @@ Sensors
 .. autodecorator:: sensor
 
 .. autoclass:: SensorDefinition
+     :members: get_execution_data
+
 .. autoclass:: SensorExecutionContext
 
 .. autofunction:: build_sensor_context
