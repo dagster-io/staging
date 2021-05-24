@@ -1,5 +1,5 @@
 from dagster import check
-from dagster.core.execution.context.system import get_output_context
+from dagster.core.execution.context.output import get_output_context
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.step import is_executable_step
 from dagster.utils.backcompat import experimental
@@ -150,6 +150,7 @@ def resolve_memoized_execution_plan(
         ExecutionPlan: Execution plan configured to only run unmemoized steps.
     """
     from .build_resources import build_resources, initialize_console_manager
+    from dagster.core.definitions.resource import ScopedResourcesBuilder
 
     mode = environment_config.mode
     mode_def = pipeline_def.get_mode_definition(mode)
@@ -180,6 +181,8 @@ def resolve_memoized_execution_plan(
                     environment_config,
                     step_output_handle,
                     log_manager=log_manager,
+                    mode_def=pipeline_def.get_mode_definition(environment_config.mode),
+                    scoped_resources_builder=ScopedResourcesBuilder(resources._asdict()),
                 )
                 if not io_manager.has_output(context):
                     step_keys_to_execute.add(step_output_handle.step_key)

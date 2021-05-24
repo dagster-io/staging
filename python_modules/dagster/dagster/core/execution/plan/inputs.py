@@ -155,7 +155,11 @@ class FromRootInputManager(
             resource_config=step_context.environment_config.resources[
                 input_def.root_manager_key
             ].config,
-            resources=build_resources_for_manager(input_def.root_manager_key, step_context),
+            resources=build_resources_for_manager(
+                input_def.root_manager_key,
+                step_context.mode_def,
+                step_context.scoped_resources_builder,
+            ),
         )
         yield _load_input_with_input_manager(loader, load_input_context)
         yield DagsterEvent.loaded_input(
@@ -212,7 +216,9 @@ class FromStepOutput(
             self.step_output_handle, step_context.pipeline_def
         )
         resource_config = step_context.environment_config.resources[io_manager_key].config
-        resources = build_resources_for_manager(io_manager_key, step_context)
+        resources = build_resources_for_manager(
+            io_manager_key, step_context.mode_def, step_context.scoped_resources_builder
+        )
 
         input_def = self.get_input_def(step_context.pipeline_def)
 

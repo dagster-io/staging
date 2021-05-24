@@ -560,7 +560,9 @@ class SolidExecutionResult:
                 dagster_type=self.solid.output_def_named(step_output_data.output_name).dagster_type,
                 source_handle=step_output_handle,
                 resource_config=context.environment_config.resources[manager_key].config,
-                resources=build_resources_for_manager(manager_key, context),
+                resources=build_resources_for_manager(
+                    manager_key, context.mode_def, context.scoped_resources_builder
+                ),
             )
         )
         return res

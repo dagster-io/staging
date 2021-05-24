@@ -10,12 +10,13 @@ if TYPE_CHECKING:
     from dagster.core.execution.context.system import StepExecutionContext
     from dagster.core.definitions.resource import Resources
     from dagster.core.types.dagster_type import DagsterType
-    from dagster.core.definitions import SolidDefinition, PipelineDefinition
+    from dagster.core.definitions import SolidDefinition, PipelineDefinition, ModeDefinition
     from dagster.core.log_manager import DagsterLogManager
     from dagster.core.system_config.objects import EnvironmentConfig
     from dagster.core.execution.plan.plan import ExecutionPlan
     from dagster.core.execution.plan.outputs import StepOutputHandle
     from dagster.core.log_manager import DagsterLogManager
+    from dagster.core.definitions.resource import ScopedResourcesBuilder
 
 
 class OutputContext:
@@ -197,6 +198,8 @@ def get_output_context(
     run_id: Optional[str] = None,
     log_manager: Optional["DagsterLogManager"] = None,
     step_context: Optional["StepExecutionContext"] = None,
+    scoped_resources_builder: Optional["ScopedResourcesBuilder"] = None,
+    mode_def: Optional["ModeDefinition"] = None,
 ) -> "OutputContext":
     """
     Args:
@@ -220,7 +223,13 @@ def get_output_context(
     io_manager_key = output_def.io_manager_key
     resource_config = environment_config.resources[io_manager_key].config
 
-    resources = build_resources_for_manager(io_manager_key, step_context) if step_context else None
+    resources = (
+        build_resources_for_manager(
+            io_manager_key, cast("ModeDefinition", mode_def), scoped_resources_builder
+        )
+        if scoped_resources_builder
+        else None
+    )
 
     return OutputContext(
         step_key=step_output_handle.step_key,

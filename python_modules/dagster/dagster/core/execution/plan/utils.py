@@ -12,16 +12,17 @@ from dagster.core.errors import (
 
 if TYPE_CHECKING:
     from dagster.core.execution.context.system import StepExecutionContext
-    from dagster.core.definitions.resource import Resources
+    from dagster.core.definitions.resource import Resources, ScopedResourcesBuilder
+    from dagster.core.definitions import ModeDefinition
 
 
 def build_resources_for_manager(
-    io_manager_key: str, step_context: "StepExecutionContext"
+    io_manager_key: str,
+    mode_def: "ModeDefinition",
+    scoped_resources_builder: "ScopedResourcesBuilder",
 ) -> "Resources":
-    required_resource_keys = step_context.mode_def.resource_defs[
-        io_manager_key
-    ].required_resource_keys
-    return step_context.scoped_resources_builder.build(required_resource_keys)
+    required_resource_keys = mode_def.resource_defs[io_manager_key].required_resource_keys
+    return scoped_resources_builder.build(required_resource_keys)
 
 
 @contextmanager
