@@ -18,6 +18,7 @@ export interface PipelineTableFragment_modes {
 export interface PipelineTableFragment_runs {
   __typename: "PipelineRun";
   id: string;
+  mode: string;
   runId: string;
   status: PipelineRunStatus;
 }
@@ -26,12 +27,14 @@ export interface PipelineTableFragment_schedules {
   __typename: "Schedule";
   id: string;
   name: string;
+  mode: string;
 }
 
 export interface PipelineTableFragment_sensors {
   __typename: "Sensor";
   id: string;
   name: string;
+  mode: string;
 }
 
 export interface PipelineTableFragment {

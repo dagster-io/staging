@@ -22,6 +22,7 @@ export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipel
 export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_runs {
   __typename: "PipelineRun";
   id: string;
+  mode: string;
   runId: string;
   status: PipelineRunStatus;
 }
@@ -30,12 +31,14 @@ export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipel
   __typename: "Schedule";
   id: string;
   name: string;
+  mode: string;
 }
 
 export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines_sensors {
   __typename: "Sensor";
   id: string;
   name: string;
+  mode: string;
 }
 
 export interface RepositoryPipelinesListQuery_repositoryOrError_Repository_pipelines {
