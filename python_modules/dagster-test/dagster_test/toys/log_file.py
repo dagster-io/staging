@@ -1,6 +1,6 @@
 import os
 
-from dagster import AssetKey, AssetMaterialization, EventMetadata, Field, Output, pipeline, solid
+from dagster import AssetKey, AssetMaterialization, EventMetadata, Field, Output, graph, solid
 
 
 @solid(
@@ -32,6 +32,6 @@ def read_file(context):
         context.log.error("No file found: {}".format(relative_filename))
 
 
-@pipeline(description="Demo pipeline that spits out some file info, given a path")
+@graph(description="Demo pipeline that spits out some file info, given a path")
 def log_file_pipeline():
     read_file()

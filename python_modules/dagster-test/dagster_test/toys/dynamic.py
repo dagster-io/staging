@@ -1,4 +1,5 @@
-from dagster import Field, pipeline, solid
+from dagster import Field, solid
+from dagster.core.definitions.decorators.graph import graph
 from dagster.core.definitions.events import DynamicOutput
 from dagster.core.definitions.output import DynamicOutputDefinition
 
@@ -35,7 +36,7 @@ def emit(_):
         yield DynamicOutput(value=i, mapping_key=str(i))
 
 
-@pipeline
+@graph
 def dynamic_pipeline():
     result = emit().map(lambda num: multiply_by_two(multiply_inputs(num, emit_ten())))
     multiply_by_two.alias("double_total")(sum_numbers(emit_ten(), result.collect()))
