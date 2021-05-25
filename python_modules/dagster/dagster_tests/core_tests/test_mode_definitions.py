@@ -6,8 +6,12 @@ from dagster import (
     DagsterInvalidDefinitionError,
     DagsterInvariantViolationError,
     Field,
+    InputDefinition,
     ModeDefinition,
+    Output,
+    OutputDefinition,
     PipelineDefinition,
+    ResourceDefinition,
     String,
     execute_pipeline,
     logger,
@@ -178,9 +182,10 @@ def test_mode_with_resource_deps():
             mode_defs=[ModeDefinition(resource_defs={"ab": resource_a})],
         )
 
-    assert (
-        str(ide.value)
-        == 'Resource "a" is required by solid def requires_a, but is not provided by mode "default".'
+    assert str(ide.value) == (
+        'Resource "a" is required by solid def requires_a, but is not provided by mode "default". '
+        'In mode "default", resource "a" must be defined, '
+        "or must be one of the provided resources: ['ab', 'io_manager']."
     )
 
     @solid(required_resource_keys={"a"})
@@ -197,6 +202,48 @@ def test_mode_with_resource_deps():
     execute_pipeline(pipeline_def_no_deps)
 
     assert called["count"] == 2
+
+
+def test_mode_with_output_manager_deps():
+    @solid(output_defs=[OutputDefinition(int, "result", io_manager_key="missing_io_manager")])
+    def requires_missing_output_manager():
+        return Output(1, "result")
+
+    with pytest.raises(DagsterInvalidDefinitionError) as ide:
+        PipelineDefinition(
+            name="mode_with_missing_output_manager",
+            solid_defs=[requires_missing_output_manager],
+            mode_defs=[ModeDefinition(resource_defs={"nope": ResourceDefinition.none_resource()})],
+        )
+
+    assert str(ide.value) == (
+        'IO manager "missing_io_manager" is required by output "result" '
+        'of solid def requires_missing_output_manager, but is not provided by mode "default". '
+        'In mode "default", IO manager "missing_io_manager" must be defined, '
+        "or must be one of the provided IO managers: ['io_manager']."
+    )
+
+
+def test_mode_with_input_manager_deps():
+    @solid(
+        input_defs=[InputDefinition("root_input", root_manager_key="missing_root_input_manager")]
+    )
+    def requires_missing_input_manager(root_input: int):
+        return root_input
+
+    with pytest.raises(DagsterInvalidDefinitionError) as ide:
+        PipelineDefinition(
+            name="mode_with_missing_output_manager",
+            solid_defs=[requires_missing_input_manager],
+            mode_defs=[ModeDefinition(resource_defs={"nope": ResourceDefinition.none_resource()})],
+        )
+
+    assert str(ide.value) == (
+        'Root input manager "missing_root_input_manager" is required by unsatisfied input "root_input" '
+        'of solid requires_missing_input_manager, but is not provided by mode "default". '
+        'In mode "default", root input manager "missing_root_input_manager" must be defined, '
+        "or must be one of the provided root input managers: []."
+    )
 
 
 def test_subset_with_mode_definitions():

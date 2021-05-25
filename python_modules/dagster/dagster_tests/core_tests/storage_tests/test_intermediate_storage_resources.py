@@ -100,6 +100,8 @@ def test_resource_requirements_fail():
             pass
 
     assert str(exc_info.value) == (
-        "Resource 'yup' is required by intermediate storage 'storage_with_req', but "
-        "is not provided by mode 'default'."
+        'Resource "yup" is required by intermediate storage "storage_with_req", but '
+        'is not provided by mode "default". '
+        'In mode "default", resource "yup" must be defined, '
+        "or must be one of the provided resources: ['io_manager', 'nope']."
     )
