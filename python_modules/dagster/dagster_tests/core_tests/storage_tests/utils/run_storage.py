@@ -466,17 +466,17 @@ class TestRunStorage:
                 run_id=three, pipeline_name="some_pipeline", tags={"mytag": "hello"}
             )
         )
-
+        # descending
         all_runs = storage.get_runs()
         assert len(all_runs) == 3
-        sliced_runs = storage.get_runs(cursor=three, limit=1)
+        sliced_runs = storage.get_runs(before_cursor=three, limit=1)
         assert len(sliced_runs) == 1
         assert sliced_runs[0].run_id == two
 
         all_runs = storage.get_runs(PipelineRunsFilter(pipeline_name="some_pipeline"))
         assert len(all_runs) == 3
         sliced_runs = storage.get_runs(
-            PipelineRunsFilter(pipeline_name="some_pipeline"), cursor=three, limit=1
+            PipelineRunsFilter(pipeline_name="some_pipeline"), before_cursor=three, limit=1
         )
         assert len(sliced_runs) == 1
         assert sliced_runs[0].run_id == two
@@ -484,10 +484,35 @@ class TestRunStorage:
         all_runs = storage.get_runs(PipelineRunsFilter(tags={"mytag": "hello"}))
         assert len(all_runs) == 3
         sliced_runs = storage.get_runs(
-            PipelineRunsFilter(tags={"mytag": "hello"}), cursor=three, limit=1
+            PipelineRunsFilter(tags={"mytag": "hello"}), before_cursor=three, limit=1
         )
         assert len(sliced_runs) == 1
         assert sliced_runs[0].run_id == two
+
+        after_cursor_sliced_runs = storage.get_runs(after_cursor=one, limit=1)
+        assert len(after_cursor_sliced_runs) == 1
+        assert after_cursor_sliced_runs[0].run_id == three
+
+        after_cursor_sliced_runs = storage.get_runs(cursor=three, after_cursor=one)
+        assert len(after_cursor_sliced_runs) == 1
+        assert after_cursor_sliced_runs[0].run_id == two
+
+        # ascending
+        all_runs = storage.get_runs(ascending=True)
+        assert len(all_runs) == 3
+        assert [run.run_id for run in all_runs] == [one, two, three]
+
+        sliced_runs = storage.get_runs(before_cursor=three, ascending=True)
+        assert len(sliced_runs) == 2
+        assert [run.run_id for run in sliced_runs] == [one, two]
+
+        sliced_runs = storage.get_runs(after_cursor=one, limit=1, ascending=True)
+        assert len(sliced_runs) == 1
+        assert sliced_runs[0].run_id == two
+
+        sliced_runs = storage.get_runs(after_cursor=one, ascending=True)
+        assert len(sliced_runs) == 2
+        assert [run.run_id for run in sliced_runs] == [two, three]
 
     def test_fetch_by_status(self, storage):
         assert storage
