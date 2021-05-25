@@ -4,6 +4,7 @@ import React from 'react';
 
 import {DISABLED_MESSAGE, usePermissions} from '../app/Permissions';
 import {PythonErrorInfo} from '../app/PythonErrorInfo';
+import {Timestamp} from '../app/time/Timestamp';
 import {useRepositoryLocationReload} from '../nav/ReloadRepositoryLocationButton';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -12,6 +13,8 @@ import {Table} from '../ui/Table';
 
 import {WorkspaceContext} from './WorkspaceContext';
 import {RootRepositoriesQuery_workspaceOrError_WorkspaceConnection_nodes as LocationOrError} from './types/RootRepositoriesQuery';
+
+const TIME_FORMAT = {showSeconds: true, showTimezone: true};
 
 const LocationStatus: React.FC<{locationOrError: LocationOrError}> = (props) => {
   const {locationOrError} = props;
@@ -115,15 +118,29 @@ export const RepositoryLocationsList = () => {
       <thead>
         <tr>
           <th>Repository location</th>
-          <th colSpan={2}>Status</th>
+          <th>Status</th>
+          <th colSpan={2}>Updated</th>
         </tr>
       </thead>
       <tbody>
         {nodes.map((location) => (
           <tr key={location.name}>
-            <td style={{width: '30%'}}>{location.name}</td>
+            <td style={{width: '30%'}}>
+              <div>{location.name}</div>
+              <div style={{fontSize: 11, marginTop: 5}}>
+                {location.displayMetadata.map((metadata, idx) => (
+                  <div key={idx}>
+                    <span style={{marginRight: 5}}>{metadata.key}:</span>
+                    <span style={{opacity: 0.5}}>{metadata.value}</span>
+                  </div>
+                ))}
+              </div>
+            </td>
             <td style={{width: '20%'}}>
               <LocationStatus locationOrError={location} />
+            </td>
+            <td style={{width: '20%'}}>
+              <Timestamp timestamp={{unix: location.updatedTimestamp}} timeFormat={TIME_FORMAT} />
             </td>
             <td style={{width: '100%'}}>
               <ReloadButton location={location.name} />
