@@ -87,6 +87,7 @@ class StepDelegatingExecutor(Executor):
                                 )
                             )
                         )
+                        running_steps.
 
                 events.extend(
                     self._pop_events(
@@ -95,7 +96,8 @@ class StepDelegatingExecutor(Executor):
                     )
                 )
 
-                for step_key in running_steps:
+                if not stopping:
+                    for step_key in running_steps:
                     events.extend(
                         self._step_handler.check_step_health(
                             self._get_step_handler_context(
@@ -104,15 +106,15 @@ class StepDelegatingExecutor(Executor):
                         )
                     )
 
-                for step in active_execution.get_steps_to_execute():
-                    running_steps[step.key] = step
-                    events.extend(
-                        self._step_handler.launch_step(
-                            self._get_step_handler_context(
-                                pipeline_context, [step.key], active_execution
+                    for step in active_execution.get_steps_to_execute():
+                        running_steps[step.key] = step
+                        events.extend(
+                            self._step_handler.launch_step(
+                                self._get_step_handler_context(
+                                    pipeline_context, [step.key], active_execution
+                                )
                             )
                         )
-                    )
 
                 for dagster_event in events:
                     yield dagster_event
