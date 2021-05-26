@@ -65,9 +65,6 @@ export const defaultMocks = {
   RepositoryLocationConnection: () => ({
     nodes: () => new MockList(1),
   }),
-  Workspace: () => ({
-    locationEntries: () => new MockList(1),
-  }),
   RepositoryLocationOrLoadError: () => ({
     __typename: 'RepositoryLocation',
   }),
@@ -95,5 +92,11 @@ export const defaultMocks = {
   }),
   Solid: () => ({
     name: hyphenatedName,
+  }),
+  Workspace: () => ({
+    locationEntries: () => new MockList(1),
+  }),
+  WorkspaceOrError: () => ({
+    __typename: 'Workspace',
   }),
 };

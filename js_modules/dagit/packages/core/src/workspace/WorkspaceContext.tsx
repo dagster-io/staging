@@ -132,9 +132,14 @@ const useWorkspaceState = () => {
   const match = useRouteMatch<{repoPath: string}>(['/workspace/:repoPath']);
   const repoPath: string | null = match?.params?.repoPath || null;
 
-  const {data, loading, refetch} = useQuery<RootRepositoriesQuery>(ROOT_REPOSITORIES_QUERY, {
-    fetchPolicy: 'cache-and-network',
-  });
+  const {data, loading, refetch, error: gqlError} = useQuery<RootRepositoriesQuery>(
+    ROOT_REPOSITORIES_QUERY,
+    {
+      fetchPolicy: 'cache-and-network',
+    },
+  );
+
+  console.log(data, loading, gqlError);
 
   const locationEntries = React.useMemo(() => {
     return data?.workspaceOrError.__typename === 'Workspace'
