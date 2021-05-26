@@ -1,5 +1,6 @@
 import {Button, Classes, Dialog, Icon} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
+import {Tooltip2 as Tooltip} from '@blueprintjs/popover2';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
@@ -17,7 +18,10 @@ interface ITagEditorProps {
 }
 
 interface ITagContainerProps {
-  tags: PipelineRunTag[];
+  tags: {
+    permanent?: PipelineRunTag[];
+    session?: PipelineRunTag[];
+  };
   onRequestEdit: () => void;
 }
 
@@ -87,9 +91,20 @@ export const TagEditor: React.FC<ITagEditorProps> = ({
         <Group padding={16} spacing={16} direction="column">
           {permanentTags.length ? (
             <TagList>
-              {permanentTags.map((tag, idx) => (
-                <RunTag tag={tag} key={idx} />
-              ))}
+              {permanentTags.map((tag, idx) => {
+                const {key} = tag;
+                const anyOverride = editState.some((editable) => editable.key === key);
+                if (anyOverride) {
+                  return (
+                    <Tooltip key={key} content="Overriden by custom tag value" placement="top">
+                      <span style={{opacity: 0.2}}>
+                        <RunTag tag={tag} key={idx} />
+                      </span>
+                    </Tooltip>
+                  );
+                }
+                return <RunTag tag={tag} key={key} />;
+              })}
             </TagList>
           ) : null}
           <div>
@@ -143,10 +158,25 @@ export const TagEditor: React.FC<ITagEditorProps> = ({
 };
 
 export const TagContainer = ({tags, onRequestEdit}: ITagContainerProps) => {
+  const {permanent = [], session = []} = tags;
   return (
     <Container>
       <TagList>
-        {tags.map((tag, idx) => (
+        {permanent.map((tag, idx) => {
+          const {key} = tag;
+          const anyOverride = session.some((sessionTag) => sessionTag.key === key);
+          if (anyOverride) {
+            return (
+              <Tooltip key={key} content="Overriden by custom tag value" placement="top">
+                <span style={{opacity: 0.2}}>
+                  <RunTag tag={tag} key={idx} />
+                </span>
+              </Tooltip>
+            );
+          }
+          return <RunTag tag={tag} key={idx} />;
+        })}
+        {session.map((tag, idx) => (
           <RunTag tag={tag} key={idx} />
         ))}
       </TagList>

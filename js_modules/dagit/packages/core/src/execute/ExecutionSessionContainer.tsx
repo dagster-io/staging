@@ -462,7 +462,7 @@ const ExecutionSessionContainer: React.FC<IExecutionSessionContainerProps> = (pr
 
   const permanentTags: PipelineRunTag[] = React.useMemo(() => pipeline.tags || [], [pipeline]);
   const sessionTags = React.useMemo(() => currentSession.tags || [], [currentSession]);
-  const allTags = React.useMemo(() => permanentTags.concat(sessionTags), [
+  const allTags = React.useMemo(() => ({permanent: permanentTags, session: sessionTags}), [
     permanentTags,
     sessionTags,
   ]);
@@ -545,7 +545,9 @@ const ExecutionSessionContainer: React.FC<IExecutionSessionContainerProps> = (pr
             <SessionSettingsSpacer />
             <SecondPanelToggle axis="horizontal" container={editorSplitPanelContainer} />
           </SessionSettingsBar>
-          {allTags.length ? <TagContainer tags={allTags} onRequestEdit={openTagEditor} /> : null}
+          {allTags.permanent.length || allTags.session.length ? (
+            <TagContainer tags={allTags} onRequestEdit={openTagEditor} />
+          ) : null}
           {currentSession.base !== null && currentSession.needsRefresh ? (
             <Box
               padding={{vertical: 8, horizontal: 12}}

@@ -609,7 +609,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
           />
           {tags.length ? (
             <div style={{border: '1px solid #ececec', borderBottom: 'none'}}>
-              <TagContainer tags={tags} onRequestEdit={() => setTagEditorOpen(true)} />
+              <TagContainer tags={{session: tags}} onRequestEdit={() => setTagEditorOpen(true)} />
             </div>
           ) : (
             <ButtonLink
