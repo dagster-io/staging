@@ -65,7 +65,7 @@ export const defaultMocks = {
   RepositoryLocationConnection: () => ({
     nodes: () => new MockList(1),
   }),
-  RepositoryLocationOrLoadError: () => ({
+  RepositoryLocationOrLoadErrpr: () => ({
     __typename: 'RepositoryLocation',
   }),
   RepositoryLocationOrLoadFailure: () => ({
