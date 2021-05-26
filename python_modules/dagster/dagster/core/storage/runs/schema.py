@@ -21,6 +21,7 @@ RunsTable = db.Table(
     db.Column("partition_set", db.Text),
     db.Column("create_timestamp", db.DateTime, server_default=get_current_timestamp()),
     db.Column("update_timestamp", db.DateTime, server_default=get_current_timestamp()),
+    db.Column("deployment_id", db.Integer),
 )
 
 # Secondary Index migration table, used to track data migrations, both for event_logs and runs.
@@ -32,6 +33,7 @@ SecondaryIndexMigrationTable = db.Table(
     db.Column("name", MySQLCompatabilityTypes.UniqueText, unique=True),
     db.Column("create_timestamp", db.DateTime, server_default=get_current_timestamp()),
     db.Column("migration_completed", db.DateTime),
+    db.Column("deployment_id", db.Integer),
 )
 
 RunTagsTable = db.Table(
@@ -41,6 +43,7 @@ RunTagsTable = db.Table(
     db.Column("run_id", None, db.ForeignKey("runs.run_id", ondelete="CASCADE")),
     db.Column("key", db.Text),
     db.Column("value", db.Text),
+    db.Column("deployment_id", db.Integer),
 )
 
 SnapshotsTable = db.Table(
@@ -50,6 +53,7 @@ SnapshotsTable = db.Table(
     db.Column("snapshot_id", db.String(255), unique=True, nullable=False),
     db.Column("snapshot_body", db.LargeBinary, nullable=False),
     db.Column("snapshot_type", db.String(63), nullable=False),
+    db.Column("deployment_id", db.Integer),
 )
 
 DaemonHeartbeatsTable = db.Table(
@@ -59,6 +63,7 @@ DaemonHeartbeatsTable = db.Table(
     db.Column("daemon_id", db.String(255)),
     db.Column("timestamp", db.types.TIMESTAMP, nullable=False),
     db.Column("body", db.Text),  # serialized DaemonHeartbeat
+    db.Column("deployment_id", db.Integer),
 )
 
 BulkActionsTable = db.Table(
@@ -69,6 +74,7 @@ BulkActionsTable = db.Table(
     db.Column("status", db.String(255), nullable=False),
     db.Column("timestamp", db.types.TIMESTAMP, nullable=False),
     db.Column("body", db.Text),
+    db.Column("deployment_id", db.Integer),
 )
 
 db.Index("idx_run_tags", RunTagsTable.c.key, RunTagsTable.c.value)
@@ -76,3 +82,10 @@ db.Index("idx_run_partitions", RunsTable.c.partition_set, RunsTable.c.partition)
 db.Index("idx_bulk_actions", BulkActionsTable.c.key)
 db.Index("idx_bulk_actions_status", BulkActionsTable.c.status)
 db.Index("idx_run_status", RunsTable.c.status)
+
+
+db.Index("idx_deployment_id_runs", RunsTable.c.deployment_id)
+db.Index("idx_deployment_id_run_tags", RunTagsTable.c.deployment_id)
+db.Index("idx_deployment_id_snapshots", SnapshotsTable.c.deployment_id)
+db.Index("idx_deployment_id_daemon_heartbeats", DaemonHeartbeatsTable.c.deployment_id)
+db.Index("idx_deployment_id_bulk_actions", BulkActionsTable.c.deployment_id)
