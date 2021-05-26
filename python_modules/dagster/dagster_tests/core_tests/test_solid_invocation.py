@@ -6,6 +6,7 @@ from dagster import (
     AssetKey,
     AssetMaterialization,
     Failure,
+    Field,
     InputDefinition,
     Output,
     OutputDefinition,
@@ -170,6 +171,35 @@ def test_solid_invocation_with_config():
 
     result = solid_requires_config(build_solid_context(config={"foo": "bar"}))
     assert result == 5
+
+
+def test_solid_invocation_default_config():
+    @solid(config_schema={"foo": Field(str, is_required=False, default_value="bar")})
+    def solid_requires_config(context):
+        assert context.solid_config["foo"] == "bar"
+        return context.solid_config["foo"]
+
+    assert solid_requires_config(None) == "bar"
+
+    @solid(config_schema=Field(str, is_required=False, default_value="bar"))
+    def solid_requires_config_val(context):
+        assert context.solid_config == "bar"
+        return context.solid_config
+
+    assert solid_requires_config_val(None) == "bar"
+
+    @solid(
+        config_schema={
+            "foo": Field(str, is_required=False, default_value="bar"),
+            "baz": str,
+        }
+    )
+    def solid_requires_config_partial(context):
+        assert context.solid_config["foo"] == "bar"
+        assert context.solid_config["baz"] == "bar"
+        return context.solid_config["foo"] + context.solid_config["baz"]
+
+    assert solid_requires_config_partial(build_solid_context(config={"baz": "bar"})) == "barbar"
 
 
 def test_solid_with_inputs():
@@ -338,8 +368,6 @@ def test_output_sent_multiple_times():
         ("mode_def", None),
         ("solid_handle", None),
         ("solid", None),
-        ("has_tag", "foo"),
-        ("get_tag", "foo"),
         ("get_step_execution_context", None),
     ],
 )
