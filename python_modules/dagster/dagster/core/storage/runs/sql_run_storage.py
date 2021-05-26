@@ -29,14 +29,7 @@ from dagster.utils import merge_dicts, utc_datetime_from_timestamp
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from .base import RunStorage
 from .migration import RUN_DATA_MIGRATIONS, RUN_PARTITIONS
-from .schema import (
-    BulkActionsTable,
-    DaemonHeartbeatsTable,
-    RunTagsTable,
-    RunsTable,
-    SecondaryIndexMigrationTable,
-    SnapshotsTable,
-)
+from .schema import RunStorageSqlMetadata
 
 
 class SnapshotType(Enum):
@@ -47,6 +40,15 @@ class SnapshotType(Enum):
 class SqlRunStorage(RunStorage):  # pylint: disable=no-init
     """Base class for SQL based run storages"""
 
+    def __init__(self, metadata_class=None):
+        self._metadata_class = metadata_class if metadata_class else RunStorageSqlMetadata
+        self._bulk_actions_table = self._metadata_class.tables["bulk_actions"]
+        self._daemon_heartbeats_table = self._metadata_class.tables["daemon_heartbeats"]
+        self._run_tags_table = self._metadata_class.tables["run_tags"]
+        self._runs_table = self._metadata_class.tables["runs"]
+        self._secondary_indexes_table = self._metadata_class.tables["secondary_indexes"]
+        self._snapshots_table = self._metadata_class.tables["snapshots"]
+
     @abstractmethod
     def connect(self):
         """Context manager yielding a sqlalchemy.engine.Connection."""
@@ -56,6 +58,15 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         """This method should perform any schema or data migrations necessary to bring an
         out-of-date instance of the storage up to date.
         """
+
+    def additional_insert_columns(self, _table_class):
+        return {}
+
+    def apply_additional_filters(self, query, table_class):
+        for column_name, column_value in self.additional_insert_columns(table_class).items():
+            query = query.where(getattr(table_class.c, column_name) == column_value)
+
+        return query
 
     def fetchall(self, query):
         with self.connect() as conn:
@@ -90,14 +101,17 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         partition_set = pipeline_run.tags.get(PARTITION_SET_TAG) if has_tags else None
         with self.connect() as conn:
             try:
-                runs_insert = RunsTable.insert().values(  # pylint: disable=no-value-for-parameter
-                    run_id=pipeline_run.run_id,
-                    pipeline_name=pipeline_run.pipeline_name,
-                    status=pipeline_run.status.value,
-                    run_body=serialize_dagster_namedtuple(pipeline_run),
-                    snapshot_id=pipeline_run.pipeline_snapshot_id,
-                    partition=partition,
-                    partition_set=partition_set,
+                runs_insert = (
+                    self._runs_table.insert().values(  # pylint: disable=no-value-for-parameter
+                        run_id=pipeline_run.run_id,
+                        pipeline_name=pipeline_run.pipeline_name,
+                        status=pipeline_run.status.value,
+                        run_body=serialize_dagster_namedtuple(pipeline_run),
+                        snapshot_id=pipeline_run.pipeline_snapshot_id,
+                        partition=partition,
+                        partition_set=partition_set,
+                        **self.additional_insert_columns(self._runs_table),
+                    )
                 )
                 conn.execute(runs_insert)
             except db.exc.IntegrityError as exc:
@@ -105,9 +119,14 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
             if pipeline_run.tags and len(pipeline_run.tags) > 0:
                 conn.execute(
-                    RunTagsTable.insert(),  # pylint: disable=no-value-for-parameter
+                    self._run_tags_table.insert(),  # pylint: disable=no-value-for-parameter
                     [
-                        dict(run_id=pipeline_run.run_id, key=k, value=v)
+                        dict(
+                            run_id=pipeline_run.run_id,
+                            key=k,
+                            value=v,
+                            **self.additional_insert_columns(self._run_tags_table),
+                        )
                         for k, v in pipeline_run.tags.items()
                     ],
                 )
@@ -140,15 +159,18 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         new_pipeline_status = lookup[event.event_type]
 
         with self.connect() as conn:
-            conn.execute(
-                RunsTable.update()  # pylint: disable=no-value-for-parameter
-                .where(RunsTable.c.run_id == run_id)
-                .values(
-                    status=new_pipeline_status.value,
-                    run_body=serialize_dagster_namedtuple(run.with_status(new_pipeline_status)),
-                    update_timestamp=pendulum.now("UTC"),
+            update_query = (
+                self._runs_table.update().where(  # pylint: disable=no-value-for-parameter
+                    self._runs_table.c.run_id == run_id
                 )
             )
+
+            update_query = self.apply_additional_filters(update_query, self._runs_table).values(
+                status=new_pipeline_status.value,
+                run_body=serialize_dagster_namedtuple(run.with_status(new_pipeline_status)),
+                update_timestamp=pendulum.now("UTC"),
+            )
+            conn.execute(update_query)
 
     def _row_to_run(self, row):
         return deserialize_json_to_dagster_namedtuple(row[0])
@@ -160,44 +182,51 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         """ Helper function to deal with cursor/limit pagination args """
 
         if cursor:
-            cursor_query = db.select([RunsTable.c.id]).where(RunsTable.c.run_id == cursor)
-            query = query.where(RunsTable.c.id < cursor_query)
+            cursor_query = self.apply_additional_filters(
+                db.select([self._runs_table.c.id]).where(self._runs_table.c.run_id == cursor),
+                self._runs_table,
+            )
+            query = self.apply_additional_filters(
+                query.where(self._runs_table.c.id < cursor_query), self._runs_table
+            )
 
         if limit:
             query = query.limit(limit)
 
-        query = query.order_by(RunsTable.c.id.desc())
+        query = query.order_by(self._runs_table.c.id.desc())
         return query
 
     def _add_filters_to_query(self, query, filters):
         check.inst_param(filters, "filters", PipelineRunsFilter)
 
         if filters.run_ids:
-            query = query.where(RunsTable.c.run_id.in_(filters.run_ids))
+            query = query.where(self._runs_table.c.run_id.in_(filters.run_ids))
 
         if filters.pipeline_name:
-            query = query.where(RunsTable.c.pipeline_name == filters.pipeline_name)
+            query = query.where(self._runs_table.c.pipeline_name == filters.pipeline_name)
 
         if filters.statuses:
             query = query.where(
-                RunsTable.c.status.in_([status.value for status in filters.statuses])
+                self._runs_table.c.status.in_([status.value for status in filters.statuses])
             )
 
         if filters.tags:
             query = query.where(
                 db.or_(
                     *(
-                        db.and_(RunTagsTable.c.key == key, RunTagsTable.c.value == value)
+                        db.and_(
+                            self._run_tags_table.c.key == key, self._run_tags_table.c.value == value
+                        )
                         for key, value in filters.tags.items()
                     )
                 )
-            ).group_by(RunsTable.c.run_body, RunsTable.c.id)
+            ).group_by(self._runs_table.c.run_body, self._runs_table.c.id)
 
             if len(filters.tags) > 0:
-                query = query.having(db.func.count(RunsTable.c.run_id) == len(filters.tags))
+                query = query.having(db.func.count(self._runs_table.c.run_id) == len(filters.tags))
 
         if filters.snapshot_id:
-            query = query.where(RunsTable.c.snapshot_id == filters.snapshot_id)
+            query = query.where(self._runs_table.c.snapshot_id == filters.snapshot_id)
 
         return query
 
@@ -213,17 +242,20 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         if columns is None:
             columns = ["run_body"]
 
-        base_query_columns = [getattr(RunsTable.c, column) for column in columns]
+        base_query_columns = [getattr(self._runs_table.c, column) for column in columns]
 
         # If we have a tags filter, then we need to select from a joined table
         if filters.tags:
             base_query = db.select(base_query_columns).select_from(
-                RunsTable.join(RunTagsTable, RunsTable.c.run_id == RunTagsTable.c.run_id)
+                self._runs_table.join(
+                    self._run_tags_table, self._runs_table.c.run_id == self._run_tags_table.c.run_id
+                )
             )
         else:
-            base_query = db.select(base_query_columns).select_from(RunsTable)
+            base_query = db.select(base_query_columns).select_from(self._runs_table)
 
-        query = self._add_filters_to_query(base_query, filters)
+        query = self.apply_additional_filters(base_query, self._runs_table)
+        query = self._add_filters_to_query(query, filters)
         query = self._add_cursor_limit_to_query(query, cursor, limit)
 
         return query
@@ -257,15 +289,17 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         """
         check.str_param(run_id, "run_id")
 
-        query = db.select([RunsTable.c.run_body]).where(RunsTable.c.run_id == run_id)
+        query = db.select([self._runs_table.c.run_body]).where(self._runs_table.c.run_id == run_id)
+        query = self.apply_additional_filters(query, self._runs_table)
         rows = self.fetchall(query)
         return deserialize_json_to_dagster_namedtuple(rows[0][0]) if len(rows) else None
 
     def get_run_tags(self):
         result = defaultdict(set)
-        query = db.select([RunTagsTable.c.key, RunTagsTable.c.value]).distinct(
-            RunTagsTable.c.key, RunTagsTable.c.value
+        query = db.select([self._run_tags_table.c.key, self._run_tags_table.c.value]).distinct(
+            self._run_tags_table.c.key, self._run_tags_table.c.value
         )
+        query = self.apply_additional_filters(query, self._run_tags_table)
         rows = self.fetchall(query)
         for r in rows:
             result[r[0]].add(r[1])
@@ -284,9 +318,12 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
         with self.connect() as conn:
             conn.execute(
-                RunsTable.update()  # pylint: disable=no-value-for-parameter
-                .where(RunsTable.c.run_id == run_id)
-                .values(
+                self.apply_additional_filters(
+                    self._runs_table.update().where(  # pylint: disable=no-value-for-parameter
+                        self._runs_table.c.run_id == run_id
+                    ),
+                    self._runs_table,
+                ).values(
                     run_body=serialize_dagster_namedtuple(
                         run.with_tags(merge_dicts(current_tags, new_tags))
                     ),
@@ -304,15 +341,29 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
             for tag in existing_tags:
                 conn.execute(
-                    RunTagsTable.update()  # pylint: disable=no-value-for-parameter
-                    .where(db.and_(RunTagsTable.c.run_id == run_id, RunTagsTable.c.key == tag))
-                    .values(value=new_tags[tag])
+                    self.apply_additional_filters(
+                        self._run_tags_table.update().where(  # pylint: disable=no-value-for-parameter
+                            db.and_(
+                                self._run_tags_table.c.run_id == run_id,
+                                self._run_tags_table.c.key == tag,
+                            )
+                        ),
+                        self._run_tags_table,
+                    ).values(value=new_tags[tag])
                 )
 
             if added_tags:
                 conn.execute(
-                    RunTagsTable.insert(),  # pylint: disable=no-value-for-parameter
-                    [dict(run_id=run_id, key=tag, value=new_tags[tag]) for tag in added_tags],
+                    self._run_tags_table.insert(),  # pylint: disable=no-value-for-parameter
+                    [
+                        dict(
+                            run_id=run_id,
+                            key=tag,
+                            value=new_tags[tag],
+                            **self.additional_insert_columns(self._run_tags_table),
+                        )
+                        for tag in added_tags
+                    ],
                 )
 
     def get_run_group(self, run_id):
@@ -328,27 +379,31 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         # root_run_id to run_id 1:1 mapping
         # https://github.com/dagster-io/dagster/issues/2495
         # Note: we currently use tags to persist the run group info
-        root_to_run = (
+        root_to_run = self.apply_additional_filters(
             db.select(
-                [RunTagsTable.c.value.label("root_run_id"), RunTagsTable.c.run_id.label("run_id")]
-            )
-            .where(
-                db.and_(RunTagsTable.c.key == ROOT_RUN_ID_TAG, RunTagsTable.c.value == root_run_id)
-            )
-            .alias("root_to_run")
-        )
+                [
+                    self._run_tags_table.c.value.label("root_run_id"),
+                    self._run_tags_table.c.run_id.label("run_id"),
+                ]
+            ).where(
+                db.and_(
+                    self._run_tags_table.c.key == ROOT_RUN_ID_TAG,
+                    self._run_tags_table.c.value == root_run_id,
+                )
+            ),
+            self._run_tags_table,
+        ).alias("root_to_run")
         # get run group
-        run_group_query = (
-            db.select([RunsTable.c.run_body])
-            .select_from(
+        run_group_query = self.apply_additional_filters(
+            db.select([self._runs_table.c.run_body]).select_from(
                 root_to_run.join(
-                    RunsTable,
-                    root_to_run.c.run_id == RunsTable.c.run_id,
+                    self._runs_table,
+                    root_to_run.c.run_id == self._runs_table.c.run_id,
                     isouter=True,
                 )
-            )
-            .alias("run_group")
-        )
+            ),
+            self._runs_table,
+        ).alias("run_group")
 
         with self.connect() as conn:
             res = conn.execute(run_group_query)
@@ -372,11 +427,10 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         #     where key = @ROOT_RUN_ID_TAG
         #   )
 
-        all_descendant_runs = (
-            db.select([RunTagsTable])
-            .where(RunTagsTable.c.key == ROOT_RUN_ID_TAG)
-            .alias("all_descendant_runs")
-        )
+        all_descendant_runs = self.apply_additional_filters(
+            db.select([self._run_tags_table]).where(self._run_tags_table.c.key == ROOT_RUN_ID_TAG),
+            self._run_tags_table,
+        ).alias("all_descendant_runs")
 
         # Augment the runs in our query, for those runs that are the descendant of some root run,
         # with the root_run_id
@@ -402,7 +456,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             .select_from(
                 runs.join(
                     all_descendant_runs,
-                    all_descendant_runs.c.run_id == RunsTable.c.run_id,
+                    all_descendant_runs.c.run_id == self._runs_table.c.run_id,
                     isouter=True,
                 )
             )
@@ -422,15 +476,17 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         #    )
 
         runs_and_root_runs = (
-            db.select([RunsTable.c.run_id.label("run_id")])
-            .select_from(runs_augmented)
-            .where(
-                db.or_(
-                    RunsTable.c.run_id == runs_augmented.c.run_id,
-                    RunsTable.c.run_id == runs_augmented.c.root_run_id,
-                )
-            )
-            .distinct(RunsTable.c.run_id)
+            self.apply_additional_filters(
+                db.select([self._runs_table.c.run_id.label("run_id")])
+                .select_from(runs_augmented)
+                .where(
+                    db.or_(
+                        self._runs_table.c.run_id == runs_augmented.c.run_id,
+                        self._runs_table.c.run_id == runs_augmented.c.root_run_id,
+                    )
+                ),
+                self._runs_table,
+            ).distinct(self._runs_table.c.run_id)
         ).alias("runs_and_root_runs")
 
         # We count the descendants of all of the runs in our query that are roots so that
@@ -450,22 +506,24 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         #    order by child_counts desc
 
         runs_and_root_runs_with_descendant_counts = (
-            db.select(
-                [
-                    RunsTable.c.run_body,
-                    db.func.count(all_descendant_runs.c.id).label("child_counts"),
-                ]
+            self.apply_additional_filters(
+                db.select(
+                    [
+                        self._runs_table.c.run_body,
+                        db.func.count(all_descendant_runs.c.id).label("child_counts"),
+                    ]
+                ).select_from(
+                    self._runs_table.join(
+                        runs_and_root_runs, self._runs_table.c.run_id == runs_and_root_runs.c.run_id
+                    ).join(
+                        all_descendant_runs,
+                        all_descendant_runs.c.value == runs_and_root_runs.c.run_id,
+                        isouter=True,
+                    )
+                ),
+                self._runs_table,
             )
-            .select_from(
-                RunsTable.join(
-                    runs_and_root_runs, RunsTable.c.run_id == runs_and_root_runs.c.run_id
-                ).join(
-                    all_descendant_runs,
-                    all_descendant_runs.c.value == runs_and_root_runs.c.run_id,
-                    isouter=True,
-                )
-            )
-            .group_by(RunsTable.c.run_body)
+            .group_by(self._runs_table.c.run_body)
             .order_by(db.desc(db.column("child_counts")))
         )
 
@@ -492,7 +550,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
     def delete_run(self, run_id):
         check.str_param(run_id, "run_id")
-        query = db.delete(RunsTable).where(RunsTable.c.run_id == run_id)
+        query = db.delete(self._runs_table).where(self._runs_table.c.run_id == run_id)
         with self.connect() as conn:
             conn.execute(query)
 
@@ -536,20 +594,24 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
         with self.connect() as conn:
             snapshot_insert = (
-                SnapshotsTable.insert().values(  # pylint: disable=no-value-for-parameter
+                self._snapshots_table.insert().values(  # pylint: disable=no-value-for-parameter
                     snapshot_id=snapshot_id,
                     snapshot_body=zlib.compress(
                         serialize_dagster_namedtuple(snapshot_obj).encode("utf-8")
                     ),
                     snapshot_type=snapshot_type.value,
+                    **self.additional_insert_columns(self._snapshots_table),
                 )
             )
             conn.execute(snapshot_insert)
             return snapshot_id
 
     def _has_snapshot_id(self, snapshot_id):
-        query = db.select([SnapshotsTable.c.snapshot_id]).where(
-            SnapshotsTable.c.snapshot_id == snapshot_id
+        query = self.apply_additional_filters(
+            db.select([self._snapshots_table.c.snapshot_id]).where(
+                self._snapshots_table.c.snapshot_id == snapshot_id
+            ),
+            self._snapshots_table,
         )
 
         row = self.fetchone(query)
@@ -557,8 +619,11 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         return bool(row)
 
     def _get_snapshot(self, snapshot_id):
-        query = db.select([SnapshotsTable.c.snapshot_body]).where(
-            SnapshotsTable.c.snapshot_id == snapshot_id
+        query = self.apply_additional_filters(
+            db.select([self._snapshots_table.c.snapshot_body]).where(
+                self._snapshots_table.c.snapshot_id == snapshot_id
+            ),
+            self._snapshots_table,
         )
 
         row = self.fetchone(query)
@@ -580,8 +645,8 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         else:
             query = (
                 self._runs_query()
-                .where(RunsTable.c.partition == partition_name)
-                .where(RunsTable.c.partition_set == partition_set_name)
+                .where(self._runs_table.c.partition == partition_name)
+                .where(self._runs_table.c.partition_set == partition_set_name)
             )
             rows = self.fetchall(query)
             return self._rows_to_runs(rows)
@@ -601,12 +666,12 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                 print_fn(f"Finished data migration: {migration_name}")
 
     def has_built_index(self, migration_name):
-        query = (
+        query = self.apply_additional_filters(
             db.select([1])
-            .where(SecondaryIndexMigrationTable.c.name == migration_name)
-            .where(SecondaryIndexMigrationTable.c.migration_completed != None)
-            .limit(1)
-        )
+            .where(self._secondary_indexes_table.c.name == migration_name)
+            .where(self._secondary_indexes_table.c.migration_completed != None),
+            self._secondary_indexes_table,
+        ).limit(1)
         with self.connect() as conn:
             results = conn.execute(query).fetchall()
 
@@ -614,9 +679,10 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
     def mark_index_built(self, migration_name):
         query = (
-            SecondaryIndexMigrationTable.insert().values(  # pylint: disable=no-value-for-parameter
+            self._secondary_indexes_table.insert().values(  # pylint: disable=no-value-for-parameter
                 name=migration_name,
                 migration_completed=datetime.now(),
+                **self.additional_insert_columns(self._secondary_indexes_table),
             )
         )
         with self.connect() as conn:
@@ -624,9 +690,12 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                 conn.execute(query)
             except db.exc.IntegrityError:
                 conn.execute(
-                    SecondaryIndexMigrationTable.update()  # pylint: disable=no-value-for-parameter
-                    .where(SecondaryIndexMigrationTable.c.name == migration_name)
-                    .values(migration_completed=datetime.now())
+                    self.apply_additional_filters(
+                        self._secondary_indexes_table.update().where(  # pylint: disable=no-value-for-parameter
+                            self._secondary_indexes_table.c.name == migration_name
+                        ),
+                        self._secondary_indexes_table,
+                    ).values(migration_completed=datetime.now())
                 )
 
     # Daemon heartbeats
@@ -637,18 +706,23 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             # insert, or update if already present
             try:
                 conn.execute(
-                    DaemonHeartbeatsTable.insert().values(  # pylint: disable=no-value-for-parameter
+                    self._daemon_heartbeats_table.insert().values(  # pylint: disable=no-value-for-parameter
                         timestamp=utc_datetime_from_timestamp(daemon_heartbeat.timestamp),
                         daemon_type=daemon_heartbeat.daemon_type,
                         daemon_id=daemon_heartbeat.daemon_id,
                         body=serialize_dagster_namedtuple(daemon_heartbeat),
+                        **self.additional_insert_columns(self._daemon_heartbeats_table),
                     )
                 )
             except db.exc.IntegrityError:
                 conn.execute(
-                    DaemonHeartbeatsTable.update()  # pylint: disable=no-value-for-parameter
-                    .where(DaemonHeartbeatsTable.c.daemon_type == daemon_heartbeat.daemon_type)
-                    .values(  # pylint: disable=no-value-for-parameter
+                    self.apply_additional_filters(
+                        self._daemon_heartbeats_table.update().where(  # pylint: disable=no-value-for-parameter
+                            self._daemon_heartbeats_table.c.daemon_type
+                            == daemon_heartbeat.daemon_type
+                        ),
+                        self._daemon_heartbeats_table,
+                    ).values(  # pylint: disable=no-value-for-parameter
                         timestamp=utc_datetime_from_timestamp(daemon_heartbeat.timestamp),
                         daemon_id=daemon_heartbeat.daemon_id,
                         body=serialize_dagster_namedtuple(daemon_heartbeat),
@@ -658,7 +732,12 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
     def get_daemon_heartbeats(self):
 
         with self.connect() as conn:
-            rows = conn.execute(db.select(DaemonHeartbeatsTable.columns))
+            rows = conn.execute(
+                self.apply_additional_filters(
+                    db.select(self._daemon_heartbeats_table.columns), self._daemon_heartbeats_table
+                )
+            )
+
             heartbeats = []
             for row in rows:
                 heartbeats.append(deserialize_json_to_dagster_namedtuple(row.body))
@@ -668,35 +747,46 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         """Clears the run storage."""
         with self.connect() as conn:
             # https://stackoverflow.com/a/54386260/324449
-            conn.execute(RunsTable.delete())  # pylint: disable=no-value-for-parameter
-            conn.execute(RunTagsTable.delete())  # pylint: disable=no-value-for-parameter
-            conn.execute(SnapshotsTable.delete())  # pylint: disable=no-value-for-parameter
-            conn.execute(DaemonHeartbeatsTable.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(self._runs_table.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(self._run_tags_table.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(self._snapshots_table.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(
+                self._daemon_heartbeats_table.delete()
+            )  # pylint: disable=no-value-for-parameter
 
     def wipe_daemon_heartbeats(self):
         with self.connect() as conn:
             # https://stackoverflow.com/a/54386260/324449
-            conn.execute(DaemonHeartbeatsTable.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(
+                self._daemon_heartbeats_table.delete()
+            )  # pylint: disable=no-value-for-parameter
 
     def get_backfills(self, status=None, cursor=None, limit=None):
         check.opt_inst_param(status, "status", BulkActionStatus)
-        query = db.select([BulkActionsTable.c.body])
+        query = self.apply_additional_filters(
+            db.select([self._bulk_actions_table.c.body]), self._bulk_actions_table
+        )
         if status:
-            query = query.where(BulkActionsTable.c.status == status.value)
+            query = query.where(self._bulk_actions_table.c.status == status.value)
         if cursor:
-            cursor_query = db.select([BulkActionsTable.c.id]).where(
-                BulkActionsTable.c.key == cursor
+            cursor_query = db.select([self._bulk_actions_table.c.id]).where(
+                self._bulk_actions_table.c.key == cursor
             )
-            query = query.where(BulkActionsTable.c.id < cursor_query)
+            query = query.where(self._bulk_actions_table.c.id < cursor_query)
         if limit:
             query = query.limit(limit)
-        query = query.order_by(BulkActionsTable.c.id.desc())
+        query = query.order_by(self._bulk_actions_table.c.id.desc())
         rows = self.fetchall(query)
         return [deserialize_json_to_dagster_namedtuple(row[0]) for row in rows]
 
     def get_backfill(self, backfill_id):
         check.str_param(backfill_id, "backfill_id")
-        query = db.select([BulkActionsTable.c.body]).where(BulkActionsTable.c.key == backfill_id)
+        query = self.apply_additional_filters(
+            db.select([self._bulk_actions_table.c.body]).where(
+                self._bulk_actions_table.c.key == backfill_id
+            ),
+            self._bulk_actions_table,
+        )
         row = self.fetchone(query)
         return deserialize_json_to_dagster_namedtuple(row[0]) if row else None
 
@@ -704,11 +794,12 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         check.inst_param(partition_backfill, "partition_backfill", PartitionBackfill)
         with self.connect() as conn:
             conn.execute(
-                BulkActionsTable.insert().values(  # pylint: disable=no-value-for-parameter
+                self._bulk_actions_table.insert().values(  # pylint: disable=no-value-for-parameter
                     key=partition_backfill.backfill_id,
                     status=partition_backfill.status.value,
                     timestamp=utc_datetime_from_timestamp(partition_backfill.backfill_timestamp),
                     body=serialize_dagster_namedtuple(partition_backfill),
+                    **self.additional_insert_columns(self._bulk_actions_table),
                 )
             )
 
@@ -721,9 +812,12 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             )
         with self.connect() as conn:
             conn.execute(
-                BulkActionsTable.update()  # pylint: disable=no-value-for-parameter
-                .where(BulkActionsTable.c.key == backfill_id)
-                .values(
+                self.apply_additional_filters(
+                    self._bulk_actions_table.update().where(  # pylint: disable=no-value-for-parameter
+                        self._bulk_actions_table.c.key == backfill_id
+                    ),
+                    self._bulk_actions_table,
+                ).values(
                     status=partition_backfill.status.value,
                     body=serialize_dagster_namedtuple(partition_backfill),
                 )
