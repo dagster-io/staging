@@ -1,0 +1,11 @@
+dbt==0.18.2
+chardet==3.0.4
+coloredlogs==14.0
+Babel==2.9.1
+cronitor==1.0.13
+click==7.1.2
+astroid==2.4.2
+alembic==1.6.4
+attrs==21.2.0
+responses==0.10.15
+agate==1.6.1
