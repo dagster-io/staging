@@ -87,7 +87,6 @@ class StepDelegatingExecutor(Executor):
                                 )
                             )
                         )
-                    running_steps.clear()
 
                 events.extend(
                     self._pop_events(
