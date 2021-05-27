@@ -9,7 +9,7 @@ from dagster.core.errors import DagsterInvalidConfigError
 from .definition_config_schema import convert_user_facing_definition_config_schema
 
 if TYPE_CHECKING:
-    from dagster.core.execution.context.logger import InitLoggerContext
+    from dagster.core.execution.context.logger import InitLoggerContext, UnboundInitLoggerContext
     from dagster.core.definitions import PipelineDefinition
 
     InitLoggerFunction = Callable[[InitLoggerContext], logging.Logger]
@@ -66,6 +66,54 @@ class LoggerDefinition(AnonymousConfigurableDefinition):
             logger_fn=self.logger_fn,
         )
 
+    def initialize(self, init_context: "UnboundInitLoggerContext") -> logging.Logger:
+        """Using the provided context, call the underlying `logger_fn` and return created logger."""
+        from dagster.core.execution.context.logger import (
+            InitLoggerContext,
+            UnboundInitLoggerContext,
+        )
+
+        check.inst_param(init_context, "init_context", UnboundInitLoggerContext)
+
+        logger_config = _resolve_bound_config(init_context.logger_config, self)
+
+        bound_context = InitLoggerContext(
+            logger_config, self, init_context.pipeline_def, init_context.run_id
+        )
+
+        return self.logger_fn(bound_context)
+
+
+def _resolve_bound_config(logger_config: Any, logger_def: "LoggerDefinition") -> Any:
+    from dagster.config.validate import process_config
+
+    validated_config = None
+    if logger_def.config_field:
+        logger_config = logger_config or _get_default_if_exists(logger_def)
+        config_evr = process_config(logger_def.config_field.config_type, logger_config)
+        if not config_evr.success:
+            raise DagsterInvalidConfigError(
+                "Error in config for logger ",
+                config_evr.errors,
+                logger_config,
+            )
+        validated_config = config_evr.value
+        mapped_config_evr = logger_def.apply_config_mapping({"config": validated_config})
+        if not mapped_config_evr.success:
+            raise DagsterInvalidConfigError(
+                "Error in config mapping for logger ", mapped_config_evr.errors, validated_config
+            )
+        validated_config = mapped_config_evr.value.get("config", {})
+    return validated_config or {}
+
+
+def _get_default_if_exists(logger_def: LoggerDefinition):
+    return (
+        logger_def.config_field.default_value
+        if logger_def.config_field and logger_def.config_field.default_provided
+        else None
+    )
+
 
 def logger(
     config_schema: Any = None, description: Optional[str] = None
@@ -97,32 +145,12 @@ def logger(
 
 
 def build_init_logger_context(
-    logger_def: Optional["LoggerDefinition"] = None,
     logger_config: Any = None,
     pipeline_def: Optional["PipelineDefinition"] = None,
-) -> "InitLoggerContext":
-    from dagster.config.validate import validate_config
-    from dagster.core.execution.context.logger import InitLoggerContext
+) -> "UnboundInitLoggerContext":
+    from dagster.core.execution.context.logger import UnboundInitLoggerContext
     from dagster.core.definitions import PipelineDefinition
 
-    check.inst_param(logger_def, "logger_def", LoggerDefinition)
     check.opt_inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
 
-    # If logger def is provided, then we can verify config.
-    if logger_def:
-        if logger_def.config_field:
-            config_evr = validate_config(logger_def.config_field.config_type, logger_config)
-            if not config_evr.success:
-                raise DagsterInvalidConfigError(
-                    "Error in config for logger ", config_evr.errors, logger_config
-                )
-        mapped_config_evr = logger_def.apply_config_mapping({"config": logger_config})
-        if not mapped_config_evr.success:
-            raise DagsterInvalidConfigError(
-                "Error in config mapping for logger ", mapped_config_evr.errors, logger_config
-            )
-    logger_config = mapped_config_evr.value.get("config", {})
-
-    return InitLoggerContext(
-        logger_config=logger_config, pipeline_def=pipeline_def, logger_def=logger_def, run_id=None
-    )
+    return UnboundInitLoggerContext(logger_config=logger_config, pipeline_def=pipeline_def)
