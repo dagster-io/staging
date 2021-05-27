@@ -68,7 +68,6 @@ def schedule_partition_range(
     fmt,
     timezone,
     execution_time_to_partition_fn,
-    inclusive=False,
 ):
     check.inst_param(start, "start", datetime)
     check.opt_inst_param(end, "end", datetime)
@@ -76,7 +75,6 @@ def schedule_partition_range(
     check.str_param(fmt, "fmt")
     check.opt_str_param(timezone, "timezone")
     check.callable_param(execution_time_to_partition_fn, "execution_time_to_partition_fn")
-    check.opt_bool_param(inclusive, "inclusive")
 
     if end and start > end:
         raise DagsterInvariantViolationError(
@@ -89,26 +87,33 @@ def schedule_partition_range(
     def _get_schedule_range_partitions(current_time=None):
         check.opt_inst_param(current_time, "current_time", datetime)
         tz = timezone if timezone else "UTC"
-        _start = (
-            to_timezone(start, tz)
-            if isinstance(start, PendulumDateTime)
-            else pendulum.instance(start, tz=tz)
-        )
+        now = pendulum.now(tz)
 
         if end:
             _end = end
         elif current_time:
             _end = current_time
         else:
-            _end = pendulum.now(tz)
+            _end = now
 
         # coerce to the definition timezone
-        if isinstance(_end, PendulumDateTime):
-            _end = to_timezone(_end, tz)
-        else:
-            _end = pendulum.instance(_end, tz=tz)
+        _start = (
+            to_timezone(start, tz)
+            if isinstance(start, PendulumDateTime)
+            else pendulum.instance(start, tz=tz)
+        )
+        _end = (
+            to_timezone(_end, tz)
+            if isinstance(_end, PendulumDateTime)
+            else pendulum.instance(_end, tz=tz)
+        )
 
-        end_timestamp = _end.timestamp()
+        # Convert end execution time to end partition time
+        _current_time = current_time if _end == current_time else now
+        end_partition_time = execution_time_to_partition_fn(_current_time)
+
+        # Ignore partitions that are within the offset relative to the current time
+        end_timestamp = min(_end, end_partition_time).timestamp()
 
         partitions = []
         for next_time in schedule_execution_time_iterator(_start.timestamp(), cron_schedule, tz):
@@ -123,7 +128,7 @@ def schedule_partition_range(
 
             partitions.append(Partition(value=partition_time, name=partition_time.strftime(fmt)))
 
-        return partitions if inclusive else partitions[:-1]
+        return partitions
 
     return _get_schedule_range_partitions
 
@@ -137,7 +142,7 @@ class ScheduleType(Enum):
 
 class PartitionParams(ABC):
     @abstractmethod
-    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+    def get_partitions(self, current_time: Optional[datetime] = None) -> List[Partition]:
         ...
 
 
@@ -149,7 +154,7 @@ class StaticPartitionParams(
             cls, check.list_param(partitions, "partitions", of_type=Partition)
         )
 
-    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+    def get_partitions(self, current_time: Optional[datetime] = None) -> List[Partition]:
         return self.partitions
 
 
@@ -164,7 +169,6 @@ class TimeBasedPartitionParams(
             ("execution_day", Optional[int]),
             ("end", Optional[datetime]),
             ("fmt", Optional[str]),
-            ("inclusive", Optional[bool]),
             ("timezone", Optional[str]),
             ("offset", Optional[int]),
         ],
@@ -178,7 +182,6 @@ class TimeBasedPartitionParams(
         execution_day: Optional[int] = None,
         end: Optional[datetime] = None,
         fmt: Optional[str] = None,
-        inclusive: Optional[bool] = None,
         timezone: Optional[str] = None,
         offset: Optional[int] = None,
     ):
@@ -222,12 +225,11 @@ class TimeBasedPartitionParams(
             ),
             check.opt_inst_param(end, "end", datetime),
             check.opt_str_param(fmt, "fmt", default=DEFAULT_DATE_FORMAT),
-            check.opt_bool_param(inclusive, "inclusive", default=False),
             check.opt_str_param(timezone, "timezone", default="UTC"),
             check.opt_int_param(offset, "offset", default=1),
         )
 
-    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+    def get_partitions(self, current_time: Optional[datetime] = None) -> List[Partition]:
         check.opt_inst_param(current_time, "current_time", datetime)
 
         partition_fn = schedule_partition_range(
@@ -237,7 +239,6 @@ class TimeBasedPartitionParams(
             fmt=self.fmt,
             timezone=self.timezone,
             execution_time_to_partition_fn=self.get_execution_time_to_partition_fn(),
-            inclusive=self.inclusive,
         )
 
         return partition_fn(current_time=current_time)
@@ -304,7 +305,7 @@ class DynamicPartitionParams(
             cls, check.callable_param(partition_fn, "partition_fn")
         )
 
-    def get_partitions(self, current_time: Optional[datetime]) -> List[Partition]:
+    def get_partitions(self, current_time: Optional[datetime] = None) -> List[Partition]:
         return self.partition_fn(current_time)
 
 
