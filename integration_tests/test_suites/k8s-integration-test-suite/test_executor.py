@@ -153,7 +153,7 @@ def test_k8s_run_launcher_image_from_origin(
 
 
 @pytest.mark.integration
-def test_k8s_run_launcher_terminate(
+def test_k8s_executor_terminate(
     dagster_instance_for_k8s_run_launcher, helm_namespace_for_k8s_run_launcher, dagster_docker_image
 ):
     pipeline_name = "slow_pipeline"

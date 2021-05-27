@@ -22,10 +22,12 @@ class StepDelegatingExecutor(Executor):
         step_handler: StepHandler,
         retries: RetryMode = RetryMode.DISABLED,
         sleep_seconds: float = 0.1,
+        check_step_health_interval: float = 10,
     ):
         self._step_handler = step_handler
         self._retries = retries
         self._sleep_seconds = sleep_seconds
+        self._check_step_health_interval = check_step_health_interval
 
     @property
     def retries(self):
@@ -75,7 +77,7 @@ class StepDelegatingExecutor(Executor):
                     yield DagsterEvent.engine_event(
                         pipeline_context,
                         "Executor received termination signal, forwarding to steps",
-                        EngineEventData(),
+                        EngineEventData.interrupted(list(running_steps.keys())),
                     )
                     stopping = True
                     active_execution.mark_interrupted()
@@ -87,7 +89,6 @@ class StepDelegatingExecutor(Executor):
                                 )
                             )
                         )
-                    running_steps.clear()
 
                 events.extend(
                     self._pop_events(

@@ -2,8 +2,9 @@ import os
 
 import kubernetes
 from dagster import Field, StringSource, executor
+from dagster.core.definitions.event_metadata import EventMetadataEntry
 from dagster.core.definitions.executor import multiple_process_executor_requirements
-from dagster.core.events import DagsterEvent, DagsterEventType
+from dagster.core.events import DagsterEvent, DagsterEventType, EngineEventData
 from dagster.core.execution.plan.objects import StepFailureData
 from dagster.core.execution.retries import get_retries_config
 from dagster.core.executor.base import Executor
@@ -39,6 +40,7 @@ class K8sStepHandler(StepHandler):
         self._job_namespace = job_namespace
 
     def launch_step(self, step_handler_context: StepHandlerContext):
+        events = []
         assert (
             len(step_handler_context.execute_step_args.step_keys_to_execute) == 1
         ), "Launching multiple steps is not currently supported"
@@ -63,6 +65,17 @@ class K8sStepHandler(StepHandler):
         if not job_config.job_image:
             raise Exception("No image included in either executor config or the pipeline")
 
+        events += DagsterEvent(
+            event_type_value=DagsterEventType.ENGINE_EVENT.value,
+            pipeline_name=step_handler_context.execute_step_args.pipeline_origin.pipeline_name,
+            message=f"Executing step {step_key} in Kubernetes job {job_name}",
+            event_specific_data=EngineEventData(
+                [
+                    EventMetadataEntry.text(job_name, "Kubernetes Job name"),
+                ]
+            ),
+        )
+
         job = construct_dagster_k8s_job(
             job_config,
             args,
@@ -75,7 +88,7 @@ class K8sStepHandler(StepHandler):
         kubernetes.client.BatchV1Api().create_namespaced_job(
             body=job, namespace=self._job_namespace
         )
-        return []
+        return events
 
     def check_step_health(self, step_handler_context: StepHandlerContext):
         assert (
@@ -137,7 +150,7 @@ class K8sStepHandler(StepHandler):
     ),
     requirements=multiple_process_executor_requirements(),
 )
-def dagster_k8s_executor(init_context: InitExecutorContext) -> Executor:
+def k8s_job_executor(init_context: InitExecutorContext) -> Executor:
     run_launcher = init_context.instance.run_launcher
     exc_cfg = init_context.executor_config
     job_config = DagsterK8sJobConfig(
