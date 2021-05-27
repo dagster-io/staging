@@ -451,7 +451,8 @@ def _check_partitions(
 HOURS_UNTIL_FEBRUARY_27 = 24 * (31 + 26)
 
 
-def test_partitions_for_hourly_schedule_decorators_without_timezone():
+@pytest.mark.parametrize("partition_hours_offset", [0, 1, 2])
+def test_partitions_for_hourly_schedule_decorators_without_timezone(partition_hours_offset: int):
     with instance_for_test() as instance:
         with pendulum.test(
             to_timezone(create_pendulum_time(2019, 2, 27, 0, 1, 1, tz="UTC"), "US/Eastern")
@@ -465,13 +466,14 @@ def test_partitions_for_hourly_schedule_decorators_without_timezone():
                 pipeline_name="foo_pipeline",
                 start_date=start_date,
                 execution_time=time(hour=0, minute=25),
+                partition_hours_offset=partition_hours_offset,
             )
             def hourly_foo_schedule(hourly_time):
                 return {"hourly_time": hourly_time.isoformat()}
 
             _check_partitions(
                 hourly_foo_schedule,
-                HOURS_UNTIL_FEBRUARY_27,
+                HOURS_UNTIL_FEBRUARY_27 - partition_hours_offset,
                 pendulum.instance(start_date, tz="UTC"),
                 DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE,
                 relativedelta(hours=1),
@@ -481,9 +483,9 @@ def test_partitions_for_hourly_schedule_decorators_without_timezone():
             assert execution_data.run_requests
             assert len(execution_data.run_requests) == 1
             assert execution_data.run_requests[0].run_config == {
-                "hourly_time": create_pendulum_time(
-                    year=2019, month=2, day=26, hour=23, tz="UTC"
-                ).isoformat()
+                "hourly_time": create_pendulum_time(year=2019, month=2, day=26, hour=23, tz="UTC")
+                .subtract(hours=partition_hours_offset)
+                .isoformat()
             }
 
             valid_time = create_pendulum_time(
@@ -495,13 +497,14 @@ def test_partitions_for_hourly_schedule_decorators_without_timezone():
             assert execution_data.run_requests
             assert len(execution_data.run_requests) == 1
             assert execution_data.run_requests[0].run_config == {
-                "hourly_time": create_pendulum_time(
-                    year=2019, month=1, day=27, hour=0, tz="UTC"
-                ).isoformat()
+                "hourly_time": create_pendulum_time(year=2019, month=1, day=27, hour=1, tz="UTC")
+                .subtract(hours=partition_hours_offset)
+                .isoformat()
             }
 
 
-def test_partitions_for_hourly_schedule_decorators_with_timezone():
+@pytest.mark.parametrize("partition_hours_offset", [0, 1, 2])
+def test_partitions_for_hourly_schedule_decorators_with_timezone(partition_hours_offset: int):
     with instance_for_test() as instance:
         with pendulum.test(create_pendulum_time(2019, 2, 27, 0, 1, 1, tz="US/Central")):
             start_date = datetime(year=2019, month=1, day=1)
@@ -514,6 +517,7 @@ def test_partitions_for_hourly_schedule_decorators_with_timezone():
                 start_date=start_date,
                 execution_time=time(hour=0, minute=25),
                 execution_timezone="US/Central",
+                partition_hours_offset=partition_hours_offset,
             )
             def hourly_central_schedule(hourly_time):
                 return {"hourly_time": hourly_time.isoformat()}
@@ -522,7 +526,7 @@ def test_partitions_for_hourly_schedule_decorators_with_timezone():
 
             _check_partitions(
                 hourly_central_schedule,
-                HOURS_UNTIL_FEBRUARY_27,
+                HOURS_UNTIL_FEBRUARY_27 - partition_hours_offset,
                 pendulum.instance(start_date, tz="US/Central"),
                 DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
                 relativedelta(hours=1),
@@ -538,8 +542,10 @@ def test_partitions_for_hourly_schedule_decorators_with_timezone():
             assert len(execution_data.run_requests) == 1
             assert execution_data.run_requests[0].run_config == {
                 "hourly_time": create_pendulum_time(
-                    year=2019, month=1, day=27, hour=0, tz="US/Central"
-                ).isoformat()
+                    year=2019, month=1, day=27, hour=1, tz="US/Central"
+                )
+                .subtract(hours=partition_hours_offset)
+                .isoformat()
             }
 
             # You can specify a start date in a different timezone and it will be transformed into the
@@ -553,71 +559,20 @@ def test_partitions_for_hourly_schedule_decorators_with_timezone():
                 start_date=start_date_with_different_timezone,
                 execution_time=time(hour=0, minute=25),
                 execution_timezone="US/Central",
+                partition_hours_offset=partition_hours_offset,
             )
             def hourly_central_schedule_with_timezone_start_time(hourly_time):
                 return {"hourly_time": hourly_time.isoformat()}
 
             _check_partitions(
                 hourly_central_schedule_with_timezone_start_time,
-                HOURS_UNTIL_FEBRUARY_27 - 2,  # start date is two hours later since it's in PT
+                HOURS_UNTIL_FEBRUARY_27
+                - 2  # start date is two hours later since it's in PT
+                - partition_hours_offset,
                 to_timezone(start_date_with_different_timezone, "US/Central"),
                 DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
                 relativedelta(hours=1),
             )
-
-            # test partition_hours_offset=0
-
-            @hourly_schedule(
-                pipeline_name="foo_pipeline",
-                start_date=start_date_with_different_timezone,
-                execution_time=time(hour=0, minute=25),
-                execution_timezone="US/Central",
-                partition_hours_offset=0,
-            )
-            def hourly_schedule_for_current_hour(hourly_time):
-                return {"hourly_time": hourly_time.isoformat()}
-
-            valid_time = create_pendulum_time(
-                year=2019, month=1, day=27, hour=1, minute=25, tz="US/Central"
-            )
-            context_with_valid_time = build_schedule_context(instance, valid_time)
-
-            execution_data = hourly_schedule_for_current_hour.evaluate_tick(context_with_valid_time)
-            assert execution_data.run_requests
-            assert len(execution_data.run_requests) == 1
-            assert execution_data.run_requests[0].run_config == {
-                "hourly_time": create_pendulum_time(
-                    year=2019, month=1, day=27, hour=1, tz="US/Central"
-                ).isoformat()
-            }
-
-            # test partition_hours_offset=2
-
-            @hourly_schedule(
-                pipeline_name="foo_pipeline",
-                start_date=start_date_with_different_timezone,
-                execution_time=time(hour=0, minute=25),
-                execution_timezone="US/Central",
-                partition_hours_offset=2,
-            )
-            def hourly_schedule_for_two_hours_ago(hourly_time):
-                return {"hourly_time": hourly_time.isoformat()}
-
-            valid_time = create_pendulum_time(
-                year=2019, month=1, day=27, hour=1, minute=25, tz="US/Central"
-            )
-            context_with_valid_time = build_schedule_context(instance, valid_time)
-
-            execution_data = hourly_schedule_for_two_hours_ago.evaluate_tick(
-                context_with_valid_time
-            )
-            assert execution_data.run_requests
-            assert len(execution_data.run_requests) == 1
-            assert execution_data.run_requests[0].run_config == {
-                "hourly_time": create_pendulum_time(
-                    year=2019, month=1, day=26, hour=23, tz="US/Central"
-                ).isoformat()
-            }
 
 
 def test_partitions_for_daily_schedule_decorators_without_timezone():
@@ -982,14 +937,15 @@ def test_partitions_outside_schedule_range():
             pipeline_name="too late",
             start_date=create_pendulum_time(year=2020, month=1, day=1, tz="UTC"),
             end_date=create_pendulum_time(year=2020, month=12, day=1, tz="UTC"),
+            partition_months_offset=0,
         )
         def too_late(monthly_time):
             return {"monthly_time": monthly_time.isoformat()}
 
         execution_data = too_late.evaluate_tick(context)
         assert execution_data.skip_message == (
-            "Your partition (2020-12-01T00:00:00+00:00) is after the end of "
-            "the partition set (2020-11-01T00:00:00+00:00). "
+            "Your partition (2021-01-01T00:00:00+00:00) is after the end of "
+            "the partition set (2020-12-01T00:00:00+00:00). "
             "Verify your schedule's end_date is correct."
         )
 
