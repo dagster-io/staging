@@ -121,10 +121,25 @@ For more information, you can check out the [Modes](/concepts/modes-resources) a
 
 ### Testing single solid execution
 
-You can test a solid by invoking it.
+You can execute a single solid without writing a pipeline using <PyObject object="execute_solid" />. Using this function you will a single solid in an ephemeral pipeline. You can then then test execution properties using the <PyObject object="SolidExecutionResult" /> object that it returns.
+
+```python file=/concepts/solids_pipelines/unit_tests.py startafter=start_test_execute_solid_marker endbefore=end_test_execute_solid_marker
+def test_solid():
+    result = execute_solid(add_one)
+
+    # return type is SolidExecutionResult
+    assert isinstance(result, SolidExecutionResult)
+    assert result.success
+    # check the solid output value
+    assert result.output_value() == 2
+```
+
+### (Experimental) Testing solids with invocation
+
+You can also test a solid by invoking it.
 
 ```python file=/concepts/solids_pipelines/unit_tests.py startafter=start_test_solid_marker endbefore=end_test_solid_marker
-def test_solid():
+def test_solid_with_invocation():
     assert add_one() == 2
 ```
 
