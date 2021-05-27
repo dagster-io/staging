@@ -199,10 +199,6 @@ class IWorkspaceProcessContext(ABC):
         pass
 
     @abstractproperty
-    def instance(self) -> DagsterInstance:
-        pass
-
-    @abstractproperty
     def location_state_events(self) -> "Subject":
         pass
 
@@ -268,15 +264,11 @@ class WorkspaceProcessContext(IWorkspaceProcessContext):
 
     def create_request_context(self) -> WorkspaceRequestContext:
         return WorkspaceRequestContext(
-            instance=self.instance,
+            instance=self._instance,
             workspace_snapshot=self._workspace.create_snapshot(),
             process_context=self,
             version=self.version,
         )
-
-    @property
-    def instance(self) -> DagsterInstance:
-        return self._instance
 
     @property
     def workspace(self) -> Workspace:
