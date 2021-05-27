@@ -120,8 +120,8 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
             check.opt_str_param(kubeconfig_file, "kubeconfig_file")
             kubernetes.config.load_kube_config(kubeconfig_file)
 
-        self._batch_api = k8s_client_batch_api or kubernetes.client.BatchV1Api()
-        self._core_api = k8s_client_core_api or kubernetes.client.CoreV1Api()
+        self._fixed_batch_api = k8s_client_batch_api
+        self._fixed_core_api = k8s_client_core_api
 
         self._job_config = None
         self._job_image = check.opt_str_param(job_image, "job_image")
@@ -141,6 +141,14 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         self._env_secrets = check.opt_list_param(env_secrets, "env_secrets", of_type=str)
 
         super().__init__()
+
+    @property
+    def _batch_api(self):
+        return self._fixed_batch_api if self._fixed_batch_api else None
+
+    @property
+    def _core_api(self):
+        return self._fixed_core_api if self._fixed_core_api else None
 
     @classmethod
     def config_type(cls):
