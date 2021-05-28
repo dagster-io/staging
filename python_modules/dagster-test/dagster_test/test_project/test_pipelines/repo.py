@@ -32,9 +32,9 @@ from dagster.core.definitions.decorators import daily_schedule, schedule
 from dagster.core.test_utils import nesting_composite_pipeline
 from dagster.utils import merge_dicts, segfault
 from dagster.utils.yaml_utils import merge_yamls
-from dagster_aws.s3 import s3_plus_default_intermediate_storage_defs, s3_resource
+from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
+from dagster_gcp.gcs import gcs_pickle_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
-from dagster_gcp.gcs.system_storage import gcs_plus_default_intermediate_storage_defs
 
 IS_BUILDKITE = bool(os.getenv("BUILDKITE"))
 
@@ -45,8 +45,15 @@ def celery_mode_defs(resources=None):
 
     return [
         ModeDefinition(
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs=resources if resources else {"s3": s3_resource},
+            resource_defs=dict(
+                **{
+                    "io_manager": s3_pickle_io_manager.configured(
+                        {"s3_bucket": "dagster-scratch-80542c2"}
+                    ),
+                    "s3": s3_resource,
+                },
+                **(resources or {}),
+            ),
             executor_defs=default_executors + [celery_executor, celery_k8s_job_executor],
         )
     ]
@@ -57,8 +64,15 @@ def k8s_mode_defs(resources=None):
 
     return [
         ModeDefinition(
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs=resources if resources else {"s3": s3_resource},
+            resource_defs=dict(
+                **{
+                    "io_manager": s3_pickle_io_manager.configured(
+                        {"s3_bucket": "dagster-scratch-80542c2"}
+                    ),
+                    "s3": s3_resource,
+                },
+                **(resources or {}),
+            ),
             executor_defs=default_executors + [dagster_k8s_executor],
         )
     ]
@@ -90,10 +104,7 @@ def hanging_solid(_):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs={"s3": s3_resource},
-        )
+        ModeDefinition(resource_defs={"io_manager": s3_pickle_io_manager, "s3": s3_resource})
     ]
 )
 def hanging_pipeline():
@@ -102,10 +113,7 @@ def hanging_pipeline():
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs={"s3": s3_resource},
-        )
+        ModeDefinition(resource_defs={"io_manager": s3_pickle_io_manager, "s3": s3_resource})
     ]
 )
 def demo_pipeline():
@@ -126,8 +134,7 @@ def define_docker_celery_pipeline():
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-                resource_defs={"s3": s3_resource},
+                resource_defs={"io_manager": s3_pickle_io_manager, "s3": s3_resource},
                 executor_defs=default_executors + [celery_docker_executor],
             )
         ]
@@ -140,10 +147,7 @@ def define_docker_celery_pipeline():
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(
-            intermediate_storage_defs=gcs_plus_default_intermediate_storage_defs,
-            resource_defs={"gcs": gcs_resource},
-        )
+        ModeDefinition(resource_defs={"io_manager": gcs_pickle_io_manager, "gcs": gcs_resource})
     ]
 )
 def demo_pipeline_gcs():
@@ -152,10 +156,7 @@ def demo_pipeline_gcs():
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs={"s3": s3_resource},
-        )
+        ModeDefinition(resource_defs={"io_manager": gcs_pickle_io_manager, "gcs": gcs_resource})
     ]
 )
 def demo_error_pipeline():
@@ -293,7 +294,6 @@ def define_schedules():
         from dagster_celery_k8s.config import get_celery_engine_grpc_config
 
         cfg = get_celery_engine_grpc_config()
-        cfg["storage"] = {"s3": {"config": {"s3_bucket": "dagster-scratch-80542c2"}}}
         return cfg
 
     @schedule(
@@ -322,7 +322,6 @@ def define_schedules():
         from dagster_celery_k8s.config import get_celery_engine_config
 
         cfg = get_celery_engine_config()
-        cfg["storage"] = {"s3": {"config": {"s3_bucket": "dagster-scratch-80542c2"}}}
         return cfg
 
     @schedule(
@@ -461,10 +460,7 @@ def emit_airflow_execution_date(context):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs={"s3": s3_resource},
-        )
+        ModeDefinition(resource_defs={"io_manager": s3_pickle_io_manager, "s3": s3_resource})
     ]
 )
 def demo_airflow_execution_date_pipeline():
