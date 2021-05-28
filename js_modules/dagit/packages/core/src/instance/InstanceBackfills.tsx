@@ -285,7 +285,7 @@ const BackfillRow = ({
       )
     : null;
 
-  const canCancel = backfill.runs.some((run) => run.canTerminate);
+  const canCancel = backfill.runs.some((run) => doneStatuses.has(run.status));
 
   return (
     <tr>

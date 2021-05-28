@@ -23,9 +23,7 @@ export const BackfillTerminationDialog = ({backfill, onClose, onComplete}: Props
     return null;
   }
   const numUnscheduled = (backfill.numTotal || 0) - (backfill.numRequested || 0);
-  const cancelableRuns = backfill.runs.filter(
-    (run) => !doneStatuses.has(run?.status) && run.canTerminate,
-  );
+  const cancelableRuns = backfill.runs.filter((run) => !doneStatuses.has(run?.status));
   const unfinishedMap = backfill.runs
     .filter((run) => !doneStatuses.has(run?.status))
     .reduce((accum, run) => ({...accum, [run.id]: run.canTerminate}), {});
