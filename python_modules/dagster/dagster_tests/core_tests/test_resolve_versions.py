@@ -591,3 +591,17 @@ def test_step_versions_composite_solid():
     versions = resolve_step_versions(wrap_pipeline, speculative_execution_plan, environment_config)
 
     assert versions["do_stuff.scalar_config_solid"] == None
+
+
+def test_configured_versions():
+    @solid(version="5")
+    def basic_solid():
+        pass
+
+    assert basic_solid.configured({}, name="basic_solid_configured").version == "5"
+
+    @resource(version="5")
+    def basic_resource(_):
+        pass
+
+    assert basic_resource.configured({}).version == "5"
