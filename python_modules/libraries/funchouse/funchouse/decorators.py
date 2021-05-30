@@ -1,0 +1,80 @@
+from typing import AbstractSet, Any, Callable, Dict, List, Optional, Tuple, Union
+
+from dagster import InputDefinition, OutputDefinition, SolidDefinition
+from dagster.core.decorator_utils import get_function_params, get_valid_name_permutations
+from dagster.core.definitions.decorators.solid import _Solid
+
+
+def asset(
+    name: Optional[str] = None,
+    namespace: Optional[List[str]] = None,
+    inputs: Optional[List[Union[Tuple[str], List[str]]]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    description: Optional[str] = None,
+    required_resource_keys: Optional[AbstractSet[str]] = None,
+) -> Callable[[Callable[..., Any]], SolidDefinition]:
+    """Create a solid that updates an asset."""
+    if callable(name):
+        return _Asset()(name)
+
+    if metadata and "namespace" in metadata:
+        raise ValueError("TODO")
+
+    def inner(fn: Callable[..., Any]) -> SolidDefinition:
+        return _Asset(
+            name=name,
+            namespace=namespace,
+            inputs=inputs,
+            metadata=metadata,
+            description=description,
+            required_resource_keys=required_resource_keys,
+        )(fn)
+
+    return inner
+
+
+class _Asset:
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        namespace: Optional[List[str]] = None,
+        inputs: Optional[List[Union[Tuple[str], List[str]]]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        description: Optional[str] = None,
+        required_resource_keys: Optional[AbstractSet[str]] = None,
+    ):
+        self.name = name
+        self.namespace = namespace
+        self.inputs = inputs
+        self.metadata = metadata
+        self.description = description
+        self.required_resource_keys = required_resource_keys
+
+    def __call__(self, fn: Callable):
+        asset_name = self.name or fn.__name__
+        params = get_function_params(fn)
+        is_context_provided = len(params) > 0 and params[0].name in get_valid_name_permutations(
+            "context"
+        )
+        input_params = params[1:] if is_context_provided else params
+        if len(input_params) != len(self.inputs or []):
+            raise ValueError("TODO")
+
+        input_defs = [
+            InputDefinition(
+                name=input_param.name,
+                metadata={"logical_asset": tuple(input_path)},
+                root_manager_key="root_manager",
+            )
+            for input_path, input_param in zip(self.inputs or [], input_params)
+        ]
+        output_def = OutputDefinition(
+            metadata={"logical_asset": tuple(self.namespace or ()) + (asset_name,)}
+        )
+        return _Solid(
+            name=asset_name,
+            description=self.description,
+            input_defs=input_defs,
+            output_defs=[output_def],
+            required_resource_keys=self.required_resource_keys,
+        )(fn)
