@@ -393,6 +393,7 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         tox_env_suffixes=["-papermill1", "-papermill2"],
     ),
     ModuleBuildSpec("python_modules/libraries/lakehouse", upload_coverage=False),
+    ModuleBuildSpec("python_modules/libraries/funchouse", upload_coverage=False),
 ]
 
 
