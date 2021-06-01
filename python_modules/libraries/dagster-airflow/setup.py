@@ -37,8 +37,7 @@ if __name__ == "__main__":
             "pendulum==1.4.4",
             # https://issues.apache.org/jira/browse/AIRFLOW-6854
             'typing_extensions; python_version>="3.8"',
-            # https://github.com/dagster-io/dagster/issues/3858
-            "sqlalchemy>=1.0,<1.4.0",
+            "SQLAlchemy>=1.0",
             "marshmallow-sqlalchemy<0.26.0",
         ],
         extras_require={
