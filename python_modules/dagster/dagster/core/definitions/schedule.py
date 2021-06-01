@@ -158,20 +158,6 @@ class ScheduleDefinition:
         description (Optional[str]): A human-readable description of the schedule.
     """
 
-    __slots__ = [
-        "_name",
-        "_pipeline_name",
-        "_tags_fn",
-        "_run_config_fn",
-        "_mode",
-        "_solid_selection",
-        "_description",
-        "_cron_schedule",
-        "_environment_vars",
-        "_execution_fn",
-        "_execution_timezone",
-    ]
-
     def __init__(
         self,
         name: str,
@@ -286,6 +272,11 @@ class ScheduleDefinition:
                         schedule_name=name, timezone=self._execution_timezone
                     )
                 )
+
+    # This allows us to pass schedule definition off as a function, so that it can inherit the
+    # metadata of the wrapped function.
+    def __call__(self, *args, **kwargs):
+        return self
 
     @property
     def name(self) -> str:

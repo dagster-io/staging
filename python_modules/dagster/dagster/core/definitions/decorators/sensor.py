@@ -1,4 +1,5 @@
 import inspect
+from functools import update_wrapper
 from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from dagster import check
@@ -70,7 +71,7 @@ def sensor(
                     ).format(sensor_name=sensor_name, result=result, type_=type(result))
                 )
 
-        return SensorDefinition(
+        sensor_def = SensorDefinition(
             name=sensor_name,
             pipeline_name=pipeline_name,
             evaluation_fn=_wrapped_fn,
@@ -79,5 +80,9 @@ def sensor(
             minimum_interval_seconds=minimum_interval_seconds,
             description=description,
         )
+
+        update_wrapper(sensor_def, wrapped=fn)
+
+        return sensor_def
 
     return inner
