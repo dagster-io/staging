@@ -20,7 +20,7 @@ from .dependency import (
 from .hook import HookDefinition
 from .inference import infer_output_props
 from .output import OutputDefinition, OutputMapping
-from .solid import NodeDefinition
+from .solid import NodeDefinition, SolidDefinition
 from .utils import check_valid_name, validate_tags
 
 _composition_stack: List["InProgressCompositionContext"] = []
@@ -252,6 +252,9 @@ class PendingNodeInvocation:
 
     def __call__(self, *args, **kwargs):
         node_name = self.given_alias if self.given_alias else self.node_def.name
+
+        if not is_in_composition() and isinstance(self.node_def, SolidDefinition):
+            return self.node_def.__call__(*args, **kwargs)
 
         input_bindings = {}
 

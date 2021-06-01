@@ -486,3 +486,11 @@ def test_output_type_check():
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
         wrong_type()
+
+
+def test_pending_node_invocation():
+    @solid
+    def basic_solid_to_tag():
+        return 5
+
+    assert basic_solid_to_tag.with_hooks(set())() == 5
