@@ -53,6 +53,14 @@ def test_solid_invocation_no_arg():
     ):
         basic_solid(None)
 
+    with pytest.raises(
+        DagsterInvalidInvocationError,
+        match="Too many input arguments were provided for solid 'aliased_basic_solid'. This may be "
+        "because an argument was provided for the context parameter, but no context parameter was "
+        "defined for the solid.",
+    ):
+        basic_solid.alias("aliased_basic_solid")(None)
+
 
 def test_solid_invocation_none_arg():
     @solid
@@ -367,6 +375,15 @@ def test_wrong_output():
     ):
         solid_wrong_output()
 
+    with pytest.raises(
+        DagsterInvariantViolationError,
+        match=re.escape(
+            'Solid "aliased_solid_wrong_output" returned an output "wrong_name" that does '
+            "not exist. The available outputs are ['result']"
+        ),
+    ):
+        solid_wrong_output.alias("aliased_solid_wrong_output")()
+
 
 def test_output_not_sent():
     @solid(output_defs=[OutputDefinition(int, name="1"), OutputDefinition(int, name="2")])
@@ -387,6 +404,13 @@ def test_output_not_sent():
     ):
         solid_multiple_outputs_not_sent()
 
+    with pytest.raises(
+        DagsterInvariantViolationError,
+        match='Solid "aliased_solid_multiple_outputs_not_sent" did not return an output '
+        'for non-optional output "1"',
+    ):
+        solid_multiple_outputs_not_sent.alias("aliased_solid_multiple_outputs_not_sent")()
+
 
 def test_output_sent_multiple_times():
     @solid(output_defs=[OutputDefinition(int, name="1")])
@@ -402,9 +426,15 @@ def test_output_sent_multiple_times():
 
     with pytest.raises(
         DagsterInvariantViolationError,
-        match='Solid "solid_yields_twice" returned an output "1" multiple times',
+        match="Solid 'solid_yields_twice' returned an output '1' multiple times",
     ):
         solid_yields_twice()
+
+    with pytest.raises(
+        DagsterInvariantViolationError,
+        match="Solid 'aliased_solid_yields_twice' returned an output '1' multiple times",
+    ):
+        solid_yields_twice.alias("aliased_solid_yields_twice")()
 
 
 @pytest.mark.parametrize(
@@ -486,3 +516,18 @@ def test_output_type_check():
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
         wrong_type()
+
+
+def test_pending_node_invocation():
+    @solid
+    def basic_solid_to_hook():
+        return 5
+
+    assert basic_solid_to_hook.with_hooks(set())() == 5
+
+    @solid
+    def basic_solid_with_tag(context):
+        assert context.has_tag("foo")
+        return context.get_tag("foo")
+
+    assert basic_solid_with_tag.tag({"foo": "bar"})(None) == "bar"
