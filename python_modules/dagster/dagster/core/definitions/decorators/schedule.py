@@ -1,5 +1,6 @@
 import datetime
 import warnings
+from functools import update_wrapper
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from dagster import check
@@ -79,7 +80,7 @@ def schedule(
 
         schedule_name = name or fn.__name__
 
-        return ScheduleDefinition(
+        schedule_def = ScheduleDefinition(
             name=schedule_name,
             cron_schedule=cron_schedule,
             pipeline_name=pipeline_name,
@@ -93,6 +94,10 @@ def schedule(
             execution_timezone=execution_timezone,
             description=description,
         )
+
+        update_wrapper(schedule_def, wrapped=fn)
+
+        return schedule_def
 
     return inner
 

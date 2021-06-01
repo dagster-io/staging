@@ -32,15 +32,6 @@ class SensorExecutionContext:
             sensor. Use the preferred `cursor` attribute instead.
     """
 
-    __slots__ = [
-        "_instance_ref",
-        "_last_completion_time",
-        "_last_run_key",
-        "_cursor",
-        "_exit_stack",
-        "_instance",
-    ]
-
     def __init__(
         self,
         instance_ref: Optional[InstanceRef],
@@ -127,18 +118,6 @@ class SensorDefinition:
         description (Optional[str]): A human-readable description of the sensor.
     """
 
-    __slots__ = [
-        "_name",
-        "_pipeline_name",
-        "_tags_fn",
-        "_run_config_fn",
-        "_mode",
-        "_solid_selection",
-        "_description",
-        "_evaluation_fn",
-        "_min_interval",
-    ]
-
     def __init__(
         self,
         name: str,
@@ -164,6 +143,11 @@ class SensorDefinition:
         self._min_interval = check.opt_int_param(
             minimum_interval_seconds, "minimum_interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL
         )
+
+    # This allows us to pass sensor definition off as a function, so that it can inherit the
+    # metadata of the wrapped function.
+    def __call__(self, *args, **kwargs):
+        return self
 
     @property
     def name(self) -> str:
