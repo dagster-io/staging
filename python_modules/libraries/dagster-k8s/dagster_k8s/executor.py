@@ -26,6 +26,10 @@ from .utils import delete_job
 
 @experimental
 class K8sStepHandler(StepHandler):
+    """
+    Executor which launches steps as Kubernetes Jobs.
+    """
+
     @property
     def name(self):
         return "K8sStepHandler"
