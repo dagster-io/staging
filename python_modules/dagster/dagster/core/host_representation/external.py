@@ -1,5 +1,6 @@
 import warnings
 from collections import OrderedDict
+from typing import List, Optional
 
 from dagster import check
 from dagster.core.definitions.run_request import JobType
@@ -11,6 +12,7 @@ from dagster.core.utils import toposort
 from dagster.utils.schedules import schedule_execution_time_iterator
 
 from .external_data import (
+    ExternalPartitionNamesData,
     ExternalPartitionSetData,
     ExternalPipelineData,
     ExternalRepositoryData,
@@ -113,6 +115,16 @@ class ExternalRepository:
             ExternalPartitionSet(external_partition_set_data, self._handle)
             for external_partition_set_data in self.external_repository_data.external_partition_set_datas
         ]
+
+    def has_external_partition_set_names(self, partition_set_name: str) -> bool:
+        return self.get_external_partition_set(partition_set_name).partition_set_names is not None
+
+    def get_external_partition_set_names(
+        self, partition_set_name: str
+    ) -> "ExternalPartitionNamesData":
+        return ExternalPartitionNamesData(
+            partition_names=self.get_external_partition_set(partition_set_name).partition_set_names
+        )
 
     def get_full_external_pipeline(self, pipeline_name):
         check.str_param(pipeline_name, "pipeline_name")
@@ -539,6 +551,16 @@ class ExternalPartitionSet:
     @property
     def pipeline_name(self):
         return self._external_partition_set_data.pipeline_name
+
+    @property
+    def partition_set_names(self) -> Optional[List[str]]:
+        if not self._external_partition_set_data.partition_params:
+            return None
+
+        return [
+            partition.name
+            for partition in self._external_partition_set_data.partition_params.get_partitions()
+        ]
 
     def get_external_origin(self):
         return self._handle.get_external_origin()
