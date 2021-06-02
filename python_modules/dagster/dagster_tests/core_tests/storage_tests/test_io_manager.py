@@ -31,6 +31,7 @@ from dagster.core.storage.fs_io_manager import custom_path_fs_io_manager, fs_io_
 from dagster.core.storage.io_manager import IOManager, io_manager
 from dagster.core.storage.mem_io_manager import InMemoryIOManager, mem_io_manager
 from dagster.core.system_config.objects import EnvironmentConfig
+from dagster.core.errors import DagsterExecutionHandleOutputError
 
 
 def test_io_manager_with_config():
@@ -685,3 +686,31 @@ def test_get_output_context_with_resources():
             step_context=mock.MagicMock(),
             resources=mock.MagicMock(),
         )
+
+
+def test_error_boundary_with_gen():
+    class ErrorIOManager(IOManager):
+        def load_input(self, context):
+            pass
+
+        def handle_output(self, context, obj):
+            raise ValueError("handle output error")
+            yield AssetMaterialization(asset_key="a")
+
+    @io_manager
+    def error_io_manager(_):
+        return ErrorIOManager()
+
+    @solid
+    def basic_solid():
+        return 5
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": error_io_manager})])
+    def single_solid_pipeline():
+        basic_solid()
+
+    result = execute_pipeline(single_solid_pipeline, raise_on_error=False)
+    step_failure = [
+        event for event in result.event_list if event.event_type_value == "STEP_FAILURE"
+    ][0]
+    assert step_failure.event_specific_data.error.cls_name == "DagsterExecutionHandleOutputError"
