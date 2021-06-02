@@ -155,6 +155,10 @@ class K8sStepHandler(StepHandler):
     requirements=multiple_process_executor_requirements(),
 )
 def k8s_job_executor(init_context: InitExecutorContext) -> Executor:
+    """
+    Executor which launches steps as Kubernetes Jobs.
+    """
+
     run_launcher = init_context.instance.run_launcher
     exc_cfg = init_context.executor_config
     job_config = DagsterK8sJobConfig(
