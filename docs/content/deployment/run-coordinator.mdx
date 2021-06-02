@@ -139,3 +139,7 @@ If there are runs in progress that are blocking the queue, you have the option o
 ### Still stuck?
 
 If these steps didn't help, reach out in Slack or file an issue and we'll be happy to help investigate.
+
+## Custom Run Coordinators
+
+Note that one can subclass one of the `RunCoordinator`s to allow for a custom run queuing strategy when submitting to the [Daemon](/deployment/dagster-daemon) or to execute custom hooks before runs are submitted. For example, you can read HTTP headers to inject run tags for [Run Attribution](/guides/dagster/run-attribution).
