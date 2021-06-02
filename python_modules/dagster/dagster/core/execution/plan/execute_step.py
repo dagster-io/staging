@@ -31,12 +31,13 @@ from dagster.core.execution.plan.compute import execute_core_compute
 from dagster.core.execution.plan.inputs import StepInputData
 from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
+from dagster.core.execution.plan.python_logging import python_logging_to_dagster_log_manager
 from dagster.core.execution.resolve_versions import resolve_step_output_versions
 from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter
 from dagster.core.storage.io_manager import IOManager
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind
-from dagster.utils import ensure_gen, iterate_with_context
+from dagster.utils import ensure_gen, iterate_with_context_managers
 from dagster.utils.backcompat import experimental_functionality_warning
 from dagster.utils.timing import time_execution_scope
 
@@ -474,17 +475,19 @@ def _store_output(
     manager_materializations = []
     manager_metadata_entries = []
     if handle_output_res is not None:
-        for elt in iterate_with_context(
-            lambda: solid_execution_error_boundary(
-                DagsterExecutionHandleOutputError,
-                msg_fn=lambda: (
-                    f'Error occurred while handling output "{output_context.name}" of '
-                    f'step "{step_context.step.key}":'
+        for elt in iterate_with_context_managers(
+            [
+                lambda: solid_execution_error_boundary(
+                    DagsterExecutionHandleOutputError,
+                    msg_fn=lambda: (
+                        f'Error occurred while handling output "{output_context.name}" of '
+                        f'step "{step_context.step.key}":'
+                    ),
+                    step_context=step_context,
+                    step_key=step_context.step.key,
+                    output_name=output_context.name,
                 ),
-                step_context=step_context,
-                step_key=step_context.step.key,
-                output_name=output_context.name,
-            ),
+            ],
             ensure_gen(handle_output_res),
         ):
             if isinstance(elt, AssetMaterialization):
@@ -596,15 +599,18 @@ def _user_event_sequence_for_step_compute_fn(
         step_context.solid_def.compute_fn,
     )
 
-    for event in iterate_with_context(
-        lambda: solid_execution_error_boundary(
-            DagsterExecutionStepExecutionError,
-            msg_fn=lambda: f'Error occurred while executing solid "{step_context.solid.name}":',
-            step_context=step_context,
-            step_key=step_context.step.key,
-            solid_def_name=step_context.solid_def.name,
-            solid_name=step_context.solid.name,
-        ),
+    for event in iterate_with_context_managers(
+        [
+            lambda: python_logging_to_dagster_log_manager(step_context.log),
+            lambda: solid_execution_error_boundary(
+                DagsterExecutionStepExecutionError,
+                msg_fn=lambda: f'Error occurred while executing solid "{step_context.solid.name}":',
+                step_context=step_context,
+                step_key=step_context.step.key,
+                solid_def_name=step_context.solid_def.name,
+                solid_name=step_context.solid.name,
+            ),
+        ],
         gen,
     ):
         yield event

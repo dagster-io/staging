@@ -18,7 +18,7 @@ from dagster.core.execution.context.system import PlanOrchestrationContext
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
 from dagster.core.instance import DagsterInstance
-from dagster.utils import frozentags, iterate_with_context
+from dagster.utils import frozentags, iterate_with_context_managers
 
 # Dask resource requirements are specified under this key
 DASK_RESOURCE_REQUIREMENTS_KEY = "dagster-dask/resource_requirements"
@@ -273,7 +273,9 @@ class DaskExecutor(Executor):
             futures = dask.distributed.as_completed(execution_futures, with_results=True)
 
             # Allow interrupts while waiting for the results from Dask
-            for future, result in iterate_with_context(raise_execution_interrupts, futures):
+            for future, result in iterate_with_context_managers(
+                [raise_execution_interrupts], futures
+            ):
                 for step_event in result:
                     check.inst(step_event, DagsterEvent)
                     yield step_event
