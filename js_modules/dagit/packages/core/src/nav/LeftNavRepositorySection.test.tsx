@@ -8,21 +8,6 @@ import {LAST_REPO_KEY, LeftNavRepositorySection, REPO_KEYS} from './LeftNavRepos
 
 describe('Repository options', () => {
   const defaultMocks = {
-    WorkspaceOrError: () => ({
-      __typename: 'Workspace',
-    }),
-    WorkspaceLocationEntry: () => ({
-      locationOrLoadError: {
-        __typename: 'RepositoryLocation',
-        name: () => 'bar',
-        repositories: () => new MockList(1),
-      },
-    }),
-    RepositoryLocationOrLoadError: () => ({
-      __typename: 'RepositoryLocation',
-      name: () => 'bar',
-      repositories: () => new MockList(1),
-    }),
     RepositoryLocation: () => ({
       name: () => 'bar',
       repositories: () => new MockList(1),
