@@ -31,7 +31,6 @@ from dagster.core.storage.fs_io_manager import custom_path_fs_io_manager, fs_io_
 from dagster.core.storage.io_manager import IOManager, io_manager
 from dagster.core.storage.mem_io_manager import InMemoryIOManager, mem_io_manager
 from dagster.core.system_config.objects import EnvironmentConfig
-from dagster.core.errors import DagsterExecutionHandleOutputError
 
 
 def test_io_manager_with_config():
@@ -694,8 +693,8 @@ def test_error_boundary_with_gen():
             pass
 
         def handle_output(self, context, obj):
-            raise ValueError("handle output error")
             yield AssetMaterialization(asset_key="a")
+            raise ValueError("handle output error")
 
     @io_manager
     def error_io_manager(_):
