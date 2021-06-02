@@ -1,7 +1,7 @@
 import inspect
 from abc import ABC, abstractmethod
 from collections import namedtuple
-from datetime import datetime, time
+from datetime import datetime
 from enum import Enum
 from typing import Callable, List, NamedTuple, Optional, cast
 
@@ -17,6 +17,7 @@ from dagster.core.errors import (
 )
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.tags import check_tags
+from dagster.serdes import whitelist_for_serdes
 from dagster.seven.compat.pendulum import PendulumDateTime, to_timezone
 from dagster.utils import frozenlist, merge_dicts
 from dagster.utils.schedules import schedule_execution_time_iterator
@@ -119,6 +120,7 @@ def schedule_partition_range(
     return _get_schedule_range_partitions
 
 
+@whitelist_for_serdes
 class ScheduleType(Enum):
     HOURLY = "HOURLY"
     DAILY = "DAILY"
@@ -132,6 +134,7 @@ class PartitionParams(ABC):
         ...
 
 
+@whitelist_for_serdes
 class StaticPartitionParams(
     PartitionParams, NamedTuple("_StaticPartitionParams", [("partitions", List[Partition])])
 ):
@@ -144,16 +147,39 @@ class StaticPartitionParams(
         return self.partitions
 
 
+@whitelist_for_serdes
+class PartitionExecutionTime(
+    NamedTuple(
+        "_PartitionExecutionTime",
+        [("execution_minute", int), ("execution_hour", int), ("execution_day", Optional[int])],
+    )
+):
+    def __new__(
+        cls,
+        execution_minute: int,
+        execution_hour: int,
+        execution_day: Optional[int] = None,
+    ):
+        return super(PartitionExecutionTime, cls).__new__(
+            cls,
+            check.int_param(execution_minute, "execution_minute"),
+            check.int_param(execution_hour, "execution_hour"),
+            check.opt_int_param(execution_day, "execution_day"),
+        )
+
+
+@whitelist_for_serdes
 class TimeBasedPartitionParams(
     PartitionParams,
     NamedTuple(
         "_TimeBasedPartitionParams",
         [
             ("schedule_type", ScheduleType),
-            ("start", datetime),
-            ("execution_time", time),
-            ("execution_day", Optional[int]),
-            ("end", Optional[datetime]),
+            ("start_timestamp", float),
+            ("partition_execution_time", PartitionExecutionTime),
+            ("start_timezone", Optional[str]),
+            ("end_timestamp", Optional[float]),
+            ("end_timezone", Optional[str]),
             ("fmt", Optional[str]),
             ("timezone", Optional[str]),
             ("offset", Optional[int]),
@@ -163,37 +189,35 @@ class TimeBasedPartitionParams(
     def __new__(
         cls,
         schedule_type: ScheduleType,
-        start: datetime,
-        execution_time: Optional[time] = None,
-        execution_day: Optional[int] = None,
-        end: Optional[datetime] = None,
+        start_timestamp: float,
+        partition_execution_time: PartitionExecutionTime,
+        start_timezone: Optional[str] = None,
+        end_timestamp: Optional[float] = None,
+        end_timezone: Optional[str] = None,
         fmt: Optional[str] = None,
         timezone: Optional[str] = None,
         offset: Optional[int] = None,
     ):
-        if end is not None:
+        if end_timestamp is not None:
             check.invariant(
-                start <= end,
-                f'Selected date range start "{start}" '
-                f'is after date range end "{end}"'.format(
-                    start=start.strftime(fmt) if fmt is not None else start,
-                    end=cast(datetime, end).strftime(fmt) if fmt is not None else end,
-                ),
+                start_timestamp <= end_timestamp,
+                f'Selected start timestamp "{start_timestamp}" '
+                f'is after end timestamp "{end_timestamp}"',
             )
         if schedule_type in [ScheduleType.HOURLY, ScheduleType.DAILY]:
             check.invariant(
-                not execution_day,
+                not partition_execution_time.execution_day,
                 f'Execution day should not be provided for schedule type "{schedule_type}"',
             )
         elif schedule_type is ScheduleType.WEEKLY:
-            execution_day = execution_day if execution_day is not None else 0
+            execution_day = partition_execution_time.execution_day
             check.invariant(
                 execution_day is not None and 0 <= execution_day <= 6,
                 f'Execution day "{execution_day}" must be between 0 and 6 for '
                 f'schedule type "{schedule_type}"',
             )
         elif schedule_type is ScheduleType.MONTHLY:
-            execution_day = execution_day if execution_day is not None else 1
+            execution_day = partition_execution_time.execution_day
             check.invariant(
                 execution_day is not None and 1 <= execution_day <= 31,
                 f'Execution day "{execution_day}" must be between 1 and 31 for '
@@ -203,24 +227,41 @@ class TimeBasedPartitionParams(
         return super(TimeBasedPartitionParams, cls).__new__(
             cls,
             check.inst_param(schedule_type, "schedule_type", ScheduleType),
-            check.inst_param(start, "start", datetime),
-            check.opt_inst_param(execution_time, "execution_time", time, time(0, 0)),
-            check.opt_int_param(
-                execution_day,
-                "execution_day",
+            check.float_param(start_timestamp, "start_timestamp"),
+            check.inst_param(
+                partition_execution_time, "partition_execution_time", PartitionExecutionTime
             ),
-            check.opt_inst_param(end, "end", datetime),
+            check.opt_str_param(start_timezone, "start_timezone"),
+            check.opt_float_param(end_timestamp, "end_timestamp"),
+            check.opt_str_param(end_timezone, "end_timezone"),
             check.opt_str_param(fmt, "fmt", default=DEFAULT_DATE_FORMAT),
             check.opt_str_param(timezone, "timezone", default="UTC"),
             check.opt_int_param(offset, "offset", default=1),
         )
 
+    def _get_start_date(self) -> datetime:
+        if self.start_timezone is None:
+            return datetime.fromtimestamp(self.start_timestamp)
+        else:
+            start_date = datetime.utcfromtimestamp(self.start_timestamp)
+            return pendulum.instance(start_date, tz=self.start_timezone)
+
+    def _get_end_date(self) -> Optional[datetime]:
+        if not self.end_timestamp:
+            return None
+
+        if self.end_timezone is None:
+            return datetime.fromtimestamp(self.end_timestamp)
+        else:
+            end_date = datetime.utcfromtimestamp(self.end_timestamp)
+            return pendulum.instance(end_date, tz=self.end_timezone)
+
     def get_partitions(self, current_time: Optional[datetime] = None) -> List[Partition]:
         check.opt_inst_param(current_time, "current_time", datetime)
 
         partition_fn = schedule_partition_range(
-            start=self.start,
-            end=self.end,
+            start=self._get_start_date(),
+            end=self._get_end_date(),
             cron_schedule=self.get_cron_schedule(),
             fmt=self.fmt,
             timezone=self.timezone,
@@ -230,9 +271,9 @@ class TimeBasedPartitionParams(
         return partition_fn(current_time=current_time)
 
     def get_cron_schedule(self) -> str:
-        minute = self.execution_time.minute
-        hour = self.execution_time.hour
-        day = self.execution_day
+        minute = self.partition_execution_time.execution_minute
+        hour = self.partition_execution_time.execution_hour
+        day = self.partition_execution_time.execution_day
 
         if self.schedule_type is ScheduleType.HOURLY:
             return f"{minute} * * * *"
@@ -253,13 +294,13 @@ class TimeBasedPartitionParams(
                 days=self.offset, hours=d.hour, minutes=d.minute
             )
         elif self.schedule_type is ScheduleType.WEEKLY:
-            execution_day = cast(int, self.execution_day)
-            day_difference = (execution_day - (self.start.weekday() + 1)) % 7
+            execution_day = cast(int, self.partition_execution_time.execution_day)
+            day_difference = (execution_day - (self._get_start_date().weekday() + 1)) % 7
             return lambda d: pendulum.instance(d).subtract(
                 weeks=self.offset, days=day_difference, hours=d.hour, minutes=d.minute
             )
         elif self.schedule_type is ScheduleType.MONTHLY:
-            execution_day = cast(int, self.execution_day)
+            execution_day = cast(int, self.partition_execution_time.execution_day)
             return lambda d: pendulum.instance(d).subtract(
                 months=self.offset, days=execution_day - 1, hours=d.hour, minutes=d.minute
             )

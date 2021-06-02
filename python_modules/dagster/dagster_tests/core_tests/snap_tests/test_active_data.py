@@ -1,11 +1,21 @@
+import time
 from datetime import datetime
 
+import pytest
 from dagster import ModeDefinition, PresetDefinition, daily_schedule, pipeline, repository, solid
 from dagster.core.host_representation import (
     external_pipeline_data_from_def,
     external_repository_data_from_def,
 )
+from dagster.core.test_utils import environ
 from dagster.serdes import serialize_pp
+
+
+@pytest.fixture(name="timezone", autouse=True)
+def timezone_fixture():
+    with environ({"TZ": "US/Pacific"}):
+        time.tzset()
+        yield
 
 
 @solid
@@ -29,17 +39,16 @@ def a_pipeline():
     a_solid()
 
 
-@daily_schedule(  # type: ignore
-    pipeline_name="a_pipeline",
-    start_date=datetime(year=2019, month=1, day=1),
-    end_date=datetime(year=2019, month=2, day=1),
-    execution_timezone="US/Central",
-)
-def a_schedule():
-    return {}
-
-
 def test_external_repository_data(snapshot):
+    @daily_schedule(
+        pipeline_name="a_pipeline",
+        start_date=datetime(year=2019, month=1, day=1),
+        end_date=datetime(year=2019, month=2, day=1),
+        execution_timezone="US/Central",
+    )
+    def a_schedule():
+        return {}
+
     @repository
     def repo():
         return [a_pipeline, a_schedule]

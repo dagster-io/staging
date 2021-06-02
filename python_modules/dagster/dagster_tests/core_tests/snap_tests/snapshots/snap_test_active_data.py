@@ -1213,6 +1213,25 @@ snapshots['test_external_repository_data 1'] = '''{
       "__class__": "ExternalPartitionSetData",
       "mode": "default",
       "name": "a_schedule_partitions",
+      "partition_params": {
+        "__class__": "TimeBasedPartitionParams",
+        "end_timestamp": 1549008000.0,
+        "end_timezone": null,
+        "fmt": "%Y-%m-%d",
+        "offset": 1,
+        "partition_execution_time": {
+          "__class__": "PartitionExecutionTime",
+          "execution_day": null,
+          "execution_hour": 0,
+          "execution_minute": 0
+        },
+        "schedule_type": {
+          "__enum__": "ScheduleType.DAILY"
+        },
+        "start_timestamp": 1546329600.0,
+        "start_timezone": null,
+        "timezone": "US/Central"
+      },
       "pipeline_name": "a_pipeline",
       "solid_selection": null
     }
