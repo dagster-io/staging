@@ -6,6 +6,7 @@ for that.
 """
 
 from collections import namedtuple
+from typing import List, NamedTuple, Optional, Union
 
 from dagster import check
 from dagster.core.definitions import (
@@ -15,7 +16,12 @@ from dagster.core.definitions import (
     RepositoryDefinition,
     ScheduleDefinition,
 )
-from dagster.core.definitions.partition import PartitionScheduleDefinition
+from dagster.core.definitions.partition import (
+    DynamicPartitionParams,
+    PartitionScheduleDefinition,
+    StaticPartitionParams,
+    TimeBasedPartitionParams,
+)
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo
@@ -251,15 +257,36 @@ class ExternalExecutionParamsErrorData(namedtuple("_ExternalExecutionParamsError
 
 @whitelist_for_serdes
 class ExternalPartitionSetData(
-    namedtuple("_ExternalPartitionSetData", "name pipeline_name solid_selection mode")
+    NamedTuple(
+        "_ExternalPartitionSetData",
+        [
+            ("name", str),
+            ("pipeline_name", str),
+            ("solid_selection", Optional[List[str]]),
+            ("mode", Optional[str]),
+            ("partition_params", Optional[Union[StaticPartitionParams, TimeBasedPartitionParams]]),
+        ],
+    )
 ):
-    def __new__(cls, name, pipeline_name, solid_selection, mode):
+    def __new__(
+        cls,
+        name: str,
+        pipeline_name: str,
+        solid_selection: Optional[List[str]],
+        mode: Optional[str],
+        partition_params: Optional[Union[StaticPartitionParams, TimeBasedPartitionParams]],
+    ):
         return super(ExternalPartitionSetData, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
             solid_selection=check.opt_nullable_list_param(solid_selection, "solid_selection", str),
             mode=check.opt_str_param(mode, "mode"),
+            partition_params=check.opt_inst_param(
+                partition_params,
+                "partition_params",
+                (StaticPartitionParams, TimeBasedPartitionParams),
+            ),
         )
 
 
@@ -390,6 +417,9 @@ def external_partition_set_data_from_def(partition_set_def):
         pipeline_name=partition_set_def.pipeline_name,
         solid_selection=partition_set_def.solid_selection,
         mode=partition_set_def.mode,
+        partition_params=partition_set_def.partition_params
+        if not isinstance(partition_set_def.partition_params, DynamicPartitionParams)
+        else None,
     )
 
 

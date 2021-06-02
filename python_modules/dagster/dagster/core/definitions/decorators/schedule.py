@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from dagster import check
 from dagster.core.definitions.partition import (
+    PartitionExecutionTime,
     PartitionScheduleDefinition,
     PartitionSetDefinition,
     ScheduleType,
@@ -223,10 +224,13 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.MONTHLY,
-            start=start_date,
-            execution_day=execution_day_of_month,
-            execution_time=execution_time,
-            end=end_date,
+            start_timestamp=start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute,
+                execution_hour=execution_time.hour,
+                execution_day=execution_day_of_month,
+            ),
+            end_timestamp=end_date.timestamp() if end_date else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_months_offset,
@@ -371,10 +375,13 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.WEEKLY,
-            start=start_date,
-            execution_time=execution_time,
-            execution_day=execution_day_of_week,
-            end=end_date,
+            start_timestamp=start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute,
+                execution_hour=execution_time.hour,
+                execution_day=execution_day_of_week,
+            ),
+            end_timestamp=end_date.timestamp() if end_date else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_weeks_offset,
@@ -509,9 +516,11 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.DAILY,
-            start=start_date,
-            execution_time=execution_time,
-            end=end_date,
+            start_timestamp=start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute, execution_hour=execution_time.hour
+            ),
+            end_timestamp=end_date.timestamp() if end_date else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_days_offset,
@@ -661,9 +670,11 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.HOURLY,
-            start=start_date,
-            execution_time=execution_time,
-            end=end_date,
+            start_timestamp=start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute, execution_hour=execution_time.hour
+            ),
+            end_timestamp=end_date.timestamp() if end_date else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_hours_offset,

@@ -663,6 +663,11 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
 
+        external_repo = self.get_repository(repository_handle.repository_name)
+
+        if external_repo.has_external_partition_set_names(partition_set_name):
+            return external_repo.get_external_partition_set_names(partition_set_name)
+
         return sync_get_external_partition_names_grpc(
             self.client, repository_handle, partition_set_name
         )

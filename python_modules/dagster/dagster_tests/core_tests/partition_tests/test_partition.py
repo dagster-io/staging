@@ -7,6 +7,7 @@ from dagster.check import CheckError
 from dagster.core.definitions.partition import (
     DynamicPartitionParams,
     Partition,
+    PartitionExecutionTime,
     ScheduleType,
     StaticPartitionParams,
     TimeBasedPartitionParams,
@@ -53,7 +54,7 @@ def test_static_partition_params(partitions: List[Partition]):
             datetime(year=2021, month=1, day=3),
             None,
             datetime(year=2021, month=1, day=1),
-            r"Selected date range start .* is after date range end",
+            r"Selected start timestamp .* is after end timestamp",
         ),
         (
             ScheduleType.HOURLY,
@@ -95,13 +96,11 @@ def test_time_based_partition_params_invariants(
     with pytest.raises(CheckError, match=error_message_regex):
         TimeBasedPartitionParams(
             schedule_type=schedule_type,
-            start=start,
-            execution_day=execution_day,
-            execution_time=None,
-            end=end,
-            fmt=None,
-            timezone=None,
-            offset=None,
+            start_timestamp=start.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=0, execution_hour=0, execution_day=execution_day
+            ),
+            end_timestamp=end.timestamp(),
         )
 
 
@@ -229,7 +228,7 @@ def test_time_based_partition_params_invariants(
 def test_time_partition_params_daily_partitions(
     start: datetime,
     execution_time: time,
-    end: datetime,
+    end: Optional[datetime],
     partition_days_offset: Optional[int],
     current_time,
     expected_partitions: List[str],
@@ -237,9 +236,11 @@ def test_time_partition_params_daily_partitions(
     with pendulum.test(current_time):
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.DAILY,
-            start=start,
-            execution_time=execution_time,
-            end=end,
+            start_timestamp=start.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute, execution_hour=execution_time.hour
+            ),
+            end_timestamp=end.timestamp() if end else None,
             offset=partition_days_offset,
         )
 
@@ -333,7 +334,7 @@ def test_time_partition_params_daily_partitions(
 )
 def test_time_partition_params_monthly_partitions(
     start: datetime,
-    end: datetime,
+    end: Optional[datetime],
     partition_months_offset: Optional[int],
     current_time,
     expected_partitions: List[str],
@@ -341,10 +342,11 @@ def test_time_partition_params_monthly_partitions(
     with pendulum.test(current_time):
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.MONTHLY,
-            start=start,
-            execution_time=time(1, 20),
-            execution_day=1,
-            end=end,
+            start_timestamp=start.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=20, execution_hour=1, execution_day=1
+            ),
+            end_timestamp=end.timestamp() if end else None,
             offset=partition_months_offset,
         )
 
@@ -438,7 +440,7 @@ def test_time_partition_params_monthly_partitions(
 )
 def test_time_partition_params_weekly_partitions(
     start: datetime,
-    end: datetime,
+    end: Optional[datetime],
     partition_weeks_offset: Optional[int],
     current_time,
     expected_partitions: List[str],
@@ -446,10 +448,13 @@ def test_time_partition_params_weekly_partitions(
     with pendulum.test(current_time):
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.WEEKLY,
-            start=start,
-            execution_time=time(1, 20),
-            execution_day=0,
-            end=end,
+            start_timestamp=start.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=20,
+                execution_hour=1,
+                execution_day=0,
+            ),
+            end_timestamp=end.timestamp() if end else None,
             offset=partition_weeks_offset,
         )
 
@@ -651,9 +656,9 @@ def test_time_partition_params_hourly_partitions(
     with pendulum.test(current_time):
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.HOURLY,
-            start=start,
-            execution_time=time(0, 1),
-            end=end,
+            start_timestamp=start.timestamp(),
+            partition_execution_time=PartitionExecutionTime(execution_minute=1, execution_hour=0),
+            end_timestamp=end.timestamp() if end else None,
             timezone=timezone,
             fmt=DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
             offset=partition_hours_offset,
