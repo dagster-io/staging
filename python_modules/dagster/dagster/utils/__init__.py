@@ -21,6 +21,7 @@ from typing import (
     Generator,
     Generic,
     Iterator,
+    List,
     Optional,
     Type,
     TypeVar,
@@ -370,15 +371,20 @@ def start_termination_thread(termination_event):
 
 T = TypeVar("T")
 
-# Executes the next() function within an instance of the supplied context manager class
-# (leaving the context before yielding each result)
-def iterate_with_context(
-    context_fn: Callable[[], ContextManager], iterator: Iterator[T]
+
+def iterate_with_context_managers(
+    context_manager_fns: List[Callable[[], ContextManager]], iterator: Iterator[T]
 ) -> Iterator[T]:
+    """
+    Executes the next() function within the supplied context managers
+    (leaving the context before yielding each result)
+    """
     while True:
         # Allow interrupts during user code so that we can terminate slow/hanging steps
-        with context_fn():
+        with contextlib.ExitStack() as stack:
             try:
+                for context_manager_fn in context_manager_fns:
+                    stack.enter_context(context_manager_fn())
                 next_output = next(iterator)
             except StopIteration:
                 return
