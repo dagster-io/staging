@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from dagster import check
 from dagster.core.definitions.partition import (
+    PartitionExecutionTime,
     PartitionScheduleDefinition,
     PartitionSetDefinition,
     ScheduleType,
@@ -12,6 +13,7 @@ from dagster.core.definitions.partition import (
 )
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.seven.compat.pendulum import PendulumDateTime
 from dagster.utils.partitions import (
     DEFAULT_DATE_FORMAT,
     DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE,
@@ -223,10 +225,19 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.MONTHLY,
-            start=start_date,
-            execution_day=execution_day_of_month,
-            execution_time=execution_time,
-            end=end_date,
+            start_timestamp=start_date.replace(tzinfo="UTC").timestamp()
+            if isinstance(start_date, PendulumDateTime)
+            else start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute,
+                execution_hour=execution_time.hour,
+                execution_day=execution_day_of_month,
+            ),
+            start_timezone=start_date.timezone.name
+            if isinstance(start_date, PendulumDateTime)
+            else None,
+            end_timestamp=end_date.timestamp() if end_date else None,
+            end_timezone=end_date.timezone.name if isinstance(end_date, PendulumDateTime) else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_months_offset,
@@ -371,10 +382,19 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.WEEKLY,
-            start=start_date,
-            execution_time=execution_time,
-            execution_day=execution_day_of_week,
-            end=end_date,
+            start_timestamp=start_date.replace(tzinfo="UTC").timestamp()
+            if isinstance(start_date, PendulumDateTime)
+            else start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute,
+                execution_hour=execution_time.hour,
+                execution_day=execution_day_of_week,
+            ),
+            start_timezone=start_date.timezone.name
+            if isinstance(start_date, PendulumDateTime)
+            else None,
+            end_timestamp=end_date.timestamp() if end_date else None,
+            end_timezone=end_date.timezone.name if isinstance(end_date, PendulumDateTime) else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_weeks_offset,
@@ -509,9 +529,17 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.DAILY,
-            start=start_date,
-            execution_time=execution_time,
-            end=end_date,
+            start_timestamp=start_date.replace(tzinfo="UTC").timestamp()
+            if isinstance(start_date, PendulumDateTime)
+            else start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute, execution_hour=execution_time.hour
+            ),
+            start_timezone=start_date.timezone.name
+            if isinstance(start_date, PendulumDateTime)
+            else None,
+            end_timestamp=end_date.timestamp() if end_date else None,
+            end_timezone=end_date.timezone.name if isinstance(end_date, PendulumDateTime) else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_days_offset,
@@ -661,9 +689,17 @@ def my_schedule_definition(_):
 
         partition_params = TimeBasedPartitionParams(
             schedule_type=ScheduleType.HOURLY,
-            start=start_date,
-            execution_time=execution_time,
-            end=end_date,
+            start_timestamp=start_date.replace(tzinfo="UTC").timestamp()
+            if isinstance(start_date, PendulumDateTime)
+            else start_date.timestamp(),
+            partition_execution_time=PartitionExecutionTime(
+                execution_minute=execution_time.minute, execution_hour=execution_time.hour
+            ),
+            start_timezone=start_date.timezone.name
+            if isinstance(start_date, PendulumDateTime)
+            else None,
+            end_timestamp=end_date.timestamp() if end_date else None,
+            end_timezone=end_date.timezone.name if isinstance(end_date, PendulumDateTime) else None,
             fmt=fmt,
             timezone=execution_timezone,
             offset=partition_hours_offset,
