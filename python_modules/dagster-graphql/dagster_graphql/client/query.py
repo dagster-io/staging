@@ -171,11 +171,6 @@ fragment messageEventFragment on MessageEvent {
   level
   eventType
   ...stepEventFragment
-  ... on PipelineInitFailureEvent {
-    initError: error {
-      ...errorFragment
-    }
-  }
 }
 """
     + STEP_EVENT_FRAGMENTS
