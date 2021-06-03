@@ -114,6 +114,11 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
   }, [pipelineTab.pathComponent, repos, tab]);
 
   const items = type === 'pipelines' ? selectedPipelines : selectedSolids;
+  const itemsSorted = React.useMemo(
+    () =>
+      items.sort((a, b) => a.label.toLocaleLowerCase().localeCompare(b.label.toLocaleLowerCase())),
+    [items],
+  );
 
   return (
     <Box flex={{direction: 'column'}} style={{minHeight: 0, flex: 1}}>
@@ -141,21 +146,17 @@ export const RepositoryContentList: React.FC<RepositoryContentListProps> = ({
         </ButtonGroup>
       </Box>
       <Items>
-        {items
-          .sort((a, b) => a.label.toLocaleLowerCase().localeCompare(b.label.toLocaleLowerCase()))
-          .map((p) => (
-            <Item
-              key={p.to}
-              data-tooltip={p.label}
-              data-tooltip-style={
-                p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle
-              }
-              className={`${p.label === selector && p.repoPath === repoPath ? 'selected' : ''}`}
-              to={p.to}
-            >
-              {p.labelEl || p.label}
-            </Item>
-          ))}
+        {itemsSorted.map((p) => (
+          <Item
+            key={p.to}
+            data-tooltip={p.label}
+            data-tooltip-style={p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle}
+            className={`${p.label === selector && p.repoPath === repoPath ? 'selected' : ''}`}
+            to={p.to}
+          >
+            {p.labelEl || p.label}
+          </Item>
+        ))}
       </Items>
     </Box>
   );
