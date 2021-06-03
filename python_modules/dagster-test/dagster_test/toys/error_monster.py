@@ -5,6 +5,7 @@ from dagster import (
     InputDefinition,
     Int,
     ModeDefinition,
+    Output,
     OutputDefinition,
     PresetDefinition,
     ResourceDefinition,
@@ -109,6 +110,7 @@ def _act_on_config(solid_config):
     required_resource_keys={"errorable_resource"},
 )
 def emit_num(context):
+    yield Output(1)
     _act_on_config(context.solid_config)
 
     if context.solid_config["return_wrong_type"]:
