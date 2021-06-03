@@ -56,7 +56,6 @@ if TYPE_CHECKING:
         "PipelineCanceledData",
         "ObjectStoreOperationResultData",
         "HandledOutputData",
-        "PipelineInitFailureData",
         "LoadedInputData",
         "ComputeLogsCaptureData",
     ]
@@ -77,8 +76,6 @@ class DagsterEventType(Enum):
 
     ASSET_MATERIALIZATION = "ASSET_MATERIALIZATION"
     STEP_EXPECTATION_RESULT = "STEP_EXPECTATION_RESULT"
-
-    PIPELINE_INIT_FAILURE = "PIPELINE_INIT_FAILURE"
 
     PIPELINE_ENQUEUED = "PIPELINE_ENQUEUED"
     PIPELINE_DEQUEUED = "PIPELINE_DEQUEUED"
@@ -124,7 +121,6 @@ STEP_EVENTS = {
 }
 
 FAILURE_EVENTS = {
-    DagsterEventType.PIPELINE_INIT_FAILURE,
     DagsterEventType.PIPELINE_FAILURE,
     DagsterEventType.STEP_FAILURE,
     DagsterEventType.PIPELINE_CANCELED,
@@ -136,7 +132,6 @@ PIPELINE_EVENTS = {
     DagsterEventType.PIPELINE_STARTING,
     DagsterEventType.PIPELINE_START,
     DagsterEventType.PIPELINE_SUCCESS,
-    DagsterEventType.PIPELINE_INIT_FAILURE,
     DagsterEventType.PIPELINE_FAILURE,
     DagsterEventType.PIPELINE_CANCELING,
     DagsterEventType.PIPELINE_CANCELED,
@@ -450,10 +445,6 @@ class DagsterEvent(
         return self.event_type == DagsterEventType.PIPELINE_FAILURE
 
     @property
-    def is_pipeline_init_failure(self) -> bool:
-        return self.event_type == DagsterEventType.PIPELINE_INIT_FAILURE
-
-    @property
     def is_failure(self) -> bool:
         return self.event_type in FAILURE_EVENTS
 
@@ -537,13 +528,6 @@ class DagsterEvent(
             self.event_type,
         )
         return cast(StepExpectationResultData, self.event_specific_data)
-
-    @property
-    def pipeline_init_failure_data(self) -> "PipelineInitFailureData":
-        _assert_type(
-            "pipeline_init_failure_data", DagsterEventType.PIPELINE_INIT_FAILURE, self.event_type
-        )
-        return cast(PipelineInitFailureData, self.event_specific_data)
 
     @property
     def pipeline_failure_data(self) -> "PipelineFailureData":
@@ -760,11 +744,28 @@ class DagsterEvent(
 
     @staticmethod
     def pipeline_failure(
-        pipeline_context: IPlanContext,
-        context_msg: str,
+        pipeline_context: IPlanContext = None,
+        context_msg: str = None,
         error_info: Optional[SerializableErrorInfo] = None,
+        pipeline_name: str = None,
     ) -> "DagsterEvent":
+        # when the failure happens trying to bring up context, can't use from_pipeline
+        if pipeline_context is None and pipeline_name:
+            check.str_param(pipeline_name, "pipeline_name")
+            event = DagsterEvent(
+                event_type_value=DagsterEventType.PIPELINE_FAILURE.value,
+                pipeline_name=pipeline_name,
+                event_specific_data=PipelineFailureData(error_info),
+                message=(
+                    f'Pipeline failure during initialization for pipeline "{pipeline_name}". '
+                    "This may be due to a failure in initializing the executor or one of the loggers."
+                ),
+                pid=os.getpid(),
+            )
+            return event
 
+        check.inst_param(pipeline_context, "pipeline_context", IPlanContext)
+        check.str_param(context_msg, "context_msg")
         return DagsterEvent.from_pipeline(
             DagsterEventType.PIPELINE_FAILURE,
             pipeline_context,
@@ -882,32 +883,6 @@ class DagsterEvent(
                 error=error,
             ),
         )
-
-    @staticmethod
-    def pipeline_init_failure(
-        pipeline_name: str, failure_data: "PipelineInitFailureData", log_manager: DagsterLogManager
-    ) -> "DagsterEvent":
-        # this failure happens trying to bring up context so can't use from_pipeline
-
-        event = DagsterEvent(
-            event_type_value=DagsterEventType.PIPELINE_INIT_FAILURE.value,
-            pipeline_name=pipeline_name,
-            event_specific_data=failure_data,
-            message=(
-                'Pipeline failure during initialization for pipeline "{pipeline_name}". '
-                "This may be due to a failure in initializing the executor or one of the loggers."
-            ).format(pipeline_name=pipeline_name),
-            pid=os.getpid(),
-        )
-        log_manager.error(
-            event.message
-            or "{event_type} for pipeline {pipeline_name}".format(
-                event_type=DagsterEventType.PIPELINE_INIT_FAILURE, pipeline_name=pipeline_name
-            ),
-            dagster_event=event,
-            pipeline_name=pipeline_name,
-        )
-        return event
 
     @staticmethod
     def engine_event(
@@ -1327,21 +1302,6 @@ class EngineEventData(
 
 
 @whitelist_for_serdes
-class PipelineInitFailureData(
-    NamedTuple(
-        "_PipelineInitFailureData",
-        [
-            ("error", SerializableErrorInfo),
-        ],
-    )
-):
-    def __new__(cls, error: SerializableErrorInfo):
-        return super(PipelineInitFailureData, cls).__new__(
-            cls, error=check.inst_param(error, "error", SerializableErrorInfo)
-        )
-
-
-@whitelist_for_serdes
 class PipelineFailureData(
     NamedTuple(
         "_PipelineFailureData",
@@ -1519,8 +1479,13 @@ def _handle_back_compat(event_type_value, event_specific_data):
     if event_type_value == "STEP_MATERIALIZATION":
         return DagsterEventType.ASSET_MATERIALIZATION.value, event_specific_data
 
-    else:
-        return event_type_value, event_specific_data
+    # transform PIPELINE_INIT_FAILURE to PIPELINE_FAILURE
+    if event_type_value == "PIPELINE_INIT_FAILURE":
+        return DagsterEventType.PIPELINE_FAILURE.value, PipelineFailureData(
+            event_specific_data.error
+        )
+
+    return event_type_value, event_specific_data
 
 
 register_serdes_tuple_fallbacks(
