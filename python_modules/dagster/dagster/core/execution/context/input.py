@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, Union
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
@@ -48,6 +48,7 @@ class InputContext:
         resource_config: Optional[Dict[str, Any]] = None,
         resources: Optional[Union["Resources", Dict[str, Any]]] = None,
         step_context: Optional["StepExecutionContext"] = None,
+        python_type: Optional[Type] = None,
     ):
         from dagster.core.definitions.resource import Resources, IContainsGenerator
         from dagster.core.execution.build_resources import build_resources
@@ -62,6 +63,7 @@ class InputContext:
         self._log = log_manager
         self._resource_config = resource_config
         self._step_context = step_context
+        self._python_type = python_type or dagster_type.python_type
 
         if isinstance(resources, Resources):
             self._resources_cm = None
@@ -114,6 +116,10 @@ class InputContext:
     @property
     def dagster_type(self) -> Optional["DagsterType"]:
         return self._dagster_type
+
+    @property
+    def python_type(self) -> Optional[Type]:
+        return self._python_type
 
     @property
     def log(self) -> Optional["DagsterLogManager"]:

@@ -94,6 +94,7 @@ class DagsterType:
         auto_plugins=None,
         required_resource_keys=None,
         kind=DagsterTypeKind.REGULAR,
+        python_type=None,
     ):
         check.opt_str_param(key, "key")
         check.opt_str_param(name, "name")
@@ -156,6 +157,7 @@ class DagsterType:
         )
 
         self.kind = check.inst_param(kind, "kind", DagsterTypeKind)
+        self.python_type = check.opt_type_param(python_type, "python_type")
 
     def type_check(self, context, value):
         retval = self._type_check_fn(context, value)
@@ -787,13 +789,13 @@ DAGSTER_INVALID_TYPE_ERROR_MESSAGE = (
 class TypeHintInferredDagsterType(DagsterType):
     def __init__(self, python_type: typing.Type):
         qualified_name = f"{python_type.__module__}.{python_type.__name__}"
-        self.python_type = python_type
         super(TypeHintInferredDagsterType, self).__init__(
             key=f"_TypeHintInferred[{qualified_name}]",
             description=f"DagsterType created from a type hint for the Python type {qualified_name}",
             type_check_fn=isinstance_type_check_fn(
                 python_type, python_type.__name__, qualified_name
             ),
+            python_type=python_type,
         )
 
     @property
