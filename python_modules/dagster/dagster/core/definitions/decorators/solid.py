@@ -238,7 +238,8 @@ def solid(
     )
 
 
-def _coerce_solid_output_to_iterator(result, context, output_defs):
+def _validate_and_coerce_solid_result_to_iterator(result, context, output_defs):
+
     if isinstance(result, (AssetMaterialization, Materialization, ExpectationResult)):
         raise DagsterInvariantViolationError(
             (
@@ -298,9 +299,15 @@ def _coerce_solid_output_to_iterator(result, context, output_defs):
         )
 
 
+def _coerce_solid_compute_fn_to_iterator(fn, output_defs, context, context_arg_provided, kwargs):
+    result = fn(context, **kwargs) if context_arg_provided else fn(context)
+    for event in _validate_and_coerce_solid_result_to_iterator(result, context, output_defs):
+        yield event
+
+
 async def _coerce_async_solid_to_async_gen(awaitable, context, output_defs):
     result = await awaitable
-    for event in _coerce_solid_output_to_iterator(result, context, output_defs):
+    for event in _validate_and_coerce_solid_result_to_iterator(result, context, output_defs):
         yield event
 
 
@@ -326,16 +333,23 @@ def _create_solid_compute_wrapper(
         for input_name in input_names:
             kwargs[input_name] = input_defs[input_name]
 
-        result = fn(context, **kwargs) if context_arg_provided else fn(**kwargs)
-
-        if inspect.isgenerator(result):
+        if (
+            inspect.isgeneratorfunction(fn)
+            or inspect.isasyncgenfunction(fn)
+            or inspect.iscoroutinefunction(fn)
+        ):
+            # safe to execute the function, as doing so will not immediately execute user code
+            result = fn(context, **kwargs) if context_arg_provided else fn(**kwargs)
+            if inspect.iscoroutine(result):
+                return _coerce_async_solid_to_async_gen(result, context, output_defs)
+            # already a generator
             return result
-        elif inspect.isasyncgen(result):
-            return result
-        elif inspect.iscoroutine(result):
-            return _coerce_async_solid_to_async_gen(result, context, output_defs)
         else:
-            return _coerce_solid_output_to_iterator(result, context, output_defs)
+            # we have a regular function, do not execute it before we are in an iterator
+            # (as we want all potential failures to happen inside iterators)
+            return _coerce_solid_compute_fn_to_iterator(
+                fn, output_defs, context, context_arg_provided, kwargs
+            )
 
     return compute
 
