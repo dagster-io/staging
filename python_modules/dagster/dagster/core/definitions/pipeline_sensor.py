@@ -12,7 +12,12 @@ from dagster.core.definitions.sensor import (
 )
 from dagster.core.errors import PipelineSensorExecutionError, user_code_error_boundary
 from dagster.core.events import DagsterEvent, DagsterEventType
-from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
+from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunsFilter
+from dagster.serdes import (
+    deserialize_json_to_dagster_namedtuple,
+    serialize_dagster_namedtuple,
+    whitelist_for_serdes,
+)
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 
@@ -27,6 +32,36 @@ class PipelineFailureSensorContext(
             pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
             failure_event=check.inst_param(failure_event, "failure_event", DagsterEvent),
         )
+
+
+@whitelist_for_serdes
+class PipelineFailureSensorCursor(
+    namedtuple("_PipelineFailureSensorCursor", "record_id update_timestamp")
+):
+    def __new__(cls, record_id, update_timestamp):
+
+        return super(PipelineFailureSensorCursor, cls).__new__(
+            cls,
+            record_id=check.int_param(record_id, "record_id"),
+            update_timestamp=check.str_param(update_timestamp, "update_timestamp"),
+        )
+
+    @staticmethod
+    def is_valid(json_str):
+        if json_str is None:
+            return False
+        try:
+            obj = deserialize_json_to_dagster_namedtuple(json_str)
+            return isinstance(obj, PipelineFailureSensorCursor)
+        except Exception:  # pylint: disable=broad-except
+            return False
+
+    def to_json(self):
+        return serialize_dagster_namedtuple(self)
+
+    @staticmethod
+    def from_json(json_str):
+        return deserialize_json_to_dagster_namedtuple(json_str)
 
 
 def pipeline_failure_sensor(
@@ -51,7 +86,9 @@ def pipeline_failure_sensor(
         description (Optional[str]): A human-readable description of the sensor.
     """
 
-    # TODO: allow multiple types: +DagsterEventType.PIPELINE_INIT_FAILURE
+    # FIXME: include PIPELINE_INIT_FAILURE
+    # allow multiple types in get_event_rows: +DagsterEventType.PIPELINE_INIT_FAILURE
+    # or squash PIPELINE_INIT_FAILURE into PIPELINE_FAILURE
     dagster_event_type = DagsterEventType.PIPELINE_FAILURE
 
     def inner(
@@ -64,48 +101,51 @@ def pipeline_failure_sensor(
             sensor_name = name
 
         def _wrapped_fn(context: SensorExecutionContext):
-            # Initiate the cursor to be the current datetime in UTC first time init (cursor is None)
-            if context.cursor is None:
-                curr_time = pendulum.now("UTC").isoformat()
-                context.update_cursor(curr_time)
-                yield SkipReason(
-                    f"Initiating {sensor_name}. Set cursor to {datetime.fromisoformat(curr_time)}"
+            # initiate the cursor to (most recent event id, current timestamp) when:
+            # * it's the first time starting the sensor
+            # * or, the cursor isn't in valid format (backcompt)
+            if not PipelineFailureSensorCursor.is_valid(context.cursor):
+                most_recent_event_rows = context.instance.event_log_storage.get_event_rows(
+                    ascending=False, limit=1
                 )
+                most_recent_event_id = (
+                    most_recent_event_rows[0][0] if len(most_recent_event_rows) == 1 else -1
+                )
+                new_cursor = PipelineFailureSensorCursor(
+                    update_timestamp=pendulum.now("UTC").isoformat(),
+                    record_id=most_recent_event_id,
+                )
+                context.update_cursor(new_cursor.to_json())
+                yield SkipReason(f"Initiating {sensor_name}. Set cursor to {new_cursor}")
                 return
 
-            # Fetch runs where the statuses were updated after the cursor time
-            # * we move the cursor forward to the latest visited run's update_timestamp to avoid revisit runs
-            # * we filter the query by failure status to reduce the number of scanned rows
+            record_id, update_timestamp = PipelineFailureSensorCursor.from_json(context.cursor)
+
+            # Fetch failure events after the cursor id
+            # * we move the cursor forward to the latest visited event's id to avoid revisits
             # * when the daemon is down, bc we persist the cursor info, we can go back to where we
-            #   left and backfill alerts for the qualified runs (up to 5 at a time) during the downtime
-            rows = context.instance.get_run_rows(
-                filters=PipelineRunsFilter(
-                    statuses=[PipelineRunStatus.FAILURE],
-                    updated_after=datetime.fromisoformat(context.cursor),
-                ),
-                limit=5,
-                order_by="update_timestamp",
+            #   left and backfill alerts for the qualified events (up to 5 at a time) during the downtime
+            # Note: this is a cross-run query which requires extra handling in sqlite, see details in SqliteEventLogStorage.
+            event_rows = context.instance.event_log_storage.get_event_rows(
+                after_cursor=record_id,
                 ascending=True,
+                limit=5,
+                of_type=dagster_event_type,
+                _run_updated_after=datetime.fromisoformat(update_timestamp),
             )
 
-            if len(rows) == 0:
-                yield SkipReason(
-                    f"No qualified runs found (no runs updated after {datetime.fromisoformat(context.cursor)})"
-                )
+            if len(event_rows) == 0:
+                yield SkipReason(f"No qualified events found after id={record_id}")
                 return
 
-            for row in rows:
-                pipeline_run = row["run_body"]
-                update_timestamp = row["update_timestamp"]
-                events = context.instance.all_logs(pipeline_run.run_id, dagster_event_type)
-
-                if len(events) == 0:
-                    context.update_cursor(update_timestamp.isoformat())
-                    continue
-
-                check.invariant(
-                    len(events) == 1, "get more than one PIPELINE_FAILURE event for one given run."
+            for record_id, event_record in event_rows:
+                # get run info
+                run_rows = context.instance.get_run_rows(
+                    filters=PipelineRunsFilter(run_ids=[event_record.run_id])
                 )
+                check.invariant(len(run_rows) == 1)
+                pipeline_run = run_rows[0]["run_body"]
+                update_timestamp = run_rows[0]["update_timestamp"]
 
                 serializable_error = None
 
@@ -119,7 +159,7 @@ def pipeline_failure_sensor(
                             PipelineFailureSensorContext(
                                 sensor_name=sensor_name,
                                 pipeline_run=pipeline_run,
-                                failure_event=events[0].dagster_event,
+                                failure_event=event_record.dagster_event,
                             )
                         )
                 except PipelineSensorExecutionError as pipeline_sensor_execution_error:
@@ -128,7 +168,11 @@ def pipeline_failure_sensor(
                         pipeline_sensor_execution_error.original_exc_info
                     )
 
-                context.update_cursor(update_timestamp.isoformat())
+                context.update_cursor(
+                    PipelineFailureSensorCursor(
+                        record_id=record_id, update_timestamp=update_timestamp.isoformat()
+                    ).to_json()
+                )
 
                 # Yield PipelineRunReaction to indicate the execution success/failure.
                 # The sensor machinery would
