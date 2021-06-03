@@ -51,6 +51,13 @@ class DagsterDaemon(AbstractContextManager):
 
         self._first_error_logged = False
 
+    @staticmethod
+    @abstractmethod
+    def create():
+        """
+        returns: DagsterDaemon
+        """
+
     @abstractclassmethod
     def daemon_type(cls):
         """
@@ -209,24 +216,11 @@ class DagsterDaemon(AbstractContextManager):
 
 
 class SchedulerDaemon(DagsterDaemon):
-    def __init__(
-        self,
-        interval_seconds,
-        max_catchup_runs,
-    ):
-        super(SchedulerDaemon, self).__init__(interval_seconds)
-        self._max_catchup_runs = max_catchup_runs
-
     @staticmethod
-    def create_from_instance(instance):
-        max_catchup_runs = instance.scheduler.max_catchup_runs
-
+    def create():
         from dagster.daemon.controller import DEFAULT_DAEMON_INTERVAL_SECONDS
 
-        return SchedulerDaemon(
-            interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS,
-            max_catchup_runs=max_catchup_runs,
-        )
+        return SchedulerDaemon(interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS)
 
     @classmethod
     def daemon_type(cls):
@@ -234,13 +228,13 @@ class SchedulerDaemon(DagsterDaemon):
 
     def run_iteration(self, instance, workspace):
         yield from execute_scheduler_iteration(
-            instance, workspace, self._logger, self._max_catchup_runs
+            instance, workspace, self._logger, instance.scheduler.max_catchup_runs
         )
 
 
 class SensorDaemon(DagsterDaemon):
     @staticmethod
-    def create_from_instance(_instance):
+    def create():
         return SensorDaemon(interval_seconds=DEFAULT_SENSOR_DAEMON_INTERVAL)
 
     @classmethod
@@ -253,7 +247,7 @@ class SensorDaemon(DagsterDaemon):
 
 class BackfillDaemon(DagsterDaemon):
     @staticmethod
-    def create_from_instance(_instance):
+    def create():
         from dagster.daemon.controller import DEFAULT_DAEMON_INTERVAL_SECONDS
 
         return BackfillDaemon(interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS)

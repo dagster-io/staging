@@ -257,15 +257,15 @@ class DagsterDaemonController:
 
 def create_daemon_of_type(daemon_type):
     if daemon_type == SchedulerDaemon.daemon_type():
-        return SchedulerDaemon.create_from_instance(DagsterInstance.get())
+        return SchedulerDaemon.create()
     elif daemon_type == SensorDaemon.daemon_type():
-        return SensorDaemon.create_from_instance(DagsterInstance.get())
+        return SensorDaemon.create()
     elif daemon_type == QueuedRunCoordinatorDaemon.daemon_type():
-        return QueuedRunCoordinatorDaemon.create_from_instance(DagsterInstance.get())
+        return QueuedRunCoordinatorDaemon.create()
     elif daemon_type == BackfillDaemon.daemon_type():
-        return BackfillDaemon.create_from_instance(DagsterInstance.get())
+        return BackfillDaemon.create()
     else:
-        raise Exception("Unexpected daemon type {daemon_type}".format(daemon_type=daemon_type))
+        raise Exception(f"Unexpected daemon type {daemon_type}")
 
 
 def all_daemons_healthy(
