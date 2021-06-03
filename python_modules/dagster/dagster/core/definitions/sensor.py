@@ -8,10 +8,12 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.instance.ref import InstanceRef
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import ensure_gen
-from dagster.utils.backcompat import experimental_fn_warning
+from dagster.utils.backcompat import experimental_arg_warning, experimental_fn_warning
 
+from .graph import GraphDefinition
 from .mode import DEFAULT_MODE_NAME
 from .run_request import JobType, RunRequest, SkipReason
+from .target import DirectTarget, RepoRelativeTarget
 from .utils import check_valid_name
 
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
@@ -24,7 +26,7 @@ class SensorExecutionContext:
     on SensorDefinition.
 
     Attributes:
-        instance_ref (InstanceRef): The serialized instance configured to run the schedule
+        instance_ref (Optional[InstanceRef]): The serialized instance configured to run the schedule
         cursor (Optional[str]): The cursor, passed back from the last sensor evaluation via
             the cursor attribute of SkipReason and RunRequest
         last_completion_time (float): DEPRECATED The last time that the sensor was evaluated (UTC).
@@ -32,18 +34,9 @@ class SensorExecutionContext:
             sensor. Use the preferred `cursor` attribute instead.
     """
 
-    __slots__ = [
-        "_instance_ref",
-        "_last_completion_time",
-        "_last_run_key",
-        "_cursor",
-        "_exit_stack",
-        "_instance",
-    ]
-
     def __init__(
         self,
-        instance_ref: InstanceRef,
+        instance_ref: Optional[InstanceRef],
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
         cursor: Optional[str],
@@ -51,7 +44,7 @@ class SensorExecutionContext:
         self._exit_stack = ExitStack()
         self._instance = None
 
-        self._instance_ref = check.inst_param(instance_ref, "instance_ref", InstanceRef)
+        self._instance_ref = check.opt_inst_param(instance_ref, "instance_ref", InstanceRef)
         self._last_completion_time = check.opt_float_param(
             last_completion_time, "last_completion_time"
         )
@@ -68,6 +61,12 @@ class SensorExecutionContext:
 
     @property
     def instance(self) -> DagsterInstance:
+        # self._instance_ref should only ever be None when this SensorExecutionContext was
+        # constructed under test.
+        if not self._instance_ref:
+            raise DagsterInvariantViolationError(
+                "Attempted to initialize dagster instance, but no instance reference was provided."
+            )
         if not self._instance:
             self._instance = self._exit_stack.enter_context(
                 DagsterInstance.from_ref(self._instance_ref)
@@ -119,24 +118,13 @@ class SensorDefinition:
         minimum_interval_seconds (Optional[int]): The minimum number of seconds that will elapse
             between sensor evaluations.
         description (Optional[str]): A human-readable description of the sensor.
+        job (Optional[PipelineDefinition]): Experimental
     """
-
-    __slots__ = [
-        "_name",
-        "_pipeline_name",
-        "_tags_fn",
-        "_run_config_fn",
-        "_mode",
-        "_solid_selection",
-        "_description",
-        "_evaluation_fn",
-        "_min_interval",
-    ]
 
     def __init__(
         self,
         name: str,
-        pipeline_name: str,
+        pipeline_name: Optional[str],
         evaluation_fn: Callable[
             ["SensorExecutionContext"],
             Union[Generator[Union[RunRequest, SkipReason], None, None], RunRequest, SkipReason],
@@ -145,19 +133,33 @@ class SensorDefinition:
         mode: Optional[str] = None,
         minimum_interval_seconds: Optional[int] = None,
         description: Optional[str] = None,
+        job: Optional[GraphDefinition] = None,
     ):
 
         self._name = check_valid_name(name)
-        self._pipeline_name = check.str_param(pipeline_name, "pipeline_name")
-        self._mode = check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME)
-        self._solid_selection = check.opt_nullable_list_param(
-            solid_selection, "solid_selection", of_type=str
-        )
+
+        if job is not None:
+            experimental_arg_warning("target", "SensorDefinition.__init__")
+            self._target: Union[DirectTarget, RepoRelativeTarget] = DirectTarget(job)
+        else:
+            self._target = RepoRelativeTarget(
+                pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+                mode=check.opt_str_param(mode, "mode") or DEFAULT_MODE_NAME,
+                solid_selection=check.opt_nullable_list_param(
+                    solid_selection, "solid_selection", of_type=str
+                ),
+            )
+
         self._description = check.opt_str_param(description, "description")
         self._evaluation_fn = check.callable_param(evaluation_fn, "evaluation_fn")
         self._min_interval = check.opt_int_param(
             minimum_interval_seconds, "minimum_interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL
         )
+
+    # This allows us to pass sensor definition off as a function, so that it can inherit the
+    # metadata of the wrapped function.
+    def __call__(self, *args, **kwargs):
+        return self
 
     @property
     def name(self) -> str:
@@ -165,7 +167,7 @@ class SensorDefinition:
 
     @property
     def pipeline_name(self) -> str:
-        return self._pipeline_name
+        return self._target.pipeline_name
 
     @property
     def job_type(self) -> JobType:
@@ -173,17 +175,26 @@ class SensorDefinition:
 
     @property
     def solid_selection(self) -> Optional[List[Any]]:
-        return self._solid_selection
+        return self._target.solid_selection
 
     @property
     def mode(self) -> Optional[str]:
-        return self._mode
+        return self._target.mode
 
     @property
     def description(self) -> Optional[str]:
         return self._description
 
-    def get_execution_data(self, context: "SensorExecutionContext") -> "SensorExecutionData":
+    def evaluate_tick(self, context: "SensorExecutionContext") -> "SensorExecutionData":
+        """Evaluate sensor using the provided context.
+
+        Args:
+            context (SensorExecutionContext): The context with which to evaluate this sensor.
+        Returns:
+            SensorExecutionData: Contains list of run requests, or skip message if present.
+
+        """
+
         check.inst_param(context, "context", SensorExecutionContext)
         result = list(ensure_gen(self._evaluation_fn(context)))
 
@@ -205,6 +216,15 @@ class SensorDefinition:
     @property
     def minimum_interval_seconds(self) -> Optional[int]:
         return self._min_interval
+
+    def has_loadable_target(self):
+        return isinstance(self._target, DirectTarget)
+
+    def load_target(self):
+        if isinstance(self._target, DirectTarget):
+            return self._target.load()
+
+        check.failed("Target is not loadable")
 
 
 @whitelist_for_serdes
@@ -258,31 +278,32 @@ def wrap_sensor_evaluation(
 
 
 def build_sensor_context(
-    instance: DagsterInstance, cursor: Optional[str] = None
+    instance: Optional[DagsterInstance] = None, cursor: Optional[str] = None
 ) -> SensorExecutionContext:
     """Builds sensor execution context using the provided parameters.
 
-    The instance provided to ``build_sensor_context`` must be persistent;
+    If provided, the dagster instance must be persistent;
     DagsterInstance.ephemeral() will result in an error.
 
     Args:
-        instance (DagsterInstance): The dagster instance configured to run the sensor.
+        instance (Optional[DagsterInstance]): The dagster instance configured to run the sensor.
+        cursor (Optional[str]): A cursor value to provide to the evaluation of the sensor.
 
     Examples:
 
         .. code-block:: python
 
-            context = build_sensor_context(instance)
-            my_sensor.get_execution_data(context)
+            context = build_sensor_context()
+            my_sensor.evaluate_tick(context)
 
     """
 
     experimental_fn_warning("build_sensor_context")
 
-    check.inst_param(instance, "instance", DagsterInstance)
+    check.opt_inst_param(instance, "instance", DagsterInstance)
     check.opt_str_param(cursor, "cursor")
     return SensorExecutionContext(
-        instance_ref=instance.get_ref(),
+        instance_ref=instance.get_ref() if instance else None,
         last_completion_time=None,
         last_run_key=None,
         cursor=cursor,

@@ -52,14 +52,15 @@ def celery_mode_defs(resources=None):
     ]
 
 
-def k8s_mode_defs(resources=None):
-    from dagster_k8s.executor import dagster_k8s_executor
+def k8s_mode_defs(resources=None, name="default"):
+    from dagster_k8s.executor import k8s_job_executor
 
     return [
         ModeDefinition(
+            name=name,
             intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
             resource_defs=resources if resources else {"s3": s3_resource},
-            executor_defs=default_executors + [dagster_k8s_executor],
+            executor_defs=default_executors + [k8s_job_executor],
         )
     ]
 
@@ -375,7 +376,7 @@ def define_slow_pipeline():
     def slow_solid(_):
         time.sleep(100)
 
-    @pipeline(mode_defs=celery_mode_defs())
+    @pipeline(mode_defs=celery_mode_defs() + k8s_mode_defs(name="k8s"))
     def slow_pipeline():
         slow_solid()
 

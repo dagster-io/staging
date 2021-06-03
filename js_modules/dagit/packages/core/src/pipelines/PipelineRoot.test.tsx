@@ -26,9 +26,6 @@ describe('PipelineRoot', () => {
       id: () => PIPELINE_NAME,
       modes: () => new MockList(1),
     }),
-    RepositoryLocationConnection: () => ({
-      nodes: () => new MockList(1),
-    }),
     RepositoryLocation: () => ({
       id: REPO_LOCATION,
       name: REPO_LOCATION,

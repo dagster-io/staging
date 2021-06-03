@@ -9,8 +9,11 @@ from dagster import (
     daily_schedule,
     lambda_solid,
     repository,
+    schedule,
+    sensor,
+    solid,
 )
-from dagster.core.definitions import sensor
+from dagster.core.definitions.decorators.graph import graph
 
 
 def create_single_node_pipeline(name, called):
@@ -198,3 +201,76 @@ def test_bad_sensor():
         @repository
         def _some_repo():
             return [foo_sensor]
+
+
+def test_direct_schedule_target():
+    @solid
+    def wow():
+        return "wow"
+
+    @graph
+    def wonder():
+        wow()
+
+    @schedule(cron_schedule="* * * * *", job=wonder)
+    def direct_schedule(_):
+        return {}
+
+    @repository
+    def test():
+        return [direct_schedule]
+
+    assert test
+
+
+def test_direct_sensor_target():
+    @solid
+    def wow():
+        return "wow"
+
+    @graph
+    def wonder():
+        wow()
+
+    @sensor(job=wonder)
+    def direct_sensor(_):
+        return {}
+
+    @repository
+    def test():
+        return [direct_sensor]
+
+    assert test
+
+
+def test_bare_graph():
+    @solid
+    def ok():
+        return "sure"
+
+    @graph
+    def bare():
+        ok()
+
+    @repository
+    def test():
+        return [bare]
+
+    # should get updated once "executable" exists
+    assert test.get_pipeline("bare")
+
+
+def test_bare_graph_with_resources():
+    @solid(required_resource_keys={"stuff"})
+    def needy(context):
+        return context.resources.stuff
+
+    @graph
+    def bare():
+        needy()
+
+    with pytest.raises(DagsterInvalidDefinitionError, match='Resource key "stuff" is required'):
+
+        @repository
+        def _test():
+            return [bare]

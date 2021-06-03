@@ -8,7 +8,7 @@ import {AppContext} from '../app/AppContext';
 import {showCustomAlert} from '../app/CustomAlertProvider';
 import {filterByQuery} from '../app/GraphQueryImpl';
 import {PythonErrorInfo} from '../app/PythonErrorInfo';
-import {GanttChart, GanttChartMode, QueuedState} from '../gantt/GanttChart';
+import {GanttChart, GanttChartLoadingState, GanttChartMode, QueuedState} from '../gantt/GanttChart';
 import {toGraphQueryItems} from '../gantt/toGraphQueryItems';
 import {useQueryPersistedState} from '../hooks/useQueryPersistedState';
 import {FirstOrSecondPanelToggle, SplitPanelContainer} from '../ui/SplitPanelContainer';
@@ -155,7 +155,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
   const splitPanelContainer = React.createRef<SplitPanelContainer>();
 
   const {basePath} = React.useContext(AppContext);
-  const [computeLogStep, setComputeLogStep] = React.useState<string>();
+  const [computeLogKey, setComputeLogKey] = React.useState<string>();
   const [queryLogType, setQueryLogType] = useQueryPersistedState<string>({
     queryKey: 'logType',
     defaults: {logType: 'structured'},
@@ -177,17 +177,24 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
     if (!stepKeys) {
       return;
     }
-    if (!computeLogStep || !stepKeys.includes(computeLogStep)) {
-      const stepKey = selectionStepKeys.length === 1 ? selectionStepKeys[0] : stepKeys[0];
-      setComputeLogStep(stepKey);
-    } else if (selectionStepKeys.length === 1 && computeLogStep !== selectionStepKeys[0]) {
-      setComputeLogStep(selectionStepKeys[0]);
+    if (metadata.logCaptureSteps) {
+      const logKeys = Object.keys(metadata.logCaptureSteps);
+      const selectedLogKey = logKeys.find((logKey) => {
+        return selectionStepKeys.every(
+          (stepKey) =>
+            metadata.logCaptureSteps && metadata.logCaptureSteps[logKey].stepKeys.includes(stepKey),
+        );
+      });
+      setComputeLogKey(selectedLogKey || logKeys[0]);
+    } else if (!computeLogKey || !stepKeys.includes(computeLogKey)) {
+      setComputeLogKey(selectionStepKeys.length === 1 ? selectionStepKeys[0] : stepKeys[0]);
+    } else if (selectionStepKeys.length === 1 && computeLogKey !== selectionStepKeys[0]) {
+      setComputeLogKey(selectionStepKeys[0]);
     }
-  }, [stepKeys, computeLogStep, selectionStepKeys]);
+  }, [stepKeys, computeLogKey, selectionStepKeys, metadata.logCaptureSteps]);
 
-  const onComputeLogStepSelect = (stepKey: string) => {
-    setComputeLogStep(stepKey);
-    onSetSelectionQuery(stepKey);
+  const onSetComputeLogKey = (logKey: string) => {
+    setComputeLogKey(logKey);
   };
 
   const logsFilterStepKeys = runtimeGraph
@@ -195,7 +202,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
         .filter((v) => v.token && v.token === 'query')
         .reduce((accum, v) => {
           return [...accum, ...filterByQuery(runtimeGraph, v.value).all.map((n) => n.name)];
-        }, [])
+        }, [] as string[])
     : [];
 
   const onLaunch = async (style: ReExecutionStyle) => {
@@ -243,7 +250,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
 
   const gantt = (metadata: IRunMetadataDict) => {
     if (logs.loading) {
-      return <GanttChart.LoadingState runId={runId} />;
+      return <GanttChartLoadingState runId={runId} />;
     }
 
     if (run?.status === 'QUEUED') {
@@ -300,15 +307,15 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
               onSetFilter={onSetLogsFilter}
               steps={stepKeys}
               metadata={metadata}
-              computeLogStep={computeLogStep}
-              onSetComputeLogStep={onComputeLogStepSelect}
+              computeLogKey={computeLogKey}
+              onSetComputeLogKey={onSetComputeLogKey}
               computeLogUrl={computeLogUrl}
             />
             {logType !== LogType.structured ? (
               <ComputeLogPanel
                 runId={runId}
                 stepKeys={stepKeys}
-                selectedStepKey={computeLogStep}
+                computeLogKey={computeLogKey}
                 ioType={LogType[logType]}
                 setComputeLogUrl={setComputeLogUrl}
               />

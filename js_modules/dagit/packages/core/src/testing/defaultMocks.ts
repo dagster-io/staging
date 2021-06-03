@@ -1,7 +1,7 @@
 import {MockList} from '@graphql-tools/mock';
 import faker from 'faker';
 
-const hyphenatedName = () => faker.random.words(2).replace(/ /g, '-').toLowerCase();
+export const hyphenatedName = () => faker.random.words(2).replace(/ /g, '-').toLowerCase();
 const randomId = () => faker.random.uuid();
 
 /**
@@ -15,11 +15,8 @@ export const defaultMocks = {
   Asset: () => ({
     id: randomId,
   }),
-  PartitionSetOrError: () => ({
-    __typename: 'PartitionSetOrError',
-  }),
-  PartitionSetsOrError: () => ({
-    __typename: 'PartitionSets',
+  ISolidDefinition: () => ({
+    __typename: 'SolidDefinition',
   }),
   Pipeline: () => ({
     id: randomId,
@@ -27,44 +24,130 @@ export const defaultMocks = {
     pipelineSnapshotId: randomId,
     solids: () => new MockList(2),
   }),
+  Query: () => ({
+    version: () => 'x.y.z',
+  }),
+  Repository: () => ({
+    id: randomId,
+    name: hyphenatedName,
+  }),
+  RepositoryLocation: () => ({
+    id: randomId,
+    name: hyphenatedName,
+  }),
+  Workspace: () => ({
+    locationEntries: () => new MockList(1),
+  }),
+  Schedule: () => ({
+    id: hyphenatedName,
+    name: hyphenatedName,
+    results: () => new MockList(1),
+  }),
+  Sensor: () => ({
+    id: hyphenatedName,
+    name: hyphenatedName,
+    results: () => new MockList(1),
+  }),
+  Solid: () => ({
+    name: hyphenatedName,
+  }),
+
+  // Disambiguate error unions. If you'd like to mock an error, define a custom mock
+  // for the type.
+  RepositoriesOrError: () => ({
+    __typename: 'RepositoryConnection',
+  }),
+  DagsterTypeOrError: () => ({
+    __typename: 'RegularDagsterType',
+  }),
+  PipelineRunStatsOrError: () => ({
+    __typename: 'PipelineRunStatsSnapshot',
+  }),
+  PipelineRunOrError: () => ({
+    __typename: 'PipelineRun',
+  }),
+  PartitionsOrError: () => ({
+    __typename: 'Partitions',
+  }),
+  PartitionRunConfigOrError: () => ({
+    __typename: 'PartitionRunConfig',
+  }),
+  PartitionTagsOrError: () => ({
+    __typename: 'PartitionTags',
+  }),
+  PartitionStatusesOrError: () => ({
+    __typename: 'PartitionStatuses',
+  }),
+  RepositoryOrError: () => ({
+    __typename: 'Repository',
+  }),
+  WorkspaceOrError: () => ({
+    __typename: 'Workspace',
+  }),
+  RepositoryLocationOrLoadError: () => ({
+    __typename: 'RepositoryLocation',
+  }),
   PipelineOrError: () => ({
     __typename: 'Pipeline',
   }),
   PipelineSnapshotOrError: () => ({
     __typename: 'PipelineSnapshot',
   }),
-  Query: () => ({
-    version: () => 'x.y.z',
+  SchedulerOrError: () => ({
+    __typename: 'Scheduler',
   }),
-  RepositoriesOrError: () => ({
-    __typename: 'RepositoryConnection',
+  ScheduleOrError: () => ({
+    __typename: 'Schedule',
   }),
-  Repository: () => ({
-    id: randomId,
-    name: hyphenatedName,
+  SchedulesOrError: () => ({
+    __typename: 'Schedules',
   }),
-  RepositoryOrError: () => ({
-    __typename: 'Repository',
+  SensorOrError: () => ({
+    __typename: 'Sensor',
   }),
-  RepositoryLocation: () => ({
-    id: randomId,
-    name: hyphenatedName,
+  SensorsOrError: () => ({
+    __typename: 'Sensors',
   }),
-  RepositoryLocationOrLoadFailure: () => ({
-    __typename: 'RepositoryLocation',
+  JobStateOrError: () => ({
+    __typename: 'JobState',
   }),
-  RepositoryLocationsOrError: () => ({
-    __typename: 'RepositoryLocationConnection',
+  JobStatesOrError: () => ({
+    __typename: 'JobStates',
   }),
-  Schedule: () => ({
-    id: hyphenatedName,
-    name: hyphenatedName,
+  PartitionSetsOrError: () => ({
+    __typename: 'PartitionSets',
   }),
-  Sensor: () => ({
-    id: hyphenatedName,
-    name: hyphenatedName,
+  PartitionSetOrError: () => ({
+    __typename: 'PartitionSet',
   }),
-  Solid: () => ({
-    name: hyphenatedName,
+  PipelineRunsOrError: () => ({
+    __typename: 'PipelineRuns',
+  }),
+  RunGroupOrError: () => ({
+    __typename: 'RunGroup',
+  }),
+  ExecutionPlanOrError: () => ({
+    __typename: 'ExecutionPlan',
+  }),
+  RunConfigSchemaOrError: () => ({
+    __typename: 'RunConfigSchema',
+  }),
+  AssetsOrError: () => ({
+    __typename: 'AssetConnection',
+  }),
+  AssetOrError: () => ({
+    __typename: 'Asset',
+  }),
+  PartitionBackfillOrError: () => ({
+    __typename: 'PartitionBackfill',
+  }),
+  PartitionBackfillsOrError: () => ({
+    __typename: 'PartitionBackfills',
+  }),
+  StopSensorMutationResultOrError: () => ({
+    __typename: 'StopSensorMutationResult',
+  }),
+  ConfigTypeOrError: () => ({
+    __typename: 'EnumConfigType',
   }),
 };
