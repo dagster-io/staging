@@ -11,7 +11,7 @@ from dagster.core.errors import (
     DagsterInvalidConfigError,
     DagsterInvariantViolationError,
 )
-from dagster.core.events import DagsterEvent, PipelineInitFailureData
+from dagster.core.events import DagsterEvent
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
@@ -150,9 +150,9 @@ def host_mode_execution_context_event_generator(
             )
             error_info = serializable_error_info_from_exc_info(user_facing_exc_info)
 
-            yield DagsterEvent.pipeline_init_failure(
+            yield DagsterEvent.pipeline_failure(
                 pipeline_name=pipeline_run.pipeline_name,
-                failure_data=PipelineInitFailureData(error=error_info),
+                error_info=error_info,
                 log_manager=log_manager,
             )
         else:

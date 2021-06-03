@@ -232,13 +232,6 @@ def from_dagster_event_record(event_record, pipeline_name):
             else None,
             **basic_params,
         )
-
-    elif dagster_event.event_type == DagsterEventType.PIPELINE_INIT_FAILURE:
-        return GraphenePipelineInitFailureEvent(
-            pipelineName=pipeline_name,
-            error=GraphenePythonError(dagster_event.pipeline_init_failure_data.error),
-            **basic_params,
-        )
     elif dagster_event.event_type == DagsterEventType.ALERT_START:
         return GrapheneAlertStartEvent(pipelineName=pipeline_name, **basic_params)
     elif dagster_event.event_type == DagsterEventType.ALERT_SUCCESS:
