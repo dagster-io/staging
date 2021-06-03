@@ -590,21 +590,8 @@ def _user_event_sequence_for_step_compute_fn(
     check.inst_param(step_context, "step_context", StepExecutionContext)
     check.dict_param(evaluated_inputs, "evaluated_inputs", key_type=str)
 
-    gen = execute_core_compute(
+    yield from execute_core_compute(
         step_context,
         evaluated_inputs,
         step_context.solid_def.compute_fn,
     )
-
-    for event in iterate_with_context(
-        lambda: solid_execution_error_boundary(
-            DagsterExecutionStepExecutionError,
-            msg_fn=lambda: f'Error occurred while executing solid "{step_context.solid.name}":',
-            step_context=step_context,
-            step_key=step_context.step.key,
-            solid_def_name=step_context.solid_def.name,
-            solid_name=step_context.solid.name,
-        ),
-        gen,
-    ):
-        yield event

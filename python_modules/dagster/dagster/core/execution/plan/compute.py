@@ -12,12 +12,14 @@ from dagster.core.definitions import (
     Solid,
     SolidHandle,
 )
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterExecutionStepExecutionError, DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import StepExecutionContext
 from dagster.core.system_config.objects import EnvironmentConfig
+from dagster.utils import iterate_with_context
 
 from .outputs import StepOutput, StepOutputProperties
+from .utils import solid_execution_error_boundary
 
 SolidOutputUnion = Union[
     DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult
@@ -89,7 +91,19 @@ def _yield_compute_results(
 ) -> Iterator[SolidOutputUnion]:
     check.inst_param(step_context, "step_context", StepExecutionContext)
 
-    user_event_generator = compute_fn(SolidExecutionContext(step_context), inputs)
+    def get_solid_execution_boundary():
+        return solid_execution_error_boundary(
+            DagsterExecutionStepExecutionError,
+            msg_fn=lambda: f'Error occurred while executing solid "{step_context.solid.name}":',
+            step_context=step_context,
+            step_key=step_context.step.key,
+            solid_def_name=step_context.solid_def.name,
+            solid_name=step_context.solid.name,
+        )
+
+    # must place boundary here to catch exceptions before first event is yielded
+    with get_solid_execution_boundary():
+        user_event_generator = compute_fn(SolidExecutionContext(step_context), inputs)
 
     if isinstance(user_event_generator, Output):
         raise DagsterInvariantViolationError(
@@ -106,7 +120,10 @@ def _yield_compute_results(
     if inspect.isasyncgen(user_event_generator):
         user_event_generator = gen_from_async_gen(user_event_generator)
 
-    for event in user_event_generator:
+    for event in iterate_with_context(
+        get_solid_execution_boundary,
+        user_event_generator,
+    ):
         yield _validate_event(event, step_context.step.solid_handle)
 
 
