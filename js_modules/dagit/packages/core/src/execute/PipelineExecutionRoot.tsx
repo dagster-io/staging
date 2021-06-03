@@ -2,7 +2,6 @@ import {gql} from '@apollo/client';
 import {Query} from '@apollo/client/react/components';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
-import {Redirect} from 'react-router-dom';
 
 import {
   IExecutionSessionChanges,
@@ -13,10 +12,9 @@ import {
 import {featureEnabled, FeatureFlag} from '../app/Util';
 import {CONFIG_EDITOR_RUN_CONFIG_SCHEMA_FRAGMENT} from '../configeditor/ConfigEditorUtils';
 import {useDocumentTitle} from '../hooks/useDocumentTitle';
-import {explorerPathFromString} from '../pipelines/PipelinePathUtils';
+import {explorerPathFromString, useStripSnapshotFromPath} from '../pipelines/PipelinePathUtils';
 import {repoAddressToSelector} from '../workspace/repoAddressToSelector';
 import {RepoAddress} from '../workspace/types';
-import {workspacePipelinePath} from '../workspace/workspacePath';
 
 import {
   CONFIG_EDITOR_GENERATOR_PARTITION_SETS_FRAGMENT,
@@ -43,8 +41,9 @@ interface Props {
 
 export const PipelineExecutionRoot: React.FC<Props> = (props) => {
   const {pipelinePath, repoAddress} = props;
-  const {pipelineName, pipelineMode, snapshotId} = explorerPathFromString(pipelinePath);
+  const {pipelineName, pipelineMode} = explorerPathFromString(pipelinePath);
   useDocumentTitle(`Pipeline: ${pipelineName}:${pipelineMode}`);
+  useStripSnapshotFromPath(props);
 
   const [data, onSave] = useStorage(
     repoAddress.name || '',
@@ -59,20 +58,6 @@ export const PipelineExecutionRoot: React.FC<Props> = (props) => {
     pipelineName,
     solidSelection: session?.solidSelection || undefined,
   };
-
-  if (snapshotId) {
-    return (
-      <Redirect
-        to={workspacePipelinePath(
-          repoAddress.name,
-          repoAddress.location,
-          pipelineName,
-          pipelineMode,
-          `/playground`,
-        )}
-      />
-    );
-  }
 
   const onSaveSession = (session: string, changes: IExecutionSessionChanges) => {
     onSave(applyChangesToSession(data, session, changes));

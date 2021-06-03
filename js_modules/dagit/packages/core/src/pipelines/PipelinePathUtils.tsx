@@ -1,7 +1,9 @@
 import React from 'react';
-import {Link} from 'react-router-dom';
+import {Link, useHistory, useRouteMatch} from 'react-router-dom';
 
 import {FontFamily} from '../ui/styles';
+import {useRepositoryOptions} from '../workspace/WorkspaceContext';
+import {repoAddressFromPath} from '../workspace/repoAddressFromPath';
 
 export interface PipelineExplorerPath {
   pipelineName: string;
@@ -25,7 +27,7 @@ export function explorerPathToString(path: PipelineExplorerPath) {
 
 export function explorerPathFromString(path: string) {
   const [root, ...pathSolids] = path.split('/');
-  const match = /^([^:@~]+)@?([^:~]+)?:([^:~]+)~?(.*)$/.exec(root);
+  const match = /^([^:@~]+)@?([^:~]+)?:?([^:~]+)?~?(.*)$/.exec(root);
   const [, pipelineName, snapshotId, pipelineMode, solidsQuery] = [
     ...(match || []),
     '',
@@ -41,6 +43,61 @@ export function explorerPathFromString(path: string) {
     solidsQuery,
     pathSolids,
   };
+}
+
+export function useStripSnapshotFromPath(params: {pipelinePath: string}) {
+  const history = useHistory();
+
+  React.useEffect(() => {
+    const path = explorerPathFromString(params.pipelinePath);
+    if (!path.snapshotId) {
+      return;
+    }
+    history.replace({
+      pathname: history.location.pathname.replace(
+        `/${params.pipelinePath}/`,
+        `/${explorerPathToString({...path, snapshotId: undefined})}`,
+      ),
+    });
+  }, [history, params]);
+}
+
+export function useEnforceModeInPipelinePath() {
+  const {options} = useRepositoryOptions();
+  const history = useHistory();
+
+  const match = useRouteMatch<{repoPath: string; pipelinePath: string}>(
+    '/workspace/:repoPath/pipelines/:pipelinePath',
+  );
+
+  React.useEffect(() => {
+    if (!match) {
+      return;
+    }
+    const repoAddress = repoAddressFromPath(match.params.repoPath);
+    const path = explorerPathFromString(match.params.pipelinePath);
+    if (!repoAddress || path.pipelineMode) {
+      return;
+    }
+
+    const repo = options.find(
+      (o) =>
+        o.repository.name === repoAddress.name &&
+        o.repositoryLocation.name === repoAddress.location,
+    );
+    const mode = repo?.repository.pipelines.find((p) => p.name === path.pipelineName)?.modes[0]
+      .name;
+
+    if (!mode) {
+      return;
+    }
+    history.replace(
+      match.url.replace(
+        `/${match.params.pipelinePath}/`,
+        `/${explorerPathToString({...path, pipelineMode: mode})}`,
+      ),
+    );
+  }, [history, match, options]);
 }
 
 export const PipelineSnapshotLink: React.FunctionComponent<{
