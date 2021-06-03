@@ -1,6 +1,7 @@
 import logging
 from contextlib import contextmanager
 
+from dagster.core.definitions.resource import ResourceDefinition, resource
 from dagster.core.log_manager import DagsterLogManager
 
 
@@ -24,3 +25,21 @@ def python_logging_to_dagster_log_manager(log_manager: DagsterLogManager):
         yield
     finally:
         root_logger.removeHandler(handler)
+
+
+def make_log_handler_resource(handler: logging.Handler) -> ResourceDefinition:
+    """
+    Makes a resource that applies the given Handler to the root logger for the duration of the
+    solid.
+    """
+
+    @resource
+    def log_handler_resource(_):
+        root_logger = logging.getLogger()
+        root_logger.addHandler(handler)
+        try:
+            yield
+        finally:
+            root_logger.removeHandler(handler)
+
+    return log_handler_resource
