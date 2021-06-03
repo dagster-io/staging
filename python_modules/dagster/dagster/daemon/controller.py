@@ -44,7 +44,8 @@ def _sorted_quoted(strings):
 
 def create_daemons_from_instance(instance):
     return [
-        create_daemon_of_type(daemon_type) for daemon_type in instance.get_required_daemon_types()
+        create_daemon_of_type(daemon_type, instance)
+        for daemon_type in instance.get_required_daemon_types()
     ]
 
 
@@ -255,15 +256,15 @@ class DagsterDaemonController:
         return list(self._daemons.values())
 
 
-def create_daemon_of_type(daemon_type):
+def create_daemon_of_type(daemon_type, instance):
     if daemon_type == SchedulerDaemon.daemon_type():
-        return SchedulerDaemon.create_from_instance(DagsterInstance.get())
+        return SchedulerDaemon.create_from_instance(instance)
     elif daemon_type == SensorDaemon.daemon_type():
-        return SensorDaemon.create_from_instance(DagsterInstance.get())
+        return SensorDaemon.create_from_instance(instance)
     elif daemon_type == QueuedRunCoordinatorDaemon.daemon_type():
-        return QueuedRunCoordinatorDaemon.create_from_instance(DagsterInstance.get())
+        return QueuedRunCoordinatorDaemon.create_from_instance(instance)
     elif daemon_type == BackfillDaemon.daemon_type():
-        return BackfillDaemon.create_from_instance(DagsterInstance.get())
+        return BackfillDaemon.create_from_instance(instance)
     else:
         raise Exception("Unexpected daemon type {daemon_type}".format(daemon_type=daemon_type))
 
