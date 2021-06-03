@@ -12,12 +12,14 @@ from dagster.core.definitions import (
     Solid,
     SolidHandle,
 )
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterExecutionStepExecutionError, DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import StepExecutionContext
 from dagster.core.system_config.objects import EnvironmentConfig
+from dagster.utils import iterate_with_context
 
 from .outputs import StepOutput, StepOutputProperties
+from .utils import solid_execution_error_boundary
 
 SolidOutputUnion = Union[
     DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult
@@ -65,10 +67,7 @@ def _validate_event(event: Any, solid_handle: SolidHandle) -> SolidOutputUnion:
                 "rather than an instance of Output, AssetMaterialization, or ExpectationResult."
                 " Values yielded by solids must be wrapped in one of these types. If your "
                 "solid has a single output and yields no other events, you may want to use "
-                "`return` instead of `yield` in the body of your solid compute function. If "
-                "you are already using `return`, and you expected to return a value of type "
-                "{type_}, you may be inadvertently returning a generator rather than the value "
-                "you expected."
+                "`return` instead of `yield` in the body of your solid compute function. "
             ).format(solid_name=str(solid_handle), type_=type(event))
         )
 
@@ -106,7 +105,17 @@ def _yield_compute_results(
     if inspect.isasyncgen(user_event_generator):
         user_event_generator = gen_from_async_gen(user_event_generator)
 
-    for event in user_event_generator:
+    for event in iterate_with_context(
+        lambda: solid_execution_error_boundary(
+            DagsterExecutionStepExecutionError,
+            msg_fn=lambda: f'Error occurred while executing solid "{step_context.solid.name}":',
+            step_context=step_context,
+            step_key=step_context.step.key,
+            solid_def_name=step_context.solid_def.name,
+            solid_name=step_context.solid.name,
+        ),
+        user_event_generator,
+    ):
         yield _validate_event(event, step_context.step.solid_handle)
 
 

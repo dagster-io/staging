@@ -1149,13 +1149,7 @@ def test_solid_yields_single_bare_value():
             " 'int'> rather than an instance of Output, AssetMaterialization, or ExpectationResult. "
             "Values yielded by solids must be wrapped in one of these types. If your solid has a "
             "single output and yields no other events, you may want to use `return` instead of "
-            "`yield` in the body of your solid compute function. If you are already using "
-            "`return`, and you expected to return a value of type <"
-        )
-        + r"(class|type)"
-        + re.escape(
-            " 'int'>, you may be inadvertently returning a generator rather than the value you "
-            "expected."
+            "`yield` in the body of your solid compute function."
         ),
     ):
         result = execute_solid(return_iterator)
@@ -1175,13 +1169,7 @@ def test_solid_yields_multiple_bare_values():
             " 'int'> rather than an instance of Output, AssetMaterialization, or ExpectationResult. "
             "Values yielded by solids must be wrapped in one of these types. If your solid has a "
             "single output and yields no other events, you may want to use `return` instead of "
-            "`yield` in the body of your solid compute function. If you are already using "
-            "`return`, and you expected to return a value of type <"
-        )
-        + r"(class|type)"
-        + re.escape(
-            " 'int'>, you may be inadvertently returning a generator rather than the value you "
-            "expected."
+            "`yield` in the body of your solid compute function."
         ),
     ):
         result = execute_solid(return_iterator)
@@ -1198,19 +1186,8 @@ def test_solid_returns_iterator():
 
     with pytest.raises(
         DagsterInvariantViolationError,
-        match=re.escape("Compute function for solid return_iterator yielded a value of type <")
-        + r"(class|type)"
-        + re.escape(
-            " 'int'> rather than an instance of Output, AssetMaterialization, or ExpectationResult. "
-            "Values yielded by solids must be wrapped in one of these types. If your solid has a "
-            "single output and yields no other events, you may want to use `return` instead of "
-            "`yield` in the body of your solid compute function. If you are already using "
-            "`return`, and you expected to return a value of type <"
-        )
-        + r"(class|type)"
-        + re.escape(
-            " 'int'>, you may be inadvertently returning a generator rather than the value you "
-            "expected."
+        match=re.escape(
+            "Error in solid return_iterator: You have returned a generator object from the body of the solid."
         ),
     ):
         result = execute_solid(return_iterator)
