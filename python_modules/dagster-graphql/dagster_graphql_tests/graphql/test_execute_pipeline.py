@@ -3,7 +3,11 @@ import uuid
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster.utils import file_relative_path, merge_dicts
 from dagster.utils.test import get_temp_file_name
-from dagster_graphql.client.query import LAUNCH_PIPELINE_EXECUTION_MUTATION, SUBSCRIPTION_QUERY
+from dagster_graphql.client.query import (
+    LAUNCH_PIPELINE_EXECUTION_MUTATION,
+    RUN_EVENTS_QUERY,
+    SUBSCRIPTION_QUERY,
+)
 from dagster_graphql.test.utils import execute_dagster_graphql, infer_pipeline_selector
 from graphql import parse
 
@@ -273,6 +277,70 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         non_engine_event_types = [
             message["__typename"]
             for message in run_logs["messages"]
+            if message["__typename"] != "EngineEvent"
+        ]
+        expected_non_engine_event_types = [
+            "PipelineStartingEvent",
+            "PipelineStartEvent",
+            "LogsCapturedEvent",
+            "ExecutionStepStartEvent",
+            "ExecutionStepInputEvent",
+            "ExecutionStepOutputEvent",
+            "HandledOutputEvent",
+            "ExecutionStepSuccessEvent",
+            "LogsCapturedEvent",
+            "ExecutionStepStartEvent",
+            "LoadedInputEvent",
+            "ExecutionStepInputEvent",
+            "ExecutionStepOutputEvent",
+            "HandledOutputEvent",
+            "ExecutionStepSuccessEvent",
+            "PipelineSuccessEvent",
+        ]
+        assert non_engine_event_types == expected_non_engine_event_types
+
+    def test_basic_start_pipeline_and_fetch(self, graphql_context):
+        selector = infer_pipeline_selector(graphql_context, "csv_hello_world")
+        exc_result = execute_dagster_graphql(
+            graphql_context,
+            LAUNCH_PIPELINE_EXECUTION_MUTATION,
+            variables={
+                "executionParams": {
+                    "selector": selector,
+                    "runConfigData": {
+                        "solids": {
+                            "sum_solid": {
+                                "inputs": {"num": file_relative_path(__file__, "../data/num.csv")}
+                            }
+                        }
+                    },
+                    "mode": "default",
+                }
+            },
+        )
+
+        assert not exc_result.errors
+        assert exc_result.data
+        assert (
+            exc_result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
+        )
+
+        # block until run finishes
+        graphql_context.instance.run_launcher.join()
+
+        events_result = execute_dagster_graphql(
+            graphql_context,
+            RUN_EVENTS_QUERY,
+            variables={"runId": exc_result.data["launchPipelineExecution"]["run"]["runId"]},
+        )
+
+        assert not events_result.errors
+        assert events_result.data
+        assert events_result.data["pipelineRunOrError"]["__typename"] == "PipelineRun"
+
+        non_engine_event_types = [
+            message["__typename"]
+            for message in events_result.data["pipelineRunOrError"]["events"]
             if message["__typename"] != "EngineEvent"
         ]
         expected_non_engine_event_types = [
