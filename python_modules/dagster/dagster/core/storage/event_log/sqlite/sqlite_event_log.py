@@ -6,11 +6,13 @@ import threading
 import time
 from collections import defaultdict
 from contextlib import contextmanager
+from datetime import datetime
 
 import sqlalchemy as db
-from dagster import StringSource, check
+from dagster import StringSource, check, seven
+from dagster.core.events import DagsterEventType
 from dagster.core.events.log import EventRecord
-from dagster.core.storage.pipeline_run import PipelineRunStatus
+from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.sql import (
     check_alembic_revision,
     create_engine,
@@ -20,7 +22,11 @@ from dagster.core.storage.sql import (
     stamp_alembic_rev,
 )
 from dagster.core.storage.sqlite import create_db_conn_string
-from dagster.serdes import ConfigurableClass, ConfigurableClassData
+from dagster.serdes import (
+    ConfigurableClass,
+    ConfigurableClassData,
+    deserialize_json_to_dagster_namedtuple,
+)
 from dagster.utils import mkdir_p
 from sqlalchemy.pool import NullPool
 from tqdm import tqdm
@@ -226,6 +232,68 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
                 conn.execute(insert_event_statement)
 
             self.store_asset(event)
+
+    def get_event_rows(
+        self,
+        before_cursor=None,
+        after_cursor=None,
+        limit=None,
+        ascending=False,
+        of_type=None,
+        _run_updated_after=None,
+    ):
+        """Overridden method to enable cross-run event queries in sqlite.
+
+        The record id in sqlite does not auto increment cross runs, so instead of fetching events
+        before or after record id, we only fetch events whose runs updated after _run_updated_after.
+        """
+
+        check.opt_int_param(limit, "limit")
+        check.bool_param(ascending, "ascending")
+        check.opt_inst_param(of_type, "of_type", DagsterEventType)
+        check.opt_inst_param(_run_updated_after, "_run_updated_after", datetime)
+
+        query = db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event])
+        if of_type:
+            query = query.where(SqlEventLogStorageTable.c.dagster_event_type == of_type.value)
+        if limit:
+            query = query.limit(limit)
+        if ascending:
+            query = query.order_by(SqlEventLogStorageTable.c.timestamp.asc())
+        else:
+            query = query.order_by(SqlEventLogStorageTable.c.timestamp.desc())
+
+        # workaround for the run-shard sqlite to enable cross-run queries: get a list of run_ids
+        # whose events may qualify the query, and then open run_connection per run_id at a time.
+        run_rows = self._instance.get_run_rows(
+            filters=PipelineRunsFilter(updated_after=_run_updated_after),
+            limit=limit,
+            order_by="update_timestamp",
+            ascending=ascending,
+        )
+
+        records = []
+        for run_row in run_rows:
+            run_id = run_row["run_id"]
+            with self.run_connection(run_id) as conn:
+                results = conn.execute(query).fetchall()
+
+            for row_id, json_str in results:
+                try:
+                    event_record = deserialize_json_to_dagster_namedtuple(json_str)
+                    if not isinstance(event_record, EventRecord):
+                        logging.warning(
+                            "Could not resolve event record as EventRecord for id `{}`.".format(
+                                row_id
+                            )
+                        )
+                        continue
+                    else:
+                        records.append(tuple((row_id, event_record)))
+                except seven.JSONDecodeError:
+                    logging.warning("Could not parse event record id `{}`.".format(row_id))
+
+        return records
 
     def delete_events(self, run_id):
         with self.run_connection(run_id) as conn:
