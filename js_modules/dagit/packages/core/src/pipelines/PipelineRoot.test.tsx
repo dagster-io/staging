@@ -24,6 +24,7 @@ describe('PipelineRoot', () => {
   const mocks = {
     Pipeline: () => ({
       id: () => PIPELINE_NAME,
+      modes: () => new MockList(1),
     }),
     RepositoryLocationConnection: () => ({
       nodes: () => new MockList(1),
@@ -44,7 +45,7 @@ describe('PipelineRoot', () => {
 
   const repoAddress = buildRepoAddress(REPO_NAME, REPO_LOCATION);
   const pipelineName = 'pipez';
-  const path = `/workspace/${repoAddressAsString(repoAddress)}/pipelines/${pipelineName}`;
+  const path = `/workspace/${repoAddressAsString(repoAddress)}/pipelines/${pipelineName}:default`;
 
   it('renders definition by default', async () => {
     const routerProps = {

@@ -81,6 +81,10 @@ describe('App', () => {
     ISolidDefinition: () => ({
       __typename: 'SolidDefinition',
     }),
+    Mode: () => ({
+      __typename: 'Mode',
+      name: 'default',
+    }),
   };
 
   it('renders left nav without error', async () => {
@@ -126,6 +130,7 @@ describe('App', () => {
         ...defaultMocks,
         Pipeline: () => ({
           name: 'foo_pipeline',
+          modes: new MockList(1),
         }),
         PipelineSnapshot: () => ({
           runs: () => new MockList(0),
@@ -141,7 +146,7 @@ describe('App', () => {
         <TestProvider
           routerProps={{
             initialEntries: [
-              '/workspace/my_repository@my_location/pipelines/foo_pipeline/overview',
+              '/workspace/my_repository@my_location/pipelines/foo_pipeline:default/overview',
             ],
           }}
           apolloProps={{mocks}}
