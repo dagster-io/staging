@@ -67,7 +67,7 @@ def test_pipeline_failure_sensor_has_request():
             )
 
         context = build_sensor_context(instance)
-        requests = pipeline_failure_sensor.evaluate_tick(context)
+        requests = list(pipeline_failure_sensor(context))
         assert len(requests) == 1
 
 
@@ -80,7 +80,7 @@ def test_pipeline_failure_sensor_has_no_request():
         )
 
         context = build_sensor_context(instance)
-        requests = pipeline_failure_sensor.evaluate_tick(context)
+        requests = list(pipeline_failure_sensor(context))
         assert len(requests) == 0
 
 
