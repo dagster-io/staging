@@ -566,6 +566,54 @@ class SqlEventLogStorage(EventLogStorage):
 
         return query
 
+    def get_event_rows(
+        self,
+        before_cursor=None,
+        after_cursor=None,
+        limit=None,
+        ascending=False,
+        of_type=None,
+        run_updated_after=None,
+    ):
+        """Returns a list of (record_id, record)."""
+
+        check.opt_int_param(before_cursor, "before_cursor")
+        check.opt_int_param(after_cursor, "after_cursor")
+        check.opt_int_param(limit, "limit")
+        check.bool_param(ascending, "ascending")
+        check.opt_inst_param(of_type, "of_type", DagsterEventType)
+
+        query = db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event])
+        if of_type:
+            query = query.where(SqlEventLogStorageTable.c.dagster_event_type == of_type.value)
+
+        query = self._add_cursor_limit_to_query(
+            query,
+            before_cursor,
+            after_cursor,
+            limit,
+            ascending=ascending,
+        )
+
+        with self.index_connection() as conn:
+            results = conn.execute(query).fetchall()
+
+        records = []
+        for row_id, json_str in results:
+            try:
+                event_record = deserialize_json_to_dagster_namedtuple(json_str)
+                if not isinstance(event_record, EventRecord):
+                    logging.warning(
+                        "Could not resolve event record as EventRecord for id `{}`.".format(row_id)
+                    )
+                    continue
+                else:
+                    records.append(tuple((row_id, event_record)))
+            except seven.JSONDecodeError:
+                logging.warning("Could not parse event record id `{}`.".format(row_id))
+
+        return records
+
     def has_asset_key(self, asset_key: AssetKey) -> bool:
         check.inst_param(asset_key, "asset_key", AssetKey)
         query = (
