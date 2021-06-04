@@ -1,4 +1,4 @@
-from collections import namedtuple
+from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional
 
 from dagster import check
 from dagster.core.definitions.executor import ExecutorDefinition, default_executors
@@ -11,11 +11,21 @@ from .utils import check_valid_name
 
 DEFAULT_MODE_NAME = "default"
 
+if TYPE_CHECKING:
+    from .intermediate_storage import IntermediateStorageDefinition
+
 
 class ModeDefinition(
-    namedtuple(
+    NamedTuple(
         "_ModeDefinition",
-        "name resource_defs loggers executor_defs description intermediate_storage_defs",
+        [
+            ("name", str),
+            ("resource_defs", Dict[str, ResourceDefinition]),
+            ("loggers", List[LoggerDefinition]),
+            ("executor_defs", List[ExecutorDefinition]),
+            ("description", Optional[str]),
+            ("intermediate_storage_defs", List["IntermediateStorageDefinition"]),
+        ],
     )
 ):
     """Define a mode in which a pipeline can operate.
