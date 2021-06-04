@@ -94,6 +94,7 @@ class DagsterType:
         auto_plugins=None,
         required_resource_keys=None,
         kind=DagsterTypeKind.REGULAR,
+        python_type=None,
     ):
         check.opt_str_param(key, "key")
         check.opt_str_param(name, "name")
@@ -156,6 +157,15 @@ class DagsterType:
         )
 
         self.kind = check.inst_param(kind, "kind", DagsterTypeKind)
+
+        if python_type is None:
+            self.python_type = None
+        elif isinstance(python_type, tuple):
+            self.python_type = check.tuple_param(
+                python_type, "python_type", of_type=tuple(type for item in python_type)
+            )
+        else:
+            self.python_type = check.type_param(python_type, "python_type")
 
     def type_check(self, context, value):
         retval = self._type_check_fn(context, value)
@@ -268,13 +278,14 @@ def _validate_type_check_fn(fn, name):
 
 
 class BuiltinScalarDagsterType(DagsterType):
-    def __init__(self, name, type_check_fn, *args, **kwargs):
+    def __init__(self, name, type_check_fn, python_type, *args, **kwargs):
         super(BuiltinScalarDagsterType, self).__init__(
             key=name,
             name=name,
             kind=DagsterTypeKind.SCALAR,
             type_check_fn=type_check_fn,
             is_builtin=True,
+            python_type=python_type,
             *args,
             **kwargs,
         )
@@ -294,6 +305,7 @@ class _Int(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.INT_INPUT,
             materializer=BuiltinSchemas.INT_OUTPUT,
             type_check_fn=self.type_check_fn,
+            python_type=int,
         )
 
     def type_check_scalar_value(self, value):
@@ -321,6 +333,7 @@ class _String(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.STRING_INPUT,
             materializer=BuiltinSchemas.STRING_OUTPUT,
             type_check_fn=self.type_check_fn,
+            python_type=str,
         )
 
     def type_check_scalar_value(self, value):
@@ -334,6 +347,7 @@ class _Float(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.FLOAT_INPUT,
             materializer=BuiltinSchemas.FLOAT_OUTPUT,
             type_check_fn=self.type_check_fn,
+            python_type=float,
         )
 
     def type_check_scalar_value(self, value):
@@ -347,6 +361,7 @@ class _Bool(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.BOOL_INPUT,
             materializer=BuiltinSchemas.BOOL_OUTPUT,
             type_check_fn=self.type_check_fn,
+            python_type=bool,
         )
 
     def type_check_scalar_value(self, value):
@@ -376,6 +391,8 @@ class Anyish(DagsterType):
             type_check_fn=self.type_check_method,
             description=description,
             auto_plugins=auto_plugins,
+            # typing.Any is not a python type
+            python_type=None,
         )
 
     def type_check_method(self, _context, _value):
@@ -430,6 +447,7 @@ class _Nothing(DagsterType):
             materializer=None,
             type_check_fn=self.type_check_method,
             is_builtin=True,
+            python_type=None,
         )
 
     def type_check_method(self, _context, value):
@@ -522,18 +540,15 @@ class PythonObjectDagsterType(DagsterType):
 
     def __init__(self, python_type, key=None, name=None, **kwargs):
         if isinstance(python_type, tuple):
-            self.python_type = check.tuple_param(
-                python_type, "python_type", of_type=tuple(type for item in python_type)
-            )
             self.type_str = "Union[{}]".format(
                 ", ".join(python_type.__name__ for python_type in python_type)
             )
         else:
-            self.python_type = check.type_param(python_type, "python_type")
             self.type_str = python_type.__name__
         name = check.opt_str_param(name, "name", self.type_str)
         key = check.opt_str_param(key, "key", name)
         super(PythonObjectDagsterType, self).__init__(
+            python_type=python_type,
             key=key,
             name=name,
             type_check_fn=isinstance_type_check_fn(python_type, name, self.type_str),
@@ -583,6 +598,7 @@ class OptionalType(DagsterType):
             kind=DagsterTypeKind.NULLABLE,
             type_check_fn=self.type_check_method,
             loader=_create_nullable_input_schema(inner_type),
+            python_type=inner_type.python_type,
         )
 
     @property
@@ -644,6 +660,7 @@ class ListType(DagsterType):
             kind=DagsterTypeKind.LIST,
             type_check_fn=self.type_check_method,
             loader=_create_list_input_schema(inner_type),
+            python_type=list,
         )
 
     @property
@@ -709,6 +726,7 @@ class Stringish(DagsterType):
             type_check_fn=self.type_check_method,
             loader=BuiltinSchemas.STRING_INPUT,
             materializer=BuiltinSchemas.STRING_OUTPUT,
+            python_type=str,
             **kwargs,
         )
 
@@ -787,13 +805,13 @@ DAGSTER_INVALID_TYPE_ERROR_MESSAGE = (
 class TypeHintInferredDagsterType(DagsterType):
     def __init__(self, python_type: typing.Type):
         qualified_name = f"{python_type.__module__}.{python_type.__name__}"
-        self.python_type = python_type
         super(TypeHintInferredDagsterType, self).__init__(
             key=f"_TypeHintInferred[{qualified_name}]",
             description=f"DagsterType created from a type hint for the Python type {qualified_name}",
             type_check_fn=isinstance_type_check_fn(
                 python_type, python_type.__name__, qualified_name
             ),
+            python_type=python_type,
         )
 
     @property
