@@ -228,3 +228,10 @@ class SolidExecutionContext(AbstractComputeExecutionContext):
             StepExecutionContext: The underlying system context.
         """
         return self._step_execution_context
+
+    def previous_attempt_count(self) -> int:
+        """
+        How many times this solid has attempted to execute and ended with a retry request.
+        """
+
+        return self._step_execution_context.previous_attempt_count
