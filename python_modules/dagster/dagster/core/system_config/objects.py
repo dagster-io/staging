@@ -150,10 +150,25 @@ class ResolvedRunConfig(
         check.opt_str_param(mode, "mode")
 
         mode = mode or pipeline_def.get_default_mode_name()
-        run_config_schema_type = create_run_config_schema_type(pipeline_def, mode)
+        run_config_schema = pipeline_def.get_run_config_schema(mode)
+
+        if run_config_schema.config_mapping:
+            outer_evr = process_config(
+                run_config_schema.config_mapping.config_schema.config_type,
+                run_config,
+            )
+            if not outer_evr.success:
+                raise DagsterInvalidConfigError(
+                    f"Error in config mapping for pipeline {pipeline_def.name} mode {mode}",
+                    outer_evr.errors,
+                    run_config,
+                )
+            # add user code boundary
+            run_config = run_config_schema.config_mapping.config_fn(outer_evr.value)
 
         config_evr = process_config(
-            run_config_schema_type, run_config_storage_field_backcompat(run_config)
+            run_config_schema.run_config_schema_type,
+            run_config_storage_field_backcompat(run_config),
         )
         if not config_evr.success:
             raise DagsterInvalidConfigError(
