@@ -94,6 +94,7 @@ class DagsterType:
         auto_plugins=None,
         required_resource_keys=None,
         kind=DagsterTypeKind.REGULAR,
+        typing_type=None,
     ):
         check.opt_str_param(key, "key")
         check.opt_str_param(name, "name")
@@ -156,6 +157,8 @@ class DagsterType:
         )
 
         self.kind = check.inst_param(kind, "kind", DagsterTypeKind)
+
+        self.typing_type = typing_type
 
     def type_check(self, context, value):
         retval = self._type_check_fn(context, value)
@@ -268,13 +271,14 @@ def _validate_type_check_fn(fn, name):
 
 
 class BuiltinScalarDagsterType(DagsterType):
-    def __init__(self, name, type_check_fn, *args, **kwargs):
+    def __init__(self, name, type_check_fn, typing_type, *args, **kwargs):
         super(BuiltinScalarDagsterType, self).__init__(
             key=name,
             name=name,
             kind=DagsterTypeKind.SCALAR,
             type_check_fn=type_check_fn,
             is_builtin=True,
+            typing_type=typing_type,
             *args,
             **kwargs,
         )
@@ -294,6 +298,7 @@ class _Int(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.INT_INPUT,
             materializer=BuiltinSchemas.INT_OUTPUT,
             type_check_fn=self.type_check_fn,
+            typing_type=int,
         )
 
     def type_check_scalar_value(self, value):
@@ -321,6 +326,7 @@ class _String(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.STRING_INPUT,
             materializer=BuiltinSchemas.STRING_OUTPUT,
             type_check_fn=self.type_check_fn,
+            typing_type=str,
         )
 
     def type_check_scalar_value(self, value):
@@ -334,6 +340,7 @@ class _Float(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.FLOAT_INPUT,
             materializer=BuiltinSchemas.FLOAT_OUTPUT,
             type_check_fn=self.type_check_fn,
+            typing_type=float,
         )
 
     def type_check_scalar_value(self, value):
@@ -347,6 +354,7 @@ class _Bool(BuiltinScalarDagsterType):
             loader=BuiltinSchemas.BOOL_INPUT,
             materializer=BuiltinSchemas.BOOL_OUTPUT,
             type_check_fn=self.type_check_fn,
+            typing_type=bool,
         )
 
     def type_check_scalar_value(self, value):
@@ -376,6 +384,7 @@ class Anyish(DagsterType):
             type_check_fn=self.type_check_method,
             description=description,
             auto_plugins=auto_plugins,
+            typing_type=typing.Any,
         )
 
     def type_check_method(self, _context, _value):
@@ -534,6 +543,7 @@ class PythonObjectDagsterType(DagsterType):
         name = check.opt_str_param(name, "name", self.type_str)
         key = check.opt_str_param(key, "key", name)
         super(PythonObjectDagsterType, self).__init__(
+            typing_type=python_type,
             key=key,
             name=name,
             type_check_fn=isinstance_type_check_fn(python_type, name, self.type_str),
@@ -583,6 +593,7 @@ class OptionalType(DagsterType):
             kind=DagsterTypeKind.NULLABLE,
             type_check_fn=self.type_check_method,
             loader=_create_nullable_input_schema(inner_type),
+            typing_type=typing.Optional[inner_type.typing_type],
         )
 
     @property
@@ -644,6 +655,7 @@ class ListType(DagsterType):
             kind=DagsterTypeKind.LIST,
             type_check_fn=self.type_check_method,
             loader=_create_list_input_schema(inner_type),
+            typing_type=typing.List[inner_type.typing_type],
         )
 
     @property
@@ -709,6 +721,7 @@ class Stringish(DagsterType):
             type_check_fn=self.type_check_method,
             loader=BuiltinSchemas.STRING_INPUT,
             materializer=BuiltinSchemas.STRING_OUTPUT,
+            typing_type=str,
             **kwargs,
         )
 
@@ -794,6 +807,7 @@ class TypeHintInferredDagsterType(DagsterType):
             type_check_fn=isinstance_type_check_fn(
                 python_type, python_type.__name__, qualified_name
             ),
+            typing_type=python_type,
         )
 
     @property
