@@ -904,10 +904,10 @@ def _create_run_config_schema(
     mode_definition: ModeDefinition,
     required_resources: Set[str],
 ) -> "RunConfigSchema":
-    from .environment_configs import (
-        EnvironmentClassCreationData,
+    from .run_config import (
+        RunConfigSchemaCreationData,
         construct_config_type_dictionary,
-        define_environment_cls,
+        define_run_config_schema_type,
     )
     from .run_config_schema import RunConfigSchema
 
@@ -926,8 +926,8 @@ def _create_run_config_schema(
     else:
         ignored_solids = []
 
-    environment_type = define_environment_cls(
-        EnvironmentClassCreationData(
+    environment_type = define_run_config_schema_type(
+        RunConfigSchemaCreationData(
             pipeline_name=pipeline_def.name,
             solids=pipeline_def.solids,
             dependency_structure=pipeline_def.dependency_structure,
@@ -943,7 +943,7 @@ def _create_run_config_schema(
     )
 
     return RunConfigSchema(
-        environment_type=environment_type,
+        config_type=environment_type,
         config_type_dict_by_name=config_type_dict_by_name,
         config_type_dict_by_key=config_type_dict_by_key,
     )

@@ -58,7 +58,7 @@ def def_config_field(configurable_def: ConfigurableDefinition, is_required: bool
     )
 
 
-class EnvironmentClassCreationData(NamedTuple):
+class RunConfigSchemaCreationData(NamedTuple):
     pipeline_name: str
     solids: List[Solid]
     dependency_structure: DependencyStructure
@@ -68,7 +68,7 @@ class EnvironmentClassCreationData(NamedTuple):
     required_resources: Set[str]
 
 
-def define_logger_dictionary_cls(creation_data: EnvironmentClassCreationData) -> Shape:
+def define_logger_dictionary_cls(creation_data: RunConfigSchemaCreationData) -> Shape:
     return Shape(
         {
             logger_name: def_config_field(logger_definition, is_required=False)
@@ -109,7 +109,7 @@ def define_storage_field(
         return Field(storage_selector, default_value=default_storage)
 
 
-def define_environment_cls(creation_data: EnvironmentClassCreationData):
+def define_run_config_schema_type(creation_data: RunConfigSchemaCreationData) -> ConfigType:
     intermediate_storage_field = define_storage_field(
         selector_for_named_defs(creation_data.mode_definition.intermediate_storage_defs),
         storage_names=[dfn.name for dfn in creation_data.mode_definition.intermediate_storage_defs],
