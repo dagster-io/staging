@@ -8,7 +8,9 @@ import {
   NonIdealState,
   Tabs,
   Tab,
+  Icon,
 } from '@blueprintjs/core';
+import {Tooltip2 as Tooltip} from '@blueprintjs/popover2';
 import {TimeUnit} from 'chart.js';
 import moment from 'moment-timezone';
 import * as React from 'react';
@@ -22,7 +24,7 @@ import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
 import {Spinner} from '../ui/Spinner';
-import {Subheading} from '../ui/Text';
+import {Subheading, Body} from '../ui/Text';
 import {repoAddressToSelector} from '../workspace/repoAddressToSelector';
 import {RepoAddress} from '../workspace/types';
 
@@ -259,7 +261,43 @@ export const JobTickHistory = ({
         {selectedTick ? (
           <Box background={Colors.WHITE} padding={16} margin={{bottom: 16}}>
             {selectedTick.status === JobTickStatus.SUCCESS ? (
-              <RunList runIds={selectedTick?.runIds} />
+              <Group direction="column" spacing={16}>
+                {selectedTick.originRunIds.length && (
+                  <Group direction="column" spacing={16}>
+                    <Body>
+                      REACTED RUNS
+                      <Tooltip content="Runs this tick reacted on and reported back to.">
+                        <Icon
+                          icon="info-sign"
+                          iconSize={12}
+                          color={Colors.GRAY3}
+                          style={{position: 'relative', top: '-2px', marginLeft: '6px'}}
+                        />
+                      </Tooltip>
+                    </Body>
+
+                    <RunList runIds={selectedTick.originRunIds} />
+                  </Group>
+                )}
+                <Group direction="column" spacing={16}>
+                  <Body>
+                    REQUESTED RUNS
+                    <Tooltip content="Runs launched by the run requests in this tick.">
+                      <Icon
+                        icon="info-sign"
+                        iconSize={12}
+                        color={Colors.GRAY3}
+                        style={{position: 'relative', top: '-2px', marginLeft: '6px'}}
+                      />
+                    </Tooltip>
+                  </Body>
+                  {selectedTick.runIds.length ? (
+                    <RunList runIds={selectedTick.runIds} />
+                  ) : (
+                    <NonIdealState description="Sensor does not target a pipeline." />
+                  )}
+                </Group>
+              </Group>
             ) : null}
             {selectedTick.status === JobTickStatus.SKIPPED ? (
               <Group direction="row" spacing={16}>
@@ -538,6 +576,7 @@ const JOB_TICK_HISTORY_QUERY = gql`
           timestamp
           skipReason
           runIds
+          originRunIds
           error {
             ...PythonErrorFragment
           }
