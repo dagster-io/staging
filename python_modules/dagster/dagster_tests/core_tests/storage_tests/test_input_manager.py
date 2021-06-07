@@ -11,6 +11,7 @@ from dagster import (
     OutputDefinition,
     PythonObjectDagsterType,
     RootInputManagerDefinition,
+    composite_solid,
     execute_pipeline,
     execute_solid,
     io_manager,
@@ -355,3 +356,27 @@ def test_mode_missing_input_manager_execute_solid():
 
     result = execute_solid(my_solid, input_values={"a": 5})
     assert result.success
+
+
+def test_no_root_manager_composite() -> None:
+    @root_input_manager(input_config_schema={"test": str})
+    def my_root(context):
+        return context.config["test"]
+
+    @solid(input_defs=[InputDefinition("data", dagster_type=str)])
+    def inner_solid(_, data):
+        return data
+
+    @composite_solid(
+        input_defs=[InputDefinition("data", dagster_type=str, root_manager_key="my_root")]
+    )
+    def my_composite_solid(data):
+        _ = inner_solid(data=data)
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError, match="Root input manager cannot be set on a composite solid"
+    ):
+
+        @pipeline(mode_defs=[ModeDefinition(name="default", resource_defs={"my_root": my_root})])
+        def _():
+            my_composite_solid()

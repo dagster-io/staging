@@ -654,6 +654,9 @@ def _checked_resource_reqs_for_mode(
         if isinstance(resource_def, IOutputManagerDefinition)
     )
     mode_resources = set(mode_def.resource_defs.keys())
+
+    _check_io_managers_on_composite_solids(solid_dict)
+
     for node_def in node_defs:
         for solid_def in node_def.iterate_solid_defs():
             for required_resource in solid_def.required_resource_keys:
@@ -882,6 +885,27 @@ def _checked_input_resource_reqs_for_mode(
                         )
 
     return resource_reqs
+
+
+def _check_io_managers_on_composite_solids(solid_dict: Dict[str, Solid]):
+    for solid in solid_dict.values():
+        if solid.is_composite:
+            # Ban root_manager_key on composite solids
+            for handle in solid.input_handles():
+                if handle.input_def.root_manager_key:
+                    raise DagsterInvalidDefinitionError(
+                        "Root input manager cannot be set on a composite solid: "
+                        f'Root input manager key "{handle.input_def.root_manager_key}" '
+                        f'is set on composite solid "{solid.name}". '
+                    )
+            # Ban io_manager_key on composite solids
+            for handle in solid.output_handles():
+                if handle.output_def.io_manager_key != "io_manager":
+                    raise DagsterInvalidDefinitionError(
+                        "IO manager cannot be set on a composite solid: "
+                        f'IO manager key "{handle.output_def.io_manager_key}" '
+                        f'is set on composite solid "{solid.name}". '
+                    )
 
 
 def _build_all_node_defs(node_defs: List[NodeDefinition]) -> Dict[str, NodeDefinition]:
