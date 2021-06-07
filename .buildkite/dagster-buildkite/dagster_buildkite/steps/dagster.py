@@ -206,6 +206,13 @@ def gcp_extra_cmds_fn(_):
     ]
 
 
+def hackernews_extra_commands_fn(_):
+    return [
+        r"aws s3 cp s3://\${BUILDKITE_SECRETS_BUCKET}/env .",
+        "source env",
+    ]
+
+
 def postgres_extra_cmds_fn(_):
     return [
         "pushd python_modules/libraries/dagster-postgres/dagster_postgres_tests/",
@@ -265,6 +272,11 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         buildkite_label="deploy_docker_example",
         upload_coverage=False,
         supported_pythons=ExamplePythons,
+    ),
+    ModuleBuildSpec(
+        "examples/hacker_news",
+        extra_cmds_fn=hackernews_extra_commands_fn,
+        env_vars=["SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PASSWORD"],
     ),
     ModuleBuildSpec("python_modules/dagit", extra_cmds_fn=dagit_extra_cmds_fn),
     ModuleBuildSpec("python_modules/automation"),
