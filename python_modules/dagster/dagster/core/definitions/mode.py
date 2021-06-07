@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, List, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, NamedTuple, Optional, cast
 
 from dagster import check
 from dagster.core.definitions.executor import ExecutorDefinition, default_executors
@@ -25,6 +25,7 @@ class ModeDefinition(
             ("executor_defs", List[ExecutorDefinition]),
             ("description", Optional[str]),
             ("intermediate_storage_defs", List["IntermediateStorageDefinition"]),
+            ("partitions", Optional[Callable[[], List[Any]]]),
         ],
     )
 ):
@@ -48,6 +49,7 @@ class ModeDefinition(
         intermediate_storage_defs (Optional[List[IntermediateStorageDefinition]]): The set of intermediate storage
             options available when executing in this mode. By default, this will be the 'in_memory'
             and 'filesystem' system storages.
+        partitions (Optional[Callable[[], List[Any]]]):
     """
 
     def __new__(
@@ -58,6 +60,7 @@ class ModeDefinition(
         executor_defs: Optional[List[ExecutorDefinition]] = None,
         description: Optional[str] = None,
         intermediate_storage_defs: Optional[List["IntermediateStorageDefinition"]] = None,
+        partitions: Optional[Callable[[], List[Any]]] = None,
     ):
         from dagster.core.storage.system_storage import default_intermediate_storage_defs
 
@@ -98,6 +101,7 @@ class ModeDefinition(
                 of_type=ExecutorDefinition,
             ),
             description=check.opt_str_param(description, "description"),
+            partitions=check.opt_callable_param(partitions, "partitions"),
         )
 
     @property
@@ -111,6 +115,29 @@ class ModeDefinition(
                 return intermediate_storage_def
 
         check.failed("{} storage definition not found".format(name))
+
+    def get_partition_set_def(self, pipeline_name: str):
+        from dagster.core.definitions.partition import PartitionSetDefinition, Partition
+
+        if not self.partitions:
+            return None
+
+        def partition_fn() -> List[Partition]:
+            return [
+                Partition(partition, str(partition))
+                for partition in cast(Callable, self.partitions)()
+            ]
+
+        def run_config_fn_for_partition(partition: Partition):
+            return partition.value
+
+        return PartitionSetDefinition(
+            pipeline_name=pipeline_name,
+            name=pipeline_name + "_" + self.name + "_partition_set",
+            partition_fn=partition_fn,
+            run_config_fn_for_partition=run_config_fn_for_partition,
+            mode=self.name,
+        )
 
     @staticmethod
     def from_resources(resources, name=None):
