@@ -66,11 +66,7 @@ class _Solid:
         else:
             output_defs = self.output_defs
 
-        (
-            resolved_input_defs,
-            positional_inputs,
-            context_arg_provided,
-        ) = resolve_checked_solid_fn_inputs(
+        (resolved_input_defs, positional_inputs,) = resolve_checked_solid_fn_inputs(
             decorator_name="@solid",
             fn_name=self.name,
             compute_fn=fn,
@@ -79,22 +75,18 @@ class _Solid:
             context_required=bool(self.required_resource_keys) or bool(self.config_schema),
             exclude_nothing=True,
         )
-        compute_fn = _create_solid_compute_wrapper(
-            fn, resolved_input_defs, output_defs, context_arg_provided
-        )
 
         solid_def = SolidDefinition(
             name=self.name,
             input_defs=resolved_input_defs,
             output_defs=output_defs,
-            compute_fn=compute_fn,
+            compute_fn=fn,
             config_schema=self.config_schema,
             description=self.description or fn.__doc__,
             required_resource_keys=self.required_resource_keys,
             tags=self.tags,
             positional_inputs=positional_inputs,
             version=self.version,
-            context_arg_provided=context_arg_provided,
             retry_policy=self.retry_policy,
         )
         update_wrapper(solid_def, fn)
@@ -366,7 +358,7 @@ def resolve_checked_solid_fn_inputs(
     has_context_arg: bool,
     context_required: bool,
     exclude_nothing: bool,  # should Nothing type inputs be excluded from compute_fn args
-) -> Tuple[List[InputDefinition], List[str], bool]:
+) -> Tuple[List[InputDefinition], List[str]]:
     """
     Validate provided input definitions and infer the remaining from the type signature of the compute_fn
     Returns the resolved set of InputDefinitions and the positions of input names (which is used
@@ -391,7 +383,7 @@ def resolve_checked_solid_fn_inputs(
 
     params = get_function_params(compute_fn)
 
-    is_context_provided = _is_context_provided(params)
+    context_arg_provided = is_context_provided(params)
 
     if context_required:
 
@@ -409,7 +401,7 @@ def resolve_checked_solid_fn_inputs(
         input_args = params[len(expected_positionals) :]
 
     else:
-        input_args = params[1:] if is_context_provided and has_context_arg else params
+        input_args = params[1:] if context_arg_provided and has_context_arg else params
 
     # Validate input arguments
     used_inputs = set()
@@ -453,7 +445,7 @@ def resolve_checked_solid_fn_inputs(
 
     inferred_props = {
         inferred.name: inferred
-        for inferred in infer_input_props(compute_fn, is_context_provided and has_context_arg)
+        for inferred in infer_input_props(compute_fn, context_arg_provided and has_context_arg)
     }
     input_defs = []
     for input_def in explicit_input_defs:
@@ -471,10 +463,13 @@ def resolve_checked_solid_fn_inputs(
         if inferred.name in inputs_to_infer
     )
 
-    return input_defs, positional_arg_name_list(input_args), is_context_provided and has_context_arg
+    return (
+        input_defs,
+        positional_arg_name_list(input_args),
+    )
 
 
-def _is_context_provided(params: List[funcsigs.Parameter]) -> bool:
+def is_context_provided(params: List[funcsigs.Parameter]) -> bool:
     if len(params) == 0:
         return False
     return params[0].name in get_valid_name_permutations("context")
