@@ -869,6 +869,16 @@ def _checked_input_resource_reqs_for_mode(
                 # the other ways of loading unsatisfied inputs - dagster type loaders and
                 # default values.
                 if input_def.root_manager_key:
+                    if solid.is_composite:
+                        for inner_solid in solid.definition.solids:
+                            for input_handle in inner_solid.input_handles():
+                                if input_handle.input_def.root_manager_key:
+                                    raise DagsterInvalidDefinitionError(
+                                        "Root input manager cannot be configured on solids inside a composite solid: "
+                                        f'Root input manager key "{input_handle.input_def.root_manager_key}" '
+                                        f'is set on solid "{input_handle.solid_name}" inside a composite solid "{solid.name}". '
+                                        "If you want to config inputs for a composite solid, please specify root_input_manager on composite solids only. "
+                                    )
                     resource_reqs.add(input_def.root_manager_key)
                     if input_def.root_manager_key not in mode_def.resource_defs:
                         raise DagsterInvalidDefinitionError(

@@ -11,6 +11,7 @@ from dagster import (
     OutputDefinition,
     PythonObjectDagsterType,
     RootInputManagerDefinition,
+    composite_solid,
     execute_pipeline,
     execute_solid,
     io_manager,
@@ -354,4 +355,48 @@ def test_mode_missing_input_manager_execute_solid():
         return a + 1
 
     result = execute_solid(my_solid, input_values={"a": 5})
+    assert result.success
+
+
+def test_root_manager_composite() -> None:
+    @root_input_manager(input_config_schema={"test": str})
+    def my_root(context):
+        return context.config["test"]
+
+    @solid(input_defs=[InputDefinition("data", dagster_type=str, root_manager_key="my_root")])
+    def inner_solid(_, data):
+        return data
+
+    @composite_solid(
+        input_defs=[InputDefinition("data", dagster_type=str, root_manager_key="my_root")]
+    )
+    def composite(data):
+        _ = inner_solid(data=data)
+
+    with pytest.raises(DagsterInvalidDefinitionError):
+
+        @pipeline(mode_defs=[ModeDefinition(name="default", resource_defs={"my_root": my_root})])
+        def _():
+            _ = composite()
+
+    # no root_manager_key on inner solids
+    @solid(input_defs=[InputDefinition("data", dagster_type=str)])
+    def inner_solid_2(_, data):
+        return data
+
+    @composite_solid(
+        input_defs=[InputDefinition("data", dagster_type=str, root_manager_key="my_root")]
+    )
+    def composite_2(data):
+        _ = inner_solid_2(data=data)
+
+    @pipeline(mode_defs=[ModeDefinition(name="default", resource_defs={"my_root": my_root})])
+    def my_pipeline():
+        _ = composite_2()
+
+    result = execute_pipeline(
+        my_pipeline,
+        run_config={"solids": {"composite_2": {"inputs": {"data": {"test": "hello"}}}}},
+    )
+
     assert result.success
