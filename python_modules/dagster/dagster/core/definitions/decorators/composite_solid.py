@@ -2,6 +2,7 @@ from functools import update_wrapper
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from dagster import check
+from dagster.core.errors import DagsterInvalidDefinitionError
 
 from ..composition import do_composition
 from ..input import InputDefinition
@@ -22,6 +23,7 @@ class _CompositeSolid:
         self.name = check.opt_str_param(name, "name")
         self.input_defs = check.opt_list_param(input_defs, "input_defs", InputDefinition)
         self.output_defs = check.opt_nullable_list_param(output_defs, "output", OutputDefinition)
+
         self.description = check.opt_str_param(description, "description")
 
         self.config_schema = config_schema  # gets validated in do_composition
