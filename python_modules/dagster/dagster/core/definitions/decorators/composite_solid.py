@@ -2,6 +2,7 @@ from functools import update_wrapper
 from typing import Any, Callable, Dict, List, Optional, Union
 
 from dagster import check
+from dagster.core.errors import DagsterInvalidDefinitionError
 
 from ..composition import do_composition
 from ..input import InputDefinition
@@ -22,6 +23,9 @@ class _CompositeSolid:
         self.name = check.opt_str_param(name, "name")
         self.input_defs = check.opt_list_param(input_defs, "input_defs", InputDefinition)
         self.output_defs = check.opt_nullable_list_param(output_defs, "output", OutputDefinition)
+
+        self._check_io_managers_on_composite_solid()
+
         self.description = check.opt_str_param(description, "description")
 
         self.config_schema = config_schema  # gets validated in do_composition
@@ -63,6 +67,25 @@ class _CompositeSolid:
         )
         update_wrapper(composite_def, fn)
         return composite_def
+
+    def _check_io_managers_on_composite_solid(self):
+        # Ban root_manager_key on composite solids
+        for input_def in self.input_defs:
+            if input_def.root_manager_key:
+                raise DagsterInvalidDefinitionError(
+                    "Root input manager cannot be set on a composite solid: "
+                    f'Root input manager key "{input_def.root_manager_key}" '
+                    f'is set on composite solid "{self.name}". '
+                )
+        # Ban io_manager_key on composite solids
+        if self.output_defs:
+            for output_def in self.output_defs:
+                if output_def.io_manager_key != "io_manager":
+                    raise DagsterInvalidDefinitionError(
+                        "IO manager cannot be set on a composite solid: "
+                        f'IO manager key "{output_def.io_manager_key}" '
+                        f'is set on composite solid "{self.name}". '
+                    )
 
 
 def composite_solid(

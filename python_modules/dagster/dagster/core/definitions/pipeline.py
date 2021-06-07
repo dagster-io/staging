@@ -654,6 +654,7 @@ def _checked_resource_reqs_for_mode(
         if isinstance(resource_def, IOutputManagerDefinition)
     )
     mode_resources = set(mode_def.resource_defs.keys())
+
     for node_def in node_defs:
         for solid_def in node_def.iterate_solid_defs():
             for required_resource in solid_def.required_resource_keys:
