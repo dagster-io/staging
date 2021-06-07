@@ -272,20 +272,22 @@ class PendingNodeInvocation:
 
     def __call__(self, *args, **kwargs):
         from .solid_invocation import solid_invocation_result
-        from dagster.core.execution.context.invocation import DirectSolidExecutionContext
+        from .decorators.solid import is_context_provided
+        from ..execution.context.invocation import UnboundSolidExecutionContext
+        from ..decorator_utils import get_function_params
 
         node_name = self.given_alias if self.given_alias else self.node_def.name
 
         # If PendingNodeInvocation is not within composition context, and underlying node definition
         # is a solid definition, then permit it to be invoked and executed like a solid definition.
         if not is_in_composition() and isinstance(self.node_def, SolidDefinition):
-            if self.node_def._context_arg_provided:
+            if is_context_provided(get_function_params(self.node_def.compute_fn)):
                 if len(args) == 0:
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.given_alias}' has context argument, but no context "
                         "was provided when invoking."
                     )
-                elif args[0] is not None and not isinstance(args[0], DirectSolidExecutionContext):
+                elif args[0] is not None and not isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.given_alias}' has context argument, but no context "
                         "was provided when invoking."
@@ -293,7 +295,7 @@ class PendingNodeInvocation:
                 context = args[0]
                 return solid_invocation_result(self, context, *args[1:], **kwargs)
             else:
-                if len(args) > 0 and isinstance(args[0], DirectSolidExecutionContext):
+                if len(args) > 0 and isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.given_alias}' has no context argument, but "
                         "context was provided when invoking."
@@ -816,7 +818,7 @@ def do_composition(
         outputs_are_explicit = True
         actual_output_defs = provided_output_defs
 
-    actual_input_defs, positional_inputs, _ = resolve_checked_solid_fn_inputs(
+    actual_input_defs, positional_inputs = resolve_checked_solid_fn_inputs(
         decorator_name,
         graph_name,
         fn,
