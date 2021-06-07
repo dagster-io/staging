@@ -1,6 +1,18 @@
 import inspect
-from functools import update_wrapper, wraps
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union, cast
+from functools import lru_cache, update_wrapper, wraps
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    NamedTuple,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
@@ -19,6 +31,14 @@ from ..input import InputDefinition
 from ..output import OutputDefinition
 from ..policy import RetryPolicy
 from ..solid import SolidDefinition
+
+
+class DecoratedSolidFunction(NamedTuple):
+    decorated_fn: Callable[..., Any]
+
+    @lru_cache(maxsize=1)
+    def has_context_arg(self) -> bool:
+        return is_context_provided(get_function_params(self.decorated_fn))
 
 
 class _Solid:
@@ -66,21 +86,15 @@ class _Solid:
         else:
             output_defs = self.output_defs
 
-        (
-            resolved_input_defs,
-            positional_inputs,
-            context_arg_provided,
-        ) = resolve_checked_solid_fn_inputs(
+        compute_fn = DecoratedSolidFunction(decorated_fn=fn)
+
+        (resolved_input_defs, positional_inputs,) = resolve_checked_solid_fn_inputs(
             decorator_name="@solid",
             fn_name=self.name,
-            compute_fn=fn,
+            compute_fn=compute_fn,
             explicit_input_defs=self.input_defs,
-            has_context_arg=self.has_context_arg,
             context_required=bool(self.required_resource_keys) or bool(self.config_schema),
             exclude_nothing=True,
-        )
-        compute_fn = _create_solid_compute_wrapper(
-            fn, resolved_input_defs, output_defs, context_arg_provided
         )
 
         solid_def = SolidDefinition(
@@ -94,10 +108,9 @@ class _Solid:
             tags=self.tags,
             positional_inputs=positional_inputs,
             version=self.version,
-            context_arg_provided=context_arg_provided,
             retry_policy=self.retry_policy,
         )
-        update_wrapper(solid_def, fn)
+        update_wrapper(solid_def, compute_fn.decorated_fn)
         return solid_def
 
 
@@ -361,18 +374,17 @@ def _create_solid_compute_wrapper(
 def resolve_checked_solid_fn_inputs(
     decorator_name: str,
     fn_name: str,
-    compute_fn: Callable[..., Any],
+    compute_fn: DecoratedSolidFunction,
     explicit_input_defs: List[InputDefinition],
-    has_context_arg: bool,
     context_required: bool,
     exclude_nothing: bool,  # should Nothing type inputs be excluded from compute_fn args
-) -> Tuple[List[InputDefinition], List[str], bool]:
+) -> Tuple[List[InputDefinition], List[str]]:
     """
     Validate provided input definitions and infer the remaining from the type signature of the compute_fn
     Returns the resolved set of InputDefinitions and the positions of input names (which is used
     during graph composition).
     """
-    expected_positionals = ["context"] if has_context_arg else []
+    expected_positionals = ["context"] if compute_fn.has_context_arg() else []
 
     if exclude_nothing:
         explicit_names = set(
@@ -389,9 +401,9 @@ def resolve_checked_solid_fn_inputs(
         explicit_names = set(inp.name for inp in explicit_input_defs)
         nothing_names = set()
 
-    params = get_function_params(compute_fn)
+    params = get_function_params(compute_fn.decorated_fn)
 
-    is_context_provided = _is_context_provided(params)
+    context_arg_provided = is_context_provided(params)
 
     if context_required:
 
@@ -409,7 +421,7 @@ def resolve_checked_solid_fn_inputs(
         input_args = params[len(expected_positionals) :]
 
     else:
-        input_args = params[1:] if is_context_provided and has_context_arg else params
+        input_args = params[1:] if context_arg_provided and compute_fn.has_context_arg() else params
 
     # Validate input arguments
     used_inputs = set()
@@ -453,7 +465,9 @@ def resolve_checked_solid_fn_inputs(
 
     inferred_props = {
         inferred.name: inferred
-        for inferred in infer_input_props(compute_fn, is_context_provided and has_context_arg)
+        for inferred in infer_input_props(
+            compute_fn.decorated_fn, context_arg_provided and compute_fn.has_context_arg()
+        )
     }
     input_defs = []
     for input_def in explicit_input_defs:
@@ -471,10 +485,13 @@ def resolve_checked_solid_fn_inputs(
         if inferred.name in inputs_to_infer
     )
 
-    return input_defs, positional_arg_name_list(input_args), is_context_provided and has_context_arg
+    return (
+        input_defs,
+        positional_arg_name_list(input_args),
+    )
 
 
-def _is_context_provided(params: List[funcsigs.Parameter]) -> bool:
+def is_context_provided(params: List[funcsigs.Parameter]) -> bool:
     if len(params) == 0:
         return False
     return params[0].name in get_valid_name_permutations("context")
