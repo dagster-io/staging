@@ -255,6 +255,7 @@ class Lakehouse:
             required_resource_keys=required_resource_keys,
             positional_inputs=None,
             version=computed_asset.computation.version,
+            compute_wrapper_override=True,
         )
 
     def _create_asset_solid_compute_wrapper(self, asset, input_defs, output_def):

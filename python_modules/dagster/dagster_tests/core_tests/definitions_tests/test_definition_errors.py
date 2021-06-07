@@ -22,13 +22,13 @@ def solid_a_b_list():
             name="A",
             input_defs=[],
             output_defs=[OutputDefinition()],
-            compute_fn=lambda _context, _inputs: None,
+            compute_fn=lambda _context: None,
         ),
         SolidDefinition(
             name="B",
             input_defs=[InputDefinition("b_input")],
             output_defs=[],
-            compute_fn=lambda _context, _inputs: None,
+            compute_fn=lambda _context: None,
         ),
     ]
 

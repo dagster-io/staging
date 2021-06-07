@@ -39,8 +39,8 @@ class SolidDefinition(NodeDefinition):
             optionally, an injected first argument, ``context``, a collection of information provided
             by the system.
 
-            This function must return a generator or an async generator, which must yield one
-            :py:class:`Output` for each of the solid's ``output_defs``, and additionally may
+            This function will be coerced into a generator or an async generator, which must yield
+            one :py:class:`Output` for each of the solid's ``output_defs``, and additionally may
             yield other types of Dagster events, including :py:class:`Materialization` and
             :py:class:`ExpectationResult`.
         output_defs (List[OutputDefinition]): Outputs of the solid.
@@ -60,6 +60,8 @@ class SolidDefinition(NodeDefinition):
             the same version if and only if they deterministically produce the same outputs when
             provided the same inputs.
         retry_policy (Optional[RetryPolicy]): The retry policy for this solid.
+        compute_wrapper_override (Bool): If set to True, overrides the generator that wraps the
+            solid compute fn. This is intended for use by the framework authors.
 
 
     Examples:
@@ -88,10 +90,13 @@ class SolidDefinition(NodeDefinition):
         required_resource_keys: Optional[Union[Set[str], FrozenSet[str]]] = None,
         positional_inputs: Optional[List[str]] = None,
         version: Optional[str] = None,
-        context_arg_provided: Optional[bool] = True,
         retry_policy: Optional[RetryPolicy] = None,
+        compute_wrapper_override: Optional[bool] = False,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
+        self._compute_wrapper_override = check.bool_param(
+            compute_wrapper_override, "compute_wrapper_override"
+        )
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
         self._required_resource_keys = frozenset(
             check.opt_set_param(required_resource_keys, "required_resource_keys", of_type=str)
@@ -100,8 +105,6 @@ class SolidDefinition(NodeDefinition):
         if version:
             experimental_arg_warning("version", "SolidDefinition.__init__")
         self._retry_policy = check.opt_inst_param(retry_policy, "retry_policy", RetryPolicy)
-
-        self._context_arg_provided = check.bool_param(context_arg_provided, "context_arg_provided")
 
         super(SolidDefinition, self).__init__(
             name=name,
@@ -114,18 +117,21 @@ class SolidDefinition(NodeDefinition):
 
     def __call__(self, *args, **kwargs) -> Any:
         from .composition import is_in_composition
-        from dagster.core.execution.context.invocation import DirectSolidExecutionContext
+        from .decorators.solid import is_context_provided
+        from ..execution.context.invocation import UnboundSolidExecutionContext
+        from ..decorator_utils import get_function_params
 
         if is_in_composition():
             return super(SolidDefinition, self).__call__(*args, **kwargs)
         else:
-            if self._context_arg_provided:
+            context_arg_provided = is_context_provided(get_function_params(self.compute_fn))
+            if context_arg_provided:
                 if len(args) == 0:
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.name}' has context argument, but no context "
                         "was provided when invoking."
                     )
-                elif args[0] is not None and not isinstance(args[0], DirectSolidExecutionContext):
+                elif args[0] is not None and not isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.name}' has context argument, but no context "
                         "was provided when invoking."
@@ -133,7 +139,7 @@ class SolidDefinition(NodeDefinition):
                 context = args[0]
                 return solid_invocation_result(self, context, *args[1:], **kwargs)
             else:
-                if len(args) > 0 and isinstance(args[0], DirectSolidExecutionContext):
+                if len(args) > 0 and isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.name}' has no context argument, but "
                         "context was provided when invoking."
@@ -155,6 +161,10 @@ class SolidDefinition(NodeDefinition):
     @property
     def version(self) -> Optional[str]:
         return self._version
+
+    @property
+    def compute_wrapper_override(self) -> bool:
+        return self._compute_wrapper_override
 
     def all_dagster_types(self) -> Iterator[DagsterType]:
         yield from self.all_input_output_types()
@@ -197,8 +207,8 @@ class SolidDefinition(NodeDefinition):
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
-            context_arg_provided=self._context_arg_provided,
             retry_policy=self.retry_policy,
+            compute_wrapper_override=self._compute_wrapper_override,
         )
 
     @property

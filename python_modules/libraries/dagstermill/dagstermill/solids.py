@@ -380,4 +380,5 @@ def define_dagstermill_solid(
         required_resource_keys=required_resource_keys,
         description=description,
         tags={**user_tags, **default_tags},
+        compute_wrapper_override=True,
     )

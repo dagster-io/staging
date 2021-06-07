@@ -303,13 +303,13 @@ def test_optional_solid_with_no_config():
                 config_schema=Int,
                 input_defs=[],
                 output_defs=[],
-                compute_fn=lambda context, _inputs: _assert_config_none(context, 234),
+                compute_fn=lambda context: _assert_config_none(context, 234),
             ),
             SolidDefinition(
                 name="no_config_solid",
                 input_defs=[],
                 output_defs=[],
-                compute_fn=lambda context, _inputs: _assert_config_none(context, None),
+                compute_fn=lambda context: _assert_config_none(context, None),
             ),
         ],
     )
@@ -359,7 +359,7 @@ def test_optional_solid_with_required_scalar_config():
                 config_schema=Int,
                 input_defs=[],
                 output_defs=[],
-                compute_fn=lambda context, _inputs: _assert_config_none(context, 234),
+                compute_fn=lambda context: _assert_config_none(context, 234),
             )
         ],
     )

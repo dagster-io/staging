@@ -40,6 +40,7 @@ from dagster.utils.backcompat import experimental_functionality_warning
 from dagster.utils.timing import time_execution_scope
 
 from .compute import SolidOutputUnion
+from .compute_generator import create_solid_compute_wrapper
 from .utils import solid_execution_error_boundary
 
 
@@ -294,12 +295,18 @@ def core_dagster_event_sequence_for_step(
             yield evt
 
     input_lineage = _dedup_asset_lineage(input_lineage)
+
+    core_gen = (
+        create_solid_compute_wrapper(step_context.solid_def)
+        if not step_context.solid_def.compute_wrapper_override
+        else step_context.solid_def.compute_fn
+    )
     with time_execution_scope() as timer_result:
         user_event_sequence = check.generator(
             execute_core_compute(
                 step_context,
                 inputs,
-                step_context.solid_def.compute_fn,
+                core_gen,
             )
         )
 

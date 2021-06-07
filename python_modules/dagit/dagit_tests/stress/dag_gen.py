@@ -22,6 +22,7 @@ def generate_solid(solid_id, num_inputs, num_outputs):
         input_defs=[InputDefinition(name="in_{}".format(i)) for i in range(num_inputs)],
         output_defs=[OutputDefinition(name="out_{}".format(i)) for i in range(num_outputs)],
         compute_fn=compute_fn,
+        compute_wrapper_override=True,
     )
 
 
