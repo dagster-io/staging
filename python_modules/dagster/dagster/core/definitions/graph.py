@@ -1,5 +1,17 @@
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from dagster import check
 from dagster.core.definitions.config import ConfigMapping
@@ -341,6 +353,7 @@ class GraphDefinition(NodeDefinition):
     def to_job(
         self,
         resource_defs: Dict[str, "ResourceDefinition"],
+        partitions: Optional[Callable[[], List[Any]]] = None,
     ):
         """
         For experimenting with "job" flows
@@ -355,7 +368,7 @@ class GraphDefinition(NodeDefinition):
             input_mappings=self._input_mappings,
             output_mappings=self._output_mappings,
             config_mapping=self._config_mapping,
-            mode_defs=[ModeDefinition(resource_defs=resource_defs)],
+            mode_defs=[ModeDefinition(resource_defs=resource_defs, partitions=partitions)],
         )
 
 

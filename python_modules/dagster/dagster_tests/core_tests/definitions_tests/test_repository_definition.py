@@ -274,3 +274,23 @@ def test_bare_graph_with_resources():
         @repository
         def _test():
             return [bare]
+
+
+def test_job_with_partitions():
+    @solid
+    def ok():
+        return "sure"
+
+    @graph
+    def bare():
+        ok()
+
+    def _partitions():
+        return [{}]
+
+    @repository
+    def test():
+        return [bare.to_job(resource_defs={}, partitions=_partitions)]
+
+    assert test.get_pipeline("bare")
+    assert test.get_partition_set_def("bare_default_partition_set")
