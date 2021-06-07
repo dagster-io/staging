@@ -351,7 +351,8 @@ def test_async_solid():
         await asyncio.sleep(0.01)
         return "done"
 
-    assert aio_solid() == "done"
+    loop = asyncio.get_event_loop()
+    assert loop.run_until_complete(aio_solid()) == "done"
 
 
 def test_async_gen_invocation():
@@ -360,7 +361,15 @@ def test_async_gen_invocation():
         await asyncio.sleep(0.01)
         yield Output("done")
 
-    assert aio_gen() == "done"
+    async def get_results():
+        res = []
+        async for output in aio_gen():
+            res.append(output)
+        return res
+
+    loop = asyncio.get_event_loop()
+    output = loop.run_until_complete(get_results())[0]
+    assert output.value == "done"
 
 
 def test_multiple_outputs_iterator():
@@ -373,9 +382,9 @@ def test_multiple_outputs_iterator():
     result = execute_solid(solid_multiple_outputs)
     assert result.success
 
-    output_one, output_two = solid_multiple_outputs()
-    assert output_one == 1
-    assert output_two == 2
+    outputs = list(solid_multiple_outputs())
+    assert outputs[0].value == 2
+    assert outputs[1].value == 1
 
 
 def test_wrong_output():
@@ -392,24 +401,9 @@ def test_wrong_output():
     ):
         execute_solid(solid_wrong_output)
 
-    with pytest.raises(
-        DagsterInvariantViolationError,
-        match=re.escape(
-            'Solid "solid_wrong_output" returned an output "wrong_name" that does '
-            "not exist. The available outputs are ['result']"
-        ),
-    ):
-        solid_wrong_output()
-
-    # Ensure alias is accounted for in error message
-    with pytest.raises(
-        DagsterInvariantViolationError,
-        match=re.escape(
-            'Solid "aliased_solid_wrong_output" returned an output "wrong_name" that does '
-            "not exist. The available outputs are ['result']"
-        ),
-    ):
-        solid_wrong_output.alias("aliased_solid_wrong_output")()
+    # Document that solids with incorrect outputs will be passed through, because we don't do output
+    # validation from invocation
+    assert solid_wrong_output().value == 5
 
 
 def test_output_not_sent():
@@ -424,20 +418,10 @@ def test_output_not_sent():
     ):
         execute_solid(solid_multiple_outputs_not_sent)
 
-    with pytest.raises(
-        DagsterInvariantViolationError,
-        match='Solid "solid_multiple_outputs_not_sent" did not return an output '
-        'for non-optional output "1"',
-    ):
-        solid_multiple_outputs_not_sent()
-
-    # Ensure alias is accounted for in error message
-    with pytest.raises(
-        DagsterInvariantViolationError,
-        match='Solid "aliased_solid_multiple_outputs_not_sent" did not return an output '
-        'for non-optional output "1"',
-    ):
-        solid_multiple_outputs_not_sent.alias("aliased_solid_multiple_outputs_not_sent")()
+    # Document that solids with missing outputs will be passed through, because we do not do output
+    # validation from invocation.
+    outputs = list(solid_multiple_outputs_not_sent())
+    assert outputs[0].value == 2
 
 
 def test_output_sent_multiple_times():
@@ -452,18 +436,13 @@ def test_output_sent_multiple_times():
     ):
         execute_solid(solid_yields_twice)
 
-    with pytest.raises(
-        DagsterInvariantViolationError,
-        match="Solid 'solid_yields_twice' returned an output '1' multiple times",
-    ):
-        solid_yields_twice()
-
-    # Ensure alias is accounted for in error message
-    with pytest.raises(
-        DagsterInvariantViolationError,
-        match="Solid 'aliased_solid_yields_twice' returned an output '1' multiple times",
-    ):
-        solid_yields_twice.alias("aliased_solid_yields_twice")()
+    # Document that solids with multiple of the same output name will be passed through, because we
+    # do not do output validation from invocation.
+    outputs = list(solid_yields_twice())
+    assert outputs[0].output_name == "1"
+    assert outputs[0].value == 1
+    assert outputs[1].output_name == "1"
+    assert outputs[1].value == 2
 
 
 @pytest.mark.parametrize(
@@ -517,13 +496,14 @@ def test_yielded_asset_materialization():
         yield Output(5)
         yield AssetMaterialization(asset_key=AssetKey(["fake2"]))
 
-    # Ensure that running without context works, and that asset
-    # materializations are just ignored in this case.
-    assert solid_yields_materialization(None) == 5
-
-    context = build_solid_context()
-    assert solid_yields_materialization(context) == 5
-    materializations = context.asset_materializations
+    events = list(solid_yields_materialization(None))
+    outputs = [event for event in events if isinstance(event, Output)]
+    assert outputs[0].value == 5
+    materializations = [
+        materialization
+        for materialization in events
+        if isinstance(materialization, AssetMaterialization)
+    ]
     assert len(materializations) == 2
 
 
@@ -543,8 +523,8 @@ def test_output_type_check():
     def wrong_type():
         return "foo"
 
-    with pytest.raises(DagsterTypeCheckDidNotPass):
-        wrong_type()
+    # Document that output type checks do not run from invocation
+    assert wrong_type() == "foo"
 
 
 def test_pending_node_invocation():

@@ -3,7 +3,11 @@ from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Set
 from dagster import check
 from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.definitions.policy import RetryPolicy
-from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvalidInvocationError
+from dagster.core.errors import (
+    DagsterInvalidDefinitionError,
+    DagsterInvalidInvocationError,
+    DagsterInvariantViolationError,
+)
 from dagster.core.types.dagster_type import DagsterType
 from dagster.utils.backcompat import experimental_arg_warning
 
@@ -90,6 +94,7 @@ class SolidDefinition(NodeDefinition):
         version: Optional[str] = None,
         context_arg_provided: Optional[bool] = True,
         retry_policy: Optional[RetryPolicy] = None,
+        decorated_fn: Optional[Callable[..., Any]] = None,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
@@ -103,6 +108,8 @@ class SolidDefinition(NodeDefinition):
 
         self._context_arg_provided = check.bool_param(context_arg_provided, "context_arg_provided")
 
+        self._decorated_fn = decorated_fn
+
         super(SolidDefinition, self).__init__(
             name=name,
             input_defs=check.list_param(input_defs, "input_defs", InputDefinition),
@@ -114,7 +121,7 @@ class SolidDefinition(NodeDefinition):
 
     def __call__(self, *args, **kwargs) -> Any:
         from .composition import is_in_composition
-        from dagster.core.execution.context.invocation import DirectSolidExecutionContext
+        from dagster.core.execution.context.invocation import UnboundSolidExecutionContext
 
         if is_in_composition():
             return super(SolidDefinition, self).__call__(*args, **kwargs)
@@ -125,7 +132,7 @@ class SolidDefinition(NodeDefinition):
                         f"Compute function of solid '{self.name}' has context argument, but no context "
                         "was provided when invoking."
                     )
-                elif args[0] is not None and not isinstance(args[0], DirectSolidExecutionContext):
+                elif args[0] is not None and not isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.name}' has context argument, but no context "
                         "was provided when invoking."
@@ -133,7 +140,7 @@ class SolidDefinition(NodeDefinition):
                 context = args[0]
                 return solid_invocation_result(self, context, *args[1:], **kwargs)
             else:
-                if len(args) > 0 and isinstance(args[0], DirectSolidExecutionContext):
+                if len(args) > 0 and isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.name}' has no context argument, but "
                         "context was provided when invoking."
@@ -143,6 +150,19 @@ class SolidDefinition(NodeDefinition):
     @property
     def compute_fn(self) -> Callable[..., Any]:
         return self._compute_fn
+
+    @property
+    def decorated_fn(self) -> Callable[..., Any]:
+        if not self._decorated_fn:
+            raise DagsterInvariantViolationError(
+                "``decorated_fn`` property is only set for definitions that are constructed using "
+                "the `@solid` decorator."
+            )
+        return self._decorated_fn
+
+    @property
+    def context_arg_provided(self) -> bool:
+        return self._context_arg_provided
 
     @property
     def config_schema(self) -> IDefinitionConfigSchema:
@@ -199,6 +219,7 @@ class SolidDefinition(NodeDefinition):
             version=self.version,
             context_arg_provided=self._context_arg_provided,
             retry_policy=self.retry_policy,
+            decorated_fn=self._decorated_fn,
         )
 
     @property

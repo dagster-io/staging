@@ -96,6 +96,7 @@ class _Solid:
             version=self.version,
             context_arg_provided=context_arg_provided,
             retry_policy=self.retry_policy,
+            decorated_fn=fn,
         )
         update_wrapper(solid_def, fn)
         return solid_def

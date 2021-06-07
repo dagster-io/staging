@@ -1,25 +1,19 @@
-import inspect
-from typing import TYPE_CHECKING, Any, Dict, Generator, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
-from dagster.core.definitions.events import AssetMaterialization
-from dagster.core.errors import (
-    DagsterInvalidInvocationError,
-    DagsterInvariantViolationError,
-    DagsterTypeCheckDidNotPass,
-)
+from dagster.core.errors import DagsterInvalidInvocationError, DagsterTypeCheckDidNotPass
 
 if TYPE_CHECKING:
     from dagster.core.definitions import SolidDefinition
     from dagster.core.definitions.composition import PendingNodeInvocation
     from dagster.core.execution.context.invocation import (
         BoundSolidExecutionContext,
-        DirectSolidExecutionContext,
+        UnboundSolidExecutionContext,
     )
 
 
 def solid_invocation_result(
     solid_def_or_invocation: Union["SolidDefinition", "PendingNodeInvocation"],
-    context: Optional["DirectSolidExecutionContext"],
+    context: Optional["UnboundSolidExecutionContext"],
     *args,
     **kwargs,
 ) -> Any:
@@ -38,20 +32,19 @@ def solid_invocation_result(
 
     input_dict = _resolve_inputs(solid_def, args, kwargs, context)
 
-    outputs = _execute_and_retrieve_outputs(solid_def, context, input_dict)
-
-    if len(outputs) == 1:
-        return outputs[0]
-
-    return outputs
+    return (
+        solid_def.decorated_fn(context, **input_dict)
+        if solid_def.context_arg_provided
+        else solid_def.decorated_fn(**input_dict)
+    )
 
 
 def _check_invocation_requirements(
-    solid_def: "SolidDefinition", context: Optional["DirectSolidExecutionContext"]
+    solid_def: "SolidDefinition", context: Optional["UnboundSolidExecutionContext"]
 ) -> None:
     """Ensure that provided context fulfills requirements of solid definition.
 
-    If no context was provided, then construct an enpty DirectSolidExecutionContext
+    If no context was provided, then construct an enpty UnboundSolidExecutionContext
     """
 
     # Check resource requirements
@@ -118,67 +111,3 @@ def _resolve_inputs(
             )
 
     return input_dict
-
-
-def _execute_and_retrieve_outputs(
-    solid_def: "SolidDefinition", context: "BoundSolidExecutionContext", input_dict: Dict[str, Any]
-) -> tuple:
-    from dagster.core.execution.plan.execute_step import do_type_check
-
-    output_values = {}
-    output_defs = {output_def.name: output_def for output_def in solid_def.output_defs}
-
-    for output in _core_generator(solid_def, context, input_dict):
-        if not isinstance(output, AssetMaterialization):
-            if output.output_name in output_values:
-                raise DagsterInvariantViolationError(
-                    f"Solid '{context.alias}' returned an output '{output.output_name}' multiple "
-                    "times."
-                )
-            elif output.output_name not in output_defs:
-                raise DagsterInvariantViolationError(
-                    f'Solid "{context.alias}" returned an output "{output.output_name}" that does '
-                    f"not exist. The available outputs are {list(output_defs)}"
-                )
-            else:
-                dagster_type = output_defs[output.output_name].dagster_type
-                type_check = do_type_check(
-                    context.for_type(dagster_type), dagster_type, output.value
-                )
-                if not type_check.success:
-                    raise DagsterTypeCheckDidNotPass(
-                        description=(
-                            f'Type check failed for solid output "{output.output_name}" - '
-                            f'expected type "{dagster_type.display_name}". '
-                            f"Description: {type_check.description}."
-                        ),
-                        metadata_entries=type_check.metadata_entries,
-                        dagster_type=dagster_type,
-                    )
-                output_values[output.output_name] = output.value
-        else:
-            context.record_materialization(output)
-
-    # Check to make sure all non-optional outputs were yielded.
-    for output_def in solid_def.output_defs:
-        if output_def.name not in output_values and output_def.is_required:
-            raise DagsterInvariantViolationError(
-                f'Solid "{context.alias}" did not return an output for non-optional '
-                f'output "{output_def.name}"'
-            )
-
-    # Explicitly preserve the ordering of output defs
-    return tuple([output_values[output_def.name] for output_def in solid_def.output_defs])
-
-
-def _core_generator(
-    solid_def: "SolidDefinition", context: "BoundSolidExecutionContext", input_dict: Dict[str, Any]
-) -> Generator[Any, None, None]:
-    from dagster.core.execution.plan.compute import gen_from_async_gen
-
-    compute_iterator = solid_def.compute_fn(context, input_dict)
-
-    if inspect.isasyncgen(compute_iterator):
-        compute_iterator = gen_from_async_gen(compute_iterator)
-
-    yield from compute_iterator

@@ -265,7 +265,7 @@ class PendingNodeInvocation:
 
     def __call__(self, *args, **kwargs):
         from .solid_invocation import solid_invocation_result
-        from dagster.core.execution.context.invocation import DirectSolidExecutionContext
+        from dagster.core.execution.context.invocation import UnboundSolidExecutionContext
 
         node_name = self.given_alias if self.given_alias else self.node_def.name
 
@@ -278,7 +278,7 @@ class PendingNodeInvocation:
                         f"Compute function of solid '{self.given_alias}' has context argument, but no context "
                         "was provided when invoking."
                     )
-                elif args[0] is not None and not isinstance(args[0], DirectSolidExecutionContext):
+                elif args[0] is not None and not isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.given_alias}' has context argument, but no context "
                         "was provided when invoking."
@@ -286,7 +286,7 @@ class PendingNodeInvocation:
                 context = args[0]
                 return solid_invocation_result(self, context, *args[1:], **kwargs)
             else:
-                if len(args) > 0 and isinstance(args[0], DirectSolidExecutionContext):
+                if len(args) > 0 and isinstance(args[0], UnboundSolidExecutionContext):
                     raise DagsterInvalidInvocationError(
                         f"Compute function of solid '{self.given_alias}' has no context argument, but "
                         "context was provided when invoking."
