@@ -7,6 +7,8 @@ import time
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
+from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
+
 
 from dagster import (
     Any,
@@ -31,6 +33,7 @@ from dagster import (
     PresetDefinition,
     PythonObjectDagsterType,
     ScheduleDefinition,
+    ScheduleExecutionContext,
     String,
     check,
     composite_solid,
@@ -50,7 +53,6 @@ from dagster import (
 )
 from dagster.cli.workspace.load import location_origin_from_python_file
 from dagster.core.definitions.decorators.sensor import sensor
-from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.definitions.sensor import RunRequest, SkipReason
 from dagster.core.log_manager import coerce_valid_log_level
@@ -885,6 +887,25 @@ def get_retry_multi_execution_params(graphql_context, should_fail, retry_id=None
             "tags": [{"key": RESUME_RETRY_TAG, "value": "true"}],
         },
     }
+
+
+def last_empty_partition(context, partition_set_def):
+    check.inst_param(context, "context", ScheduleExecutionContext)
+    partition_set_def = check.inst_param(
+        partition_set_def, "partition_set_def", PartitionSetDefinition
+    )
+
+    partitions = partition_set_def.get_partitions(context.scheduled_execution_time)
+    if not partitions:
+        return None
+    selected = None
+    for partition in reversed(partitions):
+        filters = PipelineRunsFilter.for_partition(partition_set_def, partition)
+        matching = context.instance.get_runs(filters)
+        if not any(run.status == PipelineRunStatus.SUCCESS for run in matching):
+            selected = partition
+            break
+    return selected
 
 
 def define_schedules():
