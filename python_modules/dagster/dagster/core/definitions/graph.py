@@ -1,5 +1,17 @@
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from dagster import check
 from dagster.config import Field, Shape
@@ -345,11 +357,18 @@ class GraphDefinition(NodeDefinition):
         resource_defs: Dict[str, "ResourceDefinition"] = None,
         config_mapping: Union[ConfigMapping, Dict[str, Any]] = None,
         default_config: Optional[Dict[str, Any]] = None,
+        partitions: Optional[Callable[[], List[Any]]] = None,
     ):
         """
         For experimenting with "job" flows
         """
         from .pipeline import PipelineDefinition
+
+        check.opt_callable_param(partitions, "partitions")
+        if default_config and partitions:
+            raise DagsterInvalidDefinitionError(
+                "A job can have default_config or partitions, but not both"
+            )
 
         if config_mapping and not isinstance(config_mapping, ConfigMapping):
             inner_run_config = config_mapping
@@ -414,6 +433,7 @@ class GraphDefinition(NodeDefinition):
                 ModeDefinition(
                     resource_defs=resource_defs,
                     _config_mapping=config_mapping,
+                    _partitions=partitions,
                 )
             ],
             preset_defs=presets,
