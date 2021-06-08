@@ -308,6 +308,9 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         ],
     ),
     ModuleBuildSpec(
+        "python_modules/dagster-test",
+    ),
+    ModuleBuildSpec(
         "python_modules/libraries/dagster-dbt",
         extra_cmds_fn=dbt_extra_cmds_fn,
     ),
@@ -600,4 +603,6 @@ def dagster_steps():
     steps += schema_checks()
     steps += graphql_python_client_backcompat_checks()
 
-    return steps
+    return ModuleBuildSpec(
+        "python_modules/dagster-test",
+    ).get_tox_build_steps()

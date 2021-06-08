@@ -5,6 +5,7 @@ from dagster import (
     DagsterTypeCheckDidNotPass,
     execute_pipeline,
 )
+from dagster.utils import file_relative_path
 from dagster.utils.temp_file import get_temp_dir
 from dagster_test.toys.asset_lineage import asset_lineage_pipeline
 from dagster_test.toys.composition import composition
@@ -94,7 +95,9 @@ def test_pyspark_assets_pipeline():
             "resources": {
                 "source_data_dir": {
                     "config": {
-                        "dir": "python_modules/dagster-test/dagster_test/toys/pyspark_assets/asset_pipeline_files"
+                        "dir": file_relative_path(
+                            __file__, "../dagster_test/toys/pyspark_assets/asset_pipeline_files"
+                        ),
                     }
                 },
                 "savedir": {"config": {"dir": temp_dir}},
