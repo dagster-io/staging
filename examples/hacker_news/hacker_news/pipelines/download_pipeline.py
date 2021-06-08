@@ -13,17 +13,14 @@ from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
 from dagster_pyspark import pyspark_resource
 from dagster_slack import slack_resource
 from hacker_news.hooks.slack_hooks import slack_on_success
-from hacker_news.resources.hn_resource import hn_api_subsample_client, hn_snapshot_client
+from hacker_news.resources.hn_resource import hn_api_client, hn_snapshot_client
 from hacker_news.resources.parquet_io_manager import partitioned_parquet_io_manager
 from hacker_news.resources.snowflake_io_manager import time_partitioned_snowflake_io_manager
-from hacker_news.solids.download_items import (
-    HN_ACTION_SCHEMA,
-    download_items,
-    split_types,
-)
+from hacker_news.solids.download_items import HN_ACTION_SCHEMA, download_items, split_types
 from hacker_news.solids.id_range_for_time import id_range_for_time
 from hacker_news.solids.upload_to_database import make_upload_to_database_solid
 
+# the configuration we'll need to make our Snowflake-based IOManager work
 SNOWFLAKE_CONF = {
     "account": os.getenv("SNOWFLAKE_ACCOUNT", ""),
     "user": os.getenv("SNOWFLAKE_USER", ""),
@@ -31,6 +28,8 @@ SNOWFLAKE_CONF = {
     "database": "DEMO_DB",
     "warehouse": "TINY_WAREHOUSE",
 }
+
+# the configuration we'll need to make spark able to read from / write to s3
 S3_SPARK_CONF = {
     "spark_conf": {
         "spark.jars.packages": "com.amazonaws:aws-java-sdk:1.7.4,org.apache.hadoop:hadoop-aws:2.7.7",
@@ -73,7 +72,7 @@ MODE_LOCAL = ModeDefinition(
         ),
         "db_io_manager": fs_io_manager,
         "pyspark": pyspark_resource,
-        "hn_client": hn_api_subsample_client.configured({"sample_rate": 10}),
+        "hn_client": hn_api_client,
         "slack": ResourceDefinition.mock_resource(),
         "base_url": ResourceDefinition.hardcoded_resource("http://localhost:3000", "Dagit URL"),
     },
@@ -83,8 +82,8 @@ MODE_LOCAL = ModeDefinition(
 MODE_STAGING = ModeDefinition(
     name="staging_live_data",
     description=(
-        "This mode queries live HN data and writes to a staging S3 bucket in the "
-        "elementl-dev account. It is meant to be used in go/dev"
+        "This mode queries live HN data and writes to a staging S3 bucket. "
+        "Intended for use in the staging environment."
     ),
     resource_defs={
         "io_manager": s3_pickle_io_manager.configured({"s3_bucket": "hackernews-elementl-dev"}),
@@ -96,7 +95,7 @@ MODE_STAGING = ModeDefinition(
         ),
         "db_io_manager": time_partitioned_snowflake_io_manager.configured(SNOWFLAKE_CONF),
         "pyspark": pyspark_resource.configured(S3_SPARK_CONF),
-        "hn_client": hn_api_subsample_client.configured({"sample_rate": 10}),
+        "hn_client": hn_api_client,
         "slack": ResourceDefinition.mock_resource(),
         "base_url": ResourceDefinition.hardcoded_resource("http://demo.elementl.dev", "Dagit URL"),
     },
@@ -106,8 +105,8 @@ MODE_STAGING = ModeDefinition(
 MODE_PROD = ModeDefinition(
     name="prod",
     description=(
-        "This mode queries live HN data and writes to a prod GCP bucket in the "
-        "elementl-prod account. It is meant to be used in go/prod"
+        "This mode queries live HN data and writes to a prod S3 bucket."
+        "Intended for use in production."
     ),
     resource_defs={
         "io_manager": s3_pickle_io_manager.configured({"s3_bucket": "hackernews-elementl-prod"}),
@@ -119,7 +118,7 @@ MODE_PROD = ModeDefinition(
         ),
         "db_io_manager": time_partitioned_snowflake_io_manager.configured(SNOWFLAKE_CONF),
         "pyspark": pyspark_resource.configured(S3_SPARK_CONF),
-        "hn_client": hn_api_subsample_client.configured({"sample_rate": 10}),
+        "hn_client": hn_api_client,
         "slack": slack_resource.configured({"token": {"env": "SLACK_DAGSTER_ETL_BOT_TOKEN"}}),
         "base_url": ResourceDefinition.hardcoded_resource(
             "https://demo.elementl.show", "Dagit URL"
@@ -151,24 +150,30 @@ download_pipeline_properties = {
     },
 }
 
-DEFAULT_PARTITION_RESOURCES = {
-    "partition_start": {"config": "2020-12-30 00:00:00"},
-    "partition_end": {"config": "2020-12-30 01:00:00"},
-}
-
 PRESET_TEST = PresetDefinition(
     name="test_local_data",
-    run_config=dict(
-        parquet_io_manager={"config": {"base_path": get_system_temp_directory()}},
-        **DEFAULT_PARTITION_RESOURCES,
-    ),
+    run_config={
+        "parquet_io_manager": {"config": {"base_path": get_system_temp_directory()}},
+        "partition_start": {"config": "2020-12-30 00:00:00"},
+        "partition_end": {"config": "2020-12-30 01:00:00"},
+    },
     mode="test_local_data",
 )
 
+"""
+Here, we generate solids by use of the make_upload_to_database_solid factory method. This pattern
+is used to create solids with similar properties (in this case, they perform the same exact
+function, only differing in what table name they attach to their Output's metadata), without having
+to duplicate our code.
+"""
 upload_comments = make_upload_to_database_solid(
-    table="hackernews.comments", schema=HN_ACTION_SCHEMA
+    table="hackernews.comments",
+    schema=HN_ACTION_SCHEMA,
 )
-upload_stories = make_upload_to_database_solid(table="hackernews.stories", schema=HN_ACTION_SCHEMA)
+upload_stories = make_upload_to_database_solid(
+    table="hackernews.stories",
+    schema=HN_ACTION_SCHEMA,
+)
 
 
 @pipeline(**download_pipeline_properties, preset_defs=[PRESET_TEST])
