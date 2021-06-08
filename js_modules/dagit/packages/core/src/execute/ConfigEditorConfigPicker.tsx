@@ -46,7 +46,6 @@ interface ConfigEditorConfigPickerProps {
   partitionSets: PartitionSet[];
   solidSelection: string[] | null;
   onSaveSession: (updates: Partial<IExecutionSession>) => void;
-  onCreateSession: (initial: Partial<IExecutionSession>) => void;
   onLoading: () => void;
   onLoaded: () => void;
   onSelectPreset: (preset: Preset) => Promise<void>;
@@ -56,9 +55,8 @@ interface ConfigEditorConfigPickerProps {
     partitionName: string,
   ) => Promise<void>;
   repoAddress: RepoAddress;
+  runConfigYaml: string;
 }
-
-const PRESET_PICKER_HINT_TEXT = `Define a PresetDefinition, PartitionSetDefinition, or a schedule decorator (e.g. @daily_schedule) to autofill this session...`;
 
 export const ConfigEditorConfigPicker: React.FC<ConfigEditorConfigPickerProps> = (props) => {
   const {
@@ -71,6 +69,7 @@ export const ConfigEditorConfigPicker: React.FC<ConfigEditorConfigPickerProps> =
     onSelectPartition,
     partitionSets,
     repoAddress,
+    runConfigYaml,
   } = props;
 
   const onSelectPartitionSet = (partitionSet: PartitionSet) => {
@@ -87,7 +86,9 @@ export const ConfigEditorConfigPicker: React.FC<ConfigEditorConfigPickerProps> =
     <PickerContainer>
       <ConfigEditorConfigGeneratorPicker
         value={base}
+        runConfigYaml={runConfigYaml}
         pipeline={pipeline}
+        pipelineMode={pipelineMode}
         presets={pipeline.presets.filter((p) => !pipelineMode || p.mode === pipelineMode)}
         partitionSets={partitionSets.filter((p) => !pipelineMode || p.mode === pipelineMode)}
         solidSelection={solidSelection}
@@ -226,23 +227,37 @@ const ConfigEditorPartitionPicker: React.FC<ConfigEditorPartitionPickerProps> = 
 
 interface ConfigEditorConfigGeneratorPickerProps {
   pipeline: Pipeline;
+  pipelineMode?: string;
   presets: Preset[];
   partitionSets: PartitionSet[];
   solidSelection: string[] | null;
   value: IExecutionSession['base'];
   onSelectPreset: (preset: Preset, pipeline?: Pipeline) => void;
   onSelectPartitionSet: (partitionSet: PartitionSet, pipeline?: Pipeline) => void;
+  runConfigYaml: string;
 }
 
-const ConfigEditorConfigGeneratorPicker: React.FunctionComponent<ConfigEditorConfigGeneratorPickerProps> = React.memo(
+const ConfigEditorConfigGeneratorPicker: React.FC<ConfigEditorConfigGeneratorPickerProps> = React.memo(
   (props) => {
-    const {pipeline, presets, partitionSets, onSelectPreset, onSelectPartitionSet, value} = props;
+    const {
+      pipeline,
+      pipelineMode,
+      presets,
+      partitionSets,
+      onSelectPreset,
+      onSelectPartitionSet,
+      value,
+    } = props;
 
-    const byName = (a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name);
+    const configGenerators: ConfigGenerator[] = React.useMemo(() => {
+      const byName = (a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name);
+      return [...presets, ...partitionSets].sort(byName);
+    }, [presets, partitionSets]);
 
-    const configGenerators: ConfigGenerator[] = [...presets, ...partitionSets].sort(byName);
+    if ((pipelineMode && configGenerators.length === 1) || !configGenerators.length) {
+      return null;
+    }
 
-    const empty = configGenerators.length === 0;
     const select: React.RefObject<Select<ConfigGenerator>> = React.createRef();
     const onSelect = (item: ConfigGenerator) => {
       if (item.__typename === 'PartitionSet') {
@@ -274,7 +289,6 @@ const ConfigEditorConfigGeneratorPicker: React.FunctionComponent<ConfigEditorCon
         >
           <Select<ConfigGenerator>
             ref={select}
-            disabled={empty}
             items={configGenerators}
             itemPredicate={(query, configGenerator) =>
               query.length === 0 || configGenerator.name.includes(query)
@@ -328,13 +342,7 @@ const ConfigEditorConfigGeneratorPicker: React.FunctionComponent<ConfigEditorCon
             noResults={<Menu.Item disabled={true} text="No presets." />}
             onItemSelect={onSelect}
           >
-            <Button
-              disabled={empty}
-              text={label}
-              title={empty ? PRESET_PICKER_HINT_TEXT : undefined}
-              data-test-id="preset-selector-button"
-              rightIcon="caret-down"
-            />
+            <Button text={label} data-test-id="preset-selector-button" rightIcon="caret-down" />
           </Select>
         </ShortcutHandler>
       </div>
