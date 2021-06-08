@@ -1,6 +1,6 @@
-from typing import List, Tuple
+from typing import Tuple
 
-from dagster import ExpectationResult, Output, OutputDefinition, RetryRequested, solid
+from dagster import ExpectationResult, Output, OutputDefinition, solid
 from pandas import DataFrame
 from pyspark.sql import DataFrame as SparkDF
 from pyspark.sql.types import (

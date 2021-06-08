@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Tuple
 
-from dagster import EventMetadataEntry, Field, Output, OutputDefinition, solid
+from dagster import EventMetadataEntry, Output, OutputDefinition, solid
 
 
 def binary_search_nearest_left(get_value, start, end, min_target):
