@@ -19,11 +19,10 @@ from hacker_news.resources.snowflake_io_manager import time_partitioned_snowflak
 from hacker_news.solids.download_items import (
     HN_ACTION_SCHEMA,
     download_items,
-    dynamic_download_items,
     join_items,
     split_types,
 )
-from hacker_news.solids.id_range_for_time import dynamic_id_ranges_for_time, id_range_for_time
+from hacker_news.solids.id_range_for_time import id_range_for_time
 from hacker_news.solids.upload_to_database import make_upload_to_database_solid
 
 SNOWFLAKE_CONF = {
@@ -167,25 +166,6 @@ PRESET_TEST = PresetDefinition(
     mode="test_local_data",
 )
 
-PRESET_TEST_DYNAMIC = PresetDefinition(
-    name="test_local_data",
-    run_config={
-        "solids": {
-            "dynamic_id_ranges_for_time": {
-                "config": {
-                    "batch_size": 100,
-                }
-            },
-        },
-        "resources": dict(
-            parquet_io_manager={"config": {"base_path": get_system_temp_directory()}},
-            **DEFAULT_PARTITION_RESOURCES,
-        ),
-    },
-    mode="test_local_data",
-)
-
-
 upload_comments = make_upload_to_database_solid(
     table="hackernews.comments", schema=HN_ACTION_SCHEMA
 )
@@ -197,16 +177,5 @@ def download_pipeline():
     comments, stories = split_types(
         download_items.with_hooks({slack_on_success})(id_range_for_time())
     )
-    upload_comments(comments)
-    upload_stories(stories)
-
-
-@pipeline(**download_pipeline_properties, preset_defs=[PRESET_TEST_DYNAMIC])
-def dynamic_download_pipeline():
-    ranges = dynamic_id_ranges_for_time()
-    items = ranges.map(dynamic_download_items)  # pylint: disable=no-member
-    raw_df = join_items.with_hooks({slack_on_success})(items.collect())
-    comments, stories = split_types(raw_df)
-
     upload_comments(comments)
     upload_stories(stories)
