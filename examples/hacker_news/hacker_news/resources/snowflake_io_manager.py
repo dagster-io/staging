@@ -75,6 +75,15 @@ def time_partitioned_snowflake_io_manager(_):
 
 
 class SnowflakeIOManager(IOManager):
+    """
+    This IOManager can handle Outputs that are either pandas DataFrames or ParquetPointers (which
+    are just paths that spark can interpret which store some parquet files). In either case, the
+    data will be written to a Snowflake table specified by metadata on the relevant OutputDefinition.
+
+    Because we specify a get_output_asset_key() function, AssetMaterialization events will be
+    automatically created each time an output is processed with this IOManager.
+    """
+
     def get_output_asset_key(self, context: OutputContext):
         return AssetKey(["snowflake", *context.metadata["table"].split(".")])
 
@@ -110,7 +119,7 @@ class SnowflakeIOManager(IOManager):
 
     def _handle_pointer_output(self, context: OutputContext, parquet_pointer: ParquetPointer):
 
-        yield EventMetadataEntry.path(parquet_pointer.path, "source parquet path")
+        yield EventMetadataEntry.path(parquet_pointer.path, "Source Parquet Path")
         with connect_snowflake(config=context.resource_config) as con:
             # stage the data stored at the given path
             con.execute(
@@ -174,6 +183,15 @@ class SnowflakeIOManager(IOManager):
 
 
 class TimePartitionedSnowflakeIOManager(SnowflakeIOManager):
+    """
+    This version of the SnowflakeIOManager divides its data into seperate time partitions. Based on
+    the values specified by the partition_start and partition_end resources, this will first delete
+    the data that is present within those bounds, then load the output data into the table.
+
+    This is useful for pipelines that run on a schedule, updating each hour (or day, etc.) with new
+    data.
+    """
+
     def get_output_asset_partitions(self, context: OutputContext):
         return [context.resources.partition_start]
 
