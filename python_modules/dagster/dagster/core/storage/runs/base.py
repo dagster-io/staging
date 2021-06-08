@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 
 from dagster.core.events import DagsterEvent
 from dagster.core.instance import MayHaveInstanceWeakref
 from dagster.core.snap import ExecutionPlanSnapshot, PipelineSnapshot
-from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunsFilter
+from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunsFilter, RunRecord
 from dagster.daemon.types import DaemonHeartbeat
 
 
@@ -133,13 +133,14 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
             Optional[PipelineRun]
         """
 
-    def get_run_rows(
+    @abstractmethod
+    def get_run_records(
         self,
         filters: PipelineRunsFilter = None,
         limit: int = None,
         order_by: str = None,
         ascending: bool = False,
-    ) -> List[Dict[str, Any]]:
+    ) -> List[RunRecord]:
         """Return a list of rows in the runs table with all columns, sorted by the given column in given order.
 
         Args:
