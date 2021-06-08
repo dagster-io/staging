@@ -4,7 +4,6 @@ from typing import Union
 import pandas
 import pyspark
 from dagster import AssetKey, EventMetadataEntry, IOManager, OutputContext, check, io_manager
-from dagster.core.types.dagster_type import TypeHintInferredDagsterType
 
 
 class ParquetIOManager(IOManager):
@@ -42,11 +41,9 @@ class ParquetIOManager(IOManager):
         yield EventMetadataEntry.path(path=path, label="path")
 
     def load_input(self, context) -> Union[pyspark.sql.DataFrame, str]:
+        # In this load_input function, we vary the behavior based on the type of the downstream input
         path = self._get_path(context.upstream_output)
-        if (
-            isinstance(context.dagster_type, TypeHintInferredDagsterType)
-            and context.dagster_type.python_type == pyspark.sql.DataFrame
-        ):
+        if context.dagster_type.typing_type == pyspark.sql.DataFrame:
             # return pyspark dataframe
             return context.resources.pyspark.spark_session.read.parquet(path)
         elif context.dagster_type.key == "String":
@@ -59,6 +56,11 @@ class ParquetIOManager(IOManager):
 
 
 class PartitionedParquetIOManager(ParquetIOManager):
+    """
+    This works similarly to the normal ParquetIOManager, but stores outputs for different partitions
+    in different filepaths.
+    """
+
     def _get_path(self, context: OutputContext):
 
         base_path = context.resource_config["base_path"]
