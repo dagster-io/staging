@@ -24,7 +24,11 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 from .api import ExecuteRunWithPlanIterable, pipeline_execution_iterator
 from .context.logger import InitLoggerContext
 from .context.system import PlanData, PlanOrchestrationContext
-from .context_creation_pipeline import PlanOrchestrationContextManager, get_logging_tags
+from .context_creation_pipeline import (
+    PlanOrchestrationContextManager,
+    get_logging_tags,
+    handlers_from_loggers,
+)
 
 
 def _get_host_mode_executor(recon_pipeline, run_config, get_executor_def_fn, instance):
@@ -118,7 +122,7 @@ def host_mode_execution_context_event_generator(
     log_manager = DagsterLogManager(
         run_id=pipeline_run.run_id,
         logging_tags=get_logging_tags(pipeline_run),
-        loggers=loggers,
+        handlers=handlers_from_loggers(loggers),
     )
 
     try:
