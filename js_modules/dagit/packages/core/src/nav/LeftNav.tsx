@@ -23,6 +23,7 @@ export const LeftNav = () => {
     '/instance/sensors',
     '/instance/config',
   ]);
+  const workspaceMatch = useRouteMatch({path: '/workspace', exact: true});
 
   return (
     <LeftNavContainer $open={nav.isOpen}>
@@ -72,6 +73,16 @@ export const LeftNav = () => {
             </Box>
           </Tab>
         </ShortcutHandler>
+        <ShortcutHandler
+          onShortcut={() => history.push('/workspace')}
+          shortcutLabel={`⌥4`}
+          shortcutFilter={(e) => e.code === 'Digit4' && e.altKey}
+        >
+          <Tab to="/workspace" className={!!workspaceMatch ? 'selected' : ''}>
+            <Icon icon="cube" iconSize={16} />
+            <TabLabel>Workspace</TabLabel>
+          </Tab>
+        </ShortcutHandler>
       </Box>
       <LeftNavRepositorySection />
       <DarkTimezonePicker />
@@ -95,7 +106,7 @@ const LeftNavContainer = styled.div<{$open: boolean}>`
 
   @media (max-width: 1440px) {
     box-shadow: 2px 0px 0px ${Colors.LIGHT_GRAY1};
-    transform: translateX(${({$open}) => ($open ? '0' : '-280px')});
+    transform: translateX(${({$open}) => ($open ? '0' : `-280px`)});
     transition: transform 150ms ease-in-out;
   }
 `;
