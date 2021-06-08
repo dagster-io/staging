@@ -80,6 +80,6 @@ def test_write_dagster_meta():
         execution_context.log.debug("some_debug_message", context_key="context_value")
         data = list(parse_json_lines(tf_name))
         assert len(data) == 1
-        assert data[0]["name"] == "foo"
+        assert data[0]["name"] == "dagster"
         assert data[0]["orig_message"] == "some_debug_message"
         assert data[0]["context_key"] == "context_value"

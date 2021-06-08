@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-from contextlib import contextmanager
 
 import pytest
 from dagster import ModeDefinition, check, execute_solid, pipeline, resource, solid
@@ -20,37 +19,14 @@ REGEX_TS = r"\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}"
 DAGSTER_DEFAULT_LOGGER = "dagster"
 
 
-@contextmanager
-def _setup_logger(name, log_levels=None):
-    """Test helper that creates a new logger.
-
-    Args:
-        name (str): The name of the logger.
-        log_levels (Optional[Dict[str, int]]): Any non-standard log levels to expose on the logger
-            (e.g., logger.success)
-    """
-    log_levels = check.opt_dict_param(log_levels, "log_levels")
-
-    class TestLogger(logging.Logger):  # py27 compat
-        pass
-
-    logger = TestLogger(name)
-
+def _setup_handler():
     captured_results = []
 
-    def log_fn(msg, *args, **kwargs):  # pylint:disable=unused-argument
-        captured_results.append(msg)
+    class TestHandler(logging.Handler):
+        def emit(self, record):
+            captured_results.append(record.msg)
 
-    def int_log_fn(lvl, msg, *args, **kwargs):  # pylint:disable=unused-argument
-        captured_results.append(msg)
-
-    for level in ["debug", "info", "warning", "error", "critical"] + list(
-        [x.lower() for x in log_levels.keys()]
-    ):
-        setattr(logger, level, log_fn)
-        setattr(logger, "log", int_log_fn)
-
-    yield (captured_results, logger)
+    return captured_results, TestHandler()
 
 
 def _regex_match_kv_pair(regex, kv_pairs):
@@ -67,39 +43,37 @@ def test_logging_no_loggers_registered():
 
 
 def test_logging_basic():
-    with _setup_logger("test") as (captured_results, logger):
+    captured_results, handler = _setup_handler()
 
-        dl = DagsterLogManager("123", {}, [logger])
-        dl.debug("test")
-        dl.info("test")
-        dl.warning("test")
-        dl.error("test")
-        dl.critical("test")
+    dl = DagsterLogManager("123", {}, [handler])
+    dl.debug("test")
+    dl.info("test")
+    dl.warning("test")
+    dl.error("test")
+    dl.critical("test")
 
-        assert captured_results == ["system - 123 - test"] * 5
+    assert captured_results == ["system - 123 - test"] * 5
 
 
 def test_logging_custom_log_levels():
-    with _setup_logger("test", {"FOO": 3}) as (_captured_results, logger):
-
-        dl = DagsterLogManager("123", {}, [logger])
-        with pytest.raises(AttributeError):
-            dl.foo("test")  # pylint: disable=no-member
+    _, handler = _setup_handler()
+    dl = DagsterLogManager("123", {}, [handler])
+    with pytest.raises(AttributeError):
+        dl.foo("test")  # pylint: disable=no-member
 
 
 def test_logging_integer_log_levels():
-    with _setup_logger("test", {"FOO": 3}) as (_captured_results, logger):
-
-        dl = DagsterLogManager("123", {}, [logger])
-        dl.log(3, "test")  # pylint: disable=no-member
+    _, handler = _setup_handler()
+    dl = DagsterLogManager("123", {}, [handler])
+    dl.log(3, "test")  # pylint: disable=no-member
 
 
 def test_logging_bad_custom_log_levels():
-    with _setup_logger("test") as (_, logger):
+    _, handler = _setup_handler()
 
-        dl = DagsterLogManager("123", {}, [logger])
-        with pytest.raises(check.CheckError):
-            dl._log("test", "foobar", {})  # pylint: disable=protected-access
+    dl = DagsterLogManager("123", {}, [handler])
+    with pytest.raises(check.CheckError):
+        dl._log("test", "foobar", {})  # pylint: disable=protected-access
 
 
 def test_multiline_logging_complex():
@@ -133,10 +107,10 @@ def test_multiline_logging_complex():
         ),
     }
 
-    with _setup_logger(DAGSTER_DEFAULT_LOGGER) as (captured_results, logger):
+    captured_results, handler = _setup_handler()
 
-        dl = DagsterLogManager("123", {}, [logger])
-        dl.info(msg, **kwargs)
+    dl = DagsterLogManager("123", {}, [handler])
+    dl.info(msg, **kwargs)
 
     expected_results = [
         "error_monster - 123 - STEP_FAILURE - DagsterEventType.STEP_FAILURE for step "
@@ -157,8 +131,8 @@ def test_default_context_logging():
     @solid(input_defs=[], output_defs=[])
     def default_context_solid(context):
         called["yes"] = True
-        for logger in context.log.loggers:
-            assert logger.level == logging.DEBUG
+        for handler in context.log.handlers:
+            assert handler.level == 0
 
     execute_solid(default_context_solid)
 

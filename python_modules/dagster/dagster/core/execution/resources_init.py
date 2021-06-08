@@ -313,7 +313,7 @@ def single_resource_event_generator(context, resource_name, resource_def):
 def get_required_resource_keys_to_init(
     execution_plan, pipeline_def, resolved_run_config, intermediate_storage_def
 ):
-    resource_keys = set()
+    resource_keys = set(["log_handlers"])
 
     if intermediate_storage_def is not None:
         resource_keys = resource_keys.union(intermediate_storage_def.required_resource_keys)

@@ -1,3 +1,4 @@
+import logging
 import sys
 from abc import ABC, abstractproperty
 from contextlib import contextmanager
@@ -10,6 +11,7 @@ from typing import (
     Generator,
     Generic,
     Iterable,
+    List,
     NamedTuple,
     Optional,
     Type,
@@ -63,6 +65,32 @@ if TYPE_CHECKING:
     from dagster.core.execution.plan.outputs import StepOutputHandle
 
 
+class FilteringPassThroughHandler(logging.Handler):
+    """Delegates to the given logger, but applies an additional provided filterer"""
+
+    def __init__(self, handler: logging.Handler, filterer: logging.Filterer):
+        self.handler = handler
+        self.filterer = filterer
+        super(FilteringPassThroughHandler, self).__init__()
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return self.filterer.filter(record) and super(FilteringPassThroughHandler, self).filter(
+            record
+        )
+
+    def emit(self, record: logging.LogRecord) -> None:
+        return self.handler.emit(record)
+
+
+def handlers_from_loggers(loggers: List[logging.Logger]) -> List[logging.Handler]:
+    handlers: List[logging.Handler] = []
+    for logger in loggers:
+        for handler in logger.handlers:
+            handlers.append(FilteringPassThroughHandler(handler=handler, filterer=logger))
+
+    return handlers
+
+
 def initialize_console_manager(pipeline_run: Optional[PipelineRun]) -> DagsterLogManager:
     # initialize default colored console logger
     loggers = []
@@ -75,7 +103,9 @@ def initialize_console_manager(pipeline_run: Optional[PipelineRun]) -> DagsterLo
             )
         )
     return DagsterLogManager(
-        None, pipeline_run.tags if pipeline_run and pipeline_run.tags else {}, loggers
+        None,
+        pipeline_run.tags if pipeline_run and pipeline_run.tags else {},
+        handlers_from_loggers(loggers),
     )
 
 
@@ -574,7 +604,7 @@ def create_log_manager(context_creation_data: ContextCreationData) -> DagsterLog
     return DagsterLogManager(
         run_id=pipeline_run.run_id,
         logging_tags=get_logging_tags(pipeline_run),
-        loggers=loggers,
+        handlers=handlers_from_loggers(loggers),
     )
 
 
@@ -605,7 +635,9 @@ def _create_context_free_log_manager(
             )
         ]
 
-    return DagsterLogManager(pipeline_run.run_id, get_logging_tags(pipeline_run), loggers)
+    return DagsterLogManager(
+        pipeline_run.run_id, get_logging_tags(pipeline_run), handlers_from_loggers(loggers)
+    )
 
 
 def get_logging_tags(pipeline_run: PipelineRun) -> Dict[str, str]:

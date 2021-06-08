@@ -91,11 +91,11 @@ def coerce_valid_log_level(log_level):
     return PYTHON_LOGGING_LEVELS_MAPPING[log_level]
 
 
-class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags loggers")):
+class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags handlers")):
     """Centralized dispatch for logging from user code.
 
     Handles the construction of uniform structured log messages and passes them through to the
-    underlying loggers.
+    underlying handlers.
 
     An instance of the log manager is made available to solids as ``context.log``. Users should not
     initialize instances of the log manager directly. To configure custom loggers, set the
@@ -113,14 +113,14 @@ class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags lo
     ``context.log.trace`` or ``context.log.notice`` will result in hard exceptions **at runtime**.
     """
 
-    def __new__(cls, run_id, logging_tags, loggers):
+    def __new__(cls, run_id, logging_tags, handlers):
         return super(DagsterLogManager, cls).__new__(
             cls,
             run_id=check.opt_str_param(run_id, "run_id"),
             logging_tags=check.dict_param(
                 logging_tags, "logging_tags", key_type=str, value_type=str
             ),
-            loggers=check.list_param(loggers, "loggers", of_type=logging.Logger),
+            handlers=check.list_param(handlers, "handlers", of_type=logging.Handler),
         )
 
     def with_tags(self, **new_tags):
@@ -185,7 +185,7 @@ class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags lo
         )
 
     def _log(self, level, orig_message, message_props):
-        """Invoke the underlying loggers for a given log level.
+        """Invoke the underlying handlers for a given log level.
 
         Args:
             level (Union[str, int]): An integer represeting a Python logging level or one of the
@@ -193,15 +193,26 @@ class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags lo
             orig_message (str): The log message generated in user code.
             message_props (dict): Additional properties for the structured log message.
         """
-        if not self.loggers:
+        if not self.handlers:
             return
 
         level = coerce_valid_log_level(level)
 
         message, extra = self._prepare_message(orig_message, message_props)
 
-        for logger_ in self.loggers:
-            logger_.log(level, message, extra=extra)
+        for handler in self.handlers:
+            record = logging.LogRecord(
+                name="dagster",
+                level=level,
+                pathname=None,
+                lineno=None,
+                msg=message,
+                args=None,
+                exc_info=None,
+            )
+            record.__dict__.update(extra)
+
+            handler.handle(record)
 
     def log(self, level, msg, **kwargs):
         """Invoke the underlying loggers for a given integer log level.

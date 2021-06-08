@@ -242,18 +242,26 @@ def define_multi_mode_with_loggers_pipeline():
     foo_logger_captured_results = []
     bar_logger_captured_results = []
 
+    class FooHandler:
+        def emit(self, record):
+            foo_logger_captured_results.append((record.levelno, record.msg))
+
+    class BarHandler:
+        def emit(self, record):
+            bar_logger_captured_results.append((record.levelno, record.msg))
+
     @logger(config_schema={"log_level": Field(String, is_required=False, default_value="INFO")})
     def foo_logger(init_context):
         logger_ = logging.Logger("foo")
-        logger_.log = lambda level, msg, **kwargs: foo_logger_captured_results.append((level, msg))
         logger_.setLevel(coerce_valid_log_level(init_context.logger_config["log_level"]))
+        logger_.addHandler(FooHandler())
         return logger_
 
     @logger(config_schema={"log_level": Field(String, is_required=False, default_value="INFO")})
     def bar_logger(init_context):
         logger_ = logging.Logger("bar")
-        logger_.log = lambda level, msg, **kwargs: bar_logger_captured_results.append((level, msg))
         logger_.setLevel(coerce_valid_log_level(init_context.logger_config["log_level"]))
+        logger_.addHandler(BarHandler())
         return logger_
 
     @solid
