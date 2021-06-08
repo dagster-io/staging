@@ -1,12 +1,8 @@
 from dagster import repository
 from hacker_news.pipelines.story_recommender import story_recommender
 
-from .pipelines.download_pipeline import download_pipeline, dynamic_download_pipeline
-from .schedules.hourly_hn_download_schedule import (
-    hourly_hn_download_prod_schedule,
-    hourly_hn_download_staging_schedule,
-    hourly_hn_dynamic_download_prod_schedule,
-)
+from .pipelines.download_pipeline import download_pipeline
+from .schedules.hourly_hn_download_schedule import hourly_hn_download_schedule
 from .sensors.hn_tables_updated_sensor import story_recommender_on_hn_table_update
 
 
@@ -14,13 +10,10 @@ from .sensors.hn_tables_updated_sensor import story_recommender_on_hn_table_upda
 def hacker_news_repository():
     pipelines = [
         download_pipeline,
-        dynamic_download_pipeline,
         story_recommender,
     ]
     schedules = [
-        hourly_hn_download_staging_schedule,
-        hourly_hn_download_prod_schedule,
-        hourly_hn_dynamic_download_prod_schedule,
+        hourly_hn_download_schedule,
     ]
     sensors = [
         story_recommender_on_hn_table_update,

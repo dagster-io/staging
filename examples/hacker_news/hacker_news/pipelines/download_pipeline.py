@@ -19,7 +19,6 @@ from hacker_news.resources.snowflake_io_manager import time_partitioned_snowflak
 from hacker_news.solids.download_items import (
     HN_ACTION_SCHEMA,
     download_items,
-    join_items,
     split_types,
 )
 from hacker_news.solids.id_range_for_time import id_range_for_time
