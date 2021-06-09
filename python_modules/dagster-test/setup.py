@@ -31,6 +31,7 @@ if __name__ == "__main__":
         install_requires=[
             "dagster",
             "pyspark",
+            "slack",
         ],
         zip_safe=False,
     )
