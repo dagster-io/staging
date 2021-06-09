@@ -27,6 +27,7 @@ from dagster.core.execution.context.system import (
 from dagster.core.execution.plan.handle import ResolvedFromDynamicStepHandle, StepHandle
 from dagster.core.execution.plan.outputs import StepOutputData
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.serdes import register_serdes_tuple_fallbacks, whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
 from dagster.utils.timing import format_duration
@@ -1104,7 +1105,12 @@ class DagsterEvent(
         return event
 
     @staticmethod
-    def capture_logs(pipeline_context: IPlanContext, log_key: str, steps: List["ExecutionStep"]):
+    def capture_logs(
+        pipeline_context: Optional[IPlanContext],
+        log_key: str,
+        steps: List["ExecutionStep"],
+        pipeline_run: Optional[PipelineRun] = None,
+    ):
         step_keys = [step.key for step in steps]
         if len(step_keys) == 1:
             message = f"Started capturing logs for solid: {step_keys[0]}."
@@ -1121,16 +1127,27 @@ class DagsterEvent(
                     log_key=log_key,
                 ),
             )
-
-        return DagsterEvent.from_pipeline(
-            DagsterEventType.LOGS_CAPTURED,
-            pipeline_context,
-            message=message,
-            event_specific_data=ComputeLogsCaptureData(
-                step_keys=step_keys,
-                log_key=log_key,
-            ),
-        )
+        elif isinstance(pipeline_context, IPlanContext):
+            return DagsterEvent.from_pipeline(
+                DagsterEventType.LOGS_CAPTURED,
+                pipeline_context,
+                message=message,
+                event_specific_data=ComputeLogsCaptureData(
+                    step_keys=step_keys,
+                    log_key=log_key,
+                ),
+            )
+        else:
+            check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
+            return DagsterEvent(
+                event_type_value=DagsterEventType.LOGS_CAPTURED.value,
+                pipeline_name=pipeline_run.pipeline_name or "",
+                message=message,
+                event_specific_data=ComputeLogsCaptureData(
+                    step_keys=step_keys,
+                    log_key=log_key,
+                ),
+            )
 
 
 def get_step_output_event(

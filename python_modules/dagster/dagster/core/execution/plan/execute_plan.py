@@ -1,4 +1,5 @@
 import sys
+from contextlib import ExitStack
 from typing import Iterator, List, cast
 
 from dagster import check
@@ -21,6 +22,7 @@ from dagster.core.execution.plan.objects import (
     step_failure_event_from_exc_info,
 )
 from dagster.core.execution.plan.plan import ExecutionPlan
+from dagster.core.storage.captured_log_manager import CapturedLogManager
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
 
 
@@ -59,9 +61,19 @@ def inner_plan_execution_iterator(
             )
 
             # capture all of the logs for this step
-            with pipeline_context.instance.compute_log_manager.watch(
-                step_context.pipeline_run, step_context.step.key
-            ):
+            with ExitStack() as stack:
+                log_manager = pipeline_context.instance.compute_log_manager
+                if isinstance(log_manager, CapturedLogManager):
+                    stack.enter_context(
+                        log_manager.capture_logs(
+                            log_key=step_context.step.key,
+                            namespace=step_context.pipeline_run.run_id,
+                        )
+                    )
+                else:
+                    stack.enter_context(
+                        log_manager.watch(step_context.pipeline_run, step_context.step.key)
+                    )
                 yield DagsterEvent.capture_logs(
                     step_context, log_key=step_context.step.key, steps=[step_context.step]
                 )
