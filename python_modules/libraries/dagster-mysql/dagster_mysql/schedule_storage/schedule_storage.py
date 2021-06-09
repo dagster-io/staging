@@ -93,3 +93,7 @@ class MySQLScheduleStorage(SqlScheduleStorage, ConfigurableClass):
     def upgrade(self):
         alembic_config = mysql_alembic_config(__file__)
         run_alembic_upgrade(alembic_config, self._engine)
+
+    def reset_migration_state(self):
+        alembic_config = mysql_alembic_config(__file__)
+        stamp_alembic_rev(alembic_config, self._engine, rev="base")

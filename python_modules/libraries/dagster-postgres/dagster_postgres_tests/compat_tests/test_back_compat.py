@@ -233,6 +233,27 @@ def _reconstruct_from_file(hostname, conn_string, path, username="test", passwor
     )
 
 
+def get_current_alembic_version(hostname, username="test", password="test"):
+    env = os.environ.copy()
+    env["PGPASSWORD"] = password
+    return subprocess.check_output(
+        [
+            "psql",
+            "-h",
+            hostname,
+            "-p",
+            "5432",
+            "-U",
+            username,
+            "--csv",
+            "-t",
+            "-c",
+            "select version_num from alembic_version limit 1",
+        ],
+        env=env,
+    )
+
+
 def _migration_regex(storage_name, current_revision, expected_revision=None):
     warning = re.escape(
         "Instance is out of date and must be migrated (Postgres {} storage requires migration).".format(
@@ -249,3 +270,30 @@ def _migration_regex(storage_name, current_revision, expected_revision=None):
     instruction = re.escape("Please run `dagster instance migrate`.")
 
     return "{} {} {}".format(warning, revision, instruction)
+
+
+def test_reset_migration(hostname, conn_string):
+    snapshots = [
+        "snapshot_0_7_6_pre_add_pipeline_snapshot/postgres/pg_dump.txt",
+        "snapshot_0_9_22_pre_asset_partition/postgres/pg_dump.txt",
+        "snapshot_0_9_22_pre_run_partition/postgres/pg_dump.txt",
+        "snapshot_0_10_0_wipe_schedules/postgres/pg_dump.txt",
+        "snapshot_0_10_6_add_bulk_actions_table/postgres/pg_dump.txt",
+        "snapshot_0_11_0_pre_asset_details/postgres/pg_dump.txt",
+    ]
+
+    for snapshot in snapshots:
+        _reconstruct_from_file(
+            hostname,
+            conn_string,
+            file_relative_path(__file__, snapshot),
+        )
+        with tempfile.TemporaryDirectory() as tempdir:
+            with open(file_relative_path(__file__, "dagster.yaml"), "r") as template_fd:
+                with open(os.path.join(tempdir, "dagster.yaml"), "w") as target_fd:
+                    template = template_fd.read().format(hostname=hostname)
+                    target_fd.write(template)
+
+            instance = DagsterInstance.from_config(tempdir)
+            instance.reset_migration_state()
+            instance.upgrade()

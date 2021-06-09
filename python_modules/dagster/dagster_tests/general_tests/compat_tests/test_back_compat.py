@@ -100,7 +100,10 @@ def get_current_alembic_version(db_path):
     con = sqlite3.connect(db_path)
     cursor = con.cursor()
     cursor.execute("SELECT * FROM alembic_version")
-    return cursor.fetchall()[0][0]
+    rows = cursor.fetchall()
+    if not rows:
+        return None
+    return rows[0][0]
 
 
 def get_sqlite3_columns(db_path, table_name):
@@ -385,3 +388,65 @@ def test_0_11_0_add_asset_columns():
             assert "last_run_id" in set(get_sqlite3_columns(db_path, "asset_keys"))
             assert "asset_details" in set(get_sqlite3_columns(db_path, "asset_keys"))
             instance.get_asset_tags(AssetKey("model"))
+
+
+def test_reset_migration():
+    snapshots = [
+        {
+            "directory": "snapshot_0_7_6_pre_event_log_migration/sqlite",
+            "db_paths": ["history/runs.db"],
+        },
+        {
+            "directory": "snapshot_0_7_6_pre_add_pipeline_snapshot/sqlite",
+            "db_paths": ["history/runs.db"],
+        },
+        {
+            "directory": "snapshot_0_7_8_pre_asset_key_migration/sqlite",
+            "db_paths": ["history/runs.db", "history/runs/722183e4-119f-4a00-853f-e1257be82ddb.db"],
+        },
+        {
+            "directory": "snapshot_0_9_22_pre_asset_partition/sqlite",
+            "db_paths": ["history/runs.db", "history/runs/1a1d3c4b-1284-4c74-830c-c8988bd4d779.db"],
+        },
+        {
+            "directory": "snapshot_0_9_22_pre_run_partition/sqlite",
+            "db_paths": ["history/runs.db"],
+        },
+        {
+            "directory": "snapshot_0_9_22_post_schema_pre_data_partition/sqlite",
+            "db_paths": ["history/runs.db"],
+        },
+        {
+            "directory": "snapshot_0_10_0_wipe_schedules/sqlite",
+            "db_paths": [
+                "history/runs.db",
+                "schedules/schedules.db",
+                "history/runs/69fe0968-302b-482d-a2f8-8de5da74cf12.db",
+            ],
+        },
+        {
+            "directory": "snapshot_0_10_6_add_bulk_actions_table/sqlite",
+            "db_paths": ["history/runs.db", "schedules/schedules.db"],
+        },
+        {
+            "directory": "snapshot_0_11_0_pre_asset_details/sqlite",
+            "db_paths": ["history/runs.db", "history/runs/index.db"],
+        },
+    ]
+
+    for snapshot in snapshots:
+        src_dir = file_relative_path(__file__, snapshot["directory"])
+        with copy_directory(src_dir) as test_dir:
+            for rel_path in snapshot["db_paths"]:
+                db_path = os.path.join(test_dir, rel_path)
+                assert get_current_alembic_version(db_path)
+
+            with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
+                instance.reset_migration_state()
+                for rel_path in snapshot["db_paths"]:
+                    db_path = os.path.join(test_dir, rel_path)
+                    assert get_current_alembic_version(db_path) == None
+                instance.upgrade()
+                for rel_path in snapshot["db_paths"]:
+                    db_path = os.path.join(test_dir, rel_path)
+                    assert get_current_alembic_version(db_path)
