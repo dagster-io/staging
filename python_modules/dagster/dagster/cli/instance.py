@@ -64,3 +64,28 @@ def reindex_command():
         click.echo("$DAGSTER_HOME: {}\n".format(home))
 
         instance.reindex(click.echo)
+
+
+@instance_cli.command(
+    name="reset_migration_state",
+    help="Resets the migration version when schema versioning gets into a bad state.",
+)
+def reset_migration_command():
+    home = os.environ.get("DAGSTER_HOME")
+    if not home:
+        click.echo("$DAGSTER_HOME is not set; ephemeral instances do not need to be migrated.")
+
+    click.echo("$DAGSTER_HOME: {}\n".format(home))
+
+    confirmation = click.prompt(
+        "Are you sure you want to reset your db migration state?  You may want to first save a "
+        "back up of your DB first. Type RESET to proceed."
+    )
+    if confirmation == "RESET":
+        with DagsterInstance.get() as instance:
+            instance.reset_migration_state(click.echo)
+
+        click.echo(
+            "Reset instance migration state. You can now run `dagster instance migrate` from a "
+            "clean state."
+        )

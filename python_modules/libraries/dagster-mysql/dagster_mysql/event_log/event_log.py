@@ -88,6 +88,11 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         with self._connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
 
+    def reset_migration_state(self):
+        alembic_config = mysql_alembic_config(__file__)
+        with self.connect() as conn:
+            stamp_alembic_rev(alembic_config, conn, rev="base")
+
     @property
     def inst_data(self):
         return self._inst_data
