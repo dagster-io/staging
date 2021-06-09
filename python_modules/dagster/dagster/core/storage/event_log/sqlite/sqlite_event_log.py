@@ -101,6 +101,23 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
 
         self._initialized_dbs = set()
 
+    def reset_migration_state(self):
+        all_run_ids = self.get_all_run_ids()
+        print(  # pylint: disable=print-call
+            f"Resetting migration state for {len(all_run_ids)} runs on disk..."
+        )
+        alembic_config = get_alembic_config(__file__)
+        if all_run_ids:
+            for run_id in tqdm(all_run_ids):
+                with self.run_connection(run_id) as conn:
+                    stamp_alembic_rev(alembic_config, conn, rev="base")
+
+        print("Updating event log storage for index db on disk...")  # pylint: disable=print-call
+        with self.index_connection() as conn:
+            stamp_alembic_rev(alembic_config, conn, rev="base")
+
+        self._initialized_dbs = set()
+
     @property
     def inst_data(self):
         return self._inst_data

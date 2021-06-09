@@ -102,3 +102,8 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         alembic_config = pg_alembic_config(__file__)
         with self.connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
+
+    def reset_migration_state(self):
+        alembic_config = pg_alembic_config(__file__)
+        with self.connect() as conn:
+            stamp_alembic_rev(alembic_config, conn, rev="base")

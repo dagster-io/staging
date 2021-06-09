@@ -554,6 +554,14 @@ class DagsterInstance:
         self._run_storage.reindex(print_fn)
         print_fn("Done.")
 
+    def reset_migration_state(self, print_fn=lambda _: None):
+        print_fn("Resetting migration state...")
+        self._event_storage.reset_migration_state()
+        self._run_storage.reset_migration_state()
+        if self._schedule_storage:
+            self._schedule_storage.reset_migration_state()
+        print_fn("Done.")
+
     def dispose(self):
         self._run_storage.dispose()
         self.run_coordinator.dispose()

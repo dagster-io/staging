@@ -117,6 +117,11 @@ class SqliteRunStorage(SqlRunStorage, ConfigurableClass):
         self._check_for_version_066_migration_and_perform()
         self._alembic_upgrade()
 
+    def reset_migration_state(self):
+        alembic_config = get_alembic_config(__file__)
+        with self.connect() as conn:
+            stamp_alembic_rev(alembic_config, conn, rev="base")
+
     # In version 0.6.6, we changed the layout of the of the sqllite dbs on disk
     # to move from the root of DAGSTER_HOME/runs.db to DAGSTER_HOME/history/runs.bd
     # This function checks for that condition and does the move
