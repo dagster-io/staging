@@ -1,3 +1,4 @@
+import hashlib
 import io
 import os
 import subprocess
@@ -10,7 +11,7 @@ from contextlib import contextmanager
 
 from dagster.core.execution import poll_compute_logs, watch_orphans
 from dagster.serdes.ipc import interrupt_ipc_subprocess, open_ipc_subprocess
-from dagster.seven import IS_WINDOWS, wait_for_process
+from dagster.seven import IS_WINDOWS, json, wait_for_process
 from dagster.utils import ensure_file
 
 WIN_PY36_COMPUTE_LOG_DISABLED_MSG = """\u001b[33mWARNING: Compute log capture is disabled for the current environment. Set the environment variable `PYTHONLEGACYWINDOWSSTDIO` to enable.\n\u001b[0m"""
@@ -164,3 +165,9 @@ def _fileno(stream):
         return fd
 
     return None
+
+
+def compute_log_key_for_steps(steps):
+    if len(steps) == 1:
+        return steps[0].key
+    return hashlib.md5(json.dumps([step.key for step in steps]).encode("utf-8")).hexdigest()
