@@ -277,6 +277,18 @@ def opt_bool_param(obj: Any, param_name: str, default: bool = None) -> Optional[
     return default if obj is None else obj
 
 
+def bytes_param(obj: Any, param_name: str) -> bytes:
+    if not isinstance(obj, bytes):
+        raise _param_type_mismatch_exception(obj, bytes, param_name)
+    return obj
+
+
+def opt_bytes_param(obj: Any, param_name: str, default: bytes = None) -> Optional[bytes]:
+    if obj is not None and not isinstance(obj, bytes):
+        raise _param_type_mismatch_exception(obj, bytes, param_name)
+    return default if obj is None else obj
+
+
 def is_list(obj_list: Any, of_type: Type = None, desc: str = None) -> List:
     if not isinstance(obj_list, list):
         raise _type_mismatch_error(obj_list, list, desc)
