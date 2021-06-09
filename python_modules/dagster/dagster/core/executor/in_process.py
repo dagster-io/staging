@@ -1,13 +1,16 @@
 import os
+from contextlib import ExitStack
 
 from dagster import check
 from dagster.core.events import DagsterEvent, EngineEventData
 from dagster.core.execution.api import ExecuteRunWithPlanIterable
+from dagster.core.execution.compute_logs import compute_log_key_for_steps
 from dagster.core.execution.context.system import PlanOrchestrationContext
 from dagster.core.execution.context_creation_pipeline import PlanExecutionContextManager
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
+from dagster.core.storage.captured_log_manager import CapturedLogManager
 from dagster.utils.timing import format_duration, time_execution_scope
 
 from .base import Executor
@@ -34,7 +37,24 @@ class InProcessExecutor(Executor):
             event_specific_data=EngineEventData.in_process(os.getpid(), step_keys_to_execute),
         )
 
-        with time_execution_scope() as timer_result:
+        with ExitStack() as stack:
+            timer_result = stack.enter_context(time_execution_scope())
+            log_manager = pipeline_context.instance.compute_log_manager
+            if (
+                isinstance(log_manager, CapturedLogManager)
+                and not log_manager.should_capture_run_by_step()
+            ):
+                plan_steps = execution_plan.get_steps_to_execute_in_topo_order()
+                log_key = compute_log_key_for_steps(plan_steps)
+                stack.enter_context(
+                    pipeline_context.instance.compute_log_manager.capture_logs(
+                        pipeline_context.pipeline_run.run_id, log_key
+                    )
+                )
+                yield DagsterEvent.capture_logs(
+                    pipeline_context, log_key, plan_steps, pipeline_context.pipeline_run
+                )
+
             yield from iter(
                 ExecuteRunWithPlanIterable(
                     execution_plan=pipeline_context.execution_plan,
