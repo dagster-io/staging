@@ -100,7 +100,10 @@ def get_current_alembic_version(db_path):
     con = sqlite3.connect(db_path)
     cursor = con.cursor()
     cursor.execute("SELECT * FROM alembic_version")
-    return cursor.fetchall()[0][0]
+    rows = cursor.fetchall()
+    if not rows:
+        return None
+    return rows[0][0]
 
 
 def get_sqlite3_columns(db_path, table_name):
@@ -385,3 +388,13 @@ def test_0_11_0_add_asset_columns():
             assert "last_run_id" in set(get_sqlite3_columns(db_path, "asset_keys"))
             assert "asset_details" in set(get_sqlite3_columns(db_path, "asset_keys"))
             instance.get_asset_tags(AssetKey("model"))
+
+
+def test_reset_migration():
+    src_dir = file_relative_path(__file__, "snapshot_0_11_0_pre_asset_details/sqlite")
+    with copy_directory(src_dir) as test_dir:
+        db_path = os.path.join(test_dir, "history", "runs", "index.db")
+        assert get_current_alembic_version(db_path) == "0da417ae1b81"
+        with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
+            instance.reset_migration_state()
+        assert get_current_alembic_version(db_path) == None

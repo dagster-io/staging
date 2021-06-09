@@ -119,6 +119,11 @@ class ConsolidatedSqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         with self._connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
 
+    def reset_migration_state(self):
+        alembic_config = get_alembic_config(__file__)
+        with self._connect() as conn:
+            stamp_alembic_rev(alembic_config, conn, rev="base")
+
     def has_secondary_index(self, name):
         if name not in self._secondary_index_cache:
             self._secondary_index_cache[name] = super(
