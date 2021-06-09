@@ -5,6 +5,7 @@ from dagster.core.storage.sql import create_engine, run_alembic_upgrade, stamp_a
 from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
 from dagster.utils import utc_datetime_from_timestamp
 
+from ..migration import get_alembic_revision_from_dagster_version
 from ..utils import (
     create_pg_connection,
     pg_alembic_config,
@@ -112,6 +113,12 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
     def upgrade(self):
         with self.connect() as conn:
             run_alembic_upgrade(pg_alembic_config(__file__), conn)
+
+    def reset_migration_state(self, dagster_version=None):
+        alembic_config = pg_alembic_config(__file__)
+        with self.connect() as conn:
+            revision = get_alembic_revision_from_dagster_version(dagster_version)
+            stamp_alembic_rev(alembic_config, conn, rev=revision)
 
     def has_built_index(self, migration_name):
         if migration_name not in self._index_migration_cache:

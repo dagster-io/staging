@@ -20,6 +20,7 @@ from dagster.serdes import (
     serialize_dagster_namedtuple,
 )
 
+from ..migration import get_alembic_revision_from_dagster_version
 from ..pynotify import await_pg_notifications
 from ..utils import (
     create_pg_connection,
@@ -99,6 +100,12 @@ class PostgresEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         alembic_config = pg_alembic_config(__file__)
         with self._connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
+
+    def reset_migration_state(self, dagster_version=None):
+        alembic_config = pg_alembic_config(__file__)
+        with self._connect() as conn:
+            revision = get_alembic_revision_from_dagster_version(dagster_version)
+            stamp_alembic_rev(alembic_config, conn, rev=revision)
 
     @property
     def inst_data(self):

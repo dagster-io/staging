@@ -170,3 +170,10 @@ def create_mysql_connection(engine, dunder_file, storage_type_desc=None):
     finally:
         if conn:
             conn.close()
+
+
+def get_alembic_revision_from_dagster_version(dagster_version=None):
+    if not dagster_version or dagster_version < [0, 10, 8]:
+        return "base"
+
+    return "f0367d611631"  # 0.11.0

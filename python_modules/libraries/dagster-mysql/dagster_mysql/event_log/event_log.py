@@ -15,6 +15,7 @@ from dagster.utils.backcompat import experimental_class_warning
 from ..utils import (
     MYSQL_POOL_RECYCLE,
     create_mysql_connection,
+    get_alembic_revision_from_dagster_version,
     mysql_alembic_config,
     mysql_config,
     mysql_url_from_config,
@@ -87,6 +88,12 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         alembic_config = mysql_alembic_config(__file__)
         with self._connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
+
+    def reset_migration_state(self, dagster_version=None):
+        alembic_config = mysql_alembic_config(__file__)
+        with self._connect() as conn:
+            revision = get_alembic_revision_from_dagster_version(dagster_version)
+            stamp_alembic_rev(alembic_config, conn, rev=revision)
 
     @property
     def inst_data(self):

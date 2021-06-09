@@ -29,6 +29,7 @@ from watchdog.observers import Observer
 
 from ..schema import SqlEventLogStorageMetadata, SqlEventLogStorageTable
 from ..sql_event_log import SqlEventLogStorage
+from .migration import get_sqlite_alembic_revision_from_dagster_version
 
 INDEX_SHARD_NAME = "index"
 
@@ -98,6 +99,24 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         print("Updating event log storage for index db on disk...")  # pylint: disable=print-call
         with self.index_connection() as conn:
             run_alembic_upgrade(alembic_config, conn, "index")
+
+        self._initialized_dbs = set()
+
+    def reset_migration_state(self, dagster_version=None):
+        revision = get_sqlite_alembic_revision_from_dagster_version(dagster_version)
+        all_run_ids = self.get_all_run_ids()
+        print(  # pylint: disable=print-call
+            f"Resetting migration state for {len(all_run_ids)} runs on disk..."
+        )
+        alembic_config = get_alembic_config(__file__)
+        if all_run_ids:
+            for run_id in tqdm(all_run_ids):
+                with self.run_connection(run_id) as conn:
+                    stamp_alembic_rev(alembic_config, conn, rev=revision)
+
+        print("Updating event log storage for index db on disk...")  # pylint: disable=print-call
+        with self.index_connection() as conn:
+            stamp_alembic_rev(alembic_config, conn, rev=revision)
 
         self._initialized_dbs = set()
 

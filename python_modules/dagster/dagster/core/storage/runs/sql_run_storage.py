@@ -57,6 +57,10 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         out-of-date instance of the storage up to date.
         """
 
+    @abstractmethod
+    def reset_migration_state(self, dagster_version=None):
+        """This method resets the schema version if any migration has gotten into a bad state"""
+
     def fetchall(self, query):
         with self.connect() as conn:
             result_proxy = conn.execute(query)

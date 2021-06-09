@@ -113,6 +113,10 @@ class ScheduleStorage(abc.ABC, MayHaveInstanceWeakref):
     def upgrade(self):
         """Perform any needed migrations"""
 
+    @abc.abstractmethod
+    def reset_migration_state(self, dagster_version=None):
+        """Reset migration version to recover from a bad state"""
+
     def optimize_for_dagit(self, statement_timeout: int):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
 

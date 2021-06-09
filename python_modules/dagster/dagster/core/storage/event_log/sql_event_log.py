@@ -54,6 +54,10 @@ class SqlEventLogStorage(EventLogStorage):
         out-of-date instance of the storage up to date.
         """
 
+    @abstractmethod
+    def reset_migration_state(self, dagster_version=None):
+        """This method resets the schema version if any migration has gotten into a bad state"""
+
     def prepare_insert_event(self, event):
         """Helper method for preparing the event log SQL insertion statement.  Abstracted away to
         have a single place for the logical table representation of the event, while having a way
