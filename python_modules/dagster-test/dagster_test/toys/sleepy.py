@@ -88,9 +88,10 @@ def _config(cfg):
 sleepy_pipeline = sleepy.to_job(
     config_mapping=ConfigMapping(
         config_schema={
-            "sleeps": Field([int], is_required=False, default_value=[1, 1, 1, 1]),
-            "fail": Field(bool, is_required=False, default_value=False),
+            "sleeps": [int],
+            "fail": bool,
         },
         config_fn=_config,
-    )
+    ),
+    default_config={"sleeps": [1, 1, 1, 1], "fail": False},
 )
