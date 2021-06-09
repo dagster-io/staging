@@ -1,5 +1,12 @@
+from typing import Optional, Tuple
+
 from dagster import check
 from dagster.core.storage.compute_log_manager import ComputeIOType
+from dagster.core.storage.instance_log_manager import (
+    CapturedLogData,
+    CapturedLogMetadata,
+    InstanceLogManager,
+)
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.serdes import serialize_dagster_namedtuple
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -21,6 +28,8 @@ from .backfill import (
     resume_partition_backfill,
 )
 from .launch_execution import launch_pipeline_execution, launch_pipeline_reexecution
+
+MAX_BYTES_CHUNK_READ = 4194304  # 4 MB
 
 
 def _force_mark_as_canceled(graphene_info, run_id):
@@ -161,9 +170,57 @@ def get_compute_log_observable(graphene_info, run_id, step_key, io_type, cursor=
     check.inst_param(io_type, "io_type", ComputeIOType)
     check.opt_str_param(cursor, "cursor")
 
-    return graphene_info.context.instance.compute_log_manager.observable(
-        run_id, step_key, io_type, cursor
-    ).map(lambda update: from_compute_log_file(graphene_info, update))
+    compute_log_manager = graphene_info.context.instance.compute_log_manager
+
+    if isinstance(compute_log_manager, InstanceLogManager):
+        log_key = step_key
+        namespace = run_id
+
+        def _callback(observer):
+            should_fetch = True
+            current_cursor = cursor
+            metadata = None
+            while should_fetch:
+                if io_type == ComputeIOType.STDERR:
+                    log_data = compute_log_manager.read_stderr(
+                        log_key, namespace, current_cursor, max_bytes=MAX_BYTES_CHUNK_READ
+                    )
+                    if not metadata:
+                        metadata = compute_log_manager.get_stderr_metadata(log_key, namespace)
+                else:
+                    log_data = compute_log_manager.read_stdout(
+                        log_key, namespace, current_cursor, max_bytes=MAX_BYTES_CHUNK_READ
+                    )
+                    if not metadata:
+                        metadata = compute_log_manager.get_stdout_metadata(log_key, namespace)
+
+                observer.on_next((log_data, metadata))
+                should_fetch = (
+                    log_data.data and len(log_data.data.encode("utf-8")) >= MAX_BYTES_CHUNK_READ
+                )
+                current_cursor = log_data.cursor
+
+            if compute_log_manager.is_capture_complete(log_key, namespace):
+                observer.on_completed()
+
+        def _to_graphene(update: Tuple[CapturedLogData, CapturedLogMetadata]):
+            from ...schema.logs.compute_logs import GrapheneComputeLogFile
+
+            log_data, metadata = update
+            return GrapheneComputeLogFile(
+                path=metadata.location,
+                data=log_data.data,
+                cursor=log_data.cursor,
+                size=len(log_data.data.encode("utf-8")),
+                download_url=metadata.download_url,
+            )
+
+        observable = Observable.create(_callback)  # pylint: disable=E1101
+        return observable.map(_to_graphene)
+    else:
+        return graphene_info.context.instance.compute_log_manager.observable(
+            run_id, step_key, io_type, cursor
+        ).map(lambda update: from_compute_log_file(graphene_info, update))
 
 
 @capture_error
