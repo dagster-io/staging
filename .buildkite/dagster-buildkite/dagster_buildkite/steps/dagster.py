@@ -515,15 +515,6 @@ def pylint_steps():
     ]
 
 
-def version_equality_checks(version=SupportedPython.V3_7):
-    return [
-        StepBuilder("all versions == ?")
-        .on_integration_image(version)
-        .run("pip install -e python_modules/automation", "dagster-release version")
-        .build()
-    ]
-
-
 def schema_checks(version=SupportedPython.V3_8):
     return [
         StepBuilder("SQL schema checks")
@@ -593,7 +584,6 @@ def dagster_steps():
 
     # https://github.com/dagster-io/dagster/issues/2785
     steps += pipenv_smoke_tests()
-    steps += version_equality_checks()
     steps += docs_steps()
     steps += examples_tests()
     steps += helm_steps()
