@@ -1,5 +1,6 @@
 import os
 import sys
+from contextlib import ExitStack
 
 from dagster import EventMetadataEntry, check
 from dagster.core.errors import DagsterExecutionInterruptedError, DagsterSubprocessError
@@ -11,6 +12,7 @@ from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
 from dagster.core.executor.base import Executor
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.captured_log_manager import CapturedLogManager
 from dagster.seven import multiprocessing
 from dagster.utils import start_termination_thread
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -50,7 +52,9 @@ class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
 
     def execute(self):
         pipeline = self.recon_pipeline
-        with DagsterInstance.from_ref(self.instance_ref) as instance:
+
+        with ExitStack() as stack:
+            instance = stack.enter_context(DagsterInstance.from_ref(self.instance_ref))
             start_termination_thread(self.term_event)
             execution_plan = create_execution_plan(
                 pipeline=pipeline,
@@ -73,6 +77,21 @@ class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
                 MultiprocessExecutor,
                 self.step_key,
             )
+
+            if (
+                isinstance(instance.compute_log_manager, CapturedLogManager)
+                and not instance.compute_log_manager.should_capture_run_by_step()
+            ):
+                steps = execution_plan.get_steps_to_execute_in_topo_order()
+                log_key = compute_log_key_for_steps(steps)
+                stack.enter_context(
+                    instance.compute_log_manager.capture_logs(self.pipeline_run.run_id, log_key)
+                )
+                # need to manually provide a pipeline run since we are generating this event outside
+                # of a pipeline context
+                capture_event = DagsterEvent.capture_logs(None, log_key, steps, self.pipeline_run)
+                instance.report_dagster_event(capture_event)
+                yield capture_event
 
             yield from execute_plan_iterator(
                 execution_plan,
