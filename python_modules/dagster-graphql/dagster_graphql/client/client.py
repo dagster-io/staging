@@ -36,18 +36,17 @@ class DagsterGraphQLClient:
 
     .. code-block:: python
 
-        client = DagsterGraphQLClient("localhost", port_number=3000)
+        client = DagsterGraphQLClient("localhost", False, port_number=3000)
         status = client.get_run_status(**SOME_RUN_ID**)
 
     Args:
         hostname (str): Hostname for the Dagster GraphQL API, like `localhost` or
             `dagit.dagster.YOUR_ORG_HERE`.
+        use_https (bool): Whether to use https in the URL connection string for the GraphQL API.
         port_number (Optional[int], optional): Optional port number to connect to on the host.
             Defaults to None.
         transport (Optional[Transport], optional): A custom transport to use to connect to the
             GraphQL API with (e.g. for custom auth). Defaults to None.
-        use_https (bool, optional): Whether to use https in the URL connection string for the
-            GraphQL API. Defaults to False.
 
     Raises:
         :py:class:`~requests.exceptions.ConnectionError`: if the client cannot connect to the host.
@@ -56,15 +55,15 @@ class DagsterGraphQLClient:
     def __init__(
         self,
         hostname: str,
+        use_https: bool,
         port_number: Optional[int] = None,
         transport: Optional[Transport] = None,
-        use_https: bool = False,
     ):
         experimental_class_warning(self.__class__.__name__)
 
         self._hostname = check.str_param(hostname, "hostname")
-        self._port_number = check.opt_int_param(port_number, "port_number")
         self._use_https = check.bool_param(use_https, "use_https")
+        self._port_number = check.opt_int_param(port_number, "port_number")
 
         self._url = (
             ("https://" if self._use_https else "http://")

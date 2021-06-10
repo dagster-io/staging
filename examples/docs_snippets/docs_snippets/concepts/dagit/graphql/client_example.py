@@ -3,7 +3,7 @@
 # start_setup_marker
 from dagster_graphql import DagsterGraphQLClient
 
-client = DagsterGraphQLClient("localhost", port_number=3000)
+client = DagsterGraphQLClient("localhost", False, port_number=3000)
 
 # end_setup_marker
 

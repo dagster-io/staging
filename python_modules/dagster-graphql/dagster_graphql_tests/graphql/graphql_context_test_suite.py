@@ -834,7 +834,7 @@ def make_graphql_context_test_suite(context_variants, recon_repo=None):
 
             with patch("dagster_graphql.client.client.Client") as mock_client:
                 mock_client.return_value = MockedGraphQLClient()
-                yield DagsterGraphQLClient("localhost")
+                yield DagsterGraphQLClient("localhost", False)
 
         def recon_repo(self):
             return recon_repo

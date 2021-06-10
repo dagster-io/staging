@@ -10,7 +10,7 @@ MockClient = namedtuple("MockClient", ("python_client", "mock_gql_client"))
 @pytest.fixture(scope="function", name="mock_client")
 def create_mock_client():
     with patch("dagster_graphql.client.client.Client") as _:
-        client = DagsterGraphQLClient("localhost")
+        client = DagsterGraphQLClient("localhost", False)
         yield MockClient(
             python_client=client, mock_gql_client=client._client  # pylint: disable=W0212
         )

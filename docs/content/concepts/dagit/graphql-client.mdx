@@ -47,7 +47,7 @@ The snippet below shows example instantiation of the client:
 ```python file=/concepts/dagit/graphql/client_example.py startafter=start_setup_marker endbefore=end_setup_marker
 from dagster_graphql import DagsterGraphQLClient
 
-client = DagsterGraphQLClient("localhost", port_number=3000)
+client = DagsterGraphQLClient("localhost", False, port_number=3000)
 ```
 
 ## Examples
