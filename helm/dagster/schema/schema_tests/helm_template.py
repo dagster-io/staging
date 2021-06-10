@@ -40,6 +40,10 @@ class HelmTemplate:
             ]
 
             if self.output:
+                # render all templates before filtering to surface Helm templating errors
+                # with better error messages
+                subprocess.check_output(command)
+
                 command += ["--show-only", self.output]
 
             templates = subprocess.check_output(command)
