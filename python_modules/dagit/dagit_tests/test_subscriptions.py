@@ -113,10 +113,10 @@ def test_event_log_subscription():
 
 
 @mock.patch(
-    "dagster.core.storage.local_compute_log_manager.LocalComputeLogManager.is_watch_completed"
+    "dagster.core.storage.local_compute_log_manager.LocalComputeLogManager.is_capture_complete"
 )
-def test_compute_log_subscription(mock_watch_completed):
-    mock_watch_completed.return_value = False
+def test_compute_log_subscription(mock_capture_completed):
+    mock_capture_completed.return_value = False
 
     schema = create_schema()
     server = DagsterSubscriptionServer(schema=schema)
@@ -139,8 +139,6 @@ def test_compute_log_subscription(mock_watch_completed):
             )
             gc.collect()
             assert len(objgraph.by_type("SubscriptionObserver")) == 1
-            assert len(objgraph.by_type("ComputeLogSubscription")) == 1
             end_subscription(server, context)
             gc.collect()
             assert len(objgraph.by_type("SubscriptionObserver")) == 0
-            assert len(objgraph.by_type("ComputeLogSubscription")) == 0
