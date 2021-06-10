@@ -39,6 +39,8 @@ class HelmTemplate:
                 *["--values", tmp_file.name],
             ]
 
+            subprocess.check_output(command)
+
             if self.output:
                 command += ["--show-only", self.output]
 
