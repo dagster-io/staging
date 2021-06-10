@@ -11,6 +11,7 @@ import sqlalchemy as db
 from dagster import StringSource, check, seven
 from dagster.core.events import DagsterEventType
 from dagster.core.events.log import EventRecord
+from dagster.core.storage.event_log.base import StoredEventRecord
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.sql import (
     check_alembic_revision,
@@ -232,7 +233,7 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
 
             self.store_asset(event)
 
-    def get_event_rows(
+    def get_stored_events(
         self,
         after_cursor=None,
         limit=None,
@@ -262,16 +263,16 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         # workaround for the run-shard sqlite to enable cross-run queries: get a list of run_ids
         # whose events may qualify the query, and then open run_connection per run_id at a time.
         run_updated_after = after_cursor.run_updated_after if after_cursor else None
-        run_records = self._instance.get_run_records(
+        stored_run_records = self._instance.get_stored_runs(
             filters=PipelineRunsFilter(updated_after=run_updated_after),
             limit=limit,
             order_by="update_timestamp",
             ascending=ascending,
         )
 
-        records = []
-        for run_record in run_records:
-            run_id = run_record.pipeline_run.run_id
+        stored_event_records = []
+        for stored_run_record in stored_run_records:
+            run_id = stored_run_record.pipeline_run.run_id
             with self.run_connection(run_id) as conn:
                 results = conn.execute(query).fetchall()
 
@@ -286,11 +287,13 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
                         )
                         continue
                     else:
-                        records.append(tuple((row_id, event_record)))
+                        stored_event_records.append(
+                            StoredEventRecord(storage_id=row_id, event_record=event_record)
+                        )
                 except seven.JSONDecodeError:
                     logging.warning("Could not parse event record id `{}`.".format(row_id))
 
-        return records
+        return stored_event_records
 
     def delete_events(self, run_id):
         with self.run_connection(run_id) as conn:

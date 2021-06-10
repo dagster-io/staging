@@ -26,7 +26,7 @@ from dagster.core.storage.pipeline_run import (
     PipelineRun,
     PipelineRunStatus,
     PipelineRunsFilter,
-    RunRecord,
+    StoredPipelineRun,
 )
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.system_config.objects import ResolvedRunConfig
@@ -987,13 +987,13 @@ class DagsterInstance:
     ) -> Dict[str, Dict[str, Union[Iterable[PipelineRun], int]]]:
         return self._run_storage.get_run_groups(filters=filters, cursor=cursor, limit=limit)
 
-    def get_run_records(
+    def get_stored_runs(
         self,
         filters: PipelineRunsFilter = None,
         limit: int = None,
         order_by: str = None,
         ascending: bool = False,
-    ) -> List[RunRecord]:
+    ) -> List[StoredPipelineRun]:
         """Return a list of run records stored in the run storage, sorted by the given column in given order.
 
         Args:
@@ -1006,7 +1006,7 @@ class DagsterInstance:
         Returns:
             List[RunRecord]: List of run records stored in the run storage.
         """
-        return self._run_storage.get_run_records(filters, limit, order_by, ascending)
+        return self._run_storage.get_stored_runs(filters, limit, order_by, ascending)
 
     def wipe(self):
         self._run_storage.wipe()

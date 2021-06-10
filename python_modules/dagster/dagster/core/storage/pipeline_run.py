@@ -391,12 +391,12 @@ class PipelineRunsFilter(
         return PipelineRunsFilter(tags=PipelineRun.tags_for_backfill_id(backfill_id))
 
 
-class RunRecord(NamedTuple):
+class StoredPipelineRun(NamedTuple):
     """Internal representation of a run record, as stored in a
     :py:class:`~dagster.core.storage.runs.RunStorage`.
     """
 
-    record_id: int
+    storage_id: int
     pipeline_run: PipelineRun
     create_timestamp: datetime
     update_timestamp: datetime
