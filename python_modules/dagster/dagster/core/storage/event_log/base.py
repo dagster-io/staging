@@ -15,6 +15,15 @@ from dagster.core.instance import MayHaveInstanceWeakref
 from dagster.core.storage.pipeline_run import PipelineRunStatsSnapshot
 
 
+class StoredEventRecord(NamedTuple):
+    """Internal representation of an event record, as stored in a
+    :py:class:`~dagster.core.storage.event_log.EventLogStorage`.
+    """
+
+    storage_id: int
+    event_record: EventRecord
+
+
 class EventsCursor(NamedTuple):
     id: int
     run_updated_after: Optional[datetime] = None
@@ -109,13 +118,13 @@ class EventLogStorage(ABC, MayHaveInstanceWeakref):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
 
     @abstractmethod
-    def get_event_rows(
+    def get_stored_events(
         self,
         after_cursor: EventsCursor = None,
         limit: int = None,
         ascending: bool = False,
         of_type: DagsterEventType = None,
-    ) -> Iterable[Tuple[int, EventRecord]]:
+    ) -> Iterable[StoredEventRecord]:
         pass
 
     @abstractmethod

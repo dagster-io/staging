@@ -4,7 +4,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union
 from dagster.core.events import DagsterEvent
 from dagster.core.instance import MayHaveInstanceWeakref
 from dagster.core.snap import ExecutionPlanSnapshot, PipelineSnapshot
-from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunsFilter, RunRecord
+from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunsFilter, StoredPipelineRun
 from dagster.daemon.types import DaemonHeartbeat
 
 
@@ -134,13 +134,13 @@ class RunStorage(ABC, MayHaveInstanceWeakref):
         """
 
     @abstractmethod
-    def get_run_records(
+    def get_stored_runs(
         self,
         filters: PipelineRunsFilter = None,
         limit: int = None,
         order_by: str = None,
         ascending: bool = False,
-    ) -> List[RunRecord]:
+    ) -> List[StoredPipelineRun]:
         """Return a list of run records stored in the run storage, sorted by the given column in given order.
 
         Args:

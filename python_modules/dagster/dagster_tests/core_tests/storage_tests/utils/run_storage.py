@@ -581,14 +581,14 @@ class TestRunStorage:
             ),
         )
 
-        record_two = storage.get_run_records(
+        record_two = storage.get_stored_runs(
             filters=PipelineRunsFilter(run_ids=[two], updated_after=datetime(2020, 1, 1))
         )[0]
         run_two_update_timestamp = record_two.update_timestamp
 
         assert [
             record.pipeline_run.run_id
-            for record in storage.get_run_records(
+            for record in storage.get_stored_runs(
                 filters=PipelineRunsFilter(updated_after=run_two_update_timestamp),
                 order_by="update_timestamp",
                 ascending=True,
@@ -597,7 +597,7 @@ class TestRunStorage:
 
         assert [
             record.pipeline_run.run_id
-            for record in storage.get_run_records(
+            for record in storage.get_stored_runs(
                 filters=PipelineRunsFilter(
                     statuses=[PipelineRunStatus.FAILURE], updated_after=run_two_update_timestamp
                 ),
