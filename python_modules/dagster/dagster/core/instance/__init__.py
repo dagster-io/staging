@@ -554,12 +554,13 @@ class DagsterInstance:
         self._run_storage.reindex(print_fn)
         print_fn("Done.")
 
-    def reset_migration_state(self, print_fn=lambda _: None):
+    def reset_migration_state(self, print_fn=lambda _: None, dagster_version=None):
+        check.opt_list_param(dagster_version, "dagster_version", of_type=int)
         print_fn("Resetting migration state...")
-        self._event_storage.reset_migration_state()
-        self._run_storage.reset_migration_state()
+        self._event_storage.reset_migration_state(dagster_version)
+        self._run_storage.reset_migration_state(dagster_version)
         if self._schedule_storage:
-            self._schedule_storage.reset_migration_state()
+            self._schedule_storage.reset_migration_state(dagster_version)
         print_fn("Done.")
 
     def dispose(self):

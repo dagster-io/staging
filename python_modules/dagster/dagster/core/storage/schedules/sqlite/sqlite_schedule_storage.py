@@ -14,6 +14,7 @@ from dagster.serdes import ConfigurableClass, ConfigurableClassData
 from dagster.utils import mkdir_p
 from sqlalchemy.pool import NullPool
 
+from .migration import get_sqlite_alembic_revision_from_dagster_version
 from ..schema import ScheduleStorageSqlMetadata
 from ..sql_schedule_storage import SqlScheduleStorage
 
@@ -76,7 +77,8 @@ class SqliteScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         with self.connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
 
-    def reset_migration_state(self):
+    def reset_migration_state(self, dagster_version=None):
         alembic_config = get_alembic_config(__file__)
         with self.connect() as conn:
-            stamp_alembic_rev(alembic_config, conn, rev="base")
+            revision = get_sqlite_alembic_revision_from_dagster_version(dagster_version)
+            stamp_alembic_rev(alembic_config, conn, rev=revision)

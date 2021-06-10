@@ -58,7 +58,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         """
 
     @abstractmethod
-    def reset_migration_state(self):
+    def reset_migration_state(self, dagster_version=None):
         """This method resets the schema version if any migration has gotten into a bad state"""
 
     def fetchall(self, query):

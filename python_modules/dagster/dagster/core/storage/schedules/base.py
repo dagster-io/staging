@@ -114,7 +114,7 @@ class ScheduleStorage(abc.ABC, MayHaveInstanceWeakref):
         """Perform any needed migrations"""
 
     @abc.abstractmethod
-    def reset_migration_state(self):
+    def reset_migration_state(self, dagster_version=None):
         """Reset migration version to recover from a bad state"""
 
     def optimize_for_dagit(self, statement_timeout: int):

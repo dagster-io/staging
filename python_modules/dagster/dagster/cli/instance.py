@@ -70,7 +70,12 @@ def reindex_command():
     name="reset_migration_state",
     help="Resets the migration version when schema versioning gets into a bad state.",
 )
-def reset_migration_state_command():
+@click.option(
+    "--dagster_version",
+    help="Set the dagster version to reset the migration state back to",
+    default=None,
+)
+def reset_migration_state_command(dagster_version):
     home = os.environ.get("DAGSTER_HOME")
     if not home:
         raise click.UsageError(
@@ -85,7 +90,12 @@ def reset_migration_state_command():
     )
     if confirmation == "RESET":
         with DagsterInstance.get() as instance:
-            instance.reset_migration_state(click.echo)
+            if dagster_version:
+                dagster_version = list(map(int, dagster_version.split(".")))
+            else:
+                dagster_version = None
+
+            instance.reset_migration_state(click.echo, dagster_version)
 
         click.echo(
             "Reset instance migration state. You can now run `dagster instance migrate` from a "
