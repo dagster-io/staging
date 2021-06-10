@@ -15,6 +15,7 @@ from ..utils import (
     mysql_url_from_config,
     retry_mysql_connection_fn,
     retry_mysql_creation_fn,
+    get_alembic_revision_from_dagster_version,
 )
 
 
@@ -99,10 +100,11 @@ class MySQLRunStorage(SqlRunStorage, ConfigurableClass):
         with self.connect() as conn:
             run_alembic_upgrade(alembic_config, conn)
 
-    def reset_migration_state(self):
+    def reset_migration_state(self, dagster_version=None):
         alembic_config = mysql_alembic_config(__file__)
         with self.connect() as conn:
-            stamp_alembic_rev(alembic_config, conn, rev="base")
+            revision = get_alembic_revision_from_dagster_version(dagster_version)
+            stamp_alembic_rev(alembic_config, conn, rev=revision)
 
     def has_built_index(self, migration_name):
         if migration_name not in self._index_migration_cache:

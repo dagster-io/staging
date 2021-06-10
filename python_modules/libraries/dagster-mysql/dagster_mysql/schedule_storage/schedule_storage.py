@@ -13,6 +13,7 @@ from ..utils import (
     mysql_url_from_config,
     retry_mysql_connection_fn,
     retry_mysql_creation_fn,
+    get_alembic_revision_from_dagster_version,
 )
 
 
@@ -94,6 +95,8 @@ class MySQLScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         alembic_config = mysql_alembic_config(__file__)
         run_alembic_upgrade(alembic_config, self._engine)
 
-    def reset_migration_state(self):
+    def reset_migration_state(self, dagster_version=None):
         alembic_config = mysql_alembic_config(__file__)
-        stamp_alembic_rev(alembic_config, self._engine, rev="base")
+        with self.connect() as conn:
+            revision = get_alembic_revision_from_dagster_version(dagster_version)
+            stamp_alembic_rev(alembic_config, conn, rev=revision)
