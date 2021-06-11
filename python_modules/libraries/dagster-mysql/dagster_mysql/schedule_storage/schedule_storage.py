@@ -8,12 +8,12 @@ from dagster.utils.backcompat import experimental_class_warning
 from ..utils import (
     MYSQL_POOL_RECYCLE,
     create_mysql_connection,
+    get_alembic_revision_from_dagster_version,
     mysql_alembic_config,
     mysql_config,
     mysql_url_from_config,
     retry_mysql_connection_fn,
     retry_mysql_creation_fn,
-    get_alembic_revision_from_dagster_version,
 )
 
 

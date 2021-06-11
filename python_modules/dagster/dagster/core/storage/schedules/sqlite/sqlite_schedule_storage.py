@@ -14,9 +14,9 @@ from dagster.serdes import ConfigurableClass, ConfigurableClassData
 from dagster.utils import mkdir_p
 from sqlalchemy.pool import NullPool
 
-from .migration import get_sqlite_alembic_revision_from_dagster_version
 from ..schema import ScheduleStorageSqlMetadata
 from ..sql_schedule_storage import SqlScheduleStorage
+from .migration import get_sqlite_alembic_revision_from_dagster_version
 
 
 class SqliteScheduleStorage(SqlScheduleStorage, ConfigurableClass):
