@@ -342,7 +342,8 @@ class GraphDefinition(NodeDefinition):
 
     def to_job(
         self,
-        resource_defs: Dict[str, "ResourceDefinition"] = None,
+        suffix: Optional[str] = None,
+        resource_defs: Optional[Dict[str, "ResourceDefinition"]] = None,
         config_mapping: Union[ConfigMapping, Dict[str, Any]] = None,
         default_config: Optional[Dict[str, Any]] = None,
     ):
@@ -361,6 +362,8 @@ class GraphDefinition(NodeDefinition):
         if not (config_mapping is None or isinstance(config_mapping, ConfigMapping)):
             check.failed(f"Unexpected config_mapping value {config_mapping}")
 
+        name = self.name + ("_" + suffix if suffix else "")
+
         presets = None
         if default_config:
             presets = [
@@ -377,7 +380,7 @@ class GraphDefinition(NodeDefinition):
                 inner_schema = (
                     PipelineDefinition(
                         solid_defs=self._solid_defs,
-                        name=self.name,
+                        name=name,
                         description=self.description,
                         dependencies=self._dependencies,
                         input_mappings=self._input_mappings,
@@ -404,7 +407,7 @@ class GraphDefinition(NodeDefinition):
 
         return PipelineDefinition(
             solid_defs=self._solid_defs,
-            name=self.name,
+            name=name,
             description=self.description,
             dependencies=self._dependencies,
             input_mappings=self._input_mappings,
