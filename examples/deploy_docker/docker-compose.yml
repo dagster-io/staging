@@ -1,4 +1,4 @@
-version: "3.7"
+version: '3.7'
 
 services:
   # This service runs the postgres DB used by dagster for run storage, schedule storage,
@@ -7,9 +7,9 @@ services:
     image: postgres:11
     container_name: docker_example_postgresql
     environment:
-      POSTGRES_USER: "postgres_user"
-      POSTGRES_PASSWORD: "postgres_password"
-      POSTGRES_DB: "postgres_db"
+      POSTGRES_USER: 'postgres_user'
+      POSTGRES_PASSWORD: 'postgres_password'
+      POSTGRES_DB: 'postgres_db'
     networks:
       - docker_example_network
 
@@ -25,10 +25,12 @@ services:
     container_name: docker_example_pipelines
     image: docker_example_pipelines_image
     environment:
-      DAGSTER_POSTGRES_USER: "postgres_user"
-      DAGSTER_POSTGRES_PASSWORD: "postgres_password"
-      DAGSTER_POSTGRES_DB: "postgres_db"
-      DAGSTER_CURRENT_IMAGE: "docker_example_pipelines_image"
+      DAGSTER_POSTGRES_USER: 'postgres_user'
+      DAGSTER_POSTGRES_PASSWORD: 'postgres_password'
+      DAGSTER_POSTGRES_DB: 'postgres_db'
+      DAGSTER_CURRENT_IMAGE: 'docker_example_pipelines_image'
+      AWS_ACCESS_KEY_ID: 'AKIA6DCZ3MCL2VHTPZIG'
+      AWS_SECRET_ACCESS_KEY: '7YhzOVxJZYlXl+0S5wViKr4aa15JXLCRrGvzinPT'
     networks:
       - docker_example_network
 
@@ -42,20 +44,22 @@ services:
     entrypoint:
       - dagit
       - -h
-      - "0.0.0.0"
+      - '0.0.0.0'
       - -p
-      - "3000"
+      - '3000'
       - -w
       - workspace.yaml
     container_name: docker_example_dagit
     expose:
-      - "3000"
+      - '3000'
     ports:
-      - "3000:3000"
+      - '3000:3000'
     environment:
-      DAGSTER_POSTGRES_USER: "postgres_user"
-      DAGSTER_POSTGRES_PASSWORD: "postgres_password"
-      DAGSTER_POSTGRES_DB: "postgres_db"
+      DAGSTER_POSTGRES_USER: 'postgres_user'
+      DAGSTER_POSTGRES_PASSWORD: 'postgres_password'
+      DAGSTER_POSTGRES_DB: 'postgres_db'
+      AWS_ACCESS_KEY_ID: 'AKIA6DCZ3MCL2VHTPZIG'
+      AWS_SECRET_ACCESS_KEY: '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'
     volumes: # Make docker client accessible so we can terminate containers from dagit
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
@@ -76,9 +80,11 @@ services:
     container_name: docker_example_daemon
     restart: on-failure
     environment:
-      DAGSTER_POSTGRES_USER: "postgres_user"
-      DAGSTER_POSTGRES_PASSWORD: "postgres_password"
-      DAGSTER_POSTGRES_DB: "postgres_db"
+      DAGSTER_POSTGRES_USER: 'postgres_user'
+      DAGSTER_POSTGRES_PASSWORD: 'postgres_password'
+      DAGSTER_POSTGRES_DB: 'postgres_db'
+      AWS_ACCESS_KEY_ID: 'AKIA6DCZ3MCL2VHTPZIG'
+      AWS_SECRET_ACCESS_KEY: '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'
     volumes: # Make docker client accessible so we can launch containers using host docker
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
