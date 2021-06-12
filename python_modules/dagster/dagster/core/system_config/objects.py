@@ -164,7 +164,9 @@ class ResolvedRunConfig(
                 )
             # add user code boundary
             run_config = run_config_schema.config_mapping.config_fn(outer_evr.value)
+        # import ipdb
 
+        # ipdb.set_trace()
         config_evr = process_config(
             run_config_schema.run_config_schema_type,
             run_config_storage_field_backcompat(run_config),

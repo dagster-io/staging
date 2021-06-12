@@ -165,6 +165,10 @@ def get_inputs_field(
     for name, inp in solid.definition.input_dict.items():
         inp_handle = SolidInputHandle(solid, inp)
         has_upstream = input_has_upstream(dependency_structure, inp_handle, solid, name)
+        # HERE!!!!!!!!!!!!!!!!!!
+        # import ipdb
+
+        # ipdb.set_trace()
         if inp.root_manager_key and not has_upstream:
             input_field = get_input_manager_input_field(solid, inp, resource_defs)
         elif inp.dagster_type.loader and not has_upstream:
@@ -320,6 +324,10 @@ def construct_leaf_solid_config(
     resource_defs: Dict[str, ResourceDefinition],
     ignored: bool,
 ) -> Optional[Field]:
+
+    # import ipdb
+
+    # ipdb.set_trace()
     return solid_config_field(
         {
             "inputs": get_inputs_field(
@@ -354,6 +362,9 @@ def define_isolid_field(
     #    provided when `configured` was called (via CompositeSolidDefinition#config_schema)
 
     if isinstance(solid.definition, SolidDefinition):
+        # import ipdb
+
+        # ipdb.set_trace()
         return construct_leaf_solid_config(
             solid,
             dependency_structure,
@@ -378,6 +389,10 @@ def define_isolid_field(
         # This case omits a 'solids' key, thus if a composite solid is `configured` or has a field
         # mapping, the user cannot stub any config, inputs, or outputs for inner (child) solids.
     else:
+
+        # import ipdb
+
+        # ipdb.set_trace()
         return solid_config_field(
             {
                 "inputs": get_inputs_field(
@@ -419,7 +434,6 @@ def define_solid_dictionary_cls(
             resource_defs,
             ignored=False,
         )
-
         if solid_field:
             fields[solid.name] = solid_field
 
