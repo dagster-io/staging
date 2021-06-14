@@ -691,7 +691,9 @@ def _checked_resource_reqs_for_mode(
 
     # Validate unsatisfied inputs can be materialized from config
     resource_reqs.update(
-        _checked_input_resource_reqs_for_mode(dependency_structure, solid_dict, mode_def)
+        _checked_input_resource_reqs_for_mode(
+            dependency_structure, solid_dict, mode_def, resource_reqs=set()
+        )
     )
 
     for intermediate_storage in mode_def.intermediate_storage_defs or []:
@@ -824,8 +826,8 @@ def _checked_input_resource_reqs_for_mode(
     dependency_structure: DependencyStructure,
     solid_dict: Dict[str, Solid],
     mode_def: ModeDefinition,
+    resource_reqs: Set[str],
 ) -> Set[str]:
-    resource_reqs = set()
     mode_root_input_managers = set(
         key
         for key, resource_def in mode_def.resource_defs.items()
@@ -833,6 +835,14 @@ def _checked_input_resource_reqs_for_mode(
     )
 
     for solid in solid_dict.values():
+        if solid.is_composite:
+            # check inner solids
+            _checked_input_resource_reqs_for_mode(
+                dependency_structure=solid.definition.dependency_structure,
+                solid_dict=solid.definition._solid_dict,  # pylint: disable=protected-access
+                mode_def=mode_def,
+                resource_reqs=resource_reqs,
+            )
         for handle in solid.input_handles():
             if dependency_structure.has_deps(handle):
                 for source_output_handle in dependency_structure.get_deps_list(handle):
