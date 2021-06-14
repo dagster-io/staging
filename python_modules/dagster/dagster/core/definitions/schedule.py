@@ -1,3 +1,4 @@
+import warnings
 from contextlib import ExitStack
 from datetime import datetime
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, cast
@@ -28,7 +29,7 @@ from .target import DirectTarget, RepoRelativeTarget
 from .utils import check_valid_name
 
 
-class ScheduleExecutionContext:
+class ScheduleEvaluationContext:
     """Schedule-specific execution context.
 
     An instance of this class is made available as the first argument to various ScheduleDefinition
@@ -65,7 +66,7 @@ class ScheduleExecutionContext:
 
     @property
     def instance(self) -> "DagsterInstance":
-        # self._instance_ref should only ever be None when this ScheduleExecutionContext was
+        # self._instance_ref should only ever be None when this ScheduleEvaluationContext was
         # constructed under test.
         if not self._instance_ref:
             raise DagsterInvariantViolationError(
@@ -82,9 +83,24 @@ class ScheduleExecutionContext:
         return self._scheduled_execution_time
 
 
+class ScheduleExecutionContext(ScheduleEvaluationContext):
+    """Wrapper around ScheduleEvaluationContext that preserves old naming for backcompat."""
+
+    def __init__(
+        self, instance_ref: Optional[InstanceRef], scheduled_execution_time: Optional[datetime]
+    ):
+        warnings.warn(
+            "`ScheduleExecutionContext` has been renamed to `ScheduleEvaluationContext`. Support for the name `ScheduleExecutionContext` will be dropped in a future release."
+        )
+        super(ScheduleExecutionContext, self).__init__(
+            instance_ref=instance_ref,
+            scheduled_execution_time=scheduled_execution_time,
+        )
+
+
 def build_schedule_context(
     instance: Optional[DagsterInstance] = None, scheduled_execution_time: Optional[datetime] = None
-) -> ScheduleExecutionContext:
+) -> ScheduleEvaluationContext:
     """Builds schedule execution context using the provided parameters.
 
     The instance provided to ``build_schedule_context`` must be persistent;
@@ -108,7 +124,7 @@ def build_schedule_context(
     experimental_fn_warning("build_schedule_context")
 
     check.opt_inst_param(instance, "instance", DagsterInstance)
-    return ScheduleExecutionContext(
+    return ScheduleEvaluationContext(
         instance_ref=instance.get_ref() if instance else None,
         scheduled_execution_time=check.opt_inst_param(
             scheduled_execution_time, "scheduled_execution_time", datetime
@@ -130,30 +146,30 @@ class ScheduleDefinition:
         cron_schedule (str): A valid cron string specifying when the schedule will run, e.g.,
             '45 23 * * 6' for a schedule that runs at 11:45 PM every Saturday.
         pipeline_name (str): The name of the pipeline to execute when the schedule runs.
-        execution_fn (Callable[ScheduleExecutionContext]): The core evaluation function for the
+        execution_fn (Callable[ScheduleEvaluationContext]): The core evaluation function for the
             schedule, which is run at an interval to determine whether a run should be launched or
-            not. Takes a :py:class:`~dagster.ScheduleExecutionContext`.
+            not. Takes a :py:class:`~dagster.ScheduleEvaluationContext`.
 
             This function must return a generator, which must yield either a single SkipReason
             or one or more RunRequest objects.
         run_config (Optional[Dict]): The config that parameterizes this execution,
             as a dict.
-        run_config_fn (Optional[Callable[[ScheduleExecutionContext], [Dict]]]): A function that
-            takes a ScheduleExecutionContext object and returns the run configuration that
+        run_config_fn (Optional[Callable[[ScheduleEvaluationContext], [Dict]]]): A function that
+            takes a ScheduleEvaluationContext object and returns the run configuration that
             parameterizes this execution, as a dict. You may set only one of ``run_config``,
             ``run_config_fn``, and ``execution_fn``.
         tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach
             to the scheduled runs.
-        tags_fn (Optional[Callable[[ScheduleExecutionContext], Optional[Dict[str, str]]]]): A
+        tags_fn (Optional[Callable[[ScheduleEvaluationContext], Optional[Dict[str, str]]]]): A
             function that generates tags to attach to the schedules runs. Takes a
-            :py:class:`~dagster.ScheduleExecutionContext` and returns a dictionary of tags (string
+            :py:class:`~dagster.ScheduleEvaluationContext` and returns a dictionary of tags (string
             key-value pairs). You may set only one of ``tags``, ``tags_fn``, and ``execution_fn``.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute when the schedule runs. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The mode to apply when executing this schedule. (default: 'default')
-        should_execute (Optional[Callable[[ScheduleExecutionContext], bool]]): A function that runs
+        should_execute (Optional[Callable[[ScheduleEvaluationContext], bool]]): A function that runs
             at schedule execution time to determine whether a schedule should execute or skip. Takes
-            a :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the
+            a :py:class:`~dagster.ScheduleEvaluationContext` and returns a boolean (``True`` if the
             schedule should execute). Defaults to a function that always returns ``True``.
         environment_vars (Optional[dict[str, str]]): The environment variables to set for the
             schedule
@@ -177,7 +193,7 @@ class ScheduleDefinition:
         should_execute: Optional[Callable[..., bool]] = None,
         environment_vars: Optional[Dict[str, str]] = None,
         execution_timezone: Optional[str] = None,
-        execution_fn: Optional[Callable[[ScheduleExecutionContext], Any]] = None,
+        execution_fn: Optional[Callable[[ScheduleEvaluationContext], Any]] = None,
         description: Optional[str] = None,
         job: Optional[GraphDefinition] = None,
     ):
@@ -308,14 +324,14 @@ class ScheduleDefinition:
         context_param_name = get_function_params(self._run_config_fn)[0].name
 
         if args:
-            context = check.opt_inst_param(args[0], context_param_name, ScheduleExecutionContext)
+            context = check.opt_inst_param(args[0], context_param_name, ScheduleEvaluationContext)
         else:
             if context_param_name not in kwargs:
                 raise DagsterInvalidInvocationError(
                     f"Schedule invocation expected argument '{context_param_name}'."
                 )
             context = check.opt_inst_param(
-                kwargs[context_param_name], context_param_name, ScheduleExecutionContext
+                kwargs[context_param_name], context_param_name, ScheduleEvaluationContext
             )
 
         context = context if context else build_schedule_context()
@@ -358,18 +374,18 @@ class ScheduleDefinition:
     def execution_timezone(self) -> Optional[str]:
         return self._execution_timezone
 
-    def evaluate_tick(self, context: "ScheduleExecutionContext") -> ScheduleExecutionData:
+    def evaluate_tick(self, context: "ScheduleEvaluationContext") -> ScheduleExecutionData:
         """Evaluate schedule using the provided context.
 
         Args:
-            context (ScheduleExecutionContext): The context with which to evaluate this schedule.
+            context (ScheduleEvaluationContext): The context with which to evaluate this schedule.
         Returns:
             ScheduleExecutionData: Contains list of run requests, or skip message if present.
 
         """
 
-        check.inst_param(context, "context", ScheduleExecutionContext)
-        execution_fn = cast(Callable[[ScheduleExecutionContext], Any], self._execution_fn)
+        check.inst_param(context, "context", ScheduleEvaluationContext)
+        execution_fn = cast(Callable[[ScheduleEvaluationContext], Any], self._execution_fn)
         result = list(ensure_gen(execution_fn(context)))
 
         if not result or result == [None]:
