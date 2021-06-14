@@ -1,9 +1,9 @@
-from typing import Dict, NamedTuple, Optional
+from typing import Dict, NamedTuple, Optional, Any
 
 from dagster import check
-from dagster.config.config_type import ConfigType
+from dagster.config import ConfigType, Shape, Field
 
-from .config import ConfigMapping
+from .config import ConfigMapping, ConfigChanges
 from .pipeline import PipelineDefinition
 
 
@@ -11,7 +11,7 @@ class RunConfigSchema(NamedTuple):
     run_config_schema_type: ConfigType
     config_type_dict_by_name: Dict[str, ConfigType]
     config_type_dict_by_key: Dict[str, ConfigType]
-    config_mapping: Optional[ConfigMapping]
+    config_changes: Optional[ConfigChanges]
 
     def has_config_type(self, name):
         check.str_param(name, "name")
@@ -29,11 +29,16 @@ class RunConfigSchema(NamedTuple):
         return self.config_type_dict_by_key.values()
 
     @property
-    def config_type(self):
-        if self.config_mapping:
-            return self.config_mapping.config_schema.config_type
+    def config_mapping(self) -> Optional[ConfigMapping]:
+        if self.config_changes and self.config_changes.config_mapping:
+            return self.config_changes.config_mapping
 
-        return self.run_config_schema_type
+        return None
+
+    @property
+    def config_type(self):
+        if self.config_changes:
+            return self.config_changes.apply_over(self.run_config_schema_type)
 
 
 def create_run_config_schema(pipeline_def, mode=None):

@@ -280,7 +280,7 @@ class PipelineDefinition(GraphDefinition):
         )
 
     def get_run_config_schema(self, mode: Optional[str] = None) -> "RunConfigSchema":
-        check.str_param(mode, "mode")
+        check.opt_str_param(mode, "mode")
 
         mode_def = self.get_mode_definition(mode)
 
@@ -940,8 +940,8 @@ def _create_run_config_schema(
         )
     )
 
-    if mode_definition.config_mapping:
-        outer_config_type = mode_definition.config_mapping.config_schema.config_type
+    if mode_definition.config_changes:
+        outer_config_type = mode_definition.config_changes.apply_over(run_config_schema_type)
     else:
         outer_config_type = run_config_schema_type
 
@@ -957,5 +957,5 @@ def _create_run_config_schema(
         run_config_schema_type=run_config_schema_type,
         config_type_dict_by_name=config_type_dict_by_name,
         config_type_dict_by_key=config_type_dict_by_key,
-        config_mapping=mode_definition.config_mapping,
+        config_changes=mode_definition.config_changes,
     )

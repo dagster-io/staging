@@ -153,7 +153,7 @@ class ResolvedRunConfig(
 
         if run_config_schema.config_mapping:
             outer_evr = process_config(
-                run_config_schema.config_mapping.config_schema.config_type,
+                run_config_schema.config_type,
                 run_config,
             )
             if not outer_evr.success:
@@ -165,10 +165,16 @@ class ResolvedRunConfig(
             # add user code boundary
             run_config = run_config_schema.config_mapping.config_fn(outer_evr.value)
 
-        config_evr = process_config(
-            run_config_schema.run_config_schema_type,
-            run_config_storage_field_backcompat(run_config),
-        )
+            config_evr = process_config(
+                run_config_schema.run_config_schema_type,
+                run_config,
+            )
+        else:
+            config_evr = process_config(
+                run_config_schema.config_type,
+                run_config_storage_field_backcompat(run_config),
+            )
+
         if not config_evr.success:
             raise DagsterInvalidConfigError(
                 "Error in config for pipeline {}".format(pipeline_def.name),

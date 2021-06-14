@@ -50,7 +50,9 @@ def resolve_is_run_config_valid(graphene_info, represented_pipeline, mode, run_c
         return GraphenePipelineConfigValidationValid(represented_pipeline.name)
 
     validated_config = validate_config_from_snap(
-        represented_pipeline.config_schema_snapshot, mode_def_snap.root_config_key, run_config
+        represented_pipeline.config_schema_snapshot,
+        mode_def_snap.root_config_key,
+        run_config,
     )
 
     if not validated_config.success:

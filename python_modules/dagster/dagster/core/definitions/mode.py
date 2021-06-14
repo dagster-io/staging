@@ -6,7 +6,7 @@ from dagster.loggers import default_loggers
 from dagster.utils.backcompat import experimental_arg_warning
 from dagster.utils.merger import merge_dicts
 
-from .config import ConfigMapping
+from .config import ConfigChanges
 from .logger import LoggerDefinition
 from .resource import ResourceDefinition
 from .utils import check_valid_name
@@ -27,7 +27,7 @@ class ModeDefinition(
             ("executor_defs", List[ExecutorDefinition]),
             ("description", Optional[str]),
             ("intermediate_storage_defs", List["IntermediateStorageDefinition"]),
-            ("config_mapping", Optional[ConfigMapping]),
+            ("config_changes", Optional[ConfigChanges]),
         ],
     )
 ):
@@ -62,7 +62,7 @@ class ModeDefinition(
         executor_defs: Optional[List[ExecutorDefinition]] = None,
         description: Optional[str] = None,
         intermediate_storage_defs: Optional[List["IntermediateStorageDefinition"]] = None,
-        _config_mapping: Optional[ConfigMapping] = None,
+        _config_changes: Optional[ConfigChanges] = None,
     ):
         from dagster.core.storage.system_storage import default_intermediate_storage_defs
 
@@ -80,7 +80,7 @@ class ModeDefinition(
                 {"io_manager": mem_io_manager}, resource_defs or {}
             )
 
-        if _config_mapping:
+        if _config_changes:
             experimental_arg_warning("config_mapping", "ModeDefinition.__new__")
 
         return super(ModeDefinition, cls).__new__(
@@ -106,7 +106,7 @@ class ModeDefinition(
                 of_type=ExecutorDefinition,
             ),
             description=check.opt_str_param(description, "description"),
-            config_mapping=check.opt_inst_param(_config_mapping, "config_mapping", ConfigMapping),
+            config_changes=check.opt_inst_param(_config_changes, "_config_changes", ConfigChanges),
         )
 
     @property
