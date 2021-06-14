@@ -2,7 +2,7 @@ import os
 
 from dagster import AssetKey, RunRequest, SkipReason, check, sensor
 from dagster.core.definitions.pipeline_sensor import (
-    PipelineFailureSensorContext,
+    PipelineFailureSensorEvaluationContext,
     pipeline_failure_sensor,
 )
 from slack import WebClient
@@ -111,7 +111,7 @@ def get_toys_sensors():
             )
 
     @pipeline_failure_sensor
-    def slack_on_pipeline_failure(context: PipelineFailureSensorContext):
+    def slack_on_pipeline_failure(context: PipelineFailureSensorEvaluationContext):
 
         base_url = "http://localhost:3000"
 

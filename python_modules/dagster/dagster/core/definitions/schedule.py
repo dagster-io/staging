@@ -64,7 +64,7 @@ class ScheduleExecutionContext:
 
     @property
     def instance(self) -> "DagsterInstance":
-        # self._instance_ref should only ever be None when this SensorExecutionContext was
+        # self._instance_ref should only ever be None when this SensorEvaluationContext was
         # constructed under test.
         if not self._instance_ref:
             raise DagsterInvariantViolationError(

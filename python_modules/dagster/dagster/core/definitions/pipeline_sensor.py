@@ -7,7 +7,7 @@ from dagster import check
 from dagster.core.definitions.sensor import (
     PipelineRunReaction,
     SensorDefinition,
-    SensorExecutionContext,
+    SensorEvaluationContext,
     SkipReason,
 )
 from dagster.core.errors import PipelineSensorExecutionError, user_code_error_boundary
@@ -16,12 +16,12 @@ from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, Pi
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 
-class PipelineFailureSensorContext(
-    namedtuple("_PipelineFailureSensorContext", "sensor_name pipeline_run failure_event")
+class PipelineFailureSensorEvaluationContext(
+    namedtuple("_PipelineFailureSensorEvaluationContext", "sensor_name pipeline_run failure_event")
 ):
     def __new__(cls, sensor_name, pipeline_run, failure_event):
 
-        return super(PipelineFailureSensorContext, cls).__new__(
+        return super(PipelineFailureSensorEvaluationContext, cls).__new__(
             cls,
             sensor_name=check.str_param(sensor_name, "sensor_name"),
             pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
@@ -34,14 +34,14 @@ def pipeline_failure_sensor(
     minimum_interval_seconds: Optional[int] = None,
     description: Optional[str] = None,
 ) -> Callable[
-    [Callable[[PipelineFailureSensorContext], Union[SkipReason, PipelineRunReaction]]],
+    [Callable[[PipelineFailureSensorEvaluationContext], Union[SkipReason, PipelineRunReaction]]],
     SensorDefinition,
 ]:
     """
     Creates a sensor that reacts to pipeline failure events, where the decorated function will be
     run when a pipeline run fails.
 
-    Takes a :py:class:`~dagster.PipelineFailureSensorContext`.
+    Takes a :py:class:`~dagster.PipelineFailureSensorEvaluationContext`.
 
     Args:
         name (Optional[str]): The name of the pipeline failure sensor. Defaults to the name of the
@@ -55,7 +55,9 @@ def pipeline_failure_sensor(
     dagster_event_type = DagsterEventType.PIPELINE_FAILURE
 
     def inner(
-        fn: Callable[["PipelineFailureSensorContext"], Union[SkipReason, PipelineRunReaction]]
+        fn: Callable[
+            ["PipelineFailureSensorEvaluationContext"], Union[SkipReason, PipelineRunReaction]
+        ]
     ) -> SensorDefinition:
         check.callable_param(fn, "fn")
         if name is None or callable(name):
@@ -63,7 +65,7 @@ def pipeline_failure_sensor(
         else:
             sensor_name = name
 
-        def _wrapped_fn(context: SensorExecutionContext):
+        def _wrapped_fn(context: SensorEvaluationContext):
             # Initiate the cursor to be the current datetime in UTC first time init (cursor is None)
             if context.cursor is None:
                 curr_time = pendulum.now("UTC").isoformat()
@@ -116,7 +118,7 @@ def pipeline_failure_sensor(
                     ):
                         # one user code invocation maps to one failure event
                         fn(
-                            PipelineFailureSensorContext(
+                            PipelineFailureSensorEvaluationContext(
                                 sensor_name=sensor_name,
                                 pipeline_run=pipeline_run,
                                 failure_event=events[0].dagster_event,

@@ -10,7 +10,7 @@ from dagster.core.definitions.reconstructable import (
     ReconstructablePipeline,
     ReconstructableRepository,
 )
-from dagster.core.definitions.sensor import SensorExecutionContext
+from dagster.core.definitions.sensor import SensorEvaluationContext
 from dagster.core.errors import (
     DagsterExecutionInterruptedError,
     DagsterInvalidSubsetError,
@@ -251,7 +251,7 @@ def get_external_sensor_execution(
     definition = recon_repo.get_definition()
     sensor_def = definition.get_sensor_def(sensor_name)
 
-    with SensorExecutionContext(
+    with SensorEvaluationContext(
         instance_ref,
         last_completion_time=last_completion_timestamp,
         last_run_key=last_run_key,
