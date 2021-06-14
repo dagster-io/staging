@@ -6,8 +6,8 @@ import pendulum
 from dagster import check
 from dagster.core.definitions.sensor import (
     PipelineRunReaction,
+    SensorContext,
     SensorDefinition,
-    SensorExecutionContext,
     SkipReason,
 )
 from dagster.core.errors import PipelineSensorExecutionError, user_code_error_boundary
@@ -63,7 +63,7 @@ def pipeline_failure_sensor(
         else:
             sensor_name = name
 
-        def _wrapped_fn(context: SensorExecutionContext):
+        def _wrapped_fn(context: SensorContext):
             # Initiate the cursor to be the current datetime in UTC first time init (cursor is None)
             if context.cursor is None:
                 curr_time = pendulum.now("UTC").isoformat()

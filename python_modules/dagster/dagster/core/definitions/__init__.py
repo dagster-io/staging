@@ -82,6 +82,6 @@ from .run_config_schema import (
 )
 from .run_request import JobType, RunRequest, SkipReason
 from .schedule import ScheduleDefinition, ScheduleExecutionContext
-from .sensor import SensorDefinition, SensorExecutionContext
+from .sensor import SensorContext, SensorDefinition
 from .solid import CompositeSolidDefinition, NodeDefinition, SolidDefinition
 from .solid_container import create_execution_structure
