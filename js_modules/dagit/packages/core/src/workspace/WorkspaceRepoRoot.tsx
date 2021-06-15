@@ -48,8 +48,12 @@ export const WorkspaceRepoRoot: React.FC<Props> = (props) => {
         return 'Solids';
       case 'graphs':
         return 'Graphs';
-      default:
+      case 'jobs':
+        return 'Jobs';
+      case 'pipelines':
         return 'Pipelines';
+      default:
+        return featureEnabled(FeatureFlag.PipelineModeTuples) ? 'Pipelines' : 'Jobs';
     }
   };
 
