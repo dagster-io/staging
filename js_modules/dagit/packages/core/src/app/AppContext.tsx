@@ -7,6 +7,11 @@ export type AppContextValue = {
   permissions: PermissionsFromJSON;
   rootServerURI: string;
   websocketURI: string;
+  authentication: {
+    organizationId: number | null;
+    deploymentId: number | null;
+    sessionToken: string | null;
+  };
 };
 
 export const AppContext = React.createContext<AppContextValue>({
@@ -14,4 +19,9 @@ export const AppContext = React.createContext<AppContextValue>({
   permissions: {},
   rootServerURI: '',
   websocketURI: '',
+  authentication: {
+    organizationId: null,
+    deploymentId: null,
+    sessionToken: null,
+  },
 });

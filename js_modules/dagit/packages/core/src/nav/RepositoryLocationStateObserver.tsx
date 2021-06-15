@@ -36,7 +36,7 @@ export const RepositoryLocationStateObserver = ({client}: StateObserverProps) =>
   const [erroredLocations, setErroredLocations] = useState<string[]>([]);
   const totalMessages = updatedLocations.length + erroredLocations.length;
 
-  const {websocketURI} = React.useContext(AppContext);
+  const {websocketURI, authentication} = React.useContext(AppContext);
 
   useEffect(() => {
     const onHandleMessages = (
@@ -69,6 +69,7 @@ export const RepositoryLocationStateObserver = ({client}: StateObserverProps) =>
       websocketURI,
       LOCATION_STATE_CHANGE_SUBSCRIPTION,
       {},
+      authentication,
       onHandleMessages,
       () => {}, // https://github.com/dagster-io/dagster/issues/2151
     );
@@ -76,7 +77,7 @@ export const RepositoryLocationStateObserver = ({client}: StateObserverProps) =>
     return () => {
       subscriptionToken.close();
     };
-  }, [locationEntries, refetch, websocketURI]);
+  }, [authentication, locationEntries, refetch, websocketURI]);
 
   return totalMessages > 0 ? (
     <Group background={Colors.GRAY5} direction="column" spacing={0}>

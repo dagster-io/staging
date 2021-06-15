@@ -86,13 +86,17 @@ interface Props {
     permissions: PermissionsFromJSON;
     subscriptionParams?: {[key: string]: string};
     sessionToken?: string;
+    organizationId?: number;
+    deploymentId?: number;
   };
 }
 
 export const AppProvider: React.FC<Props> = (props) => {
   const {appCache = AppCache, config} = props;
   const {
-    sessionToken = '',
+    sessionToken = 'ABCD',
+    organizationId = 999,
+    deploymentId = 888,
     basePath = '',
     permissions,
     subscriptionParams = {},
@@ -112,9 +116,16 @@ export const AppProvider: React.FC<Props> = (props) => {
   const websocketClient = React.useMemo(() => {
     return new SubscriptionClient(websocketURI, {
       reconnect: true,
-      connectionParams: subscriptionParams,
+      connectionParams: {
+        ...subscriptionParams,
+        authentication: {
+          organizationId,
+          deploymentId,
+          sessionToken,
+        },
+      },
     });
-  }, [subscriptionParams, websocketURI]);
+  }, [organizationId, deploymentId, sessionToken, subscriptionParams, websocketURI]);
 
   const apolloClient = React.useMemo(() => {
     const logLink = new ApolloLink((operation, forward) =>
@@ -130,7 +141,11 @@ export const AppProvider: React.FC<Props> = (props) => {
       return forward(operation);
     });
 
-    let httpLink: ApolloLink = new HttpLink({uri: httpURI});
+    const customFetchWithAuthentication = (uri: string, options: RequestInit) => {
+      return fetch(`${uri}?organizationId=${organizationId}&deploymentId=${deploymentId}`, options);
+    };
+
+    let httpLink: ApolloLink = new HttpLink({uri: httpURI, fetch: customFetchWithAuthentication});
 
     // add an auth header to the HTTP requests made by the app
     // note that the websocket-based subscriptions will not carry this header
@@ -163,7 +178,7 @@ export const AppProvider: React.FC<Props> = (props) => {
       cache: appCache,
       link: ApolloLink.from([logLink, AppErrorLink(), timeStartLink, splitLink]),
     });
-  }, [appCache, httpURI, sessionToken, websocketClient]);
+  }, [appCache, deploymentId, httpURI, organizationId, sessionToken, websocketClient]);
 
   const appContextValue = React.useMemo(
     () => ({
@@ -171,8 +186,17 @@ export const AppProvider: React.FC<Props> = (props) => {
       permissions,
       rootServerURI,
       websocketURI,
+      authentication: {organizationId, deploymentId, sessionToken},
     }),
-    [basePath, permissions, rootServerURI, websocketURI],
+    [
+      basePath,
+      permissions,
+      rootServerURI,
+      websocketURI,
+      organizationId,
+      deploymentId,
+      sessionToken,
+    ],
   );
 
   return (

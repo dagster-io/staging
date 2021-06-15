@@ -53,7 +53,7 @@ export const Run: React.FunctionComponent<RunProps> = (props) => {
     queryKey: 'selection',
     defaults: {selection: ''},
   });
-  const {websocketURI} = React.useContext(AppContext);
+  const {websocketURI, authentication} = React.useContext(AppContext);
 
   const onShowStateDetails = (stepKey: string, logs: RunPipelineRunEventFragment[]) => {
     const errorNode = logs.find(
@@ -79,7 +79,13 @@ export const Run: React.FunctionComponent<RunProps> = (props) => {
     <RunContext.Provider value={run}>
       {run && <RunStatusToPageAttributes run={run} />}
 
-      <LogsProvider websocketURI={websocketURI} key={runId} client={client} runId={runId}>
+      <LogsProvider
+        websocketURI={websocketURI}
+        authentication={authentication}
+        key={runId}
+        client={client}
+        runId={runId}
+      >
         {(logs) => (
           <RunMetadataProvider logs={logs.allNodes}>
             {(metadata) => (

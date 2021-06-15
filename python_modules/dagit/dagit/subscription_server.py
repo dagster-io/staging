@@ -6,6 +6,8 @@ from rx import Observable
 
 from .format_error import format_error_with_stack_trace
 
+map = {}
+
 
 class DagsterSubscriptionServer(GeventSubscriptionServer):
     """Subscription server that is able to handle non-subscription commands"""
@@ -15,6 +17,11 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
     def __init__(self, middleware=None, **kwargs):
         self.middleware = middleware or []
         super(DagsterSubscriptionServer, self).__init__(**kwargs)
+
+    def on_connect(self, connection_context, payload):
+        print("C", id(connection_context), payload)
+        connection_context.payload = dict(**getattr(connection_context, "payload", {}), **payload)
+        super().on_connect(connection_context, payload)
 
     def execute(self, request_context, params):
         # https://github.com/graphql-python/graphql-ws/issues/7
@@ -37,6 +44,10 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
             return self.send_message(connection_context, op_id, GQL_DATA, result)
 
     def on_start(self, connection_context, op_id, params):
+
+        print(
+            "S", id(connection_context), connection_context.payload, params['request_string'][:40]
+        )
         try:
             execution_result = self.execute(
                 # Even though this object is referred to as the "request_context", it is
