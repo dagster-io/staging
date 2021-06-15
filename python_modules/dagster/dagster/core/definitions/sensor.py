@@ -1,7 +1,7 @@
 import inspect
 import warnings
 from contextlib import ExitStack
-from typing import Any, Callable, Generator, List, NamedTuple, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Generator, List, NamedTuple, Optional, Union, cast
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidInvocationError, DagsterInvariantViolationError
@@ -16,11 +16,15 @@ from dagster.utils.backcompat import (
 )
 
 from ..decorator_utils import get_function_params
+from .events import AssetKey
 from .graph import GraphDefinition
 from .mode import DEFAULT_MODE_NAME
 from .run_request import JobType, PipelineRunReaction, RunRequest, SkipReason
 from .target import DirectTarget, RepoRelativeTarget
 from .utils import check_valid_name
+
+if TYPE_CHECKING:
+    from dagster.core.definitions.events import AssetMaterialization
 
 DEFAULT_SENSOR_DAEMON_INTERVAL = 30
 
@@ -268,7 +272,10 @@ class SensorDefinition:
             skip_message = None
 
         return SensorExecutionData(
-            run_requests, skip_message, context.cursor, pipeline_run_reactions
+            run_requests,
+            skip_message,
+            context.cursor,
+            pipeline_run_reactions,
         )
 
     @property
@@ -371,3 +378,55 @@ def build_sensor_context(
         last_run_key=None,
         cursor=cursor,
     )
+
+
+class AssetSensorDefinition(SensorDefinition):
+    def __init__(
+        self,
+        name: str,
+        asset_key: AssetKey,
+        pipeline_name: str,
+        asset_materialization_fn: Callable[
+            ["SensorExecutionContext", Union["AssetMaterialization", List["AssetMaterialization"]]],
+            Union[SkipReason, RunRequest],
+        ],
+        solid_selection: Optional[List[str]] = None,
+        mode: Optional[str] = None,
+        minimum_interval_seconds: Optional[int] = None,
+        description: Optional[str] = None,
+    ):
+        self._asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
+
+        def _wrap_asset_fn(materialization_fn):
+            def _fn(context):
+                events = context.instance.events_for_asset_key(
+                    self._asset_key, after_cursor=context.cursor, ascending=False, limit=1
+                )
+                if not events:
+                    return
+
+                record_id, event = events[0]
+                yield from materialization_fn(context, event)
+                context.update_cursor(str(record_id))
+
+            return _fn
+
+        super(AssetSensorDefinition, self).__init__(
+            name=check_valid_name(name),
+            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+            evaluation_fn=_wrap_asset_fn(
+                check.callable_param(asset_materialization_fn, "asset_materialization_fn"),
+            ),
+            solid_selection=check.opt_nullable_list_param(
+                solid_selection, "solid_selection", of_type=str
+            ),
+            mode=check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME),
+            minimum_interval_seconds=check.opt_int_param(
+                minimum_interval_seconds, "minimum_interval_seconds", DEFAULT_SENSOR_DAEMON_INTERVAL
+            ),
+            description=check.opt_str_param(description, "description"),
+        )
+
+    @property
+    def asset_key(self):
+        return self._asset_key

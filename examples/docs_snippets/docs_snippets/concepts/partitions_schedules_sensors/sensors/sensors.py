@@ -146,26 +146,61 @@ def my_directory_sensor_with_skip_reasons(_context):
 
 # end_skip_sensors_marker
 
-# start_asset_sensors_marker
-from dagster import AssetKey
+# start_asset_sensor_marker
+from dagster import AssetKey, asset_sensor
+
+
+@asset_sensor(asset_key=AssetKey("my_table"), pipeline_name="my_pipeline")
+def my_asset_sensor(context, asset_event):
+    yield RunRequest(
+        run_key=context.cursor,
+        run_config={
+            "solids": {
+                "read_materialization": {
+                    "config": {
+                        "asset_key": asset_event.asset_key.path,
+                        "pipeline": asset_event.pipeline_name,
+                    }
+                }
+            }
+        },
+    )
+
+
+# end_asset_sensor_marker
+
+# start_multi_asset_sensor_marker
 
 
 @sensor(pipeline_name="my_pipeline")
-def my_asset_sensor(context):
-    events = context.instance.events_for_asset_key(
-        AssetKey("my_table"), after_cursor=context.cursor, ascending=False, limit=1
+def multi_asset_sensor(context):
+    if context.cursor:
+        a_cursor, b_cursor = list(map(int(context.cursor.split("_"))))
+    else:
+        a_cursor, b_cursor = None, None
+
+    a_events = context.instance.events_for_asset_key(
+        AssetKey("table_a"), after_cursor=a_cursor, ascending=False, limit=1
     )
-    if not events:
+    b_events = context.instance.events_for_asset_key(
+        AssetKey("table_b"), after_cursor=b_cursor, ascending=False, limit=1
+    )
+
+    if not a_events or not b_events:
         return
 
-    record_id, event = events[0]  # take the most recent materialization
-    yield RunRequest(
-        run_key=str(record_id), run_config={}, tags={"source_pipeline": event.pipeline_name}
-    )
-    context.update_cursor(str(record_id))
+    # make sure we only generate events if both table_a and table_b have been materialized since
+    # the last evaluation.
+    yield RunRequest(run_key=None)
+
+    # update the sensor cursor by combining the individual event cursors from the two separate
+    # asset event streams
+    updated_a_cursor = a_events[0][0]
+    updated_b_cursor = b_events[0][0]
+    context.update_cursor(f"{updated_a_cursor}_{updated_b_cursor}")
 
 
-# end_asset_sensors_marker
+# end_multi_asset_sensor_marker
 
 
 # start_s3_sensors_marker
