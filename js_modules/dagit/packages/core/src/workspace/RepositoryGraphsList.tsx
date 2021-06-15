@@ -20,6 +20,24 @@ const REPOSITORY_GRAPHS_LIST_QUERY = gql`
       __typename
       ... on Repository {
         id
+        usedSolids {
+          definition {
+            __typename
+            ... on CompositeSolidDefinition {
+              name
+              description
+            }
+          }
+          invocations {
+            pipeline {
+              id
+              name
+            }
+            solidHandle {
+              handleID
+            }
+          }
+        }
         pipelines {
           id
           description
@@ -51,10 +69,25 @@ export const RepositoryGraphsList: React.FC<Props> = (props) => {
     if (!repo || repo.__typename !== 'Repository') {
       return null;
     }
-    return repo.pipelines.map((pipeline) => ({
-      pipeline,
+    const items = repo.pipelines.map((pipeline) => ({
+      name: pipeline.name,
+      path: `/graphs/${pipeline.name}`,
+      description: pipeline.description,
       repoAddress,
     }));
+
+    repo.usedSolids.forEach((s) => {
+      if (s.definition.__typename === 'CompositeSolidDefinition') {
+        items.push({
+          name: s.definition.name,
+          path: `/graphs/${s.invocations[0].pipeline.name}/${s.invocations[0].solidHandle.handleID}`,
+          description: s.definition.description,
+          repoAddress,
+        });
+      }
+    });
+
+    return items.sort((a, b) => a.name.localeCompare(b.name));
   }, [repo, repoAddress]);
 
   if (loading) {
@@ -79,20 +112,14 @@ export const RepositoryGraphsList: React.FC<Props> = (props) => {
           </tr>
         </thead>
         <tbody>
-          {graphsForTable.map(({pipeline, repoAddress}) => (
-            <tr key={`${pipeline.name}-${repoAddressAsString(repoAddress)}`}>
+          {graphsForTable.map(({name, description, path, repoAddress}) => (
+            <tr key={`${name}-${repoAddressAsString(repoAddress)}`}>
               <td>
                 <Group direction="column" spacing={4}>
-                  <Link
-                    to={workspacePath(
-                      repoAddress.name,
-                      repoAddress.location,
-                      `/graphs/${pipeline.name}`,
-                    )}
-                  >
-                    {pipeline.name}
+                  <Link to={workspacePath(repoAddress.name, repoAddress.location, path)}>
+                    {name}
                   </Link>
-                  <Description>{pipeline.description}</Description>
+                  <Description>{description}</Description>
                 </Group>
               </td>
             </tr>
