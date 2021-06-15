@@ -18,12 +18,20 @@ interface Props extends RouteComponentProps {
 export const GraphRoot: React.FC<Props> = (props) => {
   const {repoAddress} = props;
   const path = explorerPathFromString(props.match.params[0]);
+
+  // Show the name of the composite solid we are within (-1 is the selection, -2 is current parent)
+  // or the name of the pipeline tweaked to look a bit more like a graph name.
+  const title =
+    path.pathSolids.length > 1
+      ? path.pathSolids[path.pathSolids.length - 2]
+      : path.pipelineName.replace('_pipeline', '');
+
   return (
     <div style={{height: '100%', display: 'flex', flexDirection: 'column'}}>
       <div style={{padding: 20, borderBottom: '1px solid #ccc'}}>
         <Group direction="column" spacing={20}>
           <PageHeader
-            title={<Heading>{path.pipelineName.replace('_pipeline', '')}</Heading>}
+            title={<Heading>{title}</Heading>}
             description={
               <>
                 <Link to={workspacePathFromAddress(repoAddress, '/graphs')}>Graph</Link> in{' '}
