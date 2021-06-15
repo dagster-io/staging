@@ -59,7 +59,7 @@ def test_using_file_system_for_subplan():
 
     instance = DagsterInstance.ephemeral()
 
-    resolved_run_config = ResolvedRunConfig.build(pipeline, run_config=run_config)
+    resolved_run_config = ResolvedRunConfig.build_for_test(pipeline, run_config=run_config)
     execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline), resolved_run_config)
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline, execution_plan=execution_plan
@@ -116,7 +116,7 @@ def test_using_intermediates_file_system_for_subplan():
     run_config = {"intermediate_storage": {"filesystem": {}}}
 
     instance = DagsterInstance.ephemeral()
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         pipeline,
         run_config=run_config,
     )
@@ -168,7 +168,7 @@ def test_using_intermediates_to_override():
     run_config = {"storage": {"filesystem": {}}, "intermediate_storage": {"in_memory": {}}}
 
     instance = DagsterInstance.ephemeral()
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         pipeline,
         run_config=run_config,
     )
@@ -204,7 +204,7 @@ def test_using_file_system_for_subplan_multiprocessing():
 
         pipeline = reconstructable(define_inty_pipeline)
 
-        resolved_run_config = ResolvedRunConfig.build(
+        resolved_run_config = ResolvedRunConfig.build_for_test(
             pipeline.get_definition(),
             run_config=run_config,
         )
@@ -267,7 +267,7 @@ def test_using_intermediate_file_system_for_subplan_multiprocessing():
 
         pipeline = reconstructable(define_inty_pipeline)
 
-        resolved_run_config = ResolvedRunConfig.build(
+        resolved_run_config = ResolvedRunConfig.build_for_test(
             pipeline.get_definition(),
             run_config=run_config,
         )
@@ -327,7 +327,7 @@ def test_execute_step_wrong_step_key():
     pipeline = define_inty_pipeline()
     instance = DagsterInstance.ephemeral()
 
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         pipeline,
     )
     execution_plan = ExecutionPlan.build(
@@ -373,7 +373,7 @@ def test_using_file_system_for_subplan_missing_input():
     run_config = {"storage": {"filesystem": {}}}
 
     instance = DagsterInstance.ephemeral()
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         pipeline,
         run_config=run_config,
     )
@@ -405,7 +405,7 @@ def test_using_file_system_for_subplan_invalid_step():
 
     instance = DagsterInstance.ephemeral()
 
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         pipeline,
         run_config=run_config,
     )

@@ -4,10 +4,8 @@ from dagster.config import Field, Selector
 from dagster.config.config_type import ALL_CONFIG_BUILTINS, Array, ConfigType
 from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
-from dagster.core.definitions.executor import ExecutorDefinition, in_process_executor
-from dagster.core.definitions.input import InputDefinition
-from dagster.core.definitions.output import OutputDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.instance import DagsterInstance
 from dagster.core.storage.output_manager import IOutputManagerDefinition
 from dagster.core.storage.root_input_manager import IInputManagerDefinition
 from dagster.core.storage.system_storage import default_intermediate_storage_defs
@@ -17,9 +15,12 @@ from dagster.utils import check
 from .configurable import ConfigurableDefinition
 from .definition_config_schema import IDefinitionConfigSchema
 from .dependency import DependencyStructure, Solid, SolidHandle, SolidInputHandle
+from .executor import ExecutorDefinition, in_process_executor
 from .graph import GraphDefinition
+from .input import InputDefinition
 from .logger import LoggerDefinition
 from .mode import ModeDefinition
+from .output import OutputDefinition
 from .resource import ResourceDefinition
 from .solid import NodeDefinition, SolidDefinition
 
@@ -63,16 +64,16 @@ class RunConfigSchemaCreationData(NamedTuple):
     solids: List[Solid]
     dependency_structure: DependencyStructure
     mode_definition: ModeDefinition
-    logger_defs: Dict[str, LoggerDefinition]
     ignored_solids: List[Solid]
     required_resources: Set[str]
+    instance: DagsterInstance
 
 
 def define_logger_dictionary_cls(creation_data: RunConfigSchemaCreationData) -> Shape:
     return Shape(
         {
             logger_name: def_config_field(logger_definition, is_required=False)
-            for logger_name, logger_definition in creation_data.logger_defs.items()
+            for logger_name, logger_definition in creation_data.mode_definition.loggers.items()
         }
     )
 

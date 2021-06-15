@@ -1,6 +1,14 @@
 from datetime import datetime
 
-from dagster import ModeDefinition, PresetDefinition, daily_schedule, pipeline, repository, solid
+from dagster import (
+    DagsterInstance,
+    ModeDefinition,
+    PresetDefinition,
+    daily_schedule,
+    pipeline,
+    repository,
+    solid,
+)
 from dagster.core.host_representation import (
     external_pipeline_data_from_def,
     external_repository_data_from_def,
@@ -44,7 +52,7 @@ def test_external_repository_data(snapshot):
     def repo():
         return [a_pipeline, a_schedule]
 
-    external_repo_data = external_repository_data_from_def(repo)
+    external_repo_data = external_repository_data_from_def(DagsterInstance.ephemeral(), repo)
     assert external_repo_data.get_external_pipeline_data("a_pipeline")
     assert external_repo_data.get_external_schedule_data("a_schedule")
     assert external_repo_data.get_external_partition_set_data("a_schedule_partitions")
@@ -52,4 +60,6 @@ def test_external_repository_data(snapshot):
 
 
 def test_external_pipeline_data(snapshot):
-    snapshot.assert_match(serialize_pp(external_pipeline_data_from_def(a_pipeline)))
+    snapshot.assert_match(
+        serialize_pp(external_pipeline_data_from_def(DagsterInstance.ephemeral(), a_pipeline))
+    )

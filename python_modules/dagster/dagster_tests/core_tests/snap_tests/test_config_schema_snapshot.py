@@ -1,5 +1,6 @@
 from dagster import (
     Array,
+    DagsterInstance,
     Enum,
     EnumValue,
     Field,
@@ -14,6 +15,8 @@ from dagster import (
 )
 from dagster.config.config_type import ConfigTypeKind
 from dagster.config.field import resolve_to_config_type
+from dagster.core.host_representation import PipelineIndex
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.snap import (
     ConfigEnumValueSnap,
     build_config_schema_snapshot,
@@ -25,6 +28,10 @@ from dagster.serdes import (
     serialize_dagster_namedtuple,
     serialize_pp,
 )
+
+
+def _build_config_schema_snapshot(pipeline_def):
+    return build_config_schema_snapshot(BoundPipeline(pipeline_def, DagsterInstance.ephemeral()))
 
 
 def snap_from_dagster_type(dagster_type):
@@ -187,7 +194,7 @@ def test_simple_pipeline_smoke_test():
     def single_solid_pipeline():
         solid_without_config()
 
-    config_schema_snapshot = build_config_schema_snapshot(single_solid_pipeline)
+    config_schema_snapshot = _build_config_schema_snapshot(single_solid_pipeline)
     assert config_schema_snapshot.all_config_snaps_by_key
 
     serialized = serialize_dagster_namedtuple(config_schema_snapshot)
@@ -206,7 +213,7 @@ def test_check_solid_config_correct():
 
     solid_config_key = solid_with_config.config_schema.config_type.key
 
-    config_snaps = build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
+    config_snaps = _build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
 
     assert solid_config_key in config_snaps
 
@@ -232,7 +239,7 @@ def test_check_solid_list_list_config_correct():
 
     solid_config_key = solid_with_config.config_schema.config_type.key
 
-    config_snaps = build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
+    config_snaps = _build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
     assert solid_config_key in config_snaps
     solid_config_snap = config_snaps[solid_config_key]
 
@@ -274,7 +281,7 @@ def test_kitchen_sink_break_out():
     def single_solid_pipeline():
         solid_with_kitchen_sink_config()
 
-    config_snaps = build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
+    config_snaps = _build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
 
     solid_config_key = solid_with_kitchen_sink_config.config_schema.config_type.key
     assert solid_config_key in config_snaps
@@ -322,7 +329,7 @@ def test_multiple_modes():
     def modez():
         noop_solid()
 
-    config_snaps = build_config_schema_snapshot(modez).all_config_snaps_by_key
+    config_snaps = _build_config_schema_snapshot(modez).all_config_snaps_by_key
 
     assert a_resource.config_schema.config_type.key in config_snaps
     assert b_resource.config_schema.config_type.key in config_snaps
@@ -332,7 +339,9 @@ def test_multiple_modes():
 
 
 def get_config_snap(pipeline_def, key):
-    return pipeline_def.get_pipeline_snapshot().config_schema_snapshot.get_config_snap(key)
+    return PipelineIndex.create_for_test(
+        pipeline_def
+    ).pipeline_snapshot.config_schema_snapshot.get_config_snap(key)
 
 
 def test_scalar_union():
@@ -347,7 +356,7 @@ def test_scalar_union():
     def single_solid_pipeline():
         solid_with_config()
 
-    config_snaps = build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
+    config_snaps = _build_config_schema_snapshot(single_solid_pipeline).all_config_snaps_by_key
 
     scalar_union_key = solid_with_config.config_schema.config_type.key
 

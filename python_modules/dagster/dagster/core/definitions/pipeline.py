@@ -40,7 +40,6 @@ from .solid import NodeDefinition
 from .utils import validate_tags
 
 if TYPE_CHECKING:
-    from .run_config_schema import RunConfigSchema
     from dagster.core.snap import PipelineSnapshot, ConfigSchemaSnapshot
     from dagster.core.host_representation import PipelineIndex
 
@@ -245,7 +244,6 @@ class PipelineDefinition(GraphDefinition):
         self._parent_pipeline_def = check.opt_inst_param(
             _parent_pipeline_def, "_parent_pipeline_def", PipelineDefinition
         )
-        self._cached_run_config_schemas: Dict[str, "RunConfigSchema"] = {}
         self._cached_external_pipeline = None
 
     def copy_for_configured(
@@ -278,21 +276,6 @@ class PipelineDefinition(GraphDefinition):
             positional_inputs=self.positional_inputs,
             _parent_pipeline_def=self._parent_pipeline_def,
         )
-
-    def get_run_config_schema(self, mode: Optional[str] = None) -> "RunConfigSchema":
-        check.opt_str_param(mode, "mode")
-
-        mode_def = self.get_mode_definition(mode)
-
-        if mode_def.name in self._cached_run_config_schemas:
-            return self._cached_run_config_schemas[mode_def.name]
-
-        self._cached_run_config_schemas[mode_def.name] = _create_run_config_schema(
-            self,
-            mode_def,
-            self._resource_requirements[mode_def.name],
-        )
-        return self._cached_run_config_schemas[mode_def.name]
 
     @property
     def mode_definitions(self) -> List[ModeDefinition]:
@@ -407,32 +390,12 @@ class PipelineDefinition(GraphDefinition):
 
         return self._preset_dict[name]
 
-    def get_pipeline_snapshot(self) -> "PipelineSnapshot":
-        return self.get_pipeline_index().pipeline_snapshot
-
-    def get_pipeline_snapshot_id(self) -> str:
-        return self.get_pipeline_index().pipeline_snapshot_id
-
-    def get_pipeline_index(self) -> "PipelineIndex":
-        from dagster.core.snap import PipelineSnapshot
-        from dagster.core.host_representation import PipelineIndex
-
-        return PipelineIndex(
-            PipelineSnapshot.from_pipeline_def(self), self.get_parent_pipeline_snapshot()
-        )
-
-    def get_config_schema_snapshot(self) -> "ConfigSchemaSnapshot":
-        return self.get_pipeline_snapshot().config_schema_snapshot
-
     @property
     def is_subset_pipeline(self) -> bool:
         return False
 
     @property
     def parent_pipeline_def(self) -> Optional["PipelineDefinition"]:
-        return None
-
-    def get_parent_pipeline_snapshot(self) -> Optional["PipelineSnapshot"]:
         return None
 
     @property
@@ -530,9 +493,6 @@ class PipelineSubsetDefinition(PipelineDefinition):
     @property
     def parent_pipeline_def(self) -> Optional["PipelineDefinition"]:
         return self._parent_pipeline_def
-
-    def get_parent_pipeline_snapshot(self) -> Optional["PipelineSnapshot"]:
-        return self._parent_pipeline_def.get_pipeline_snapshot()
 
     @property
     def is_subset_pipeline(self) -> bool:
@@ -899,63 +859,3 @@ def _build_all_node_defs(node_defs: List[NodeDefinition]) -> Dict[str, NodeDefin
                 all_defs[node_def.name] = node_def
 
     return all_defs
-
-
-def _create_run_config_schema(
-    pipeline_def: PipelineDefinition,
-    mode_definition: ModeDefinition,
-    required_resources: Set[str],
-) -> "RunConfigSchema":
-    from .run_config import (
-        RunConfigSchemaCreationData,
-        construct_config_type_dictionary,
-        define_run_config_schema_type,
-    )
-    from .run_config_schema import RunConfigSchema
-
-    # When executing with a subset pipeline, include the missing solids
-    # from the original pipeline as ignored to allow execution with
-    # run config that is valid for the original
-    if pipeline_def.is_subset_pipeline:
-        if pipeline_def.parent_pipeline_def is None:
-            check.failed("Unexpected subset pipeline state")
-
-        ignored_solids = [
-            solid
-            for solid in pipeline_def.parent_pipeline_def.solids
-            if not pipeline_def.has_solid_named(solid.name)
-        ]
-    else:
-        ignored_solids = []
-
-    run_config_schema_type = define_run_config_schema_type(
-        RunConfigSchemaCreationData(
-            pipeline_name=pipeline_def.name,
-            solids=pipeline_def.solids,
-            dependency_structure=pipeline_def.dependency_structure,
-            mode_definition=mode_definition,
-            logger_defs=mode_definition.loggers,
-            ignored_solids=ignored_solids,
-            required_resources=required_resources,
-        )
-    )
-
-    if mode_definition.config_changes:
-        outer_config_type = mode_definition.config_changes.apply_over(run_config_schema_type)
-    else:
-        outer_config_type = run_config_schema_type
-
-    if outer_config_type is None:
-        check.failed("Unexpected outer_config_type value of None")
-
-    config_type_dict_by_name, config_type_dict_by_key = construct_config_type_dictionary(
-        pipeline_def.all_solid_defs,
-        outer_config_type,
-    )
-
-    return RunConfigSchema(
-        run_config_schema_type=run_config_schema_type,
-        config_type_dict_by_name=config_type_dict_by_name,
-        config_type_dict_by_key=config_type_dict_by_key,
-        config_changes=mode_definition.config_changes,
-    )

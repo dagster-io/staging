@@ -16,9 +16,13 @@ from dagster.core.definitions import (
     ScheduleDefinition,
 )
 from dagster.core.definitions.partition import PartitionScheduleDefinition
+from dagster.core.instance import DagsterInstance
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo
+
+from .pipeline_index import PipelineIndex
 
 
 @whitelist_for_serdes
@@ -336,13 +340,18 @@ class ExternalPartitionExecutionErrorData(
         )
 
 
-def external_repository_data_from_def(repository_def):
-    check.inst_param(repository_def, "repository_def", RepositoryDefinition)
-
+def external_repository_data_from_def(
+    instance: DagsterInstance, repository_def: RepositoryDefinition
+):
     return ExternalRepositoryData(
         name=repository_def.name,
         external_pipeline_datas=sorted(
-            list(map(external_pipeline_data_from_def, repository_def.get_all_pipelines())),
+            list(
+                map(
+                    lambda pipeline_def: external_pipeline_data_from_def(instance, pipeline_def),
+                    repository_def.get_all_pipelines(),
+                )
+            ),
             key=lambda pd: pd.name,
         ),
         external_schedule_datas=sorted(
@@ -360,12 +369,12 @@ def external_repository_data_from_def(repository_def):
     )
 
 
-def external_pipeline_data_from_def(pipeline_def):
-    check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+def external_pipeline_data_from_def(instance: DagsterInstance, pipeline_def: PipelineDefinition):
+    pipeline_index = PipelineIndex.create(BoundPipeline(pipeline_def, instance))
     return ExternalPipelineData(
         name=pipeline_def.name,
-        pipeline_snapshot=pipeline_def.get_pipeline_snapshot(),
-        parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(),
+        pipeline_snapshot=pipeline_index.pipeline_snapshot,
+        parent_pipeline_snapshot=pipeline_index.parent_pipeline_snapshot,
         active_presets=sorted(
             list(map(external_preset_data_from_def, pipeline_def.preset_defs)),
             key=lambda pd: pd.name,

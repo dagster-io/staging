@@ -131,6 +131,7 @@ def io_manager_from_intermediate_storage(intermediate_storage_def):
     Returns:
         IOManagerDefinition
     """
+    from dagster.core.instance.bound import BoundPipeline
 
     check.inst_param(
         intermediate_storage_def, "intermediate_storage_def", IntermediateStorageDefinition
@@ -148,7 +149,9 @@ def io_manager_from_intermediate_storage(intermediate_storage_def):
         pipeline_def = init_context.pipeline_def_for_backwards_compat
         # depend on InitResourceContext.instance and pipeline_def_for_backwards_compat
         resolved_run_config = ResolvedRunConfig.build(
-            pipeline_def, pipeline_run.run_config, mode=pipeline_run.mode
+            BoundPipeline(pipeline_def, instance),
+            pipeline_run.run_config,
+            mode=pipeline_run.mode,
         )
         mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
 

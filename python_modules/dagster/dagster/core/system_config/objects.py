@@ -1,6 +1,17 @@
 """System-provided config objects and constructors."""
 import warnings
-from typing import AbstractSet, Any, Dict, List, NamedTuple, Optional, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Dict,
+    List,
+    NamedTuple,
+    Optional,
+    Type,
+    Union,
+    cast,
+)
 
 from dagster import check
 from dagster.core.definitions.configurable import ConfigurableDefinition
@@ -10,8 +21,12 @@ from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.errors import DagsterInvalidConfigError
+from dagster.core.instance import DagsterInstance
 from dagster.utils import ensure_single_item
 from dagster.utils.merger import deep_merge_dicts
+
+if TYPE_CHECKING:
+    from dagster.core.instance.bound import BoundPipeline
 
 
 class SolidConfig(
@@ -132,7 +147,9 @@ class ResolvedRunConfig(
 
     @staticmethod
     def build(
-        pipeline_def: PipelineDefinition,
+        # pipeline_def: PipelineDefinition,
+        # run_config_schema: "RunConfigSchema",
+        bound_pipeline: "BoundPipeline",
         run_config: Optional[Dict[str, Any]] = None,
         mode: Optional[str] = None,
     ) -> "ResolvedRunConfig":
@@ -143,13 +160,16 @@ class ResolvedRunConfig(
         """
         from dagster.config.validate import process_config
         from .composite_descent import composite_descent
+        from dagster.core.instance.bound import BoundPipeline
 
-        check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+        check.inst_param(bound_pipeline, "bound_pipeline", BoundPipeline)
+
+        pipeline_def = bound_pipeline.pipeline_def
         run_config = check.opt_dict_param(run_config, "run_config")
-        check.opt_str_param(mode, "mode")
+        if mode is None:
+            mode = pipeline_def.get_default_mode_name()
 
-        mode = mode or pipeline_def.get_default_mode_name()
-        run_config_schema = pipeline_def.get_run_config_schema(mode)
+        run_config_schema = bound_pipeline.get_run_config_schema(mode)
 
         if run_config_schema.config_mapping:
             outer_evr = process_config(
@@ -217,6 +237,20 @@ class ResolvedRunConfig(
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,
             mode=mode,
+        )
+
+    @staticmethod
+    def build_for_test(
+        pipeline_def: PipelineDefinition,
+        run_config: Optional[Dict[str, Any]] = None,
+        mode: Optional[str] = None,
+    ):
+        from dagster.core.instance.bound import BoundPipeline
+
+        return ResolvedRunConfig.build(
+            BoundPipeline(pipeline_def, DagsterInstance.ephemeral()),
+            run_config,
+            mode,
         )
 
     def intermediate_storage_def_for_mode(

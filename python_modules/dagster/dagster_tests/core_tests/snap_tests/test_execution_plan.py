@@ -1,5 +1,6 @@
 from dagster import InputDefinition, OutputDefinition, composite_solid, pipeline, solid
 from dagster.core.execution.api import create_execution_plan
+from dagster.core.host_representation import PipelineIndex
 from dagster.core.snap import create_pipeline_snapshot_id, snapshot_from_execution_plan
 from dagster.serdes import serialize_pp
 
@@ -18,7 +19,7 @@ def test_create_noop_execution_plan(snapshot):
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot())
+                execution_plan, PipelineIndex.create_for_test(noop_pipeline).pipeline_snapshot_id
             )
         )
     )
@@ -42,7 +43,7 @@ def test_create_execution_plan_with_dep(snapshot):
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot())
+                execution_plan, PipelineIndex.create_for_test(noop_pipeline).pipeline_snapshot_id
             )
         )
     )
@@ -81,7 +82,7 @@ def test_create_with_composite(snapshot):
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(do_comps.get_pipeline_snapshot())
+                execution_plan, PipelineIndex.create_for_test(do_comps).pipeline_snapshot_id
             )
         )
     )
@@ -101,7 +102,7 @@ def test_create_noop_execution_plan_with_tags(snapshot):
     snapshot.assert_match(
         serialize_pp(
             snapshot_from_execution_plan(
-                execution_plan, create_pipeline_snapshot_id(noop_pipeline.get_pipeline_snapshot())
+                execution_plan, PipelineIndex.create_for_test(noop_pipeline).pipeline_snapshot_id
             )
         )
     )

@@ -10,6 +10,7 @@ from dagster.core.execution.backfill import BulkActionStatus, PartitionBackfill
 from dagster.core.host_representation import (
     ExternalRepositoryOrigin,
     ManagedGrpcPythonEnvRepositoryLocationOrigin,
+    PipelineIndex,
 )
 from dagster.core.snap import create_pipeline_snapshot_id
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
@@ -137,10 +138,12 @@ class TestRunStorage:
         assert storage
         pipeline_def_a = PipelineDefinition(name="some_pipeline", solid_defs=[])
         pipeline_def_b = PipelineDefinition(name="some_other_pipeline", solid_defs=[])
-        pipeline_snapshot_a = pipeline_def_a.get_pipeline_snapshot()
-        pipeline_snapshot_b = pipeline_def_b.get_pipeline_snapshot()
-        pipeline_snapshot_a_id = create_pipeline_snapshot_id(pipeline_snapshot_a)
-        pipeline_snapshot_b_id = create_pipeline_snapshot_id(pipeline_snapshot_b)
+        pipeline_idx_a = PipelineIndex.create_for_test(pipeline_def_a)
+        pipeline_idx_b = PipelineIndex.create_for_test(pipeline_def_b)
+        pipeline_snapshot_a = pipeline_idx_a.pipeline_snapshot
+        pipeline_snapshot_b = pipeline_idx_b.pipeline_snapshot
+        pipeline_snapshot_a_id = pipeline_idx_a.pipeline_snapshot_id
+        pipeline_snapshot_b_id = pipeline_idx_b.pipeline_snapshot_id
 
         assert storage.add_pipeline_snapshot(pipeline_snapshot_a) == pipeline_snapshot_a_id
         assert storage.add_pipeline_snapshot(pipeline_snapshot_b) == pipeline_snapshot_b_id
@@ -712,8 +715,9 @@ class TestRunStorage:
 
     def test_add_get_snapshot(self, storage):
         pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
-        pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
-        pipeline_snapshot_id = create_pipeline_snapshot_id(pipeline_snapshot)
+        pipeline_idx = PipelineIndex.create_for_test(pipeline_def)
+        pipeline_snapshot = pipeline_idx.pipeline_snapshot
+        pipeline_snapshot_id = pipeline_idx.pipeline_snapshot_id
 
         assert storage.add_pipeline_snapshot(pipeline_snapshot) == pipeline_snapshot_id
         fetched_pipeline_snapshot = storage.get_pipeline_snapshot(pipeline_snapshot_id)
@@ -730,10 +734,9 @@ class TestRunStorage:
     def test_single_write_read_with_snapshot(self, storage):
         run_with_snapshot_id = "lkasjdflkjasdf"
         pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
-
-        pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
-
-        pipeline_snapshot_id = create_pipeline_snapshot_id(pipeline_snapshot)
+        pipeline_idx = PipelineIndex.create_for_test(pipeline_def)
+        pipeline_snapshot = pipeline_idx.pipeline_snapshot
+        pipeline_snapshot_id = pipeline_idx.pipeline_snapshot_id
 
         run_with_snapshot = PipelineRun(
             run_id=run_with_snapshot_id,
@@ -779,8 +782,9 @@ class TestRunStorage:
 
         pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
         execution_plan = create_execution_plan(pipeline_def)
+        pipeline_idx = PipelineIndex.create_for_test(pipeline_def)
         ep_snapshot = snapshot_from_execution_plan(
-            execution_plan, pipeline_def.get_pipeline_snapshot_id()
+            execution_plan, pipeline_idx.pipeline_snapshot_id
         )
 
         snapshot_id = storage.add_execution_plan_snapshot(ep_snapshot)

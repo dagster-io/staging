@@ -18,6 +18,8 @@ from dagster import (
 from dagster.core.definitions import AssetMaterialization, Solid, create_run_config_schema
 from dagster.core.definitions.dependency import SolidHandle, SolidOutputHandle
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.instance.bound import BoundPipeline
+from dagster.core.test_utils import instance_for_test
 
 
 def test_deps_equal():
@@ -137,7 +139,12 @@ def test_pipeline_types():
         dependencies={"solid_one": {"input_one": DependencyDefinition("produce_string")}},
     )
 
-    run_config_schema = create_run_config_schema(pipeline_def)
+    with instance_for_test() as instance:
+        run_config_schema = create_run_config_schema(
+            pipeline_def=pipeline_def,
+            instance=instance,
+            mode=None,
+        )
 
     assert run_config_schema.has_config_type("String")
     assert run_config_schema.has_config_type("Int")

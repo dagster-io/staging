@@ -79,7 +79,7 @@ def one_input_no_output_pipeline():
 
 
 def test_basic_json_default_output_config_schema():
-    env = ResolvedRunConfig.build(
+    env = ResolvedRunConfig.build_for_test(
         single_int_output_pipeline(),
         {"solids": {"return_one": {"outputs": [{"result": {"json": {"path": "foo"}}}]}}},
     )
@@ -91,7 +91,7 @@ def test_basic_json_default_output_config_schema():
 
 
 def test_basic_json_named_output_config_schema():
-    env = ResolvedRunConfig.build(
+    env = ResolvedRunConfig.build_for_test(
         single_int_named_output_pipeline(),
         {"solids": {"return_named_one": {"outputs": [{"named": {"json": {"path": "foo"}}}]}}},
     )
@@ -104,7 +104,7 @@ def test_basic_json_named_output_config_schema():
 
 def test_basic_json_misnamed_output_config_schema():
     with pytest.raises(DagsterInvalidConfigError) as exc_context:
-        ResolvedRunConfig.build(
+        ResolvedRunConfig.build_for_test(
             single_int_named_output_pipeline(),
             {
                 "solids": {
@@ -119,10 +119,12 @@ def test_basic_json_misnamed_output_config_schema():
 
 
 def test_no_outputs_no_inputs_config_schema():
-    assert ResolvedRunConfig.build(no_input_no_output_pipeline())
+    assert ResolvedRunConfig.build_for_test(no_input_no_output_pipeline())
 
     with pytest.raises(DagsterInvalidConfigError) as exc_context:
-        ResolvedRunConfig.build(no_input_no_output_pipeline(), {"solids": {"return_one": {}}})
+        ResolvedRunConfig.build_for_test(
+            no_input_no_output_pipeline(), {"solids": {"return_one": {}}}
+        )
 
     assert len(exc_context.value.errors) == 1
     assert (
@@ -132,13 +134,13 @@ def test_no_outputs_no_inputs_config_schema():
 
 
 def test_no_outputs_one_input_config_schema():
-    assert ResolvedRunConfig.build(
+    assert ResolvedRunConfig.build_for_test(
         one_input_no_output_pipeline(),
         {"solids": {"take_input_return_nothing": {"inputs": {"dummy": {"value": "value"}}}}},
     )
 
     with pytest.raises(DagsterInvalidConfigError) as exc_context:
-        ResolvedRunConfig.build(
+        ResolvedRunConfig.build_for_test(
             one_input_no_output_pipeline(),
             {
                 "solids": {

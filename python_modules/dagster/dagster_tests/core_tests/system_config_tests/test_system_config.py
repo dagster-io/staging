@@ -2,6 +2,7 @@ import re
 
 from dagster import (
     Any,
+    DagsterInstance,
     DependencyDefinition,
     Field,
     InputDefinition,
@@ -21,13 +22,21 @@ from dagster import (
 )
 from dagster.config.config_type import ConfigTypeKind
 from dagster.config.validate import process_config
-from dagster.core.definitions import create_run_config_schema, create_run_config_schema_type
+from dagster.core.definitions import create_run_config_schema
 from dagster.core.definitions.run_config import (
     RunConfigSchemaCreationData,
     define_solid_dictionary_cls,
 )
 from dagster.core.system_config.objects import ResolvedRunConfig, ResourceConfig, SolidConfig
+from dagster.core.test_utils import instance_for_test
 from dagster.loggers import default_loggers
+
+
+def create_run_config_schema_type(pipeline_def):
+    schema = create_run_config_schema(
+        instance=DagsterInstance.ephemeral(), pipeline_def=pipeline_def, mode=None
+    )
+    return schema.config_type
 
 
 def create_creation_data(pipeline_def):
@@ -61,7 +70,9 @@ def test_all_types_provided():
         ],
     )
 
-    run_config_schema = create_run_config_schema(pipeline_def)
+    run_config_schema = create_run_config_schema(
+        DagsterInstance.ephemeral(), pipeline_def, mode=None
+    )
 
     all_types = list(run_config_schema.all_config_types())
 
@@ -108,7 +119,7 @@ def test_provided_default_on_resources_config():
 
     assert some_resource_field.default_value == {"config": {"with_default_int": 23434}}
 
-    value = ResolvedRunConfig.build(pipeline_def, {})
+    value = ResolvedRunConfig.build_for_test(pipeline_def, {})
     assert value.resources == {
         "some_resource": ResourceConfig({"with_default_int": 23434}),
     }
@@ -123,7 +134,7 @@ def test_default_environment():
     def pipeline_def():
         some_solid()
 
-    assert ResolvedRunConfig.build(pipeline_def, {})
+    assert ResolvedRunConfig.build_for_test(pipeline_def, {})
 
 
 def test_solid_config():
@@ -135,7 +146,7 @@ def test_solid_config():
 def test_solid_dictionary_type():
     pipeline_def = define_test_solids_config_pipeline()
 
-    env_obj = ResolvedRunConfig.build(
+    env_obj = ResolvedRunConfig.build_for_test(
         pipeline_def,
         {
             "solids": {"int_config_solid": {"config": 1}, "string_config_solid": {"config": "bar"}},
@@ -218,7 +229,9 @@ def test_solid_dictionary_some_no_config():
         int_config_solid()
         no_config_solid()
 
-    env = ResolvedRunConfig.build(pipeline_def, {"solids": {"int_config_solid": {"config": 1}}})
+    env = ResolvedRunConfig.build_for_test(
+        pipeline_def, {"solids": {"int_config_solid": {"config": 1}}}
+    )
 
     assert {"int_config_solid", "no_config_solid"} == set(env.solids.keys())
     assert env.solids == {
@@ -255,7 +268,7 @@ def test_whole_environment():
         ],
     )
 
-    env = ResolvedRunConfig.build(
+    env = ResolvedRunConfig.build_for_test(
         pipeline_def,
         {
             "resources": {"test_resource": {"config": 1}},
@@ -342,7 +355,7 @@ def test_optional_solid_with_optional_scalar_config():
 
     assert solids_type.fields["int_config_solid"].is_required is False
 
-    env_obj = ResolvedRunConfig.build(pipeline_def, {})
+    env_obj = ResolvedRunConfig.build_for_test(pipeline_def, {})
 
     assert env_obj.solids["int_config_solid"].config is None
 
@@ -409,7 +422,7 @@ def test_required_solid_with_required_subfield():
 
     assert env_type.fields["execution"].is_required is False
 
-    env_obj = ResolvedRunConfig.build(
+    env_obj = ResolvedRunConfig.build_for_test(
         pipeline_def,
         {"solids": {"int_config_solid": {"config": {"required_field": "foobar"}}}},
     )
@@ -560,7 +573,7 @@ def test_optional_and_required_context():
         env_type, "resources", "required_resource", "config", "required_field"
     ).is_required
 
-    env_obj = ResolvedRunConfig.build(
+    env_obj = ResolvedRunConfig.build_for_test(
         pipeline_def,
         {"resources": {"required_resource": {"config": {"required_field": "foo"}}}},
     )

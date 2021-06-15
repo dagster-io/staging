@@ -235,6 +235,9 @@ class DagsterApiServer(DagsterApiServicer):
 
         self.__cleanup_thread.start()
 
+        # This likely involves other changes...
+        self._instance = DagsterInstance.get()
+
     def cleanup(self):
         if self.__heartbeat_thread:
             self.__heartbeat_thread.join()
@@ -465,7 +468,7 @@ class DagsterApiServer(DagsterApiServicer):
         check.inst_param(repository_origin, "repository_origin", ExternalRepositoryOrigin)
         recon_repo = self._recon_repository_from_origin(repository_origin)
         return serialize_dagster_namedtuple(
-            external_repository_data_from_def(recon_repo.get_definition())
+            external_repository_data_from_def(self._instance, recon_repo.get_definition())
         )
 
     def ExternalRepository(self, request, _context):

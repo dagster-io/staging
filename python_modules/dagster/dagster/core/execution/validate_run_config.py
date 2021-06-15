@@ -2,6 +2,8 @@ from typing import Any, Dict, Optional
 
 from dagster import check
 from dagster.core.definitions import PipelineDefinition
+from dagster.core.instance import DagsterInstance
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.system_config.objects import ResolvedRunConfig
 from dagster.utils.backcompat import experimental_fn_warning
 
@@ -10,6 +12,7 @@ def validate_run_config(
     pipeline_def: PipelineDefinition,
     run_config: Optional[Dict[str, Any]] = None,
     mode: Optional[str] = None,
+    instance: DagsterInstance = None,
 ) -> Dict[str, Any]:
     """Function to validate a provided run config blob against a given pipeline and mode.
 
@@ -31,5 +34,9 @@ def validate_run_config(
     pipeline_def = check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
     run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
     mode = check.opt_str_param(mode, "mode", default=pipeline_def.get_default_mode_name())
-
-    return ResolvedRunConfig.build(pipeline_def, run_config, mode=mode).to_dict()
+    instance = instance or DagsterInstance.ephemeral()
+    return ResolvedRunConfig.build(
+        BoundPipeline(pipeline_def, instance),
+        run_config,
+        mode=mode,
+    ).to_dict()

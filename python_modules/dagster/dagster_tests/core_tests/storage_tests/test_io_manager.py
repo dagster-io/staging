@@ -678,7 +678,7 @@ def test_get_output_context_with_resources():
         get_output_context(
             execution_plan=create_execution_plan(basic_pipeline),
             pipeline_def=basic_pipeline,
-            resolved_run_config=ResolvedRunConfig.build(basic_pipeline),
+            resolved_run_config=ResolvedRunConfig.build_for_test(basic_pipeline),
             step_output_handle=StepOutputHandle("basic_solid", "result"),
             run_id=None,
             log_manager=None,

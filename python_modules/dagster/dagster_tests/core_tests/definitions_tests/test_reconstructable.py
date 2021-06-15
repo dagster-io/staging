@@ -6,7 +6,9 @@ import types
 import pytest
 from dagster import DagsterInvariantViolationError, PipelineDefinition, lambda_solid, pipeline
 from dagster.core.definitions.reconstructable import ReconstructableRepository, reconstructable
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.snap import PipelineSnapshot, create_pipeline_snapshot_id
+from dagster.core.test_utils import instance_for_test
 from dagster.utils import file_relative_path
 
 
@@ -36,7 +38,10 @@ lambda_version = lambda: the_pipeline
 
 
 def pid(pipeline_def):
-    return create_pipeline_snapshot_id(PipelineSnapshot.from_pipeline_def(pipeline_def))
+    with instance_for_test() as instance:
+        return create_pipeline_snapshot_id(
+            PipelineSnapshot.create(BoundPipeline(pipeline_def, instance), lineage=None)
+        )
 
 
 def test_function():

@@ -3,6 +3,7 @@ import zlib
 from unittest import mock
 
 from dagster import pipeline, solid
+from dagster.core.host_representation import PipelineIndex
 from dagster.core.storage.runs.sql_run_storage import defensively_unpack_pipeline_snapshot_query
 from dagster.serdes import serialize_dagster_namedtuple
 
@@ -84,7 +85,7 @@ def test_correctly_fetch_decompress_parse_snapshot():
     def noop_pipeline():
         noop_solid()
 
-    noop_pipeline_snapshot = noop_pipeline.get_pipeline_snapshot()
+    noop_pipeline_snapshot = PipelineIndex.create_for_test(noop_pipeline).pipeline_snapshot
 
     mock_logger = mock.MagicMock()
     assert (

@@ -40,6 +40,7 @@ from dagster.core.execution.resources_init import (
 from dagster.core.execution.retries import RetryMode
 from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.init import InitIntermediateStorageContext
 from dagster.core.storage.intermediate_storage import IntermediateStorage
@@ -140,7 +141,12 @@ def create_context_creation_data(
     instance: DagsterInstance,
 ) -> "ContextCreationData":
     pipeline_def = pipeline.get_definition()
-    resolved_run_config = ResolvedRunConfig.build(pipeline_def, run_config, mode=pipeline_run.mode)
+    bound_pipeline = BoundPipeline(pipeline_def, instance)
+    resolved_run_config = ResolvedRunConfig.build(
+        bound_pipeline,
+        run_config,
+        mode=pipeline_run.mode,
+    )
 
     mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
     intermediate_storage_def = resolved_run_config.intermediate_storage_def_for_mode(mode_def)

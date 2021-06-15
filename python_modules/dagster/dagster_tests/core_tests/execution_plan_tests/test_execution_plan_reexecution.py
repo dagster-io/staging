@@ -73,7 +73,7 @@ def test_execution_plan_reexecution():
 
     ## re-execute add_two
 
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         pipeline_def,
         run_config=run_config,
     )
@@ -81,17 +81,19 @@ def test_execution_plan_reexecution():
         InMemoryPipeline(pipeline_def),
         resolved_run_config,
     )
+
+    subset_plan = execution_plan.build_subset_plan(["add_two"], pipeline_def, resolved_run_config)
+
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline_def,
-        execution_plan=execution_plan,
+        execution_plan=subset_plan,
         run_config=run_config,
         parent_run_id=result.run_id,
         root_run_id=result.run_id,
-        step_keys_to_execute=["add_two"],
     )
 
     step_events = execute_plan(
-        execution_plan.build_subset_plan(["add_two"], pipeline_def, resolved_run_config),
+        subset_plan,
         InMemoryPipeline(pipeline_def),
         run_config=run_config,
         pipeline_run=pipeline_run,
@@ -152,7 +154,7 @@ def test_execution_plan_reexecution_with_in_memory():
 
     ## re-execute add_two
 
-    resolved_run_config = ResolvedRunConfig.build(pipeline_def, run_config=run_config)
+    resolved_run_config = ResolvedRunConfig.build_for_test(pipeline_def, run_config=run_config)
     execution_plan = ExecutionPlan.build(InMemoryPipeline(pipeline_def), resolved_run_config)
 
     pipeline_run = instance.create_run_for_pipeline(

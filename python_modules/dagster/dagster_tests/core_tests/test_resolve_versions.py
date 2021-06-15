@@ -175,7 +175,7 @@ def versioned_pipeline_expected_step2_output_version():
 def test_resolve_step_versions_no_external_dependencies():
     versioned_pipeline = versioned_pipeline_factory()
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
+    resolved_run_config = ResolvedRunConfig.build_for_test(versioned_pipeline)
 
     versions = resolve_step_versions(
         versioned_pipeline, speculative_execution_plan, resolved_run_config
@@ -191,7 +191,9 @@ def test_resolve_step_output_versions_no_external_dependencies():
     speculative_execution_plan = create_execution_plan(
         versioned_pipeline, run_config={}, mode="main"
     )
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline, run_config={}, mode="main")
+    resolved_run_config = ResolvedRunConfig.build_for_test(
+        versioned_pipeline, run_config={}, mode="main"
+    )
 
     versions = resolve_step_output_versions(
         versioned_pipeline, speculative_execution_plan, resolved_run_config
@@ -225,7 +227,7 @@ def no_version_pipeline():
 def test_resolve_memoized_execution_plan_no_stored_results():
     versioned_pipeline = versioned_pipeline_factory(VersionedInMemoryIOManager())
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
+    resolved_run_config = ResolvedRunConfig.build_for_test(versioned_pipeline)
 
     with DagsterInstance.ephemeral() as dagster_instance:
         memoized_execution_plan = resolve_memoized_execution_plan(
@@ -248,7 +250,7 @@ def test_resolve_memoized_execution_plan_yes_stored_results():
 
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
 
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
+    resolved_run_config = ResolvedRunConfig.build_for_test(versioned_pipeline)
 
     step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
     step_output_version = resolve_step_output_versions(
@@ -288,7 +290,7 @@ def test_resolve_memoized_execution_plan_partial_versioning():
     partially_versioned_pipeline = partially_versioned_pipeline_factory(manager)
     speculative_execution_plan = create_execution_plan(partially_versioned_pipeline)
 
-    resolved_run_config = ResolvedRunConfig.build(partially_versioned_pipeline)
+    resolved_run_config = ResolvedRunConfig.build_for_test(partially_versioned_pipeline)
 
     step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
 
@@ -356,7 +358,7 @@ def run_test_with_builtin_type(type_to_test, loader_version, type_value):
         run_config=run_config,
     )
 
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         versioned_pipeline_ext_input_builtin_type, run_config=run_config
     )
 
@@ -406,7 +408,7 @@ def versioned_pipeline_default_value():
 
 def test_resolve_step_versions_default_value():
     speculative_execution_plan = create_execution_plan(versioned_pipeline_default_value)
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline_default_value)
+    resolved_run_config = ResolvedRunConfig.build_for_test(versioned_pipeline_default_value)
 
     versions = resolve_step_versions(
         versioned_pipeline_default_value, speculative_execution_plan, resolved_run_config
@@ -502,7 +504,9 @@ def basic_resource_versions():
         }
     }
 
-    resolved_run_config = ResolvedRunConfig.build(modes_pipeline, run_config, mode="fakemode")
+    resolved_run_config = ResolvedRunConfig.build_for_test(
+        modes_pipeline, run_config, mode="fakemode"
+    )
 
     resource_versions_by_key = resolve_resource_versions(resolved_run_config, modes_pipeline)
 
@@ -540,7 +544,7 @@ def test_step_versions_with_resources():
     speculative_execution_plan = create_execution_plan(
         versioned_modes_pipeline, run_config=run_config, mode="fakemode"
     )
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         versioned_modes_pipeline, run_config=run_config, mode="fakemode"
     )
 
@@ -551,7 +555,7 @@ def test_step_versions_with_resources():
     solid_def_version = fake_solid_resources_versioned.version
     solid_config_version = resolve_config_version(None)
 
-    resolved_run_config = ResolvedRunConfig.build(
+    resolved_run_config = ResolvedRunConfig.build_for_test(
         versioned_modes_pipeline, run_config, mode="fakemode"
     )
 
@@ -596,7 +600,9 @@ def test_step_versions_separate_io_manager():
         io_mgr_pipeline, run_config={}, mode="fakemode"
     )
 
-    resolved_run_config = ResolvedRunConfig.build(io_mgr_pipeline, run_config={}, mode="fakemode")
+    resolved_run_config = ResolvedRunConfig.build_for_test(
+        io_mgr_pipeline, run_config={}, mode="fakemode"
+    )
 
     versions = resolve_step_versions(
         io_mgr_pipeline, speculative_execution_plan, resolved_run_config
@@ -633,7 +639,7 @@ def test_step_versions_composite_solid():
 
     speculative_execution_plan = create_execution_plan(wrap_pipeline, run_config=run_config)
 
-    resolved_run_config = ResolvedRunConfig.build(wrap_pipeline, run_config=run_config)
+    resolved_run_config = ResolvedRunConfig.build_for_test(wrap_pipeline, run_config=run_config)
 
     versions = resolve_step_versions(wrap_pipeline, speculative_execution_plan, resolved_run_config)
 

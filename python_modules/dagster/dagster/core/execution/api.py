@@ -16,6 +16,7 @@ from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
 from dagster.core.execution.retries import RetryMode
 from dagster.core.instance import DagsterInstance, is_memoized_run
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.selector import parse_step_selection
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import ResolvedRunConfig
@@ -189,7 +190,9 @@ def execute_run(
 
     if is_memoized_run(pipeline_run.tags):
         resolved_run_config = ResolvedRunConfig.build(
-            pipeline.get_definition(), pipeline_run.run_config, pipeline_run.mode
+            BoundPipeline(pipeline.get_definition(), instance),
+            pipeline_run.run_config,
+            pipeline_run.mode,
         )
 
         execution_plan = resolve_memoized_execution_plan(
@@ -493,11 +496,10 @@ def reexecute_pipeline(
             ),
         )
 
-        step_keys_to_execute: Optional[List[str]] = None
         execution_plan: Optional[ExecutionPlan] = None
         # resolve step selection DSL queries using parent execution information
         if step_selection:
-            step_keys_to_execute, execution_plan = _resolve_reexecute_step_selection(
+            execution_plan = _resolve_reexecute_step_selection(
                 execute_instance,
                 pipeline,
                 mode,
@@ -514,8 +516,6 @@ def reexecute_pipeline(
             tags=tags,
             solid_selection=parent_pipeline_run.solid_selection,
             solids_to_execute=parent_pipeline_run.solids_to_execute,
-            # convert to frozenset https://github.com/dagster-io/dagster/issues/2914
-            step_keys_to_execute=list(step_keys_to_execute) if step_keys_to_execute else None,
             root_run_id=parent_pipeline_run.root_run_id or parent_pipeline_run.run_id,
             parent_run_id=parent_pipeline_run.run_id,
         )
@@ -597,11 +597,10 @@ def reexecute_pipeline_iterator(
             ),
         )
 
-        step_keys_to_execute: Optional[List[str]] = None
         execution_plan: Optional[ExecutionPlan] = None
         # resolve step selection DSL queries using parent execution information
         if step_selection:
-            step_keys_to_execute, execution_plan = _resolve_reexecute_step_selection(
+            execution_plan = _resolve_reexecute_step_selection(
                 execute_instance,
                 pipeline,
                 mode,
@@ -618,8 +617,6 @@ def reexecute_pipeline_iterator(
             tags=tags,
             solid_selection=parent_pipeline_run.solid_selection,
             solids_to_execute=parent_pipeline_run.solids_to_execute,
-            # convert to frozenset https://github.com/dagster-io/dagster/issues/2914
-            step_keys_to_execute=list(step_keys_to_execute) if step_keys_to_execute else None,
             root_run_id=parent_pipeline_run.root_run_id or parent_pipeline_run.run_id,
             parent_run_id=parent_pipeline_run.run_id,
         )
@@ -723,6 +720,7 @@ def create_execution_plan(
     mode: Optional[str] = None,
     step_keys_to_execute: Optional[List[str]] = None,
     known_state: KnownExecutionState = None,
+    instance: DagsterInstance = None,
 ) -> ExecutionPlan:
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
@@ -731,14 +729,18 @@ def create_execution_plan(
     mode = check.opt_str_param(mode, "mode", default=pipeline_def.get_default_mode_name())
     check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
 
-    resolved_run_config = ResolvedRunConfig.build(pipeline_def, run_config, mode=mode)
+    with ephemeral_instance_if_missing(instance) as execute_instance:
+        bound_pipeline = BoundPipeline(pipeline_def, execute_instance)
+        resolved_run_config = ResolvedRunConfig.build(
+            bound_pipeline, run_config=run_config, mode=mode
+        )
 
-    return ExecutionPlan.build(
-        pipeline,
-        resolved_run_config,
-        step_keys_to_execute=step_keys_to_execute,
-        known_state=known_state,
-    )
+        return ExecutionPlan.build(
+            pipeline,
+            resolved_run_config,
+            step_keys_to_execute=step_keys_to_execute,
+            known_state=known_state,
+        )
 
 
 def pipeline_execution_iterator(
@@ -982,6 +984,7 @@ def _resolve_reexecute_step_selection(
         pipeline,
         run_config,
         mode,
+        step_keys_to_execute=list(step_keys_to_execute),
         known_state=KnownExecutionState.for_reexecution(parent_logs, step_keys_to_execute),
     )
-    return step_keys_to_execute, execution_plan
+    return execution_plan

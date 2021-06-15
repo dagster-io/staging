@@ -9,6 +9,7 @@ from dagster.core.errors import (
     DagsterInvariantViolationError,
 )
 from dagster.core.execution.api import create_execution_plan
+from dagster.core.host_representation import PipelineIndex
 from dagster.core.instance import DagsterInstance
 from dagster.core.snap import (
     create_execution_plan_snapshot_id,
@@ -72,8 +73,9 @@ def test_create_pipeline_snapshot():
 
         run = instance.get_run_by_id(result.run_id)
 
-        assert run.pipeline_snapshot_id == create_pipeline_snapshot_id(
-            noop_pipeline.get_pipeline_snapshot()
+        assert (
+            run.pipeline_snapshot_id
+            == PipelineIndex.create_for_test(noop_pipeline).pipeline_snapshot_id
         )
 
 
@@ -90,7 +92,7 @@ def test_create_execution_plan_snapshot():
         execution_plan = create_execution_plan(noop_pipeline)
 
         ep_snapshot = snapshot_from_execution_plan(
-            execution_plan, noop_pipeline.get_pipeline_snapshot_id()
+            execution_plan, PipelineIndex.create_for_test(noop_pipeline).pipeline_snapshot_id
         )
         ep_snapshot_id = create_execution_plan_snapshot_id(ep_snapshot)
 

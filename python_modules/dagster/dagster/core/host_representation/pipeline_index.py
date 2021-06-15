@@ -1,9 +1,15 @@
+from typing import Optional
+
 from dagster import check
+from dagster.core.definitions.pipeline import PipelineDefinition, PipelineSubsetDefinition
+from dagster.core.instance import DagsterInstance
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.snap import (
     DependencyStructureIndex,
     PipelineSnapshot,
     create_pipeline_snapshot_id,
 )
+from dagster.core.snap.pipeline_snapshot import PipelineSnapshotLineage
 
 
 class PipelineIndex:
@@ -107,3 +113,33 @@ class PipelineIndex:
     @property
     def config_schema_snapshot(self):
         return self.pipeline_snapshot.config_schema_snapshot
+
+    @staticmethod
+    def create(bound_pipeline: BoundPipeline) -> "PipelineIndex":
+        pipeline_def = bound_pipeline.pipeline_def
+
+        lineage = None
+        parent_pipeline_snapshot = None
+        if isinstance(pipeline_def, PipelineSubsetDefinition):
+            parent_pipeline_snapshot = PipelineSnapshot.create(
+                bound_pipeline.get_parent(),
+                lineage=None,
+            )
+            lineage = PipelineSnapshotLineage(
+                parent_snapshot_id=create_pipeline_snapshot_id(parent_pipeline_snapshot),
+                solid_selection=pipeline_def.solid_selection,
+                solids_to_execute=pipeline_def.solids_to_execute,
+            )
+
+        pipeline_snapshot = PipelineSnapshot.create(bound_pipeline, lineage=lineage)
+
+        return PipelineIndex(
+            pipeline_snapshot=pipeline_snapshot,
+            parent_pipeline_snapshot=parent_pipeline_snapshot,
+        )
+
+    @staticmethod
+    def create_for_test(
+        pipeline_def: PipelineDefinition,
+    ):
+        return PipelineIndex.create(BoundPipeline(pipeline_def, DagsterInstance.ephemeral()))

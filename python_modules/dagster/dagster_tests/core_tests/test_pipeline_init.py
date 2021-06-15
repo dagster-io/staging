@@ -84,7 +84,7 @@ def test_clean_event_generator_exit():
         pipeline_def=pipeline_def, execution_plan=execution_plan
     )
     log_manager = DagsterLogManager(run_id=pipeline_run.run_id, logging_tags={}, loggers=[])
-    resolved_run_config = ResolvedRunConfig.build(pipeline_def)
+    resolved_run_config = ResolvedRunConfig.build_for_test(pipeline_def)
     execution_plan = create_execution_plan(pipeline_def)
 
     resource_name, resource_def = next(iter(pipeline_def.get_default_mode().resource_defs.items()))
@@ -144,7 +144,7 @@ def test_intermediate_storage_run_config_not_required():
         intermediate_storage_defs=[intermediate_storage_def],
     )
     pipeline_def = PipelineDefinition([fake_solid], name="fakename", mode_defs=[fake_mode])
-    resolved_run_config = ResolvedRunConfig.build(pipeline_def, {}, mode="fakemode")
+    resolved_run_config = ResolvedRunConfig.build_for_test(pipeline_def, {}, mode="fakemode")
     assert resolved_run_config.intermediate_storage.intermediate_storage_name == "test_intermediate"
 
 
@@ -168,7 +168,9 @@ def test_intermediate_storage_definition_run_config_required():
     )
     pipeline_def = PipelineDefinition([fake_solid], name="fakename", mode_defs=[fake_mode])
 
-    resolved_run_config = ResolvedRunConfig.build(pipeline_def, run_config, mode="fakemode")
+    resolved_run_config = ResolvedRunConfig.build_for_test(
+        pipeline_def, run_config, mode="fakemode"
+    )
 
     assert (
         resolved_run_config.intermediate_storage.intermediate_storage_name
@@ -176,4 +178,4 @@ def test_intermediate_storage_definition_run_config_required():
     )
 
     with pytest.raises(DagsterInvalidConfigError):
-        resolved_run_config = ResolvedRunConfig.build(pipeline_def, {}, mode="fakemode")
+        resolved_run_config = ResolvedRunConfig.build_for_test(pipeline_def, {}, mode="fakemode")

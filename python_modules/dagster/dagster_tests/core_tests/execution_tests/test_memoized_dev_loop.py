@@ -39,7 +39,7 @@ def get_step_keys_to_execute(pipeline, run_config, mode, instance):
         pipeline,
         run_config,
         instance,
-        ResolvedRunConfig.build(pipeline, run_config=run_config, mode=mode),
+        ResolvedRunConfig.build_for_test(pipeline, run_config=run_config, mode=mode),
     )
     return memoized_execution_plan.step_keys_to_execute
 

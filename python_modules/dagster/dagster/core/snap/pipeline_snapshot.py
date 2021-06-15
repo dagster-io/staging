@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import Optional
 
 from dagster import Field, Permissive, Selector, Shape, check
 from dagster.config.config_type import (
@@ -18,6 +19,7 @@ from dagster.config.snap import (
     ConfigTypeSnap,
 )
 from dagster.core.definitions.pipeline import PipelineDefinition, PipelineSubsetDefinition
+from dagster.core.instance.bound import BoundPipeline
 from dagster.core.utils import toposort_flatten
 from dagster.serdes import create_snapshot_id, deserialize_value, whitelist_for_serdes
 
@@ -88,28 +90,27 @@ class PipelineSnapshot(
         )
 
     @classmethod
-    def from_pipeline_def(cls, pipeline_def):
-        check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
-        lineage = None
-        if isinstance(pipeline_def, PipelineSubsetDefinition):
-            lineage = PipelineSnapshotLineage(
-                parent_snapshot_id=create_pipeline_snapshot_id(
-                    cls.from_pipeline_def(pipeline_def.parent_pipeline_def)
-                ),
-                solid_selection=pipeline_def.solid_selection,
-                solids_to_execute=pipeline_def.solids_to_execute,
-            )
+    def create(
+        cls,
+        bound_pipeline: BoundPipeline,
+        lineage: Optional["PipelineSnapshotLineage"],
+    ) -> "PipelineSnapshot":
+        pipeline_def = bound_pipeline.pipeline_def
+        if isinstance(pipeline_def, PipelineSubsetDefinition) and lineage is None:
+            check.failed("subset pipeline must pass lineage")
 
         return PipelineSnapshot(
             name=pipeline_def.name,
             description=pipeline_def.description,
             tags=pipeline_def.tags,
-            config_schema_snapshot=build_config_schema_snapshot(pipeline_def),
+            config_schema_snapshot=build_config_schema_snapshot(bound_pipeline),
             dagster_type_namespace_snapshot=build_dagster_type_namespace_snapshot(pipeline_def),
             solid_definitions_snapshot=build_solid_definitions_snapshot(pipeline_def),
             dep_structure_snapshot=build_dep_structure_snapshot_from_icontains_solids(pipeline_def),
             mode_def_snaps=[
-                build_mode_def_snap(md, pipeline_def.get_run_config_schema(md.name).config_type.key)
+                build_mode_def_snap(
+                    md, bound_pipeline.get_run_config_schema(md.name).config_type.key
+                )
                 for md in pipeline_def.mode_definitions
             ],
             lineage_snapshot=lineage,
