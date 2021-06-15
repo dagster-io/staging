@@ -127,7 +127,7 @@ export const PipelineOverviewRoot: React.FC<Props> = (props) => {
                     }}
                   >
                     {featureEnabled(FeatureFlag.PipelineModeTuples) ? (
-                      <Link to={workspacePathFromAddress(repoAddress, `/graph/${pipelineName}`)}>
+                      <Link to={workspacePathFromAddress(repoAddress, `/graphs/${pipelineName}`)}>
                         Explore Graph Definition &gt;
                       </Link>
                     ) : (
