@@ -99,9 +99,14 @@ export const PipelineNav: React.FC<Props> = (props) => {
     .map((x) => x.pipelineName)
     .includes(explorerPath.pipelineName);
 
-  const tabs = currentOrder
+  let tabs = currentOrder
     .filter((key) => hasPartitionSet || key !== 'partitions')
     .map(tabForKey(repoAddress, explorerPath));
+
+  const flagPipelineTuples = featureEnabled(FeatureFlag.PipelineModeTuples);
+  if (flagPipelineTuples) {
+    tabs = tabs.filter((t) => t.text !== 'Definition');
+  }
 
   return (
     <Group direction="column" spacing={12} padding={{top: 20, horizontal: 20}}>
@@ -109,7 +114,7 @@ export const PipelineNav: React.FC<Props> = (props) => {
         title={
           <Heading>
             {explorerPath.pipelineName}
-            {featureEnabled(FeatureFlag.PipelineModeTuples) && (
+            {flagPipelineTuples && (
               <span style={{opacity: 0.5}}> : {explorerPath.pipelineMode}</span>
             )}
           </Heading>
