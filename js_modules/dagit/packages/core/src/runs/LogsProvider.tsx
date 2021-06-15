@@ -33,6 +33,7 @@ export interface LogsProviderLogs {
 
 interface LogsProviderProps {
   websocketURI: string;
+  authentication: any;
   client: ApolloClient<any>;
   runId: string;
   children: (result: LogsProviderLogs) => React.ReactChild;
@@ -82,6 +83,7 @@ export class LogsProviderWithSubscription extends React.Component<
       this.props.websocketURI,
       PIPELINE_RUN_LOGS_SUBSCRIPTION,
       {runId: runId, after: null},
+      this.props.authentication,
       this.onHandleMessages,
       () => {}, // https://github.com/dagster-io/dagster/issues/2151
     );
@@ -238,7 +240,7 @@ const LogsProviderWithQuery = (props: LogsProviderWithQueryProps) => {
 };
 
 export const LogsProvider: React.FC<LogsProviderProps> = (props) => {
-  const {client, children, runId, websocketURI} = props;
+  const {client, children, runId, websocketURI, authentication} = props;
   const websocketAvailability = useWebsocketAvailability();
 
   if (websocketAvailability === 'attempting-to-connect') {
@@ -250,7 +252,12 @@ export const LogsProvider: React.FC<LogsProviderProps> = (props) => {
   }
 
   return (
-    <LogsProviderWithSubscription runId={runId} websocketURI={websocketURI} client={client}>
+    <LogsProviderWithSubscription
+      runId={runId}
+      websocketURI={websocketURI}
+      authentication={authentication}
+      client={client}
+    >
       {children}
     </LogsProviderWithSubscription>
   );

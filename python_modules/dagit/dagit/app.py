@@ -10,7 +10,11 @@ from dagit.permissions import get_user_permissions
 from dagster import __version__ as dagster_version
 from dagster import check
 from dagster.cli.workspace import Workspace
-from dagster.cli.workspace.context import IWorkspaceProcessContext, WorkspaceProcessContext
+from dagster.cli.workspace.context import (
+    DagsterAuthenticationInformation,
+    IWorkspaceProcessContext,
+    WorkspaceProcessContext,
+)
 from dagster.core.debug import DebugRunPayload
 from dagster.core.execution.compute_logs import warn_if_compute_logs_disabled
 from dagster.core.instance import DagsterInstance
@@ -41,12 +45,20 @@ class DagsterGraphQLView(GraphQLView):
         self.context = check.inst_param(context, "context", IWorkspaceProcessContext)
 
     def get_context(self):
-        return self.context.create_request_context()
+        authentication_information = DagsterAuthenticationInformation(
+            organization_id=request.args.get('organizationId'),
+            deployment_id=request.args.get('deploymentId'),
+            session_token=request.cookies.get('dagster-cloud-session-token'),
+        )
+
+        return self.context.create_request_context(
+            authentication_information=authentication_information
+        )
 
     format_error = staticmethod(format_error_with_stack_trace)
 
 
-def dagster_graphql_subscription_view(subscription_server, context):
+def dagster_graphql_subscription_view(subscription_server: DagsterSubscriptionServer, context):
     context = check.inst_param(context, "context", IWorkspaceProcessContext)
 
     def view(ws):

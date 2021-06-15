@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from dagster.cli.workspace.context import DagsterAuthenticationInformation
 from graphql_ws.constants import GQL_COMPLETE, GQL_DATA
 from graphql_ws.gevent import GeventSubscriptionServer, SubscriptionObserver
 from rx import Observable
@@ -15,6 +16,10 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
     def __init__(self, middleware=None, **kwargs):
         self.middleware = middleware or []
         super(DagsterSubscriptionServer, self).__init__(**kwargs)
+
+    def on_connect(self, connection_context, payload):
+        connection_context.payload = dict(**getattr(connection_context, "payload", {}), **payload)
+        super().on_connect(connection_context, payload)
 
     def execute(self, request_context, params):
         # https://github.com/graphql-python/graphql-ws/issues/7
@@ -32,18 +37,27 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
 
         if execution_result == GQL_COMPLETE:
             return self.send_message(connection_context, op_id, GQL_COMPLETE, {})
-        else:
-            result = self.execution_result_to_dict(execution_result)
-            return self.send_message(connection_context, op_id, GQL_DATA, result)
+
+        result = self.execution_result_to_dict(execution_result)
+        return self.send_message(connection_context, op_id, GQL_DATA, result)
 
     def on_start(self, connection_context, op_id, params):
+        authentication = connection_context.payload['authentication']
+        authentication_information = DagsterAuthenticationInformation(
+            organization_id=authentication.get('organizationId'),
+            deployment_id=authentication.get('deploymentId'),
+            session_token=authentication.get('sessionToken'),
+        )
+
         try:
             execution_result = self.execute(
                 # Even though this object is referred to as the "request_context", it is
                 # actually a IWorkspaceProcessContext. This is a naming restriction from the underlying
                 # GeventSubscriptionServer. Here, we create a new request context for every
                 # incoming GraphQL request
-                connection_context.request_context.create_request_context(),
+                connection_context.request_context.create_request_context(
+                    authentication_information=authentication_information
+                ),
                 params,
             )
             if not isinstance(execution_result, Observable):

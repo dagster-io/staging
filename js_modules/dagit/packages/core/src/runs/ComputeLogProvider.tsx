@@ -18,6 +18,7 @@ interface IComputeLogsProviderProps {
   runId: string;
   stepKey: string;
   websocketURI: string;
+  authentication: any;
 }
 interface IComputeLogsProviderState {
   stdout: ComputeLogsSubscriptionFragment | null;
@@ -59,6 +60,7 @@ export class ComputeLogsProvider extends React.Component<
       this.props.websocketURI,
       COMPUTE_LOGS_SUBSCRIPTION,
       {runId, stepKey, ioType: ComputeIOType.STDOUT, cursor: null},
+      this.props.authentication,
       this.onStdout,
       this.onError,
     );
@@ -66,6 +68,7 @@ export class ComputeLogsProvider extends React.Component<
       this.props.websocketURI,
       COMPUTE_LOGS_SUBSCRIPTION,
       {runId, stepKey, ioType: ComputeIOType.STDERR, cursor: null},
+      this.props.authentication,
       this.onStderr,
       this.onError,
     );

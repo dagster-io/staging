@@ -34,6 +34,12 @@ if TYPE_CHECKING:
     )
 
 
+class DagsterAuthenticationInformation(NamedTuple):
+    organization_id: str
+    deployment_id: str
+    session_token: str
+
+
 class WorkspaceRequestContext(NamedTuple):
     """
     This class is request-scoped object that stores (1) a reference to all repository locations
@@ -50,6 +56,7 @@ class WorkspaceRequestContext(NamedTuple):
     workspace_snapshot: Dict[str, WorkspaceLocationEntry]
     process_context: "IWorkspaceProcessContext"
     version: Optional[str] = None
+    authentication_information: Optional[DagsterAuthenticationInformation] = None
 
     @property
     def repository_locations(self) -> List[RepositoryLocation]:
@@ -187,7 +194,9 @@ class IWorkspaceProcessContext(ABC):
     """
 
     @abstractmethod
-    def create_request_context(self) -> WorkspaceRequestContext:
+    def create_request_context(
+        self, authentication_information: Optional[DagsterAuthenticationInformation]
+    ) -> WorkspaceRequestContext:
         pass
 
     @abstractproperty
@@ -270,12 +279,21 @@ class WorkspaceProcessContext(IWorkspaceProcessContext):
     def _set_state_subscribers(self):
         self._workspace.add_state_subscriber(self._location_state_subscriber)
 
-    def create_request_context(self) -> WorkspaceRequestContext:
+    def create_request_context(
+        self, authentication_information: Optional[DagsterAuthenticationInformation] = None
+    ) -> WorkspaceRequestContext:
+        check.opt_inst_param(
+            authentication_information,
+            'authentication_information',
+            DagsterAuthenticationInformation,
+        )
+
         return WorkspaceRequestContext(
             instance=self._instance,
             workspace_snapshot=self._workspace.create_snapshot(),
             process_context=self,
             version=self.version,
+            authentication_information=authentication_information,
         )
 
     @property

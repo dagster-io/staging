@@ -27,11 +27,13 @@ export class DirectGraphQLSubscription<T> {
   private closed = false;
   private query: any;
   private variables: any;
+  private authentication: any;
 
   constructor(
     websocketURI: string,
     query: any,
     variables: any,
+    authentication: any,
     onFlushMessages: FlushCallback<T>,
     onError: ErrorCallback,
   ) {
@@ -40,6 +42,7 @@ export class DirectGraphQLSubscription<T> {
     this.onError = onError;
     this.query = query;
     this.variables = variables;
+    this.authentication = authentication;
     this.open();
   }
 
@@ -52,6 +55,7 @@ export class DirectGraphQLSubscription<T> {
     ws.addEventListener('close', this.handleRetry);
     ws.addEventListener('open', () => {
       ws.send(JSON.stringify({type: 'connection_init', payload: {}}));
+      console.log(this.authentication);
       ws.send(
         JSON.stringify({
           id: '1',
@@ -60,6 +64,7 @@ export class DirectGraphQLSubscription<T> {
             extensions: {},
             variables: this.variables,
             query: print(this.query),
+            authentication: this.authentication,
           },
         }),
       );
