@@ -108,7 +108,7 @@ export const PipelineRoot: React.FC<Props> = (props) => {
         />
         {featureEnabled(FeatureFlag.PipelineModeTuples) ? (
           <Route
-            from={[
+            path={[
               '/workspace/:repoPath/jobs/:pipelinePath',
               '/workspace/:repoPath/pipelines/:pipelinePath',
             ]}

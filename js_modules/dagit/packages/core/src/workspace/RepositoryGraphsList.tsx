@@ -108,7 +108,7 @@ export const RepositoryGraphsList: React.FC<Props> = (props) => {
       <Table>
         <thead>
           <tr>
-            <th style={{width: '50%', minWidth: '400px'}}>Graph</th>
+            <th>Graph</th>
           </tr>
         </thead>
         <tbody>
