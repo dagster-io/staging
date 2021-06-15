@@ -80,7 +80,7 @@ export const RepositoryGraphsList: React.FC<Props> = (props) => {
       if (s.definition.__typename === 'CompositeSolidDefinition') {
         items.push({
           name: s.definition.name,
-          path: `/graphs/${s.invocations[0].pipeline.name}/${s.invocations[0].solidHandle.handleID}`,
+          path: `/graphs/${s.invocations[0].pipeline.name}/${s.invocations[0].solidHandle.handleID}/`,
           description: s.definition.description,
           repoAddress,
         });

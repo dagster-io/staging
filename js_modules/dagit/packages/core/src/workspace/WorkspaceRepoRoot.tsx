@@ -86,6 +86,9 @@ export const WorkspaceRepoRoot: React.FC<Props> = (props) => {
               <SolidsRoot name={props.match.params.name} repoAddress={repoAddress} />
             )}
           />
+          {featureEnabled(FeatureFlag.PipelineModeTuples) && (
+            <Redirect from={'/workspace/:repoPath/pipelines'} to={'/workspace/:repoPath/jobs'} />
+          )}
           <Route
             path={['/workspace/:repoPath/pipelines', '/workspace/:repoPath/jobs']}
             render={() => <RepositoryPipelinesList repoAddress={repoAddress} />}
