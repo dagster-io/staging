@@ -4,8 +4,11 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Union
 
 from dagster import check
 from dagster.core.definitions.pipeline import PipelineDefinition
-from dagster.core.definitions.sensor import RunRequest, SensorDefinition, SkipReason
+from dagster.core.definitions.run_request import RunRequest, SkipReason
+from dagster.core.definitions.sensor import AssetSensorDefinition, SensorDefinition
 from dagster.core.errors import DagsterInvariantViolationError
+
+from ..events import AssetKey
 
 if TYPE_CHECKING:
     from dagster.core.definitions.sensor import SensorExecutionContext
@@ -89,5 +92,68 @@ def sensor(
         update_wrapper(sensor_def, wrapped=fn)
 
         return sensor_def
+
+    return inner
+
+
+def asset_sensor(
+    pipeline_name: str,
+    asset_key: AssetKey,
+    name: Optional[str] = None,
+    solid_selection: Optional[List[str]] = None,
+    mode: Optional[str] = None,
+    minimum_interval_seconds: Optional[int] = None,
+    description: Optional[str] = None,
+) -> Callable[
+    [
+        Callable[
+            ["SensorExecutionContext", Union["AssetMaterialization", List["AssetMaterialization"]]],
+            Union[SkipReason, RunRequest],
+        ]
+    ],
+    AssetSensorDefinition,
+]:
+
+    check.opt_str_param(name, "name")
+
+    def inner(
+        fn: Callable[
+            ["SensorExecutionContext", Union["AssetMaterialization", List["AssetMaterialization"]]],
+            Union[SkipReason, RunRequest],
+        ]
+    ) -> SensorDefinition:
+        check.callable_param(fn, "fn")
+        sensor_name = name or fn.__name__
+
+        def _wrapped_fn(context, event):
+            context.add_source_run_id(event.run_id)
+
+            result = fn(context, event)
+
+            if inspect.isgenerator(result):
+                for item in result:
+                    yield item
+            elif isinstance(result, (RunRequest, SkipReason)):
+                yield result
+
+            elif result is not None:
+                raise DagsterInvariantViolationError(
+                    (
+                        "Error in sensor {sensor_name}: Sensor unexpectedly returned output "
+                        "{result} of type {type_}.  Should only return SkipReason or "
+                        "RunRequest objects."
+                    ).format(sensor_name=sensor_name, result=result, type_=type(result))
+                )
+
+        return AssetSensorDefinition(
+            name=sensor_name,
+            asset_key=asset_key,
+            pipeline_name=pipeline_name,
+            asset_materialization_fn=_wrapped_fn,
+            solid_selection=solid_selection,
+            mode=mode,
+            minimum_interval_seconds=minimum_interval_seconds,
+            description=description,
+        )
 
     return inner
