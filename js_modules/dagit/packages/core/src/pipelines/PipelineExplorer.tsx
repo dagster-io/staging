@@ -8,7 +8,7 @@ import {Route} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
 import {filterByQuery} from '../app/GraphQueryImpl';
-import {featureEnabled, FeatureFlag} from '../app/Util';
+import {featureEnabled, FeatureFlag, useFeatureEnabled} from '../app/Util';
 import {PIPELINE_GRAPH_SOLID_FRAGMENT} from '../graph/PipelineGraph';
 import {PipelineGraphContainer} from '../graph/PipelineGraphContainer';
 import {SolidNameOrPath} from '../solids/SolidNameOrPath';
@@ -356,18 +356,21 @@ const LargeDAGNotice = () => (
   </LargeDAGContainer>
 );
 
-const EmptyDAGNotice = () => (
-  <NonIdealState
-    icon="diagram-tree"
-    title="Empty pipeline"
-    description={
-      <>
-        <div>This pipeline is empty.</div>
-        <div>Solids will appear here when you add them.</div>
-      </>
-    }
-  />
-);
+const EmptyDAGNotice = () => {
+  const pipelineMode = useFeatureEnabled(FeatureFlag.PipelineModeTuples);
+  return (
+    <NonIdealState
+      icon="diagram-tree"
+      title={pipelineMode ? 'Empty graph' : 'Empty pipeline'}
+      description={
+        <>
+          <div>This {pipelineMode ? 'graph' : 'pipeline'} is empty.</div>
+          <div>Solids will appear here when you add them.</div>
+        </>
+      }
+    />
+  );
+};
 
 const LargeDAGContainer = styled.div`
   width: 50vw;

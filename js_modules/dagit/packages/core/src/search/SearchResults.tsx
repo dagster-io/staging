@@ -4,16 +4,18 @@ import * as React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
+import {FeatureFlag, useFeatureEnabled} from '../app/Util';
+
 import {SearchResult, SearchResultType} from './types';
 
-const iconForType = (type: SearchResultType): IconName => {
+const iconForType = (type: SearchResultType, flagPipelineMode: boolean): IconName => {
   switch (type) {
     case SearchResultType.Asset:
       return 'th';
     case SearchResultType.PartitionSet:
       return 'time';
     case SearchResultType.Pipeline:
-      return 'diagram-tree';
+      return flagPipelineMode ? 'send-to-graph' : 'diagram-tree';
     case SearchResultType.Repository:
       return 'folder-open';
     case SearchResultType.Run:
@@ -38,6 +40,7 @@ interface ItemProps {
 const SearchResultItem: React.FC<ItemProps> = React.memo(({isHighlight, onClickResult, result}) => {
   const {item} = result;
   const element = React.useRef<HTMLLIElement>(null);
+  const flagPipelineMode = useFeatureEnabled(FeatureFlag.PipelineModeTuples);
 
   React.useEffect(() => {
     if (element.current && isHighlight) {
@@ -60,7 +63,7 @@ const SearchResultItem: React.FC<ItemProps> = React.memo(({isHighlight, onClickR
       <ResultLink to={item.href} onClick={onClick}>
         <Icon
           iconSize={16}
-          icon={iconForType(item.type)}
+          icon={iconForType(item.type, flagPipelineMode)}
           color={isHighlight ? Colors.WHITE : Colors.GRAY3}
         />
         <div style={{marginLeft: '12px'}}>

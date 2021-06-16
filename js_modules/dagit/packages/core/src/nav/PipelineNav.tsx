@@ -117,7 +117,7 @@ export const PipelineNav: React.FC<Props> = (props) => {
             {pipelineMode && <span style={{opacity: 0.5}}> : {explorerPath.pipelineMode}</span>}
           </Heading>
         }
-        icon="diagram-tree"
+        icon={pipelineMode ? 'send-to-graph' : 'diagram-tree'}
         description={
           <>
             <Link to={workspacePathFromAddress(repoAddress, pipelineMode ? '/jobs' : '/pipelines')}>
