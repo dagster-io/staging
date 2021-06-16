@@ -40,9 +40,9 @@ DBT_RESULT_DICT = {
 
 class TestRunResult:
     def test_from_dict(self):
-        rr = DbtResult.from_dict(DBT_RESULT_DICT)
+        rr = DbtResult.from_run_results(DBT_RESULT_DICT)
         assert len(rr) == len(DBT_RESULT_DICT["results"])
 
     def test_pickle_roundtrip(self):  # pylint: disable=unused-argument
-        rr = DbtResult.from_dict(DBT_RESULT_DICT)
+        rr = DbtResult.from_run_results(DBT_RESULT_DICT)
         assert pickle.loads(pickle.dumps(rr)) == rr
