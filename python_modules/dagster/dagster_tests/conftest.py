@@ -8,6 +8,7 @@ import docker
 import grpc
 import pytest
 from dagster import check, seven
+from dagster.core.host_representation import ExternalPipeline, InProcessRepositoryLocationOrigin
 from dagster.grpc.client import DagsterGrpcClient
 from dagster.seven import nullcontext
 from dagster.utils import file_relative_path
