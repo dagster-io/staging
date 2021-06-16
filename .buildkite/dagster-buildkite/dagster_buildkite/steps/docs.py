@@ -19,12 +19,17 @@ def docs_steps() -> List[dict]:
         # Make sure the docs site can build end-to-end.
         StepBuilder("docs next")
         .run(
+            "export AWS_ACCESS_KEY_ID_DOCS=$${AWS_ACCESS_KEY_ID}",
+            "export AWS_SECRET_ACCESS_KEY_DOCS=$${AWS_SECRET_ACCESS_KEY}",
             "pushd docs/next",
             "yarn",
             "yarn test",
             "yarn build",
         )
-        .on_integration_image(SupportedPython.V3_7)
+        .on_integration_image(
+            SupportedPython.V3_7,
+            ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        )
         .build(),
         # TODO: Yuhan to fix
         # StepBuilder("docs sphinx json build")
