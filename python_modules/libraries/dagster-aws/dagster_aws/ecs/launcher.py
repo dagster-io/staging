@@ -3,10 +3,11 @@ import os
 from dataclasses import dataclass
 from typing import List
 
+import boto3
 import requests
 from dagster.core.launcher.base import RunLauncher
 from dagster.grpc.types import ExecuteRunArgs
-from dagster.serdes import serialize_dagster_namedtuple
+from dagster.serdes import ConfigurableClass, serialize_dagster_namedtuple
 
 
 @dataclass
@@ -18,9 +19,22 @@ class TaskMetadata:
     subnets: List[str]
 
 
-class EcsRunLauncher(RunLauncher):
-    def __init__(self, boto3_client):
+class EcsRunLauncher(RunLauncher, ConfigurableClass):
+    def __init__(self, inst_data=None, boto3_client=boto3.client("ecs", region_name="us-east-1")):
+        self._inst_data = inst_data
         self.ecs = boto3_client
+
+    @property
+    def inst_data(self):
+        return self._inst_data
+
+    @classmethod
+    def config_type(cls):
+        return {}
+
+    @staticmethod
+    def from_config_value(inst_data, config_value):
+        return EcsRunLauncher(inst_data=inst_data, **config_value)
 
     def launch_run(self, run, external_pipeline):
         """

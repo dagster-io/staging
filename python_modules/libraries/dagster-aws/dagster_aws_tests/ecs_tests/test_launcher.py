@@ -26,7 +26,7 @@ def task(ecs, task_definition):
 
 
 @pytest.fixture
-def run_launcher(ecs, task, task_definition, monkeypatch, requests_mock):
+def instance(ecs, task, task_definition, monkeypatch, requests_mock):
     container_uri = "http://metadata_host"
     monkeypatch.setenv("ECS_CONTAINER_METADATA_URI_V4", container_uri)
     container = task["containers"][0]["name"]
@@ -41,16 +41,9 @@ def run_launcher(ecs, task, task_definition, monkeypatch, requests_mock):
             "Family": task_definition["family"],
         },
     )
-
-    return EcsRunLauncher(boto3_client=ecs)
-
-
-@pytest.fixture
-def instance(run_launcher, monkeypatch):
-    with instance_for_test() as instance:
-        # TODO: Remove once EcsRunLauncher is a ConfigurableClass
-        monkeypatch.setattr(instance, "_run_launcher", run_launcher)
-        run_launcher.register_instance(instance)
+    overrides = {"run_launcher": {"module": "dagster_aws.ecs", "class": "EcsRunLauncher"}}
+    with instance_for_test(overrides) as instance:
+        monkeypatch.setattr(instance.run_launcher, "ecs", ecs)
         yield instance
 
 
