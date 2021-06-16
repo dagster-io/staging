@@ -24,7 +24,6 @@ def docs_steps() -> List[dict]:
             "yarn test",
             "yarn build",
         )
-        .on_integration_image(SupportedPython.V3_7)
         .build(),
         # TODO: Yuhan to fix
         # StepBuilder("docs sphinx json build")
