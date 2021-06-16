@@ -4,7 +4,7 @@ import * as React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {featureEnabled, FeatureFlag} from '../app/Util';
+import {useFeatureFlags} from '../app/Flags';
 import {RunStatusWithStats} from '../runs/RunStatusDots';
 import {Group} from '../ui/Group';
 import {Table} from '../ui/Table';
@@ -25,9 +25,10 @@ interface Props {
 
 export const PipelineTable: React.FC<Props> = (props) => {
   const {pipelines, showRepo} = props;
+  const {flagPipelineModeTuples} = useFeatureFlags();
 
   let items = pipelines;
-  if (featureEnabled(FeatureFlag.PipelineModeTuples)) {
+  if (flagPipelineModeTuples) {
     items = [];
     for (const item of pipelines) {
       items.push(...item.pipeline.modes.map((mode) => ({...item, mode: mode.name})));
