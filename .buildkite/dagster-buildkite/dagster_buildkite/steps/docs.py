@@ -24,7 +24,10 @@ def docs_steps() -> List[dict]:
             "yarn test",
             "yarn build",
         )
-        .on_integration_image(SupportedPython.V3_7)
+        .on_integration_image(
+            SupportedPython.V3_7,
+            ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        )
         .build(),
         # TODO: Yuhan to fix
         # StepBuilder("docs sphinx json build")
