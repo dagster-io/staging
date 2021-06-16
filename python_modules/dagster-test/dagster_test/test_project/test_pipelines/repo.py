@@ -505,6 +505,16 @@ def define_demo_k8s_executor_pipeline():
     return demo_k8s_executor_pipeline
 
 
+@solid
+def noop_solid(_):
+    pass
+
+
+@pipeline
+def noop_pipeline():
+    noop_solid()
+
+
 def define_demo_execution_repo():
     @repository
     def demo_execution_repo():
@@ -527,6 +537,7 @@ def define_demo_execution_repo():
                 "hanging_pipeline": hanging_pipeline,
                 "hard_failer": define_hard_failer,
                 "demo_k8s_executor_pipeline": define_demo_k8s_executor_pipeline,
+                "noop_pipeline": noop_pipeline,
             },
             "schedules": define_schedules(),
         }

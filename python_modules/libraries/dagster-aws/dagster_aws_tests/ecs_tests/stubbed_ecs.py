@@ -7,6 +7,50 @@ from botocore.exceptions import ClientError
 from botocore.stub import Stubber
 
 
+def stubbed(function):  # pylint: disable=no-self-argument
+    """
+    A decorator that activates/deactivates the Stubber and makes sure all
+    expected calls are made.
+
+    The general pattern for stubbing a new method is:
+
+    @stubbed
+    def method(self, **kwargs):
+        self.stubber.add_response(
+            method="method", # Name of the method being stubbed
+            service_response={}, # Stubber validates the resposne shape
+            expected_params(**kwargs), # Stubber validates the params
+        )
+        self.client.method(**kwargs) # "super" (except we're not actually
+                                     # subclassing anything)
+    """
+
+    def wrapper(*args, **kwargs):
+        self = args[0]
+
+        # If we're the first stub, activate:
+        if not self.stub_count:
+            self.stubber.activate()
+
+        self.stub_count += 1
+        try:
+            response = function(*args, **kwargs)
+            # If we're the outermost stub, clean up
+            self.stub_count -= 1
+            if not self.stub_count:
+                self.stubber.deactivate()
+                self.stubber.assert_no_pending_responses()
+            return response
+        except Exception as ex:
+            # Exceptions should reset the stubber
+            self.stub_count = 0
+            self.stubber.deactivate()
+            self.stubber = Stubber(self.client)
+            raise ex
+
+    return wrapper
+
+
 class StubbedEcsError(Exception):
     pass
 
@@ -40,49 +84,6 @@ class StubbedEcs:
         self.task_definitions = defaultdict(list)
         self.tags = defaultdict(list)
         self.stub_count = 0
-
-    def stubbed(function):  # pylint: disable=no-self-argument
-        """
-        A decorator that activates/deactivates the Stubber and makes sure all
-        expected calls are made.
-
-        The general pattern for stubbing a new method is:
-
-        @stubbed
-        def method(self, **kwargs):
-            self.stubber.add_response(
-                method="method", # Name of the method being stubbed
-                service_response={}, # Stubber validates the resposne shape
-                expected_params(**kwargs), # Stubber validates the params
-            )
-            self.client.method(**kwargs) # "super" (except we're not actually
-                                         # subclassing anything)
-        """
-
-        def wrapper(*args, **kwargs):
-            self = args[0]
-
-            # If we're the first stub, activate:
-            if not self.stub_count:
-                self.stubber.activate()
-
-            self.stub_count += 1
-            try:
-                response = function(*args, **kwargs)  # pylint: disable=not-callable
-                # If we're the outermost stub, clean up
-                self.stub_count -= 1
-                if not self.stub_count:
-                    self.stubber.deactivate()
-                    self.stubber.assert_no_pending_responses()
-                return response
-            except Exception as ex:
-                # Exceptions should reset the stubber
-                self.stub_count = 0
-                self.stubber.deactivate()
-                self.stubber = Stubber(self.client)
-                raise ex
-
-        return wrapper
 
     @stubbed
     def describe_task_definition(self, **kwargs):
