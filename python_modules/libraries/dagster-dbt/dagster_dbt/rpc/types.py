@@ -1,5 +1,5 @@
 from collections import namedtuple
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from dagster import check, usable_as_dagster_type
 
@@ -7,7 +7,7 @@ from ..types import DbtResult
 
 
 @usable_as_dagster_type
-class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed")):
+class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed logs")):
     """The output from executing a dbt command via the dbt RPC server.
 
     Note that users should not construct instances of this class directly. This class is intended to be
@@ -19,6 +19,7 @@ class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed")
         start (str): An ISO string timestamp of when the dbt process started.
         end (str): An ISO string timestamp of when the dbt process ended.
         elapsed (float): The duration (in seconds) for which the dbt process was running.
+        logs (List[Dict[str, Any]]): List of parsed JSON logs produced by the dbt command.
     """
 
     def __new__(
@@ -28,6 +29,7 @@ class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed")
         start: str,
         end: str,
         elapsed: float,
+        logs: List[Dict[str, Any]],
     ):
         return super().__new__(
             cls,
@@ -36,6 +38,7 @@ class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed")
             check.str_param(start, "start"),
             check.str_param(end, "end"),
             check.float_param(elapsed, "elapsed"),
+            check.list_param(logs, "logs", of_type=dict),
         )
 
     @classmethod
@@ -55,6 +58,8 @@ class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed")
         end = check.str_elem(d, "end")
         elapsed = check.float_elem(d, "elapsed")
 
-        result = DbtResult.from_dict(d)
+        logs = check.list_elem(d, "logs", of_type=dict)
 
-        return cls(result=result, state=state, start=start, end=end, elapsed=elapsed)
+        dbt_result = DbtResult.from_run_results(d)
+
+        return cls(result=dbt_result, state=state, start=start, end=end, elapsed=elapsed, logs=logs)
