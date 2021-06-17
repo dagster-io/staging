@@ -33,6 +33,8 @@ export const AppCache = new InMemoryCache({
       return `Type.${object.name}`;
     } else if (object.__typename === 'Instance') {
       return 'Instance';
+    } else if (object.__typename === 'Workspace') {
+      return 'Workspace';
     } else {
       return defaultDataIdFromObject(object);
     }
