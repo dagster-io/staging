@@ -1,4 +1,16 @@
-from typing import Any, Callable, Dict, FrozenSet, Iterator, List, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Union,
+)
 
 from dagster import check
 from dagster.core.definitions.dependency import SolidHandle
@@ -79,9 +91,9 @@ class SolidDefinition(NodeDefinition):
     def __init__(
         self,
         name: str,
-        input_defs: List[InputDefinition],
+        input_defs: Sequence[InputDefinition],
         compute_fn: Callable[..., Any],
-        output_defs: List[OutputDefinition],
+        output_defs: Sequence[OutputDefinition],
         config_schema: Optional[Union[Dict[str, Any], IDefinitionConfigSchema]] = None,
         description: Optional[str] = None,
         tags: Optional[Dict[str, str]] = None,

@@ -1,6 +1,6 @@
 import inspect
 from functools import update_wrapper, wraps
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Callable, Dict, Generator, List, Optional, Sequence, Set, Tuple, Union, cast
 
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
@@ -25,8 +25,8 @@ class _Solid:
     def __init__(
         self,
         name: Optional[str] = None,
-        input_defs: Optional[List[InputDefinition]] = None,
-        output_defs: Optional[List[OutputDefinition]] = None,
+        input_defs: Optional[Sequence[InputDefinition]] = None,
+        output_defs: Optional[Sequence[OutputDefinition]] = None,
         description: Optional[str] = None,
         required_resource_keys: Optional[Set[str]] = None,
         config_schema: Optional[Union[Any, Dict[str, Any]]] = None,
@@ -104,8 +104,8 @@ class _Solid:
 def solid(
     name: Union[Callable[..., Any], Optional[str]] = None,
     description: Optional[str] = None,
-    input_defs: Optional[List[InputDefinition]] = None,
-    output_defs: Optional[List[OutputDefinition]] = None,
+    input_defs: Optional[Sequence[InputDefinition]] = None,
+    output_defs: Optional[Sequence[OutputDefinition]] = None,
     config_schema: Optional[Union[Any, Dict[str, Any]]] = None,
     required_resource_keys: Optional[Set[str]] = None,
     tags: Optional[Dict[str, Any]] = None,
@@ -269,6 +269,16 @@ def _validate_and_coerce_solid_result_to_iterator(result, context, output_defs):
                 )
             )
         yield Output(value=result, output_name=output_defs[0].name)
+    elif len(output_defs) > 1 and isinstance(result, tuple):
+        if len(result) != len(output_defs):
+            check.failed(
+                f"Solid '{context.solid_name}' has {len(output_defs)} output definitions, but "
+                f"returned a tuple with {len(result)} elements"
+            )
+
+        for output_defs, element in zip(output_defs, result):
+            yield Output(output_name=output_defs.name, value=element)
+
     elif result is not None:
         if not output_defs:
             raise DagsterInvariantViolationError(
