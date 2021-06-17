@@ -1,8 +1,6 @@
 import tempfile
 
-import pytest
 from dagster import execute_pipeline, reexecute_pipeline
-from dagster.core.errors import DagsterNoStepsToExecuteException
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
 from dagster.core.instance import DagsterInstance, InstanceType
@@ -81,13 +79,13 @@ def test_dev_loop_changing_versions():
         )
         assert result.success
         assert not get_step_keys_to_execute(asset_pipeline, run_config, "only_mode", instance)
-        # Ensure pipeline execution fails with proper error if every step has already been memoized.
-        with pytest.raises(DagsterNoStepsToExecuteException):
-            reexecute_pipeline(
-                asset_pipeline,
-                parent_run_id=result.run_id,
-                run_config=run_config,
-                mode="only_mode",
-                tags={"dagster/is_memoized_run": "true"},
-                instance=instance,
-            )
+        # Ensure pipeline run does not fail even though there are no steps to execute.
+        result = execute_pipeline(
+            asset_pipeline,
+            run_config=run_config,
+            mode="only_mode",
+            tags={"dagster/is_memoized_run": "true"},
+            instance=instance,
+        )
+        assert result.success
+        assert not result.step_event_list  # Ensure that no step events were emitted

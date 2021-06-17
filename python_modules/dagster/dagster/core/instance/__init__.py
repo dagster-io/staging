@@ -18,7 +18,6 @@ from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import (
     DagsterHomeNotSetError,
     DagsterInvariantViolationError,
-    DagsterNoStepsToExecuteException,
     DagsterRunAlreadyExists,
     DagsterRunConflict,
 )
@@ -684,11 +683,6 @@ class DagsterInstance:
                 resolved_run_config,
             )  # TODO: tighter integration with existing step_keys_to_execute functionality
             step_keys_to_execute = subsetted_execution_plan.step_keys_to_execute
-            if not step_keys_to_execute:
-                raise DagsterNoStepsToExecuteException(
-                    "No steps found to execute. "
-                    "This is because every step in the plan has already been memoized."
-                )
         elif step_keys_to_execute:
             if not resolved_run_config:
                 resolved_run_config = ResolvedRunConfig.build(pipeline_def, run_config, mode)
@@ -837,10 +831,7 @@ class DagsterInstance:
         )
 
         check.invariant(
-            set(step_keys_to_execute) == set(execution_plan_snapshot.step_keys_to_execute)
-            if step_keys_to_execute
-            else set(execution_plan_snapshot.step_keys_to_execute)
-            == set([step.key for step in execution_plan_snapshot.steps]),
+            set(step_keys_to_execute) == set(execution_plan_snapshot.step_keys_to_execute),
             "We encode step_keys_to_execute twice in our stack, unfortunately. This check "
             "ensures that they are consistent. We check that step_keys_to_execute in the plan "
             "matches the step_keys_to_execute params if it is set. If it is not, this indicates "
