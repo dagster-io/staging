@@ -95,6 +95,16 @@ class SecurityContext(BaseModel):
         schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.SecurityContext")}
 
 
+class InitContainer(BaseModel):
+    name: str
+    image: str
+    command: List[str]
+
+    class Config:
+        # TODO: InitContainers don't support everything that normal containers do
+        schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.Container")}
+
+
 class Resources(BaseModel):
     __root__: Dict[str, Any]
 
@@ -125,6 +135,9 @@ class SecretRef(BaseModel):
 
 
 class SecretEnvSource(BaseModel):
+    name: str
+    optional: bool
+
     class Config:
         schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.SecretEnvSource")}
 
@@ -132,3 +145,13 @@ class SecretEnvSource(BaseModel):
 class ConfigMapEnvSource(BaseModel):
     class Config:
         schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.ConfigMapEnvSource")}
+
+
+class VolumeMount(BaseModel):
+    name: str
+    mountPath: str
+    subPath: str
+    secret: str
+
+    class Config:
+        schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.VolumeMount")}

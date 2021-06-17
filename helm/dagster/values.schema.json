@@ -196,7 +196,20 @@
         "SecretEnvSource": {
             "title": "SecretEnvSource",
             "type": "object",
-            "properties": {},
+            "properties": {
+                "name": {
+                    "title": "Name",
+                    "type": "string"
+                },
+                "optional": {
+                    "title": "Optional",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "name",
+                "optional"
+            ],
             "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.SecretEnvSource"
         },
         "NodeSelector": {
