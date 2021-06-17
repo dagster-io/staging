@@ -95,6 +95,16 @@ class SecurityContext(BaseModel):
         schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.SecurityContext")}
 
 
+class InitContainer(BaseModel):
+    name: str
+    image: str
+    command: List[str]
+    imagePullPolicy: PullPolicy = PullPolicy.ALWAYS
+
+    class Config:
+        extra = Extra.forbid
+
+
 class Resources(BaseModel):
     __root__: Dict[str, Any]
 
@@ -132,3 +142,8 @@ class SecretEnvSource(BaseModel):
 class ConfigMapEnvSource(BaseModel):
     class Config:
         schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.ConfigMapEnvSource")}
+
+
+class VolumeMount(BaseModel):
+    class Config:
+        schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.VolumeMount")}
