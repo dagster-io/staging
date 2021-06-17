@@ -8,10 +8,6 @@ import {LAST_REPO_KEY, LeftNavRepositorySection, REPO_KEYS} from './LeftNavRepos
 
 describe('Repository options', () => {
   const defaultMocks = {
-    RepositoryLocation: () => ({
-      name: () => 'bar',
-      repositories: () => new MockList(1),
-    }),
     Schedules: () => ({
       results: () => new MockList(0),
     }),
@@ -22,6 +18,10 @@ describe('Repository options', () => {
 
   it('Correctly displays the current repository state', async () => {
     const mocks = {
+      RepositoryLocation: () => ({
+        name: () => 'barx',
+        repositories: () => new MockList(1),
+      }),
       Repository: () => ({
         name: () => 'foo',
         pipelines: () => new MockList(1),
@@ -64,10 +64,8 @@ describe('Repository options', () => {
       Workspace: () => ({
         locationEntries: () => [
           {
-            __typename: 'WorkspaceLocationEntry',
             name: locationOne,
             locationOrLoadError: {
-              __typename: 'RepositoryLocation',
               name: locationOne,
               repositories: () =>
                 new MockList(1, () => ({
@@ -77,10 +75,8 @@ describe('Repository options', () => {
             },
           },
           {
-            __typename: 'WorkspaceLocationEntry',
             name: locationTwo,
             locationOrLoadError: {
-              __typename: 'RepositoryLocation',
               name: locationTwo,
               repositories: () =>
                 new MockList(1, () => ({
