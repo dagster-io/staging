@@ -4,8 +4,7 @@ import pytest
 from kubernetes.client import models
 from schema.charts.dagster.subschema.migrate import Migrate
 from schema.charts.dagster.values import DagsterHelmValues
-
-from .helm_template import HelmTemplate
+from schema.utils.helm_template import HelmTemplate
 
 
 @pytest.fixture(name="template")

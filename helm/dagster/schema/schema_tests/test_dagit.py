@@ -3,8 +3,7 @@ from kubernetes.client import models
 from schema.charts.dagster.subschema.dagit import Dagit
 from schema.charts.dagster.values import DagsterHelmValues
 from schema.charts.utils import kubernetes
-
-from .helm_template import HelmTemplate
+from schema.utils.helm_template import HelmTemplate
 
 
 @pytest.fixture(name="deployment_template")

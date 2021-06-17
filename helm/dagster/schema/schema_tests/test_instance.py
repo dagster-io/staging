@@ -4,8 +4,7 @@ from kubernetes.client import models
 from schema.charts.dagster.subschema.daemon import Daemon, QueuedRunCoordinator
 from schema.charts.dagster.subschema.postgresql import PostgreSQL, Service
 from schema.charts.dagster.values import DagsterHelmValues
-
-from .helm_template import HelmTemplate
+from schema.utils.helm_template import HelmTemplate
 
 
 @pytest.fixture(name="template")
