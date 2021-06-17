@@ -1,65 +1,33 @@
-from collections import namedtuple
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from dagster import check, usable_as_dagster_type
+import requests
+from dagster import usable_as_dagster_type
 
-from ..types import DbtResult
+from ..types import DbtOutput
 
 
 @usable_as_dagster_type
-class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed logs")):
+class DbtRpcOutput(DbtOutput):
     """The output from executing a dbt command via the dbt RPC server.
 
-    Note that users should not construct instances of this class directly. This class is intended to be
-    constructed from the JSON output of dbt commands.
-
     Attributes:
-        result (DbtResult): The dbt results from the executed command.
-        state (str): The state of the polled dbt process.
-        start (str): An ISO string timestamp of when the dbt process started.
-        end (str): An ISO string timestamp of when the dbt process ended.
-        elapsed (float): The duration (in seconds) for which the dbt process was running.
-        logs (List[Dict[str, Any]]): List of parsed JSON logs produced by the dbt command.
+        result (Dict[str, Any]): The parsed contents of the "result" field of the JSON response from
+            the rpc server (if any).
+        response_dict (Dict[str, Any]): The entire contents of the JSON response from the rpc server.
+        response (requests.Response): The original Response from which this output was generated.
     """
 
-    def __new__(
-        cls,
-        result: DbtResult,
-        state: str,
-        start: str,
-        end: str,
-        elapsed: float,
-        logs: List[Dict[str, Any]],
-    ):
-        return super().__new__(
-            cls,
-            result,
-            check.str_param(state, "state"),
-            check.str_param(start, "start"),
-            check.str_param(end, "end"),
-            check.float_param(elapsed, "elapsed"),
-            check.list_param(logs, "logs", of_type=dict),
-        )
+    def __init__(self, response: requests.Response):
 
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "DbtRpcOutput":
-        """Constructs an instance of :class:`DbtRpcOutput <dagster_dbt.DbtRpcOutput>` from a
-        dictionary.
+        self._response = response
+        self._response_dict = response.json()
 
-        Args:
-            d (Dict[str, Any]): A dictionary with key-values to construct a :class:`DbtRpcOutput
-                <dagster_dbt.DbtRpcOutput>`.
+        super().__init__(result=self._response_dict.get("result", {}))
 
-        Returns:
-            DbtRpcOutput: An instance of :class:`DbtRpcOutput <dagster_dbt.DbtRpcOutput>`.
-        """
-        state = check.str_elem(d, "state")
-        start = check.str_elem(d, "start")
-        end = check.str_elem(d, "end")
-        elapsed = check.float_elem(d, "elapsed")
+    @property
+    def response(self) -> requests.Response:
+        return self._response
 
-        logs = check.list_elem(d, "logs", of_type=dict)
-
-        dbt_result = DbtResult.from_run_results(d)
-
-        return cls(result=dbt_result, state=state, start=start, end=end, elapsed=elapsed, logs=logs)
+    @property
+    def response_dict(self) -> Dict[str, Any]:
+        return self._response_dict

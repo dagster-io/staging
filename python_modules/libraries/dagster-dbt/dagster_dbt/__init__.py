@@ -43,7 +43,6 @@ from .rpc import (
     dbt_rpc_test_and_wait,
     local_dbt_rpc_resource,
 )
-from .types import DbtResult, NodeResult, StepTiming
 from .version import __version__
 
 check_dagster_package_version("dagster-dbt", __version__)
@@ -57,11 +56,8 @@ __all__ = [
     "DagsterDbtError",
     "DagsterDbtRpcUnexpectedPollOutputError",
     "DbtCliOutput",
-    "DbtResult",
     "DbtRpcClient",
     "DbtRpcOutput",
-    "NodeResult",
-    "StepTiming",
     "create_dbt_rpc_run_sql_solid",
     "dbt_cli_compile",
     "dbt_cli_docs_generate",
