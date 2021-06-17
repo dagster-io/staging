@@ -1,8 +1,7 @@
 import json
 import os
-import re
 import subprocess
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from dagster import check
 
@@ -12,7 +11,7 @@ from ..errors import (
     DagsterDbtCliOutputsNotFoundError,
 )
 from .constants import DBT_RUN_RESULTS_COMMANDS, DEFAULT_DBT_TARGET_PATH
-from .types import DbtCliOutput, DbtResult
+from .types import DbtCliOutput
 
 
 def execute_cli(
@@ -61,10 +60,10 @@ def execute_cli(
     log.info(f"Executing command: {full_command}")
 
     return_code = 0
-    process = subprocess.Popen(command_list, stdout=subprocess.PIPE)
     logs = []
-
     output = []
+
+    process = subprocess.Popen(command_list, stdout=subprocess.PIPE)
     for raw_line in process.stdout or []:
         line = raw_line.decode("utf-8")
         output.append(line)
@@ -93,44 +92,19 @@ def execute_cli(
     if return_code == 1 and not ignore_handled_error:
         raise DagsterDbtCliHandledRuntimeError(logs=logs, raw_output=raw_output)
 
-    result = None
-    if command in DBT_RUN_RESULTS_COMMANDS:
-        raw_run_results = parse_run_results(flags_dict["project-dir"], target_path)
-        result = DbtResult.from_run_results(raw_run_results)
+    run_results = (
+        parse_run_results(flags_dict["project-dir"], target_path)
+        if command in DBT_RUN_RESULTS_COMMANDS
+        else {}
+    )
 
     return DbtCliOutput(
         command=full_command,
         return_code=return_code,
         raw_output=raw_output,
         logs=logs,
-        result=result,
+        result=run_results,
     )
-
-
-SUMMARY_RE = re.compile(r"PASS=(\d+) WARN=(\d+) ERROR=(\d+) SKIP=(\d+) TOTAL=(\d+)")
-SUMMARY_LABELS = ("num_pass", "num_warn", "num_error", "num_skip", "num_total")
-
-
-def extract_summary(logs: List[Dict[str, str]]):
-    """Extracts the summary statistics from dbt CLI output."""
-    check.list_param(logs, "logs", dict)
-
-    summary = [None] * 5
-
-    if len(logs) > 0:
-        # Attempt to extract summary results from the last log's message.
-        last_line = logs[-1]
-        message = last_line["message"].strip()
-
-        try:
-            summary = next(SUMMARY_RE.finditer(message)).groups()
-        except StopIteration:
-            # Failed to match regex.
-            pass
-        else:
-            summary = map(int, summary)
-
-    return dict(zip(SUMMARY_LABELS, summary))
 
 
 def parse_run_results(path: str, target_path: str = DEFAULT_DBT_TARGET_PATH) -> Dict[str, Any]:

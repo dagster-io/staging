@@ -29,7 +29,7 @@ def test_seed(conn_string, test_project_dir, dbt_config_dir):  # pylint: disable
     dbt_result = execute_solid(
         my_dbt_solid, get_mode_def(test_project_dir, dbt_config_dir)
     ).output_value()
-    assert len(dbt_result.result.results) == 1
+    assert len(dbt_result.result["results"]) == 1
 
 
 def test_test(
@@ -43,7 +43,7 @@ def test_test(
     dbt_result = execute_solid(
         my_dbt_solid, get_mode_def(test_project_dir, dbt_config_dir)
     ).output_value()
-    assert len(dbt_result.result.results) == 15
+    assert len(dbt_result.result["results"]) == 15
 
 
 def test_basic_run(
@@ -56,10 +56,10 @@ def test_basic_run(
     dbt_result = execute_solid(
         my_dbt_solid, get_mode_def(test_project_dir, dbt_config_dir)
     ).output_value()
-    assert len(dbt_result.result.results) == 4
+    assert len(dbt_result.result["results"]) == 4
 
 
-def test_extra_flags_run(
+def test_extra_args_run(
     dbt_seed, conn_string, test_project_dir, dbt_config_dir
 ):  # pylint: disable=unused-argument
 
@@ -67,13 +67,47 @@ def test_extra_flags_run(
 
     @solid(required_resource_keys={"dbt"})
     def my_dbt_solid(context):
-        return context.resources.dbt.run(extra_flags={"vars": my_vars})
+        return context.resources.dbt.run(vars=my_vars)
 
     dbt_result = execute_solid(
         my_dbt_solid, get_mode_def(test_project_dir, dbt_config_dir)
     ).output_value()
-    assert len(dbt_result.result.results) == 4
-    assert json.loads(dbt_result.result.raw_run_results["args"]["vars"]) == my_vars
+    assert len(dbt_result.result["results"]) == 4
+    assert json.loads(dbt_result.result["args"]["vars"]) == my_vars
+
+
+def test_models_run(
+    dbt_seed, conn_string, test_project_dir, dbt_config_dir
+):  # pylint: disable=unused-argument
+
+    my_vars = {"foo": 1, "bar": "baz"}
+
+    @solid(required_resource_keys={"dbt"})
+    def my_dbt_solid(context):
+        return context.resources.dbt.run(models=["+least_caloric"], vars=my_vars)
+
+    dbt_result = execute_solid(
+        my_dbt_solid, get_mode_def(test_project_dir, dbt_config_dir)
+    ).output_value()
+    assert len(dbt_result.result["results"]) == 2
+    assert json.loads(dbt_result.result["args"]["vars"]) == my_vars
+
+
+def test_exclude_run(
+    dbt_seed, conn_string, test_project_dir, dbt_config_dir
+):  # pylint: disable=unused-argument
+
+    my_vars = {"foo": 1, "bar": "baz"}
+
+    @solid(required_resource_keys={"dbt"})
+    def my_dbt_solid(context):
+        return context.resources.dbt.run(exclude=["least_caloric"], vars=my_vars)
+
+    dbt_result = execute_solid(
+        my_dbt_solid, get_mode_def(test_project_dir, dbt_config_dir)
+    ).output_value()
+    assert len(dbt_result.result["results"]) == 3
+    assert json.loads(dbt_result.result["args"]["vars"]) == my_vars
 
 
 def test_merged_extra_flags_run(
@@ -85,7 +119,7 @@ def test_merged_extra_flags_run(
 
     @solid(required_resource_keys={"dbt"})
     def my_dbt_solid(context):
-        return context.resources.dbt.run(extra_flags={"vars": my_vars})
+        return context.resources.dbt.run(vars=my_vars)
 
     dbt_result = execute_solid(
         my_dbt_solid,
@@ -99,10 +133,10 @@ def test_merged_extra_flags_run(
             }
         ),
     ).output_value()
-    assert len(dbt_result.result.results) == 4
+    assert len(dbt_result.result["results"]) == 4
     for key in [*configured_vars.keys(), *my_vars.keys()]:
         assert key in dbt_result.command
-    assert json.loads(dbt_result.result.raw_run_results["args"]["vars"]) == {
+    assert json.loads(dbt_result.result["args"]["vars"]) == {
         **configured_vars,
         **my_vars,
     }
