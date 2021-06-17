@@ -19,6 +19,7 @@ from dagster.daemon.daemon import (
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
 from dagster.daemon.types import DaemonHeartbeat, DaemonStatus
 from dagster.utils.interrupts import raise_interrupts_as
+from dagster.core.instance.init_logging import initialize_logging
 
 # How long beyond the expected heartbeat will the daemon be considered healthy
 DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS = 300
@@ -59,6 +60,8 @@ def daemon_controller_from_instance(
 ):
     check.inst_param(instance, "instance", DagsterInstance)
     grpc_server_registry = None
+
+    initialize_logging(instance.get_settings("logging").get("daemon"))
 
     try:
         with ExitStack() as stack:

@@ -9,6 +9,7 @@ import click
 import pendulum
 from dagster import __version__
 from dagster.core.instance import DagsterInstance
+from dagster.core.instance.init_logging import initialize_logging
 from dagster.daemon.controller import (
     DEFAULT_DAEMON_HEARTBEAT_TOLERANCE_SECONDS,
     DagsterDaemonController,

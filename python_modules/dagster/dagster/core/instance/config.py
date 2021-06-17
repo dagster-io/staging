@@ -2,7 +2,7 @@ import os
 import warnings
 
 from dagster import Bool, check
-from dagster.config import Field, Permissive
+from dagster.config import Field, Permissive, Selector
 from dagster.config.validate import validate_config
 from dagster.core.errors import DagsterInvalidConfigError
 from dagster.serdes import class_from_code_pointer
@@ -80,6 +80,10 @@ def configurable_class_schema():
     return {"module": str, "class": str, "config": Field(Permissive())}
 
 
+def config_field_for_logging():
+    return Field(Selector({"file": str, "config": Permissive()}), is_required=False)
+
+
 def dagster_instance_config_schema():
     return {
         "local_artifact_storage": config_field_for_configurable_class(),
@@ -92,4 +96,5 @@ def dagster_instance_config_schema():
         "run_launcher": config_field_for_configurable_class(),
         "telemetry": Field({"enabled": Field(Bool, is_required=False)}),
         "custom_instance_class": config_field_for_configurable_class(),
+        "logging": {"daemon": config_field_for_logging()},
     }

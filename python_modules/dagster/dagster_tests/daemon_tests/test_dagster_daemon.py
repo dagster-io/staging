@@ -8,6 +8,11 @@ from dagster.daemon.cli import run_command
 from dagster.daemon.controller import daemon_controller_from_instance
 from dagster.daemon.daemon import SchedulerDaemon
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
+import tempfile
+from pathlib import Path
+import multiprocessing
+from dagster import DagsterInstance
+import logging
 
 
 def test_scheduler_instance():
@@ -129,3 +134,46 @@ def test_different_intervals(caplog):
                     raise Exception("Timed out waiting for schedule daemon to execute twice")
 
                 time.sleep(0.5)
+
+
+def test_logging():
+    with tempfile.TemporaryDirectory() as logdir:
+        logfile_path = str(Path(logdir) / "logfile")
+        with instance_for_test(
+            overrides={
+                "run_coordinator": {
+                    "module": "dagster.core.run_coordinator.queued_run_coordinator",
+                    "class": "QueuedRunCoordinator",
+                },
+                "logging": {
+                    "daemon": {
+                        "config": {
+                            "root": {"handlers": ["file_handler"], "level": "DEBUG"},
+                            "handlers": {
+                                "file_handler": {
+                                    "class": "logging.FileHandler",
+                                    "filename": logfile_path,
+                                }
+                            },
+                        }
+                    }
+                },
+            }
+        ):
+            # run in a subprocess so it doesn't pollute the test process's global logging config
+            def subprocess():
+                with DagsterInstance.get() as instance:
+                    with daemon_controller_from_instance(instance) as controller:
+                        daemons = controller.daemons
+
+                        assert len(daemons) == 4
+                        assert any(
+                            isinstance(daemon, QueuedRunCoordinatorDaemon) for daemon in daemons
+                        )
+
+            p = multiprocessing.Process(target=subprocess)
+            p.start()
+            p.join()
+
+        logfile_contents = open(logfile_path, "r").read()
+        assert len(logfile_contents) > 0
