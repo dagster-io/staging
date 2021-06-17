@@ -7,8 +7,8 @@ from kubernetes.client import models
 from schema.charts.dagster.values import DagsterHelmValues
 from schema.charts.dagster_user_deployments.subschema.user_deployments import UserDeployments
 from schema.charts.utils import kubernetes
+from schema.utils.helm_template import HelmTemplate
 
-from .helm_template import HelmTemplate
 from .utils import create_complex_user_deployment, create_simple_user_deployment
 
 
