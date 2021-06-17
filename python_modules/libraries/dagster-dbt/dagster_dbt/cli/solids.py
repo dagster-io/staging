@@ -13,6 +13,7 @@ from dagster import (
 from dagster.config.field import Field
 from dagster.utils.backcompat import experimental
 
+from ..utils import generate_materializations
 from .constants import (
     CLI_COMMON_FLAGS_CONFIG_SCHEMA,
     CLI_COMMON_OPTIONS_CONFIG_SCHEMA,
@@ -101,7 +102,6 @@ def dbt_cli_run(context):
     """This solid executes ``dbt run`` via the dbt CLI. See the solid definition for available
     parameters.
     """
-    from ..utils import generate_materializations
 
     cli_output = execute_cli(
         context.solid_config["dbt_executable"],
