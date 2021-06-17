@@ -34,22 +34,26 @@ if TYPE_CHECKING:
     )
 
 
-class WorkspaceRequestContext(NamedTuple):
-    """
-    This class is request-scoped object that stores (1) a reference to all repository locations
-    that exist on the `IWorkspaceProcessContext` at the start of the request and (2) a snapshot of the
-    `Workspace` at the start of the request.
+class IWorkspaceRequestContext:
+    @abstractproperty
+    def instance(self) -> DagsterInstance:
+        pass
 
-    This object is needed because a process context and the repository locations on that context can
-    be updated (for example, from a thread on the process context). If a request is accessing a
-    repository location at the same time the repository location was being cleaned up, we would run
-    into errors.
-    """
+    @abstractproperty
+    def workspace_snapshot(self) -> Dict[str, WorkspaceLocationEntry]:
+        pass
 
-    instance: DagsterInstance
-    workspace_snapshot: Dict[str, WorkspaceLocationEntry]
-    process_context: "IWorkspaceProcessContext"
-    version: Optional[str] = None
+    @abstractproperty
+    def process_context(self) -> "IWorkspaceProcessContext":
+        pass
+
+    @abstractproperty
+    def version(self) -> Optional[str]:
+        pass
+
+    @abstractproperty
+    def read_only(self) -> bool:
+        pass
 
     @property
     def repository_locations(self) -> List[RepositoryLocation]:
@@ -62,10 +66,6 @@ class WorkspaceRequestContext(NamedTuple):
     @property
     def repository_location_names(self) -> List[str]:
         return list(self.workspace_snapshot)
-
-    @property
-    def read_only(self) -> bool:
-        return self.process_context.read_only
 
     def repository_location_errors(self) -> List[SerializableErrorInfo]:
         return [entry.load_error for entry in self.workspace_snapshot.values() if entry.load_error]
@@ -179,15 +179,60 @@ class WorkspaceRequestContext(NamedTuple):
         )
 
 
+class WorkspaceRequestContext(IWorkspaceRequestContext):
+    """
+    This class is request-scoped object that stores (1) a reference to all repository locations
+    that exist on the `IWorkspaceProcessContext` at the start of the request and (2) a snapshot of the
+    `Workspace` at the start of the request.
+
+    This object is needed because a process context and the repository locations on that context can
+    be updated (for example, from a thread on the process context). If a request is accessing a
+    repository location at the same time the repository location was being cleaned up, we would run
+    into errors.
+    """
+
+    def __init__(
+        self,
+        instance: DagsterInstance,
+        workspace_snapshot: Dict[str, WorkspaceLocationEntry],
+        process_context: "IWorkspaceProcessContext",
+        version: Optional[str],
+    ):
+        self._instance = instance
+        self._workspace_snapshot = workspace_snapshot
+        self._process_context = process_context
+        self._version = version
+
+    @property
+    def instance(self) -> DagsterInstance:
+        return self._instance
+
+    @property
+    def workspace_snapshot(self) -> Dict[str, WorkspaceLocationEntry]:
+        return self._workspace_snapshot
+
+    @property
+    def process_context(self) -> "IWorkspaceProcessContext":
+        return self._process_context
+
+    @property
+    def version(self) -> Optional[str]:
+        return self._version
+
+    @property
+    def read_only(self) -> bool:
+        return self.process_context.read_only
+
+
 class IWorkspaceProcessContext(ABC):
     """
     Class that stores process-scoped information about a dagit session.
-    In most cases, you will want to create a `WorkspaceRequestContext` to create a request-scoped
+    In most cases, you will want to create an `IWorkspaceRequestContext` to create a request-scoped
     object.
     """
 
     @abstractmethod
-    def create_request_context(self) -> WorkspaceRequestContext:
+    def create_request_context(self) -> IWorkspaceRequestContext:
         pass
 
     @abstractproperty
