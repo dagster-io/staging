@@ -269,6 +269,16 @@ def _validate_and_coerce_solid_result_to_iterator(result, context, output_defs):
                 )
             )
         yield Output(value=result, output_name=output_defs[0].name)
+    elif len(output_defs) > 1 and isinstance(result, tuple):
+        if len(result) != len(output_defs):
+            check.failed(
+                f"Solid '{context.solid_name}' has {len(output_defs)} output definitions, but "
+                f"returned a tuple with {len(result)} elements"
+            )
+
+        for output_defs, element in zip(output_defs, result):
+            yield Output(output_name=output_defs.name, value=element)
+
     elif result is not None:
         if not output_defs:
             raise DagsterInvariantViolationError(
