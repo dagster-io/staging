@@ -497,7 +497,7 @@ def reexecute_pipeline(
         execution_plan: Optional[ExecutionPlan] = None
         # resolve step selection DSL queries using parent execution information
         if step_selection:
-            step_keys_to_execute, execution_plan = _resolve_reexecute_step_selection(
+            execution_plan = _resolve_reexecute_step_selection(
                 execute_instance,
                 pipeline,
                 mode,
@@ -514,8 +514,6 @@ def reexecute_pipeline(
             tags=tags,
             solid_selection=parent_pipeline_run.solid_selection,
             solids_to_execute=parent_pipeline_run.solids_to_execute,
-            # convert to frozenset https://github.com/dagster-io/dagster/issues/2914
-            step_keys_to_execute=list(step_keys_to_execute) if step_keys_to_execute else None,
             root_run_id=parent_pipeline_run.root_run_id or parent_pipeline_run.run_id,
             parent_run_id=parent_pipeline_run.run_id,
         )
@@ -597,11 +595,10 @@ def reexecute_pipeline_iterator(
             ),
         )
 
-        step_keys_to_execute: Optional[List[str]] = None
         execution_plan: Optional[ExecutionPlan] = None
         # resolve step selection DSL queries using parent execution information
         if step_selection:
-            step_keys_to_execute, execution_plan = _resolve_reexecute_step_selection(
+            execution_plan = _resolve_reexecute_step_selection(
                 execute_instance,
                 pipeline,
                 mode,
@@ -618,8 +615,6 @@ def reexecute_pipeline_iterator(
             tags=tags,
             solid_selection=parent_pipeline_run.solid_selection,
             solids_to_execute=parent_pipeline_run.solids_to_execute,
-            # convert to frozenset https://github.com/dagster-io/dagster/issues/2914
-            step_keys_to_execute=list(step_keys_to_execute) if step_keys_to_execute else None,
             root_run_id=parent_pipeline_run.root_run_id or parent_pipeline_run.run_id,
             parent_run_id=parent_pipeline_run.run_id,
         )
@@ -966,7 +961,7 @@ def _resolve_reexecute_step_selection(
     run_config: Optional[dict],
     parent_pipeline_run: PipelineRun,
     step_selection: List[str],
-) -> Tuple[List[str], ExecutionPlan]:
+) -> ExecutionPlan:
     if parent_pipeline_run.solid_selection:
         pipeline = pipeline.subset_for_execution(parent_pipeline_run.solid_selection)
 
@@ -982,6 +977,7 @@ def _resolve_reexecute_step_selection(
         pipeline,
         run_config,
         mode,
+        step_keys_to_execute=list(step_keys_to_execute),
         known_state=KnownExecutionState.for_reexecution(parent_logs, step_keys_to_execute),
     )
-    return step_keys_to_execute, execution_plan
+    return execution_plan
