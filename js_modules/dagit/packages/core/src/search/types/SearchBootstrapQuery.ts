@@ -10,6 +10,8 @@
 
 export interface SearchBootstrapQuery_workspaceOrError_PythonError {
   __typename: "PythonError";
+  message: string;
+  stack: string[];
 }
 
 export interface SearchBootstrapQuery_workspaceOrError_Workspace_locationEntries_locationOrLoadError_PythonError {
