@@ -3,7 +3,7 @@ import signal
 import sys
 import tempfile
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 
 import pendulum
 import yaml
@@ -83,14 +83,16 @@ def environ(env):
 
 
 @contextmanager
-def instance_for_test(overrides=None):
+def instance_for_test(overrides=None, set_dagster_home=True):
     with tempfile.TemporaryDirectory() as temp_dir:
-        with instance_for_test_tempdir(temp_dir, overrides) as instance:
+        with instance_for_test_tempdir(
+            temp_dir, overrides, set_dagster_home=set_dagster_home
+        ) as instance:
             yield instance
 
 
 @contextmanager
-def instance_for_test_tempdir(temp_dir, overrides=None):
+def instance_for_test_tempdir(temp_dir, overrides=None, set_dagster_home=True):
     # If using the default run launcher, wait for any grpc processes that created runs
     # during test disposal to finish, since they might also be using this instance's tempdir
     instance_overrides = merge_dicts(
@@ -108,10 +110,10 @@ def instance_for_test_tempdir(temp_dir, overrides=None):
 
     # Write any overrides to disk and set DAGSTER_HOME so that they will still apply when
     # DagsterInstance.get() is called from a different process
-    with environ({"DAGSTER_HOME": temp_dir}):
+    with environ({"DAGSTER_HOME": temp_dir}) if set_dagster_home else nullcontext():
         with open(os.path.join(temp_dir, "dagster.yaml"), "w") as fd:
             yaml.dump(instance_overrides, fd, default_flow_style=False)
-        with DagsterInstance.get() as instance:
+        with DagsterInstance.from_config(temp_dir) as instance:
             try:
                 yield instance
             except:
