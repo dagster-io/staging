@@ -71,7 +71,7 @@ class InputDefinition:
 
     def __init__(
         self,
-        name,
+        name=None,
         dagster_type=None,
         description=None,
         default_value=NoValueSentinel,
@@ -81,7 +81,7 @@ class InputDefinition:
         asset_partitions=None,
         # when adding new params, make sure to update combine_with_inferred below
     ):
-        self._name = check_valid_name(name)
+        self._name = check_valid_name(name) if name else None
 
         self._type_not_set = dagster_type is None
         self._dagster_type = check.inst(resolve_dagster_type(dagster_type), DagsterType)
