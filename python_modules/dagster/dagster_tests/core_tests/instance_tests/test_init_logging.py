@@ -1,9 +1,10 @@
 import logging
-from dagster.core.instance.init_logging import initialize_logging
 import multiprocessing
 import tempfile
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any, Dict
+
+from dagster.core.instance.init_logging import initialize_logging
 
 FILE_CONFIG_TEMPLATE = """
 [loggers]

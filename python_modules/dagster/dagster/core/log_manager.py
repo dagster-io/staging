@@ -2,6 +2,7 @@ import datetime
 import itertools
 import logging
 from collections import OrderedDict, namedtuple
+from typing import Any, Dict
 
 from dagster import check, seven
 from dagster.core.utils import make_new_run_id
@@ -33,6 +34,51 @@ def _dump_value(value):
         return seven.json.dumps(value._asdict())
 
     return seven.json.dumps(value)
+
+
+def prepare_log_message_and_extra(
+    orig_message: str, message_props: Dict[str, Any], logging_tags: Dict[str, Any]
+):
+    # These are todos to further align with the Python logging API
+    check.invariant("extra" not in message_props, "do not allow until explicit support is handled")
+    check.invariant(
+        "exc_info" not in message_props, "do not allow until explicit support is handled"
+    )
+
+    # Reserved keys in the message_props -- these are system generated.
+    check.invariant("orig_message" not in message_props, "orig_message reserved value")
+    check.invariant("message" not in message_props, "message reserved value")
+    check.invariant("log_message_id" not in message_props, "log_message_id reserved value")
+    check.invariant("log_timestamp" not in message_props, "log_timestamp reserved value")
+
+    log_message_id = make_new_run_id()
+
+    log_timestamp = datetime.datetime.utcnow().isoformat()
+
+    synth_props = {
+        "orig_message": orig_message,
+        "log_message_id": log_message_id,
+        "log_timestamp": log_timestamp,
+    }
+
+    # We first generate all props for the purpose of producing the semi-structured
+    # log message via _kv_message
+    all_props = dict(
+        itertools.chain(synth_props.items(), logging_tags.items(), message_props.items())
+    )
+
+    # So here we use the arbitrary key DAGSTER_META_KEY to store a dictionary of
+    # all the meta information that dagster injects into log message.
+    # The python logging module, in its infinite wisdom, actually takes all the
+    # keys in extra and unconditionally smashes them into the internal dictionary
+    # of the logging.LogRecord class. We used a reserved key here to avoid naming
+    # collisions with internal variables of the LogRecord class.
+    # See __init__.py:363 (makeLogRecord) in the python 3.6 logging module source
+    # for the gory details.
+    return (
+        construct_log_string(synth_props, logging_tags, message_props),
+        {DAGSTER_META_KEY: all_props},
+    )
 
 
 def construct_log_string(synth_props, logging_tags, message_props):
@@ -136,54 +182,6 @@ class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags lo
         """
         return self._replace(logging_tags=merge_dicts(self.logging_tags, new_tags))
 
-    def _prepare_message(self, orig_message, message_props):
-        check.str_param(orig_message, "orig_message")
-        check.dict_param(message_props, "message_props")
-
-        # These are todos to further align with the Python logging API
-        check.invariant(
-            "extra" not in message_props, "do not allow until explicit support is handled"
-        )
-        check.invariant(
-            "exc_info" not in message_props, "do not allow until explicit support is handled"
-        )
-
-        # Reserved keys in the message_props -- these are system generated.
-        check.invariant("orig_message" not in message_props, "orig_message reserved value")
-        check.invariant("message" not in message_props, "message reserved value")
-        check.invariant("log_message_id" not in message_props, "log_message_id reserved value")
-        check.invariant("log_timestamp" not in message_props, "log_timestamp reserved value")
-
-        log_message_id = make_new_run_id()
-
-        log_timestamp = datetime.datetime.utcnow().isoformat()
-
-        synth_props = {
-            "orig_message": orig_message,
-            "log_message_id": log_message_id,
-            "log_timestamp": log_timestamp,
-            "run_id": self.run_id,
-        }
-
-        # We first generate all props for the purpose of producing the semi-structured
-        # log message via _kv_messsage
-        all_props = dict(
-            itertools.chain(synth_props.items(), self.logging_tags.items(), message_props.items())
-        )
-
-        # So here we use the arbitrary key DAGSTER_META_KEY to store a dictionary of
-        # all the meta information that dagster injects into log message.
-        # The python logging module, in its infinite wisdom, actually takes all the
-        # keys in extra and unconditionally smashes them into the internal dictionary
-        # of the logging.LogRecord class. We used a reserved key here to avoid naming
-        # collisions with internal variables of the LogRecord class.
-        # See __init__.py:363 (makeLogRecord) in the python 3.6 logging module source
-        # for the gory details.
-        return (
-            construct_log_string(synth_props, self.logging_tags, message_props),
-            {DAGSTER_META_KEY: all_props},
-        )
-
     def _log(self, level, orig_message, message_props):
         """Invoke the underlying loggers for a given log level.
 
@@ -198,7 +196,9 @@ class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags lo
 
         level = coerce_valid_log_level(level)
 
-        message, extra = self._prepare_message(orig_message, message_props)
+        message, extra = prepare_log_message_and_extra(
+            orig_message, merge_dicts(message_props, {"run_id", self.run_id}), self.logging_tags
+        )
 
         for logger_ in self.loggers:
             logger_.log(level, message, extra=extra)

@@ -1,18 +1,17 @@
+import multiprocessing
+import tempfile
 import time
+from pathlib import Path
 
 import pendulum
 import pytest
 from click.testing import CliRunner
+from dagster import DagsterInstance
 from dagster.core.test_utils import instance_for_test
 from dagster.daemon.cli import run_command
 from dagster.daemon.controller import daemon_controller_from_instance
 from dagster.daemon.daemon import SchedulerDaemon
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
-import tempfile
-from pathlib import Path
-import multiprocessing
-from dagster import DagsterInstance
-import logging
 
 
 def test_scheduler_instance():

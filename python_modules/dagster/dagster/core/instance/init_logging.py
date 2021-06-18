@@ -1,7 +1,8 @@
-from typing import Dict, Any, Optional
 from logging.config import dictConfig, fileConfig
-from dagster.utils.merger import merge_dicts
+from typing import Any, Dict, Optional
+
 from dagster import check
+from dagster.utils.merger import merge_dicts
 
 
 def initialize_logging(logging_config: Optional[Dict[str, Any]]) -> None:

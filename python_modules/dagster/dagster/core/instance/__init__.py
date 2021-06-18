@@ -22,6 +22,7 @@ from dagster.core.errors import (
     DagsterRunAlreadyExists,
     DagsterRunConflict,
 )
+from dagster.core.log_manager import prepare_log_message_and_extra
 from dagster.core.storage.pipeline_run import (
     PipelineRun,
     PipelineRunStatus,
@@ -1149,6 +1150,12 @@ class DagsterInstance:
         )
 
         self.handle_new_event(event_record)
+
+        message, extra = prepare_log_message_and_extra(
+            message, {"dagster_event": dagster_event}, {}
+        )
+        logging.getLogger("dagster_engine").log(level=log_level, msg=message, **extra)
+
         return dagster_event
 
     def report_run_canceling(self, run, message=None):
