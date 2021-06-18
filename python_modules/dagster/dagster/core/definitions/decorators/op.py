@@ -7,6 +7,7 @@ from ..input import In, InputDefinition
 from ..output import MultiOut, Out, OutputDefinition
 from ..policy import RetryPolicy
 from ..solid import SolidDefinition
+from ..utils import NoValueSentinel
 from .solid import _Solid, solid
 
 
@@ -21,7 +22,7 @@ def op(
     tags: Optional[Dict[str, Any]] = None,
     version: Optional[str] = None,
     retry_policy: Optional[RetryPolicy] = None,
-    ins: Optional[List[In]] = None,
+    ins: Optional[Union[List[In], Dict[str, In]]] = None,
     out: Optional[Union[Out, MultiOut]] = None,
 ) -> Union[_Solid, SolidDefinition]:
     """Op is an experimental replacement for solid, intended to decrease verbosity of core API."""
@@ -30,6 +31,26 @@ def op(
 
     if output_defs is not None and out is not None:
         check.failed("Values cannot be provided for both the 'output_defs' and 'out' arguments")
+
+    if isinstance(ins, dict):
+        if any([inp.name is not None for inp in ins.values()]):
+            check.failed(
+                "Cannot provide name to In if providing dictionary of ins. "
+                "The In will take on the dict key as the name."
+            )
+        ins = [
+            In(
+                name=key,
+                dagster_type=inp.dagster_type,
+                description=inp.description,
+                default_value=inp.default_value if inp.has_default_value else NoValueSentinel,
+                root_manager_key=inp.root_manager_key,
+                metadata=inp.metadata,
+                asset_key=inp._asset_key_fn,  # pylint: disable=protected-access
+                asset_partitions=inp._asset_partitions_fn,  # pylint: disable=protected-access
+            )
+            for key, inp in ins.items()
+        ]
 
     final_output_defs: Optional[Sequence[OutputDefinition]] = None
     if out:
