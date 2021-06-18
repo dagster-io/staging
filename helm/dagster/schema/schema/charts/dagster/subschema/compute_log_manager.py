@@ -43,6 +43,7 @@ class S3ComputeLogManager(BaseModel):
     verify: Optional[bool]
     verifyCertPath: Optional[StringSource]
     endpointUrl: Optional[StringSource]
+    skipEmptyFiles: Optional[bool]
 
     class Config:
         extra = Extra.forbid
