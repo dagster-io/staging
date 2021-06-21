@@ -22,7 +22,19 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile_pipelines
+    command:
+      - dagster
+      - api
+      - grpc
+      - -h
+      - "0.0.0.0"
+      - -p
+      - "4000"
+      - -f
+      - repo.py
     container_name: docker_example_pipelines
+    expose:
+      - "4000"
     image: docker_example_pipelines_image
     environment:
       DAGSTER_POSTGRES_USER: "postgres_user"
@@ -31,6 +43,7 @@ services:
       DAGSTER_CURRENT_IMAGE: "docker_example_pipelines_image"
     networks:
       - docker_example_network
+
 
   # This service runs dagit, which loads the pipelines from the user code container.
   # Since our instance uses the QueuedRunCoordinator, any runs submitted from dagit will be put on
@@ -56,8 +69,12 @@ services:
       DAGSTER_POSTGRES_USER: "postgres_user"
       DAGSTER_POSTGRES_PASSWORD: "postgres_password"
       DAGSTER_POSTGRES_DB: "postgres_db"
+      DAGSTER_HOME: "/opt/dagster/dagster_home"
+    working_dir: "/opt/dagster/dagster_home"
     volumes: # Make docker client accessible so we can terminate containers from dagit
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./workspace.yaml:/opt/dagster/dagster_home/workspace.yaml
+      - ./dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
     networks:
       - docker_example_network
     depends_on:
@@ -79,8 +96,10 @@ services:
       DAGSTER_POSTGRES_USER: "postgres_user"
       DAGSTER_POSTGRES_PASSWORD: "postgres_password"
       DAGSTER_POSTGRES_DB: "postgres_db"
+      DAGSTER_HOME: "/opt/dagster/dagster_home"
     volumes: # Make docker client accessible so we can launch containers using host docker
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./dagster.yaml:/opt/dagster/dagster_home/dagster.yaml
     networks:
       - docker_example_network
     depends_on:

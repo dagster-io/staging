@@ -4,11 +4,26 @@ import subprocess
 import time
 from contextlib import contextmanager
 
+import pytest
 import requests
 from dagster import file_relative_path
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
+
+
+@pytest.fixture(name="docker_compose")
+def docker_compose_fixture():
+    with docker_service_up(file_relative_path(__file__, "../from_source/docker-compose.yml")):
+        try:
+            yield
+        finally:
+            print("Dagit logs:")  # pylint: disable=print-call
+            print(  # pylint: disable=print-call
+                subprocess.check_output(["docker", "logs", "docker_example_dagit"]).decode(
+                    "unicode_escape"
+                )
+            )
 
 
 @contextmanager
@@ -126,122 +141,115 @@ mutation($runId: String!) {
 """
 
 
-def test_deploy_docker():
-    with docker_service_up(file_relative_path(__file__, "../from_source/docker-compose.yml")):
-        # Wait for server to wake up
+def test_deploy_docker(docker_compose):  # pylint: disable=unused-argument
+    # Wait for server to wake up
 
-        start_time = time.time()
+    start_time = time.time()
 
-        dagit_host = os.environ.get("DEPLOY_DOCKER_DAGIT_HOST", "localhost")
+    dagit_host = os.environ.get("DEPLOY_DOCKER_DAGIT_HOST", "localhost")
 
-        while True:
-            if time.time() - start_time > 15:
-                raise Exception("Timed out waiting for dagit server to be available")
+    while True:
+        if time.time() - start_time > 15:
+            raise Exception("Timed out waiting for dagit server to be available")
 
-            try:
-                sanity_check = requests.get(
-                    "http://{dagit_host}:3000/dagit_info".format(dagit_host=dagit_host)
-                )
-                assert "dagit" in sanity_check.text
-                break
-            except requests.exceptions.ConnectionError:
-                pass
-
-            time.sleep(1)
-
-        res = requests.get(
-            "http://{dagit_host}:3000/graphql?query={query_string}".format(
-                dagit_host=dagit_host,
-                query_string=PIPELINES_OR_ERROR_QUERY,
+        try:
+            sanity_check = requests.get(
+                "http://{dagit_host}:3000/dagit_info".format(dagit_host=dagit_host)
             )
-        ).json()
+            assert "dagit" in sanity_check.text
+            break
+        except requests.exceptions.ConnectionError:
+            pass
 
-        data = res.get("data")
-        assert data
+        time.sleep(1)
 
-        repositoriesOrError = data.get("repositoriesOrError")
-        assert repositoriesOrError
+    res = requests.get(
+        "http://{dagit_host}:3000/graphql?query={query_string}".format(
+            dagit_host=dagit_host,
+            query_string=PIPELINES_OR_ERROR_QUERY,
+        )
+    ).json()
 
-        nodes = repositoriesOrError.get("nodes")
-        assert nodes
+    data = res.get("data")
+    assert data
 
-        names = {node["name"] for node in nodes[0]["pipelines"]}
-        assert names == {"my_pipeline", "hanging_pipeline"}
+    repositoriesOrError = data.get("repositoriesOrError")
+    assert repositoriesOrError
 
-        variables = {
-            "executionParams": {
-                "selector": {
-                    "repositoryLocationName": "example_pipelines",
-                    "repositoryName": "deploy_docker_repository",
-                    "pipelineName": "my_pipeline",
-                },
-                "mode": "default",
-            }
+    nodes = repositoriesOrError.get("nodes")
+    assert nodes
+
+    names = {node["name"] for node in nodes[0]["pipelines"]}
+    assert names == {"my_pipeline", "hanging_pipeline"}
+
+    variables = {
+        "executionParams": {
+            "selector": {
+                "repositoryLocationName": "example_pipelines",
+                "repositoryName": "deploy_docker_repository",
+                "pipelineName": "my_pipeline",
+            },
+            "mode": "default",
         }
+    }
 
-        launch_res = requests.post(
-            "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
-                dagit_host=dagit_host,
-                query_string=LAUNCH_PIPELINE_MUTATION,
-                variables=json.dumps(variables),
-            )
-        ).json()
-
-        assert (
-            launch_res["data"]["launchPipelineExecution"]["__typename"]
-            == "LaunchPipelineRunSuccess"
+    launch_res = requests.post(
+        "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
+            dagit_host=dagit_host,
+            query_string=LAUNCH_PIPELINE_MUTATION,
+            variables=json.dumps(variables),
         )
+    ).json()
 
-        run = launch_res["data"]["launchPipelineExecution"]["run"]
-        run_id = run["runId"]
-        assert run["status"] == "QUEUED"
+    assert launch_res["data"]["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
 
-        _wait_for_run_status(run_id, dagit_host, PipelineRunStatus.SUCCESS)
+    run = launch_res["data"]["launchPipelineExecution"]["run"]
+    run_id = run["runId"]
+    assert run["status"] == "QUEUED"
 
-        # Launch a hanging pipeline and terminate it
-        variables = {
-            "executionParams": {
-                "selector": {
-                    "repositoryLocationName": "example_pipelines",
-                    "repositoryName": "deploy_docker_repository",
-                    "pipelineName": "hanging_pipeline",
-                },
-                "mode": "default",
-            }
+    _wait_for_run_status(run_id, dagit_host, PipelineRunStatus.SUCCESS)
+
+    # Launch a hanging pipeline and terminate it
+    variables = {
+        "executionParams": {
+            "selector": {
+                "repositoryLocationName": "example_pipelines",
+                "repositoryName": "deploy_docker_repository",
+                "pipelineName": "hanging_pipeline",
+            },
+            "mode": "default",
         }
+    }
 
-        launch_res = requests.post(
-            "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
-                dagit_host=dagit_host,
-                query_string=LAUNCH_PIPELINE_MUTATION,
-                variables=json.dumps(variables),
-            )
-        ).json()
-
-        assert (
-            launch_res["data"]["launchPipelineExecution"]["__typename"]
-            == "LaunchPipelineRunSuccess"
+    launch_res = requests.post(
+        "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
+            dagit_host=dagit_host,
+            query_string=LAUNCH_PIPELINE_MUTATION,
+            variables=json.dumps(variables),
         )
+    ).json()
 
-        run = launch_res["data"]["launchPipelineExecution"]["run"]
-        hanging_run_id = run["runId"]
+    assert launch_res["data"]["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
 
-        _wait_for_run_status(hanging_run_id, dagit_host, PipelineRunStatus.STARTED)
+    run = launch_res["data"]["launchPipelineExecution"]["run"]
+    hanging_run_id = run["runId"]
 
-        terminate_res = requests.post(
-            "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
-                dagit_host=dagit_host,
-                query_string=TERMINATE_MUTATION,
-                variables=json.dumps({"runId": hanging_run_id}),
-            )
-        ).json()
+    _wait_for_run_status(hanging_run_id, dagit_host, PipelineRunStatus.STARTED)
 
-        assert (
-            terminate_res["data"]["terminatePipelineExecution"]["__typename"]
-            == "TerminatePipelineExecutionSuccess"
+    terminate_res = requests.post(
+        "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
+            dagit_host=dagit_host,
+            query_string=TERMINATE_MUTATION,
+            variables=json.dumps({"runId": hanging_run_id}),
         )
+    ).json()
 
-        _wait_for_run_status(hanging_run_id, dagit_host, PipelineRunStatus.CANCELED)
+    assert (
+        terminate_res["data"]["terminatePipelineExecution"]["__typename"]
+        == "TerminatePipelineExecutionSuccess"
+    )
+
+    _wait_for_run_status(hanging_run_id, dagit_host, PipelineRunStatus.CANCELED)
 
 
 def _wait_for_run_status(run_id, dagit_host, desired_status):

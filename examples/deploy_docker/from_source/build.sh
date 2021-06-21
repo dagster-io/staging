@@ -14,7 +14,7 @@ cleanup
 # ensure cleanup happens on error or normal exit
 trap cleanup INT TERM EXIT ERR
 
-set -ux
+set -eux
 shopt -s expand_aliases
 
 pushd $BASE_DIR
