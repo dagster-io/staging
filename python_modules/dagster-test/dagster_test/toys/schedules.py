@@ -159,7 +159,7 @@ def monthly_materialization_schedule():
 
 
 def longitudinal_schedule():
-    from .longitudinal import longitudinal_pipeline
+    from .longitudinal import longitudinal_job
 
     schedule_name = "longitudinal_demo"
 
@@ -167,13 +167,13 @@ def longitudinal_schedule():
         return {
             "solids": {
                 solid.name: {"config": {"partition": partition.name}}
-                for solid in longitudinal_pipeline.solids
+                for solid in longitudinal_job.solids
             }
         }
 
     partition_set = PartitionSetDefinition(
         name="ingest_and_train",
-        pipeline_name="longitudinal_pipeline",
+        pipeline_name=longitudinal_job.name,
         partition_fn=date_partition_range(start=datetime.datetime(2020, 1, 1)),
         run_config_fn_for_partition=longitudinal_config,
     )
