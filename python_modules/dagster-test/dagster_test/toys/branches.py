@@ -1,11 +1,11 @@
 from time import sleep
 
-from dagster import Field, Int, Output, OutputDefinition, PresetDefinition, pipeline, solid
+from dagster import Field, MultiOut, Out, Output, graph, op
 
 
-@solid(
+@op(
     config_schema={"sleep_secs": Field([int], is_required=False, default_value=[0, 0])},
-    output_defs=[OutputDefinition(Int, "out_1"), OutputDefinition(Int, "out_2")],
+    out=MultiOut(outs=[Out(dagster_type=int, name="out_1"), Out(dagster_type=int, name="out_2")]),
 )
 def root(context):
     sleep_secs = context.solid_config["sleep_secs"]
@@ -13,7 +13,7 @@ def root(context):
     yield Output(sleep_secs[1], "out_2")
 
 
-@solid
+@op
 def branch_solid(context, sec):
     if sec < 0:
         sleep(-sec)
@@ -31,28 +31,27 @@ def branch(name, arg, solid_num):
     return out
 
 
-@pipeline(
-    description=("Demo fork-shaped pipeline that has two-path parallel structure of solids."),
-    preset_defs=[
-        PresetDefinition(
-            "sleep_failed",
-            {
-                "intermediate_storage": {"filesystem": {}},
-                "execution": {"multiprocess": {}},
-                "solids": {"root": {"config": {"sleep_secs": [-10, 30]}}},
-            },
-        ),
-        PresetDefinition(
-            "sleep",
-            {
-                "intermediate_storage": {"filesystem": {}},
-                "execution": {"multiprocess": {}},
-                "solids": {"root": {"config": {"sleep_secs": [0, 10]}}},
-            },
-        ),
-    ],
-)
-def branch_pipeline():
-    out_1, out_2 = root()
+@graph(description="Demo fork-shaped pipeline that has two-path parallel structure of solids.")
+def branch_graph():
+    out_1, out_2 = root()  # pylint: disable=no-value-for-parameter
     branch("branch_1", out_1, 3)
     branch("branch_2", out_2, 5)
+
+
+sleep_failed_branch_job = branch_graph.to_job(
+    name="sleep_failed_branch_job",
+    default_config={
+        "intermediate_storage": {"filesystem": {}},
+        "execution": {"multiprocess": {}},
+        "solids": {"root": {"config": {"sleep_secs": [-10, 30]}}},
+    },
+)
+
+sleep_branch_job = branch_graph.to_job(
+    name="sleep_branch_job",
+    default_config={
+        "intermediate_storage": {"filesystem": {}},
+        "execution": {"multiprocess": {}},
+        "solids": {"root": {"config": {"sleep_secs": [0, 10]}}},
+    },
+)
