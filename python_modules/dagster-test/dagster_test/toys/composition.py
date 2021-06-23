@@ -1,50 +1,46 @@
-from dagster import (
-    Float,
-    InputDefinition,
-    Int,
-    List,
-    OutputDefinition,
-    composite_solid,
-    pipeline,
-    solid,
-)
+from typing import List
+
+from dagster import InputDefinition, OutputDefinition, graph, op
 
 
-@solid(output_defs=[OutputDefinition(Int)])
-def emit_one(_):
+@op
+def emit_one() -> int:
     return 1
 
 
-@solid(input_defs=[InputDefinition("numbers", List[Int])], output_defs=[OutputDefinition(Int)])
-def add(_, numbers):
+@op
+def add(numbers: List[int]) -> int:
     return sum(numbers)
 
 
-@solid(input_defs=[InputDefinition("num", Float)], output_defs=[OutputDefinition(Float)])
-def div_two(_, num):
+@op
+def div_two(num: float) -> float:
     return num / 2
 
 
-@composite_solid(output_defs=[OutputDefinition(Int)])
-def emit_two():
+@graph
+def emit_two() -> int:
     return add([emit_one(), emit_one()])
 
 
-@composite_solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
-def add_four(num):
+@graph(input_defs=[InputDefinition("num", int)], output_defs=[OutputDefinition(int)])
+def add_four(num: int) -> int:
     return add([emit_two(), emit_two(), num])
 
 
-@composite_solid(input_defs=[InputDefinition("num", Float)], output_defs=[OutputDefinition(Float)])
-def div_four(num):
+@graph
+def div_four(num: float) -> float:
     return div_two(num=div_two(num))
 
 
-@solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Float)])
-def int_to_float(_, num):
+@op
+def int_to_float(num) -> float:
     return float(num)
 
 
-@pipeline(description="Demo pipeline that makes use of composite solids.")
-def composition():
+@graph(description="Demo graph that makes use of composition of graphs.")
+def composition_graph():
     div_four(int_to_float(add_four()))
+
+
+composition_job = composition_graph.to_job(name="composition_job")
