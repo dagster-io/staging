@@ -1,9 +1,9 @@
 from dagster import repository
 from dagster_test.toys.asset_lineage import asset_lineage_partition_set, asset_lineage_pipeline
-from dagster_test.toys.branches import branch_pipeline
-from dagster_test.toys.composition import composition
+from dagster_test.toys.branches import sleep_branch_job, sleep_failed_branch_job
+from dagster_test.toys.composition import composition_graph
 from dagster_test.toys.dynamic import dynamic_pipeline
-from dagster_test.toys.error_monster import error_monster
+from dagster_test.toys.error_monster import error_monster_job
 from dagster_test.toys.hammer import hammer_pipeline
 from dagster_test.toys.log_asset import log_asset_pipeline
 from dagster_test.toys.log_file import log_file_pipeline
@@ -23,8 +23,8 @@ from .sensors import get_toys_sensors
 def toys_repository():
     return (
         [
-            composition,
-            error_monster,
+            composition_graph,
+            error_monster_job,
             hammer_pipeline,
             log_asset_pipeline,
             log_file_pipeline,
@@ -34,7 +34,8 @@ def toys_repository():
             many_events,
             sleepy_pipeline,
             retry_pipeline,
-            branch_pipeline,
+            sleep_branch_job,
+            sleep_failed_branch_job,
             unreliable_pipeline,
             dynamic_pipeline,
             asset_lineage_pipeline,
