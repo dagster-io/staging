@@ -79,7 +79,7 @@ def backfill_test_schedule():
     # create weekly partition set
     partition_set = PartitionSetDefinition(
         name="unreliable_weekly",
-        pipeline_name="unreliable_pipeline",
+        pipeline_name="unreliable_job",
         partition_fn=date_partition_range(
             # first sunday of the year
             start=datetime.datetime(2020, 1, 5),
@@ -105,7 +105,7 @@ def materialization_schedule():
     schedule_name = "many_events_partitioned"
     partition_set = PartitionSetDefinition(
         name="many_events_minutely",
-        pipeline_name="many_events",
+        pipeline_name="many_events_job",
         partition_fn=date_partition_range(start=datetime.datetime(2020, 1, 1)),
         run_config_fn_for_partition=lambda _: {"intermediate_storage": {"filesystem": {}}},
     )
@@ -123,7 +123,7 @@ def materialization_schedule():
 
 
 @hourly_schedule(
-    pipeline_name="many_events",
+    pipeline_name="many_events_job",
     start_date=datetime.datetime(2021, 1, 1),
     execution_timezone=_toys_tz_info(),
 )
@@ -132,7 +132,7 @@ def hourly_materialization_schedule():
 
 
 @daily_schedule(
-    pipeline_name="many_events",
+    pipeline_name="many_events_job",
     start_date=datetime.datetime(2021, 1, 1),
     execution_timezone=_toys_tz_info(),
 )
@@ -141,7 +141,7 @@ def daily_materialization_schedule():
 
 
 @weekly_schedule(
-    pipeline_name="many_events",
+    pipeline_name="many_events_job",
     start_date=datetime.datetime(2021, 1, 1),
     execution_timezone=_toys_tz_info(),
 )
@@ -150,7 +150,7 @@ def weekly_materialization_schedule():
 
 
 @monthly_schedule(
-    pipeline_name="many_events",
+    pipeline_name="many_events_job",
     start_date=datetime.datetime(2021, 1, 1),
     execution_timezone=_toys_tz_info(),
 )
@@ -159,7 +159,7 @@ def monthly_materialization_schedule():
 
 
 def longitudinal_schedule():
-    from .longitudinal import longitudinal_pipeline
+    from .longitudinal import longitudinal_job
 
     schedule_name = "longitudinal_demo"
 
@@ -167,13 +167,13 @@ def longitudinal_schedule():
         return {
             "solids": {
                 solid.name: {"config": {"partition": partition.name}}
-                for solid in longitudinal_pipeline.solids
+                for solid in longitudinal_job.solids
             }
         }
 
     partition_set = PartitionSetDefinition(
         name="ingest_and_train",
-        pipeline_name="longitudinal_pipeline",
+        pipeline_name=longitudinal_job.name,
         partition_fn=date_partition_range(start=datetime.datetime(2020, 1, 1)),
         run_config_fn_for_partition=longitudinal_config,
     )
@@ -207,7 +207,7 @@ def get_toys_schedules():
         ScheduleDefinition(
             name="many_events_every_min",
             cron_schedule="* * * * *",
-            pipeline_name="many_events",
+            pipeline_name="many_events_job",
             run_config_fn=lambda _: {"intermediate_storage": {"filesystem": {}}},
             execution_timezone=_toys_tz_info(),
         ),
