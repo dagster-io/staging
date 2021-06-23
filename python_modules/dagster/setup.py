@@ -77,7 +77,7 @@ if __name__ == "__main__":
             "tabulate",
             "tqdm",
             "typing_compat",
-            "sqlalchemy>=1.0",
+            "sqlalchemy>=1.0,<1.4.19",
             "toposort>=1.0",
             "watchdog>=0.8.3",
             'psutil >= 1.0; platform_system=="Windows"',
