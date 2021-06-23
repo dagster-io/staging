@@ -93,6 +93,9 @@ class IWorkspaceRequestContext:
     def get_repository_location_error(self, name: str) -> Optional[SerializableErrorInfo]:
         return self.workspace_snapshot[name].load_error
 
+    def has_repository_location_name(self, name: str) -> bool:
+        return bool(self.workspace_snapshot.get(name))
+
     def has_repository_location(self, name: str) -> bool:
         location_entry = self.workspace_snapshot.get(name)
         return bool(location_entry and location_entry.repository_location != None)
@@ -105,6 +108,9 @@ class IWorkspaceRequestContext:
         # request context created from the updated process context
         self.process_context.reload_repository_location(name)
         return self.process_context.create_request_context()
+
+    def shutdown_repository_location(self, name: str):
+        self.process_context.shutdown_repository_location(name)
 
     def reload_workspace(self) -> "IWorkspaceRequestContext":
         self.process_context.reload_workspace()
@@ -251,6 +257,9 @@ class IWorkspaceProcessContext(ABC):
     def reload_repository_location(self, name: str) -> None:
         pass
 
+    def shutdown_repository_location(self, name: str) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     def reload_workspace(self) -> None:
         pass
@@ -348,6 +357,9 @@ class WorkspaceProcessContext(IWorkspaceProcessContext):
 
     def reload_repository_location(self, name: str) -> None:
         self._workspace.reload_repository_location(name)
+
+    def shutdown_repository_location(self, name: str) -> None:
+        self._workspace.shutdown_repository_location(name)
 
     def reload_workspace(self) -> None:
         self._workspace.reload_workspace()
