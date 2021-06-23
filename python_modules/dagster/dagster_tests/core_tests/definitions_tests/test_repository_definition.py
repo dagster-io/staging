@@ -228,6 +228,8 @@ def test_direct_schedule_target():
     def my_daily(_):
         return {}
 
+    assert my_daily.get_partition_set().pipeline_name == "wonder"
+
     @monthly_schedule(
         pipeline_name=None,
         job=wonder,
@@ -235,6 +237,8 @@ def test_direct_schedule_target():
     )
     def my_monthly(_):
         return {}
+
+    assert my_monthly.get_partition_set().pipeline_name == "wonder"
 
     @weekly_schedule(
         pipeline_name=None,
@@ -244,6 +248,8 @@ def test_direct_schedule_target():
     def my_weekly(_):
         return {}
 
+    assert my_weekly.get_partition_set().pipeline_name == "wonder"
+
     @hourly_schedule(
         pipeline_name=None,
         job=wonder,
@@ -251,6 +257,8 @@ def test_direct_schedule_target():
     )
     def my_hourly(_):
         return {}
+
+    assert my_hourly.get_partition_set().pipeline_name == "wonder"
 
     @repository
     def test():
