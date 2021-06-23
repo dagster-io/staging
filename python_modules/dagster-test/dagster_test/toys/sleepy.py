@@ -2,29 +2,30 @@
 from time import sleep
 from typing import Iterator, List
 
-from dagster import ConfigMapping, Output, OutputDefinition, solid
-from dagster.core.definitions.decorators.graph import graph
+from dagster import ConfigMapping, MultiOut, Out, Output, graph, op
 
 
-@solid
+@op
 def sleeper(context, units: List[int]) -> int:
     tot = 0
     for sec in units:
-        context.log.info("Sleeping for {} seconds".format(sec))
+        context.log.info(f"Sleeping for {sec} seconds")
         sleep(sec)
         tot += sec
 
     return tot
 
 
-@solid(
+@op(
     config_schema=[int],
-    output_defs=[
-        OutputDefinition(List[int], "out_1"),
-        OutputDefinition(List[int], "out_2"),
-        OutputDefinition(List[int], "out_3"),
-        OutputDefinition(List[int], "out_4"),
-    ],
+    out=MultiOut(
+        outs=[
+            Out(List[int], "out_1"),
+            Out(List[int], "out_2"),
+            Out(List[int], "out_3"),
+            Out(List[int], "out_4"),
+        ]
+    ),
 )
 def giver(context) -> Iterator[Output]:
     units = context.solid_config
@@ -38,9 +39,9 @@ def giver(context) -> Iterator[Output]:
     yield Output(queues[3], "out_4")
 
 
-@solid(
+@op(
     config_schema={"fail": bool},
-    output_defs=[OutputDefinition(int, is_required=False)],
+    out=Out(int, is_required=False),
 )
 def total(context, in_1, in_2, in_3, in_4):
     result = in_1 + in_2 + in_3 + in_4
@@ -50,18 +51,18 @@ def total(context, in_1, in_2, in_3, in_4):
     context.log.info(str(result))
 
 
-@solid
-def will_fail(_, i):
+@op
+def will_fail(i):
     raise Exception(i)
 
 
 @graph(
     description=(
-        "Demo diamond-shaped pipeline that has four-path parallel structure of solids.  Execute "
+        "Demo diamond-shaped pipeline that has four-path parallel structure of solids. Execute "
         "with the `multi` preset to take advantage of multi-process parallelism."
     ),
 )
-def sleepy():
+def sleepy_graph():
     giver_res = giver()
 
     will_fail(
@@ -85,7 +86,8 @@ def _config(cfg):
     }
 
 
-sleepy_pipeline = sleepy.to_job(
+sleepy_job = sleepy_graph.to_job(
+    name="sleepy_job",
     config_mapping=ConfigMapping(
         config_schema={
             "sleeps": [int],
