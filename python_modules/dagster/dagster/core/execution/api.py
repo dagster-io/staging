@@ -376,6 +376,28 @@ def execute_pipeline(
         )
 
 
+Job = PipelineDefinition
+JobResult = PipelineExecutionResult
+
+
+def execute_job(
+    job: Job,
+    run_config: Optional[dict] = None,
+    instance: Optional[DagsterInstance] = None,
+    raise_on_error: bool = True,
+) -> JobResult:
+    if len(job.mode_definitions) > 1:
+        raise DagsterInvariantViolationError(
+            "`execute_job` can only be used with a Job (pipeline with one mode)."
+        )
+    return execute_pipeline(
+        pipeline=job,
+        run_config=run_config,
+        instance=instance,
+        raise_on_error=raise_on_error,
+    )
+
+
 @telemetry_wrapper
 def _logged_execute_pipeline(
     pipeline: Union[IPipeline, PipelineDefinition],
