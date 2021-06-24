@@ -63,9 +63,9 @@ class StepBuilder:
         settings["image"] = "{account_id}.dkr.ecr.us-west-2.amazonaws.com/{image}".format(
             account_id=AWS_ACCOUNT_ID, image=image
         )
-        settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
+        settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock", "/tmp:/tmp"]
         settings["network"] = "kind"
-        settings["environment"] = ["BUILDKITE"] + (env or [])
+        settings["environment"] = ["BUILDKITE", "PYTEST_DEBUG_TEMPROOT=/tmp"] + (env or [])
         ecr_settings = {
             "login": True,
             "no-include-email": True,
