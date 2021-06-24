@@ -1,7 +1,14 @@
 from typing import Dict
 
 import pytest
-from dagster import ConfigMapping, DagsterInvalidDefinitionError, execute_pipeline, resource, solid
+from dagster import (
+    ConfigMapping,
+    DagsterInvalidDefinitionError,
+    execute_pipeline,
+    logger,
+    resource,
+    solid,
+)
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.execution.execute import execute_in_process
@@ -279,3 +286,20 @@ def test_partitions_and_default_config():
             partitions=partition_fn,
             default_config={"solids": {"my_solid": {"config": {"date": "abc"}}}},
         )
+
+
+def test_logger_defs():
+    @solid
+    def my_solid(_):
+        pass
+
+    @graph
+    def my_graph():
+        my_solid()
+
+    @logger
+    def my_logger(_):
+        pass
+
+    my_job = my_graph.to_job(logger_defs={"abc": my_logger})
+    assert my_job.mode_definitions[0].loggers == {"abc": my_logger}

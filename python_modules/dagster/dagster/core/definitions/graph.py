@@ -37,13 +37,14 @@ from .dependency import (
 )
 from .i_solid_definition import NodeDefinition
 from .input import FanInInputPointer, InputDefinition, InputMapping, InputPointer
+from .logger import LoggerDefinition
 from .output import OutputDefinition, OutputMapping
 from .preset import PresetDefinition
 from .solid_container import create_execution_structure, validate_dependency_dict
 
 if TYPE_CHECKING:
-    from .solid import SolidDefinition
     from .resource import ResourceDefinition
+    from .solid import SolidDefinition
 
 
 def _check_node_defs_arg(graph_name: str, node_defs: List[NodeDefinition]):
@@ -366,6 +367,7 @@ class GraphDefinition(NodeDefinition):
         config_mapping: Union[ConfigMapping, Dict[str, Any]] = None,
         default_config: Optional[Dict[str, Any]] = None,
         partitions: Optional[Callable[[], List[Any]]] = None,
+        logger_defs: Optional[Dict[str, LoggerDefinition]] = None,
     ):
         """
         For experimenting with "job" flows
@@ -415,6 +417,7 @@ class GraphDefinition(NodeDefinition):
                         mode_defs=[
                             ModeDefinition(
                                 resource_defs=resource_defs,
+                                logger_defs=logger_defs,
                             )
                         ],
                     )
@@ -442,6 +445,7 @@ class GraphDefinition(NodeDefinition):
             mode_defs=[
                 ModeDefinition(
                     resource_defs=resource_defs,
+                    logger_defs=logger_defs,
                     _config_mapping=config_mapping,
                     _partitions=partitions,
                 )
