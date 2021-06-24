@@ -987,10 +987,16 @@ def test_single_step_resource_event_logs():
     )
 
     with instance_for_test() as instance:
-        pipeline_run = instance.create_run_for_pipeline(
+        execution_plan = create_execution_plan(
             the_pipeline,
             run_config={"loggers": {"callback": {}}},
             step_keys_to_execute=["resource_solid"],
+        )
+
+        pipeline_run = instance.create_run_for_pipeline(
+            the_pipeline,
+            run_config={"loggers": {"callback": {}}},
+            execution_plan=execution_plan,
         )
 
         result = execute_run(InMemoryPipeline(the_pipeline), pipeline_run, instance)
