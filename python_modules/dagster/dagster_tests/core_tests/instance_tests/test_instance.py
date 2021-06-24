@@ -253,3 +253,9 @@ def test_instance_subclass():
             }
         ) as subclass_instance:
             pass
+
+
+def test_dagit_base_url():
+    url = "http://dagit.dagster.io"
+    with instance_for_test(overrides={"dagit_base_url": url}) as instance:
+        assert instance.get_settings("dagit_base_url") == url

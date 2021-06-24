@@ -186,7 +186,7 @@ class InstanceRef(
             ),
         )
 
-        settings_keys = {"telemetry"}
+        settings_keys = {"telemetry", "dagit_base_url"}
         settings = {key: config_value.get(key) for key in settings_keys}
 
         if custom_instance_class:
