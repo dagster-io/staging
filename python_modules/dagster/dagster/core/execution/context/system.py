@@ -4,6 +4,7 @@ Not every property on these should be exposed to random Jane or Joe dagster user
 so we have a different layer of objects that encode the explicit public API
 in the user_context module
 """
+import re
 from abc import ABC, abstractproperty
 from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Set, cast
 
@@ -17,6 +18,7 @@ from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
+from dagster.core.definitions.utils import NoValueSentinel
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.step import ExecutionStep
@@ -493,14 +495,20 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
         if (
             # this is re-execution
             self.pipeline_run.parent_run_id
-            # we are not re-executing the entire pipeline
-            and self.pipeline_run.step_keys_to_execute is not None
+            # we are not executing every step
+            and not self.pipeline_run.step_keys_to_execute == NoValueSentinel
             # this step is not being executed
-            and step_output_handle.step_key not in self.pipeline_run.step_keys_to_execute
+            and not self._is_in_step_keys_to_execute(step_output_handle)
         ):
             return self._get_source_run_id_from_logs(step_output_handle)
         else:
             return self.pipeline_run.run_id
+
+    def _is_in_step_keys_to_execute(self, step_output_handle: StepOutputHandle) -> bool:
+        # If input to step key is an unresolved dynamic input, then the mapping key will be unmarked
+        # in step_keys_to_execute.
+        unmapped_step_key = re.sub(r"\[.*\]", "[?]", step_output_handle.step_key)
+        return unmapped_step_key in self.pipeline_run.step_keys_to_execute
 
     def capture_step_exception(self, exception: BaseException):
         self._step_exception = check.inst_param(exception, "exception", BaseException)

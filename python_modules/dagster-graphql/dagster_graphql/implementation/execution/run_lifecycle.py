@@ -1,4 +1,5 @@
 from dagster import check
+from dagster.core.definitions.utils import NoValueSentinel
 from dagster.core.events import EngineEventData, EventMetadataEntry
 from dagster.core.execution.plan.resume_retry import get_retry_steps_from_execution_plan
 from dagster.core.execution.plan.state import KnownExecutionState
@@ -56,6 +57,8 @@ def create_valid_pipeline_run(graphene_info, external_pipeline, execution_params
     step_keys_to_execute, known_state = compute_step_keys_to_execute(
         graphene_info, external_pipeline, execution_params
     )
+
+    step_keys_to_execute = NoValueSentinel if step_keys_to_execute is None else step_keys_to_execute
 
     external_execution_plan = get_external_execution_plan_or_raise(
         graphene_info=graphene_info,

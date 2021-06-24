@@ -3,6 +3,7 @@ import sys
 from dagster import check
 from dagster.cli.workspace.context import IWorkspaceRequestContext
 from dagster.config.validate import validate_config_from_snap
+from dagster.core.definitions.utils import NoValueSentinel
 from dagster.core.host_representation import (
     ExternalExecutionPlan,
     ExternalPipeline,
@@ -114,9 +115,10 @@ def ensure_valid_step_keys(full_external_execution_plan, step_keys):
     check.inst_param(
         full_external_execution_plan, "full_external_execution_plan", ExternalExecutionPlan
     )
-    check.opt_list_param(step_keys, "step_keys", of_type=str)
+    if not step_keys == NoValueSentinel:
+        check.opt_inst_param(step_keys, "step_keys", (list,))
 
-    if not step_keys:
+    if not step_keys or step_keys == NoValueSentinel:
         return
 
     for step_key in step_keys:
