@@ -11,21 +11,21 @@ from dagster_airflow_tests.marks import requires_airflow_db
 @pytest.mark.parametrize(
     "cli_args",
     [
-        ["--module-name", "dagster_test.toys.log_spew", "--pipeline-name", "log_spew"],
-        ["--module-name", "dagster_test.toys.many_events", "--pipeline-name", "many_events"],
+        ["--module-name", "dagster_test.toys.log_spew", "--pipeline-name", "log_spew_job"],
+        ["--module-name", "dagster_test.toys.many_events", "--pipeline-name", "many_events_job"],
         [
             "--module-name",
             "dagster_test.toys.error_monster",
             "--preset",
-            "passing",
+            "default",
             "--pipeline-name",
-            "error_monster",
+            "error_monster_job",
         ],
         [
             "--module-name",
             "dagster_test.toys.resources",
             "--pipeline-name",
-            "resource_pipeline",
+            "resource_job",
         ],
     ],
 )

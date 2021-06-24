@@ -2,16 +2,16 @@ from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.system_config.objects import ResolvedRunConfig
 from dagster_airflow.compile import coalesce_execution_steps
-from dagster_test.toys.composition import composition
+from dagster_test.toys.composition import composition_job
 
 
 def test_compile():
     resolved_run_config = ResolvedRunConfig.build(
-        composition,
+        composition_job,
         {"solids": {"add_four": {"inputs": {"num": {"value": 1}}}}},
     )
 
-    plan = ExecutionPlan.build(InMemoryPipeline(composition), resolved_run_config)
+    plan = ExecutionPlan.build(InMemoryPipeline(composition_job), resolved_run_config)
 
     res = coalesce_execution_steps(plan)
     assert set(res.keys()) == {
