@@ -81,7 +81,10 @@ class _Repository:
             repository_data = repository_definitions
 
         repository_def = RepositoryDefinition(
-            name=self.name, description=self.description, repository_data=repository_data
+            name=self.name,
+            description=self.description,
+            repository_data=repository_data,
+            repository_fn=fn,
         )
 
         update_wrapper(repository_def, fn)

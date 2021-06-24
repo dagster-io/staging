@@ -512,3 +512,30 @@ def repository_def_from_pointer(pointer):
             "Received a {type}".format(str=pointer.describe(), type=type(target))
         )
     return repo_def
+
+
+class ReconstructableRepositoryFactory(namedtuple("_ReconstructableRepository", "pointer")):
+    def __new__(
+        cls,
+        pointer,
+    ):
+        return super(ReconstructableRepositoryFactory, cls).__new__(
+            cls, pointer=check.inst_param(pointer, "pointer", CodePointer)
+        )
+
+    def get_job_pointer(self, target):
+        recon_repo = ReconstructableRepository(self.pointer)
+
+        return ReconstructablePipeline(recon_repo, target)
+
+
+def reconstructable_factory(factory):
+    """Ingest a module-scope fxn that returns a repository definition, and return a reconstructable capable of retrieving the underlying definition."""
+    check.callable_param(factory, "factory")
+
+    if not hasattr(factory, "__module__"):
+        raise DagsterInvariantViolationError("Expected module-scope function.")
+
+    pointer = ModuleCodePointer(factory.__module__, factory.__name__)
+
+    return ReconstructableRepositoryFactory(pointer)
