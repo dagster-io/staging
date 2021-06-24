@@ -1,9 +1,10 @@
 from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar, Union, cast
 
 from dagster import check
-from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
-from dagster.utils import merge_dicts
 
+from ...utils import merge_dicts
+from ..code_pointer import ModuleCodePointer
+from ..errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from .graph import GraphDefinition
 from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
@@ -638,10 +639,12 @@ class RepositoryDefinition:
         name,
         repository_data,
         description=None,
+        repository_fn=None,
     ):
         self._name = check_valid_name(name)
         self._description = check.opt_str_param(description, "description")
         self._repository_data = check.inst_param(repository_data, "repository_data", RepositoryData)
+        self._repository_fn = check.opt_callable_param(repository_fn, "repository_fn")
 
     @property
     def name(self):
@@ -744,3 +747,17 @@ class RepositoryDefinition:
     # overwritten. Therefore, we want to maintain the call-ability of repository definitions.
     def __call__(self, *args, **kwargs):
         return self
+
+    def get_job_pointer(self, target):
+        from .reconstructable import ReconstructableRepository, ReconstructablePipeline
+
+        if not hasattr(self, "__module__"):
+            raise DagsterInvariantViolationError(
+                "Repository was not defined in module scope, so a code pointer can not be initialized."
+            )
+
+        recon_repo = ReconstructableRepository(
+            ModuleCodePointer(self.__module__, self._repository_fn.__name__)
+        )
+
+        return ReconstructablePipeline(recon_repo, target)

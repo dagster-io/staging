@@ -196,6 +196,19 @@ class ReconstructablePipeline(
     def get_python_origin_id(self):
         return self.get_python_origin().get_id()
 
+    @staticmethod
+    def from_repo_factory(factory, target):
+        check.callable_param(factory, "factory")
+
+        if not hasattr(factory, "__module__"):
+            raise DagsterInvariantViolationError("Expected module-scope function.")
+
+        recon_repo = ReconstructableRepository(
+            ModuleCodePointer(factory.__module__, factory.__name__)
+        )
+
+        return ReconstructablePipeline(recon_repo, target)
+
 
 @whitelist_for_serdes
 class ReconstructableSchedule(
