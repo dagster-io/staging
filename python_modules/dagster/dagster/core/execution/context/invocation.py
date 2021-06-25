@@ -376,6 +376,14 @@ class BoundSolidExecutionContext(SolidExecutionContext):
         )
 
 
+def build_op_context(
+    resources: Optional[Dict[str, Any]] = None,
+    config: Optional[Any] = None,
+    instance: Optional[DagsterInstance] = None,
+):
+    return build_solid_context(resources=resources, config=config, instance=instance)
+
+
 def build_solid_context(
     resources: Optional[Dict[str, Any]] = None,
     config: Optional[Any] = None,
