@@ -610,6 +610,7 @@ def _launch_run(
         execution_plan_snapshot=execution_plan_snapshot,
         parent_pipeline_snapshot=external_pipeline.parent_pipeline_snapshot,
         external_pipeline_origin=external_pipeline.get_external_origin(),
+        pipeline_code_origin=external_pipeline.get_python_origin(),
     )
 
     tick_context.add_run(run_id=possibly_invalid_pipeline_run.run_id, run_key=run_request.run_key)
