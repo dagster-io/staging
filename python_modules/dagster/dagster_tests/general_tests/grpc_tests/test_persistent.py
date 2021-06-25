@@ -10,7 +10,7 @@ from dagster.core.host_representation.origin import (
     ExternalRepositoryOrigin,
     GrpcServerRepositoryLocationOrigin,
 )
-from dagster.core.test_utils import environ, instance_for_test, new_cwd
+from dagster.core.test_utils import environ, new_cwd
 from dagster.grpc.client import DagsterGrpcClient
 from dagster.grpc.server import wait_for_grpc_server
 from dagster.grpc.types import SensorExecutionArgs
@@ -356,7 +356,7 @@ def test_streaming():
         process.terminate()
 
 
-def test_sensor_timeout():
+def test_sensor_timeout(instance):
     port = find_free_port()
     python_file = file_relative_path(__file__, "grpc_repo.py")
 
@@ -380,27 +380,13 @@ def test_sensor_timeout():
         wait_for_grpc_server(process, ipc_output_file)
         client = DagsterGrpcClient(port=port)
 
-        with instance_for_test() as instance:
-            repo_origin = ExternalRepositoryOrigin(
-                repository_location_origin=GrpcServerRepositoryLocationOrigin(
-                    port=port, host="localhost"
-                ),
-                repository_name="bar_repo",
-            )
-            with pytest.raises(Exception, match="Deadline Exceeded"):
-                client.external_sensor_execution(
-                    sensor_execution_args=SensorExecutionArgs(
-                        repository_origin=repo_origin,
-                        instance_ref=instance.get_ref(),
-                        sensor_name="slow_sensor",
-                        last_completion_time=None,
-                        last_run_key=None,
-                        cursor=None,
-                    ),
-                    timeout=2,
-                )
-
-            # Call succeeds without the timeout
+        repo_origin = ExternalRepositoryOrigin(
+            repository_location_origin=GrpcServerRepositoryLocationOrigin(
+                port=port, host="localhost"
+            ),
+            repository_name="bar_repo",
+        )
+        with pytest.raises(Exception, match="Deadline Exceeded"):
             client.external_sensor_execution(
                 sensor_execution_args=SensorExecutionArgs(
                     repository_origin=repo_origin,
@@ -410,6 +396,19 @@ def test_sensor_timeout():
                     last_run_key=None,
                     cursor=None,
                 ),
+                timeout=2,
             )
+
+        # Call succeeds without the timeout
+        client.external_sensor_execution(
+            sensor_execution_args=SensorExecutionArgs(
+                repository_origin=repo_origin,
+                instance_ref=instance.get_ref(),
+                sensor_name="slow_sensor",
+                last_completion_time=None,
+                last_run_key=None,
+                cursor=None,
+            ),
+        )
     finally:
         process.terminate()

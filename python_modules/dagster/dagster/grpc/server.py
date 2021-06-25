@@ -174,6 +174,7 @@ class DagsterApiServer(DagsterApiServicer):
     # the target passed in here instead of passing in a target in the argument.
     def __init__(
         self,
+        instance: DagsterInstance,
         server_termination_event,
         loadable_target_origin=None,
         heartbeat=False,
@@ -186,6 +187,7 @@ class DagsterApiServer(DagsterApiServicer):
         check.bool_param(heartbeat, "heartbeat")
         check.int_param(heartbeat_timeout, "heartbeat_timeout")
         check.invariant(heartbeat_timeout > 0, "heartbeat_timeout must be greater than 0")
+        self._instance = check.inst_param(instance, "instance", DagsterInstance)
 
         self._server_termination_event = check.inst_param(
             server_termination_event, "server_termination_event", ThreadingEventType
@@ -767,6 +769,7 @@ def server_termination_target(termination_event, server):
 class DagsterGrpcServer:
     def __init__(
         self,
+        instance: DagsterInstance,
         host="localhost",
         port=None,
         socket=None,
@@ -812,6 +815,7 @@ class DagsterGrpcServer:
 
         try:
             self._api_servicer = DagsterApiServer(
+                instance=instance,
                 server_termination_event=self._server_termination_event,
                 loadable_target_origin=loadable_target_origin,
                 heartbeat=heartbeat,

@@ -396,6 +396,7 @@ def grpc_command(
         else nullcontext()
     ):
         server = DagsterGrpcServer(
+            instance=DagsterInstance.get(),
             port=port,
             socket=socket,
             host=host,

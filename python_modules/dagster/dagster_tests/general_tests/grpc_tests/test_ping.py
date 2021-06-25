@@ -4,7 +4,7 @@ import time
 
 import grpc
 import pytest
-from dagster import check, seven
+from dagster import DagsterInstance, check, seven
 from dagster.grpc import DagsterGrpcClient, DagsterGrpcServer, ephemeral_grpc_api_client
 from dagster.grpc.server import GrpcServerProcess, open_server_process
 from dagster.serdes.ipc import interrupt_ipc_subprocess_pid
@@ -23,7 +23,7 @@ def server_thread_runnable(**kwargs):
 def test_server_socket_on_windows():
     with safe_tempfile_path() as skt:
         with pytest.raises(check.CheckError, match=re.escape("`socket` not supported")):
-            DagsterGrpcServer(socket=skt)
+            DagsterGrpcServer(socket=skt, instance=DagsterInstance.get())
 
 
 def test_server_port_and_socket():
@@ -32,7 +32,7 @@ def test_server_port_and_socket():
             check.CheckError,
             match=re.escape("You must pass one and only one of `port` or `socket`."),
         ):
-            DagsterGrpcServer(socket=skt, port=find_free_port())
+            DagsterGrpcServer(socket=skt, port=find_free_port(), instance=DagsterInstance.get())
 
 
 @pytest.mark.skipif(seven.IS_WINDOWS, reason="Unix-only test")
