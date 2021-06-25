@@ -101,6 +101,7 @@ class Shape(_ConfigHasFields):
         cls,
         fields,
         description=None,
+        field_substitutions=None,  # pylint: disable=unused-argument
     ):
         return _memoize_inst_in_field_cache(
             cls,
@@ -108,13 +109,21 @@ class Shape(_ConfigHasFields):
             _define_shape_key_hash(expand_fields_dict(fields), description),
         )
 
-    def __init__(self, fields, description=None):
+    def __init__(
+        self,
+        fields,
+        description=None,
+        field_substitutions=None,
+    ):
         fields = expand_fields_dict(fields)
         super(Shape, self).__init__(
             kind=ConfigTypeKind.STRICT_SHAPE,
             key=_define_shape_key_hash(fields, description),
             description=description,
             fields=fields,
+        )
+        self.field_substitutions = check.opt_dict_param(
+            field_substitutions, "field_substitutions", key_type=str, value_type=str
         )
 
 
