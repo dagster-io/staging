@@ -204,6 +204,8 @@ def _validate_shape_config(context, config_value, check_for_extra_incoming_field
     check.not_none_param(config_value, "config_value")
     check.bool_param(check_for_extra_incoming_fields, "check_for_extra_incoming_fields")
 
+    field_substitutions = context.config_type_snap.field_substitutions or None
+
     if config_value and not isinstance(config_value, dict):
         return EvaluateValueResult.for_error(create_dict_type_mismatch_error(context, config_value))
 
@@ -217,20 +219,39 @@ def _validate_shape_config(context, config_value, check_for_extra_incoming_field
     if check_for_extra_incoming_fields:
         _append_if_error(
             errors,
-            _check_for_extra_incoming_fields(context, defined_field_names, incoming_field_names),
+            _check_for_extra_incoming_fields(
+                context,
+                defined_field_names,
+                incoming_field_names,
+                field_substitutions=field_substitutions,
+            ),
         )
 
     _append_if_error(
-        errors, _compute_missing_fields_error(context, field_snaps, incoming_field_names)
+        errors,
+        _compute_missing_fields_error(
+            context,
+            field_snaps,
+            incoming_field_names,
+            field_substitutions=field_substitutions,
+        ),
     )
 
     # dict is well-formed. now recursively validate all incoming fields
 
     field_errors = []
+    orig_field_to_sub = (
+        {v: k for k, v in field_substitutions.items()} if field_substitutions else {}
+    )
     for field_snap in context.config_type_snap.fields:
         name = field_snap.name
-        if name in config_value:
-            field_evr = _validate_config(context.for_field_snap(field_snap), config_value[name])
+        if name in config_value or orig_field_to_sub.get(name, name) in config_value:
+            config_value_at_name = (
+                config_value[name]
+                if name in config_value
+                else config_value[orig_field_to_sub[name]]
+            )
+            field_evr = _validate_config(context.for_field_snap(field_snap), config_value_at_name)
 
             if field_evr.errors:
                 field_errors += field_evr.errors
@@ -265,8 +286,18 @@ def _append_if_error(errors, maybe_error):
         errors.append(maybe_error)
 
 
-def _check_for_extra_incoming_fields(context, defined_field_names, incoming_field_names):
+def _check_for_extra_incoming_fields(
+    context, defined_field_names, incoming_field_names, field_substitutions=None
+):
+    field_substitutions = check.opt_dict_param(field_substitutions, "field_substitutions")
     extra_fields = list(incoming_field_names - defined_field_names)
+
+    # Check possible substitutions, and get rid of names that are present post-substitution.
+    extra_fields = [
+        field_name
+        for field_name in extra_fields
+        if field_substitutions.get(field_name, field_name) not in defined_field_names
+    ]
 
     if extra_fields:
         if len(extra_fields) == 1:
@@ -275,11 +306,17 @@ def _check_for_extra_incoming_fields(context, defined_field_names, incoming_fiel
             return create_fields_not_defined_error(context, extra_fields)
 
 
-def _compute_missing_fields_error(context, field_snaps, incoming_fields):
+def _compute_missing_fields_error(context, field_snaps, incoming_fields, field_substitutions=None):
     missing_fields = []
 
+    field_substitutions = check.opt_dict_param(field_substitutions, "field_substitutions")
+    field_names_to_subs = {v: k for k, v in field_substitutions.items()}
     for field_snap in field_snaps:
-        if field_snap.is_required and field_snap.name not in incoming_fields:
+        if (
+            field_snap.is_required
+            and field_snap.name not in incoming_fields
+            and field_names_to_subs.get(field_snap.name, field_snap.name) not in incoming_fields
+        ):
             missing_fields.append(field_snap.name)
 
     if missing_fields:
