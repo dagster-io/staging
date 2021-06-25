@@ -55,7 +55,8 @@ class ConfigTypeSnap(
         "type_param_keys "  # only valid for closed generics (Set, Tuple, List, Optional)
         "enum_values "  # only valid for enums
         "fields "  # only valid for dicts and selectors
-        "scalar_kind",  # only valid for scalars
+        "scalar_kind "  # only valid for scalars
+        "field_aliases",  # only valid for shapes
     )
 ):
     # serdes log
@@ -70,6 +71,7 @@ class ConfigTypeSnap(
         enum_values,
         fields,
         scalar_kind=None,  # Old version of object will not have this property
+        field_aliases=None,
     ):
         return super(ConfigTypeSnap, cls).__new__(
             cls,
@@ -89,6 +91,7 @@ class ConfigTypeSnap(
             ),
             description=check.opt_str_param(description, "description"),
             scalar_kind=check.opt_inst_param(scalar_kind, "scalar_kind", ConfigScalarKind),
+            field_aliases=field_aliases,
         )
 
     @property
@@ -216,6 +219,9 @@ def snap_from_config_type(config_type):
         if ConfigTypeKind.has_fields(config_type.kind)
         else None,
         scalar_kind=config_type.scalar_kind if config_type.kind == ConfigTypeKind.SCALAR else None,
+        field_aliases=config_type.field_aliases
+        if config_type.kind == ConfigTypeKind.STRICT_SHAPE
+        else None,
     )
 
 
