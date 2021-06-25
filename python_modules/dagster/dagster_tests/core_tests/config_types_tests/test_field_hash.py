@@ -30,8 +30,8 @@ def test_hash_diff():
 
 
 def test_construct_same_dicts():
-    int_dict_1 = Shape(fields={"an_int": Field(int)})
-    int_dict_2 = Shape(fields={"an_int": Field(int)})
+    int_dict_1 = Shape(fields={"an_int": Field(int)}, field_aliases={"foo": "bar"})
+    int_dict_2 = Shape(fields={"an_int": Field(int)}, field_aliases={"foo": "bar"})
 
     # assert identical object
     assert int_dict_1 is int_dict_2
@@ -40,9 +40,15 @@ def test_construct_same_dicts():
 
 
 def test_field_order_irrelevant():
-    int_dict_1 = Shape(fields={"an_int": Field(int), "another_int": Field(int)})
+    int_dict_1 = Shape(
+        fields={"an_int": Field(int), "another_int": Field(int)},
+        field_aliases={"foo": "bar", "biz": "baz"},
+    )
 
-    int_dict_2 = Shape(fields={"another_int": Field(int), "an_int": Field(int)})
+    int_dict_2 = Shape(
+        fields={"another_int": Field(int), "an_int": Field(int)},
+        field_aliases={"biz": "baz", "foo": "bar"},
+    )
 
     # assert identical object
     assert int_dict_1 is int_dict_2
@@ -51,8 +57,8 @@ def test_field_order_irrelevant():
 
 
 def test_construct_different_dicts():
-    int_dict = Shape(fields={"an_int": Field(int)})
-    string_dict = Shape(fields={"a_string": Field(str)})
+    int_dict = Shape(fields={"an_int": Field(int)}, field_aliases={"foo": "bar"})
+    string_dict = Shape(fields={"a_string": Field(str)}, field_aliases={"bar": "baz"})
 
     assert int_dict is not string_dict
     assert int_dict.key != string_dict.key

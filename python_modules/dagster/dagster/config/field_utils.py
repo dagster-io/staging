@@ -95,12 +95,17 @@ class Shape(_ConfigHasFields):
     Args:
         fields (Dict[str, Field]):
             The specification of the config dict.
+        field_aliases (Dict[str, str]):
+            Maps a string key to an alias that can be used instead of the original key. For example,
+            an entry {"solids": "ops"} means that someone could use "ops" instead of "solids" as a
+            top level string key.
     """
 
     def __new__(
         cls,
         fields,
         description=None,
+        field_aliases=None,  # pylint: disable=unused-argument
     ):
         return _memoize_inst_in_field_cache(
             cls,
@@ -108,13 +113,21 @@ class Shape(_ConfigHasFields):
             _define_shape_key_hash(expand_fields_dict(fields), description),
         )
 
-    def __init__(self, fields, description=None):
+    def __init__(
+        self,
+        fields,
+        description=None,
+        field_aliases=None,
+    ):
         fields = expand_fields_dict(fields)
         super(Shape, self).__init__(
             kind=ConfigTypeKind.STRICT_SHAPE,
             key=_define_shape_key_hash(fields, description),
             description=description,
             fields=fields,
+        )
+        self.field_aliases = check.opt_dict_param(
+            field_aliases, "field_aliases", key_type=str, value_type=str
         )
 
 
