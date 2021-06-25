@@ -9,7 +9,7 @@ from dagster.core.definitions.intermediate_storage import IntermediateStorageDef
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.resource import ResourceDefinition
-from dagster.core.errors import DagsterInvalidConfigError
+from dagster.core.errors import DagsterInvalidConfigError, DagsterInvariantViolationError
 from dagster.utils import ensure_single_item
 from dagster.utils.merger import deep_merge_dicts
 
@@ -165,9 +165,11 @@ class ResolvedRunConfig(
             # add user code boundary
             run_config = run_config_schema.config_mapping.config_fn(outer_evr.value)
 
+        backcompat_run_config = run_config_storage_field_backcompat(run_config)
+        op_converted_run_config = run_config_op_field(backcompat_run_config)
         config_evr = process_config(
             run_config_schema.run_config_schema_type,
-            run_config_storage_field_backcompat(run_config),
+            op_converted_run_config,
         )
         if not config_evr.success:
             raise DagsterInvalidConfigError(
@@ -262,6 +264,33 @@ class ResolvedRunConfig(
         env_dict["loggers"] = self.loggers
 
         return env_dict
+
+
+def run_config_op_field(run_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Recursively convert ``ops`` config entry to ``solids`` config entry.
+
+    We treat ``ops`` as an alias of ``solids``. Since this can be recursively applied due to
+    recursive graphs, we need to recursively replace keys in the dictionary.
+    """
+    return _run_config_op_field_helper(run_config)
+
+
+def _run_config_op_field_helper(inner_graph_config: Dict[str, Any]) -> Dict[str, Any]:
+    """Helper function that handles recursion for replacing ``op`` config entries."""
+    if "ops" not in inner_graph_config:
+        return inner_graph_config
+    else:
+        if "solids" in inner_graph_config:
+            raise DagsterInvariantViolationError(
+                "Provided both ``solids`` and ``ops`` config argument. This is disallowed, since "
+                "it can lead to collisions."
+            )
+        converted_dict = {k: v for k, v in inner_graph_config.items() if not k == "ops"}
+        solids_config = {}
+        for op_name, config_blob in inner_graph_config["ops"].items():
+            solids_config[op_name] = _run_config_op_field_helper(config_blob)
+        converted_dict["solids"] = solids_config
+        return converted_dict
 
 
 def run_config_storage_field_backcompat(run_config: Dict[str, Any]) -> Dict[str, Any]:

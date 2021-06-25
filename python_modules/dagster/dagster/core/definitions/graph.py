@@ -395,6 +395,9 @@ class GraphDefinition(NodeDefinition):
 
         presets = None
         if default_config:
+            from ..system_config.objects import run_config_op_field
+
+            default_config = run_config_op_field(default_config)
             presets = [
                 PresetDefinition(
                     name="default",
