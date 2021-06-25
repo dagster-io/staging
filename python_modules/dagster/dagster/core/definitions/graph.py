@@ -740,11 +740,14 @@ def _config_mapping_with_default_value(
         return x
 
     updated_fields = {}
+    field_to_sub = {v: k for k, v in inner_schema.field_substitutions.items()}
     for name, field in inner_schema.fields.items():
-        if name in default_config:
+        if name in default_config or field_to_sub.get(name, name) in default_config:
             updated_fields[name] = Field(
                 config=field.config_type,
-                default_value=default_config[name],
+                default_value=default_config[name]
+                if name in default_config
+                else default_config[field_to_sub[name]],
                 description=field.description,
             )
 

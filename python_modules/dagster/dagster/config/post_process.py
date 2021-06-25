@@ -128,14 +128,26 @@ def _recurse_in_to_shape(context: TraversalContext, config_value: Any) -> Evalua
     config_value = check.opt_dict_param(config_value, "config_value", key_type=str)
 
     fields = context.config_type.fields
+    field_substitutions = (
+        context.config_type.field_substitutions
+        if context.config_type.kind == ConfigTypeKind.STRICT_SHAPE
+        else None
+    )
+    field_names_to_subs = (
+        {v: k for k, v in field_substitutions.items()} if field_substitutions else {}
+    )
     incoming_fields = config_value.keys()
 
     processed_fields = {}
 
     for expected_field, field_def in fields.items():
-        if expected_field in incoming_fields:
+        subbed_field = field_names_to_subs.get(expected_field, expected_field)
+        if expected_field in incoming_fields or subbed_field in incoming_fields:
             processed_fields[expected_field] = _recursively_process_config(
-                context.for_field(field_def, expected_field), config_value[expected_field]
+                context.for_field(field_def, expected_field),
+                config_value[expected_field]
+                if expected_field in config_value
+                else config_value[subbed_field],
             )
 
         elif field_def.default_provided:
