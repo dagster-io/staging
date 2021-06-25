@@ -1,16 +1,6 @@
 from typing import Tuple
 
-from dagster import (
-    In,
-    MultiOut,
-    Nothing,
-    Out,
-    Output,
-    build_op_context,
-    execute_pipeline,
-    graph,
-    op,
-)
+from dagster import In, Nothing, Out, Output, build_op_context, execute_pipeline, graph, op
 
 
 def execute_op_in_job(an_op):
@@ -69,7 +59,7 @@ def test_out():
 
 
 def test_multi_out():
-    @op(out=MultiOut({"a": Out(metadata={"x": 1}), "b": Out(metadata={"y": 2})}))
+    @op(out={"a": Out(metadata={"x": 1}), "b": Out(metadata={"y": 2})})
     def my_op() -> Tuple[int, str]:
         return 1, "q"
 
@@ -96,7 +86,7 @@ def test_tuple_out():
 
 
 def test_multi_out_yields():
-    @op(out=MultiOut({"a": Out(metadata={"x": 1}), "b": Out(metadata={"y": 2})}))
+    @op(out={"a": Out(metadata={"x": 1}), "b": Out(metadata={"y": 2})})
     def my_op():
         yield Output(output_name="a", value=1)
         yield Output(output_name="b", value=2)
@@ -113,7 +103,7 @@ def test_multi_out_yields():
 
 
 def test_multi_out_optional():
-    @op(out=MultiOut({"a": Out(metadata={"x": 1}, is_required=False), "b": Out(metadata={"y": 2})}))
+    @op(out={"a": Out(metadata={"x": 1}, is_required=False), "b": Out(metadata={"y": 2})})
     def my_op():
         yield Output(output_name="b", value=2)
 
@@ -155,7 +145,7 @@ def test_ins_dict():
 
 
 def test_multi_out_dict():
-    @op(out=MultiOut({"a": Out(metadata={"x": 1}), "b": Out(metadata={"y": 2})}))
+    @op(out={"a": Out(metadata={"x": 1}), "b": Out(metadata={"y": 2})})
     def my_op() -> Tuple[int, str]:
         return 1, "q"
 
@@ -198,3 +188,9 @@ def test_op_config():
         assert context.op_config == {"conf_str": "foo"}
 
     my_op(build_op_context(config={"conf_str": "foo"}))
+
+    @graph
+    def basic():
+        my_op()
+
+    execute_pipeline(basic.to_job(), run_config={"ops": {"my_op": {"config": {"conf_str": "foo"}}}})

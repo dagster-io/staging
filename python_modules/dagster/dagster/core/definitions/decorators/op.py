@@ -5,7 +5,7 @@ from dagster.utils.backcompat import experimental_decorator
 
 from ..inference import infer_output_props
 from ..input import In, InputDefinition
-from ..output import MultiOut, Out, OutputDefinition
+from ..output import Out, OutputDefinition
 from ..policy import RetryPolicy
 from ..solid import SolidDefinition
 from .solid import _Solid
@@ -25,7 +25,7 @@ class _Op:
         decorator_takes_context: Optional[bool] = True,
         retry_policy: Optional[RetryPolicy] = None,
         ins: Optional[Dict[str, In]] = None,
-        out: Optional[Union[Out, MultiOut]] = None,
+        out: Optional[Union[Out, Dict[str, Out]]] = None,
     ):
         self.name = check.opt_str_param(name, "name")
         self.input_defs = input_defs
@@ -61,12 +61,17 @@ class _Op:
 
         final_output_defs: Optional[Sequence[OutputDefinition]] = None
         if self.out:
-            check.inst_param(self.out, "out", (Out, MultiOut))
+            check.inst_param(self.out, "out", (Out, dict))
 
             if isinstance(self.out, Out):
-                final_output_defs = [self.out.to_definition(inferred_out)]
-            elif isinstance(self.out, MultiOut):
-                final_output_defs = self.out.to_definition_list(inferred_out)
+                final_output_defs = [self.out.to_definition(inferred_out.annotation, name=None)]
+            else:
+                final_output_defs = []
+                for idx, (name, out) in enumerate(self.out.items()):
+                    annotation_type = (
+                        inferred_out.annotation.__args__[idx] if inferred_out.annotation else None
+                    )
+                    final_output_defs.append(out.to_definition(annotation_type, name=name))
         else:
             final_output_defs = self.output_defs
 
@@ -96,7 +101,7 @@ def op(
     version: Optional[str] = None,
     retry_policy: Optional[RetryPolicy] = None,
     ins: Optional[Dict[str, In]] = None,
-    out: Optional[Union[Out, MultiOut]] = None,
+    out: Optional[Union[Out, Dict[str, Out]]] = None,
 ) -> Union[_Op, SolidDefinition]:
     """Op is an experimental replacement for solid, intended to decrease verbosity of core API."""
     # This case is for when decorator is used bare, without arguments. e.g. @op versus @op()
