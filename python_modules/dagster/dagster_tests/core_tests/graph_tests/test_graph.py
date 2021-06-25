@@ -1,4 +1,4 @@
-from dagster import ConfigMapping, graph, logger, resource, solid, success_hook
+from dagster import ConfigMapping, Permissive, graph, logger, op, resource, success_hook
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.definitions.partition import (
     Partition,
@@ -8,12 +8,12 @@ from dagster.core.definitions.partition import (
 from dagster.core.execution.execute import execute_in_process
 
 
-def get_solids():
-    @solid
+def get_ops():
+    @op
     def emit_one(_):
         return 1
 
-    @solid
+    @op
     def add(_, x, y):
         return x + y
 
@@ -21,7 +21,7 @@ def get_solids():
 
 
 def test_basic_graph():
-    emit_one, add = get_solids()
+    emit_one, add = get_ops()
 
     @graph
     def get_two():
@@ -35,7 +35,7 @@ def test_basic_graph():
 
 
 def test_composite_graph():
-    emit_one, add = get_solids()
+    emit_one, add = get_ops()
 
     @graph
     def add_one(x):
@@ -53,7 +53,7 @@ def test_with_resources():
     def a_resource(_):
         return "a"
 
-    @solid(required_resource_keys={"a"})
+    @op(required_resource_keys={"a"})
     def needs_resource(context):
         return context.resources.a
 
@@ -73,12 +73,12 @@ def test_config_mapping_fn():
     def date(context) -> str:
         return context.resource_config
 
-    @solid(
+    @op(
         required_resource_keys={"date"},
         config_schema={"msg": str},
     )
     def do_stuff(context):
-        return f"{context.solid_config['msg'] } on {context.resources.date}"
+        return f"{context.op_config['msg'] } on {context.resources.date}"
 
     @graph
     def needs_config():
@@ -86,7 +86,7 @@ def test_config_mapping_fn():
 
     def _mapped(val):
         return {
-            "solids": {"do_stuff": {"config": {"msg": "i am here"}}},
+            "ops": {"do_stuff": {"config": {"msg": "i am here"}}},
             "resources": {"date": {"config": val["date"]}},
         }
 
@@ -108,12 +108,12 @@ def test_default_config():
     def date(context) -> str:
         return context.resource_config
 
-    @solid(
+    @op(
         required_resource_keys={"date"},
         config_schema={"msg": str},
     )
     def do_stuff(context):
-        return f"{context.solid_config['msg'] } on {context.resources.date}"
+        return f"{context.op_config['msg'] } on {context.resources.date}"
 
     @graph
     def needs_config():
@@ -122,7 +122,7 @@ def test_default_config():
     job = needs_config.to_job(
         resource_defs={"date": date},
         config={
-            "solids": {"do_stuff": {"config": {"msg": "i am here"}}},
+            "ops": {"do_stuff": {"config": {"msg": "i am here"}}},
             "resources": {"date": {"config": "6/3"}},
         },
     )
@@ -133,7 +133,7 @@ def test_default_config():
 
 
 def test_suffix():
-    emit_one, add = get_solids()
+    emit_one, add = get_ops()
 
     @graph
     def get_two():
@@ -146,16 +146,16 @@ def test_suffix():
 
 
 def test_partitions():
-    @solid(config_schema={"date": str})
-    def my_solid(_):
+    @op(config_schema={"date": str})
+    def my_op(_):
         pass
 
     @graph
     def my_graph():
-        my_solid()
+        my_op()
 
     def config_fn(partition: Partition):
-        return {"solids": {"my_solid": {"config": {"date": partition.value}}}}
+        return {"ops": {"my_op": {"config": {"date": partition.value}}}}
 
     job = my_graph.to_job(
         config=PartitionedConfig(
@@ -172,12 +172,12 @@ def test_partitions():
     assert partitions[0].value == "2020-02-25"
     assert partitions[0].name == "2020-02-25"
     assert partition_set.run_config_for_partition(partitions[0]) == {
-        "solids": {"my_solid": {"config": {"date": "2020-02-25"}}}
+        "ops": {"my_op": {"config": {"date": "2020-02-25"}}}
     }
 
 
 def test_tags_on_job():
-    @solid
+    @op
     def basic():
         pass
 
@@ -194,13 +194,13 @@ def test_tags_on_job():
 
 
 def test_logger_defs():
-    @solid
-    def my_solid(_):
+    @op
+    def my_op(_):
         pass
 
     @graph
     def my_graph():
-        my_solid()
+        my_op()
 
     @logger
     def my_logger(_):
@@ -217,7 +217,7 @@ def test_job_with_hooks():
     def basic_hook(_):
         entered.append("yes")
 
-    @solid
+    @op
     def basic_emit():
         pass
 
@@ -231,3 +231,33 @@ def test_job_with_hooks():
 
     assert result.success
     assert entered == ["yes"]
+
+
+def test_op_config_recursive():
+    @op(config_schema={"solids": Permissive(), "ops": Permissive()})
+    def my_op(context):
+        return context.op_config
+
+    @graph
+    def my_graph():
+        return my_op()
+
+    config = {
+        "solids": {"solids": {"foo": {"config": {"foobar": "bar"}}}},
+        "ops": {"solids": {"foo": {"config": {"foobar": "bar"}}}},
+    }
+    result = my_graph.execute_in_process(
+        run_config={"ops": {"my_graph": {"ops": {"my_op": {"config": config}}}}}
+    )
+    assert result.success
+    assert result.output_values["result"] == config
+
+    @graph
+    def solids():
+        return my_op()
+
+    result = solids.execute_in_process(
+        run_config={"ops": {"solids": {"ops": {"my_op": {"config": config}}}}}
+    )
+    assert result.success
+    assert result.output_values["result"] == config

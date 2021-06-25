@@ -430,6 +430,9 @@ class GraphDefinition(NodeDefinition):
         elif isinstance(config, PartitionedConfig):
             partitioned_config = config
         elif isinstance(config, dict):
+            from ..system_config.objects import run_config_op_field
+
+            config = run_config_op_field(config)
             presets = [PresetDefinition(name="default", run_config=config)]
             # Using config mapping here is a trick to make it so that the preset will be used even
             # when no config is supplied for the job.

@@ -4,6 +4,7 @@ from dagster.core.definitions import create_run_config_schema
 from dagster.core.host_representation import PipelineSelector
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster.core.storage.tags import TagType, get_tag_type
+from dagster.core.system_config.objects import run_config_op_field
 from graphql.execution.base import ResolveInfo
 
 from .external import ensure_valid_config, get_external_pipeline_or_raise
@@ -143,6 +144,7 @@ def validate_pipeline_config(graphene_info, selector, run_config, mode):
     check.opt_str_param(mode, "mode")
 
     external_pipeline = get_external_pipeline_or_raise(graphene_info, selector)
+    run_config = run_config_op_field(run_config)
     ensure_valid_config(external_pipeline, mode, run_config)
     return GraphenePipelineConfigValidationValid(pipeline_name=external_pipeline.name)
 
