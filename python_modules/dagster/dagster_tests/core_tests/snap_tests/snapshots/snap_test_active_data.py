@@ -6,7 +6,9 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
-snapshots['test_external_pipeline_data 1'] = '''{
+snapshots[
+    'test_external_pipeline_data 1'
+] = '''{
   "__class__": "ExternalPipelineData",
   "active_presets": [
     {
@@ -41,6 +43,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": "Any",
           "key": "Any",
@@ -54,6 +57,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": "List of Array.Shape.41de0e2d7b75524510155d0bdab8723c6feced3b",
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": null,
           "key": "Array.Shape.41de0e2d7b75524510155d0bdab8723c6feced3b",
@@ -69,6 +73,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": "",
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": "Bool",
           "key": "Bool",
@@ -84,6 +89,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": "",
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": "Float",
           "key": "Float",
@@ -99,6 +105,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": "",
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": "Int",
           "key": "Int",
@@ -114,6 +121,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": null,
           "key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
@@ -130,6 +138,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": null,
           "key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
@@ -146,6 +155,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": null,
           "key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
@@ -162,6 +172,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": null,
           "key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
@@ -178,6 +189,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -210,6 +222,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -242,6 +255,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -274,6 +288,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -315,6 +330,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -356,6 +372,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -397,6 +414,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -438,6 +456,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -470,6 +489,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": null,
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -511,6 +531,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -534,6 +555,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -566,6 +588,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -589,6 +612,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -612,6 +636,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -635,6 +660,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -658,6 +684,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -681,6 +708,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -713,6 +741,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -745,6 +774,9 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {
+            "ops": "solids"
+          },
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -777,6 +809,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -800,6 +833,9 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {
+            "ops": "solids"
+          },
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -868,6 +904,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [],
           "given_name": null,
           "key": "Shape.da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -881,6 +918,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -904,6 +942,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -927,6 +966,9 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {
+            "solids": "ops"
+          },
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -950,6 +992,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": null,
           "enum_values": null,
+          "field_aliases": {},
           "fields": [
             {
               "__class__": "ConfigFieldSnap",
@@ -973,6 +1016,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "__class__": "ConfigTypeSnap",
           "description": "",
           "enum_values": null,
+          "field_aliases": null,
           "fields": null,
           "given_name": "String",
           "key": "String",
@@ -1207,7 +1251,9 @@ snapshots['test_external_pipeline_data 1'] = '''{
   }
 }'''
 
-snapshots['test_external_repository_data 1'] = '''{
+snapshots[
+    'test_external_repository_data 1'
+] = '''{
   "__class__": "ExternalRepositoryData",
   "external_partition_set_datas": [
     {
@@ -1254,6 +1300,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": "Any",
               "key": "Any",
@@ -1267,6 +1314,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": "List of Array.Shape.41de0e2d7b75524510155d0bdab8723c6feced3b",
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": null,
               "key": "Array.Shape.41de0e2d7b75524510155d0bdab8723c6feced3b",
@@ -1282,6 +1330,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": "",
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": "Bool",
               "key": "Bool",
@@ -1297,6 +1346,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": "",
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": "Float",
               "key": "Float",
@@ -1312,6 +1362,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": "",
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": "Int",
               "key": "Int",
@@ -1327,6 +1378,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": null,
               "key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
@@ -1343,6 +1395,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": null,
               "key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
@@ -1359,6 +1412,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": null,
               "key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
@@ -1375,6 +1429,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": null,
               "key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
@@ -1391,6 +1446,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1423,6 +1479,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1455,6 +1512,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1487,6 +1545,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1528,6 +1587,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1569,6 +1629,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1610,6 +1671,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1651,6 +1713,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1683,6 +1746,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": null,
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1724,6 +1788,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1747,6 +1812,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1779,6 +1845,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1802,6 +1869,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1825,6 +1893,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1848,6 +1917,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1871,6 +1941,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1894,6 +1965,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1926,6 +1998,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1958,6 +2031,9 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {
+                "ops": "solids"
+              },
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -1990,6 +2066,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -2013,6 +2090,9 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {
+                "ops": "solids"
+              },
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -2081,6 +2161,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [],
               "given_name": null,
               "key": "Shape.da39a3ee5e6b4b0d3255bfef95601890afd80709",
@@ -2094,6 +2175,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -2117,6 +2199,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -2140,6 +2223,9 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {
+                "solids": "ops"
+              },
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -2163,6 +2249,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": null,
               "enum_values": null,
+              "field_aliases": {},
               "fields": [
                 {
                   "__class__": "ConfigFieldSnap",
@@ -2186,6 +2273,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "__class__": "ConfigTypeSnap",
               "description": "",
               "enum_values": null,
+              "field_aliases": null,
               "fields": null,
               "given_name": "String",
               "key": "String",
