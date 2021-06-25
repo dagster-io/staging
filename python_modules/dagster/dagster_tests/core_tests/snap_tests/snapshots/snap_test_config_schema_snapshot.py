@@ -10,6 +10,7 @@ snapshots['test_historical_config_type_snap 1'] = '''{
   "__class__": "ConfigTypeSnap",
   "description": "",
   "enum_values": [],
+  "field_substitutions": null,
   "fields": [],
   "given_name": "kjdkfjdkfjdkj",
   "key": "ksjdkfjdkfjd",
