@@ -201,6 +201,15 @@ def test_op_config():
 
     my_op(build_op_context(config={"conf_str": "foo"}))
 
+    @graph
+    def basic():
+        my_op()
+
+    result = basic.to_job(
+        config={"ops": {"my_op": {"config": {"conf_str": "foo"}}}}
+    ).execute_in_process()
+    assert result.success
+
 
 even_type = DagsterType(
     name="EvenDagsterType",
