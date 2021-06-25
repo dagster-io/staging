@@ -10,7 +10,7 @@ from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.errors import DagsterInvalidConfigError
-from dagster.utils import ensure_single_item
+from dagster.utils import ensure_single_item, merge_dicts
 from dagster.utils.merger import deep_merge_dicts
 
 
@@ -147,6 +147,14 @@ class ResolvedRunConfig(
         check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
         run_config = check.opt_dict_param(run_config, "run_config")
         check.opt_str_param(mode, "mode")
+
+        # Translate ops config entry to solid config.
+        if "ops" in run_config:
+            consolidated_solids_config = merge_dicts(
+                run_config.get("solids", {}), run_config.get("ops", {})
+            )
+            run_config = {k: v for k, v in run_config.items() if not k == "ops"}
+            run_config["solids"] = consolidated_solids_config
 
         mode = mode or pipeline_def.get_default_mode_name()
         run_config_schema = pipeline_def.get_run_config_schema(mode)

@@ -198,3 +198,9 @@ def test_op_config():
         assert context.op_config == {"conf_str": "foo"}
 
     my_op(build_op_context(config={"conf_str": "foo"}))
+
+    @graph
+    def basic():
+        my_op()
+
+    execute_pipeline(basic.to_job(), run_config={"ops": {"my_op": {"config": {"conf_str": "foo"}}}})
