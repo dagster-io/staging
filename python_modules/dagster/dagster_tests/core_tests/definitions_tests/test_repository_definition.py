@@ -207,7 +207,7 @@ def test_bad_sensor():
             return [foo_sensor]
 
 
-def test_direct_schedule_target():
+def get_basic_graph():
     @solid
     def wow():
         return "wow"
@@ -216,9 +216,26 @@ def test_direct_schedule_target():
     def wonder():
         wow()
 
+    return wonder
+
+
+def test_cron_schedule_repo():
+    wonder = get_basic_graph()
+
     @schedule(cron_schedule="* * * * *", job=wonder)
     def direct_schedule(_):
         return {}
+
+    @repository
+    def test():
+        return [direct_schedule]
+
+    assert test
+    assert test.has_pipeline("wonder")
+
+
+def get_schedules():
+    wonder = get_basic_graph()
 
     @daily_schedule(
         pipeline_name=None,
@@ -252,11 +269,20 @@ def test_direct_schedule_target():
     def my_hourly(_):
         return {}
 
+    return [my_daily, my_monthly, my_weekly, my_hourly]
+
+
+@pytest.mark.parametrize("schedule_for_job", get_schedules())
+def test_direct_schedule_target(schedule_for_job):
+
+    assert schedule_for_job.get_partition_set().pipeline_name == "wonder"
+
     @repository
     def test():
-        return [direct_schedule, my_daily, my_monthly, my_weekly, my_hourly]
+        return [schedule_for_job]
 
     assert test
+    assert test.has_pipeline("wonder")
 
 
 def test_direct_sensor_target():
