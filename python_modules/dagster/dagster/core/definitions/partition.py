@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime, time
 from enum import Enum
-from typing import Callable, List, NamedTuple, Optional, cast
+from typing import Callable, List, NamedTuple, Optional, Union, cast
 
 import pendulum
 from dagster import check
@@ -24,6 +24,7 @@ from ..storage.tags import check_tags
 from .mode import DEFAULT_MODE_NAME
 from .run_request import RunRequest, SkipReason
 from .schedule import ScheduleDefinition, ScheduleExecutionContext
+from .target import DirectTarget, RepoRelativeTarget
 from .utils import check_valid_name
 
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
@@ -289,7 +290,7 @@ class PartitionSetDefinition(
     namedtuple(
         "_PartitionSetDefinition",
         (
-            "name pipeline_name partition_fn solid_selection mode "
+            "name target partition_fn solid_selection mode "
             "user_defined_run_config_fn_for_partition user_defined_tags_fn_for_partition "
             "partition_params"
         ),
@@ -300,7 +301,6 @@ class PartitionSetDefinition(
 
     Args:
         name (str): Name for this partition set
-        pipeline_name (str): The name of the pipeline definition
         partition_fn (Optional[Callable[void, List[Partition]]]): User-provided function to define
             the set of valid partition objects.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
@@ -314,6 +314,7 @@ class PartitionSetDefinition(
             be added to the generated run for this partition.
         partition_params (Optional[PartitionParams]): A set of parameters used to construct the set
             of valid partition objects.
+        job (Optional[GraphDefinition]) Experimental.
     """
 
     def __new__(
@@ -326,6 +327,7 @@ class PartitionSetDefinition(
         run_config_fn_for_partition=lambda _partition: {},
         tags_fn_for_partition=lambda _partition: {},
         partition_params=None,
+        job=None,
     ):
         check.invariant(
             partition_fn is not None or partition_params is not None,
@@ -363,10 +365,21 @@ class PartitionSetDefinition(
 
                 return [_wrap_partition(obj) for obj in obj_list]
 
+        if job is not None:
+            target: Union[DirectTarget, RepoRelativeTarget] = DirectTarget(job)
+        else:
+            target = RepoRelativeTarget(
+                pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+                mode=check.opt_str_param(mode, "mode") or DEFAULT_MODE_NAME,
+                solid_selection=check.opt_nullable_list_param(
+                    solid_selection, "solid_selection", of_type=str
+                ),
+            )
+
         return super(PartitionSetDefinition, cls).__new__(
             cls,
             name=check_valid_name(name),
-            pipeline_name=check.opt_str_param(pipeline_name, "pipeline_name"),
+            target=target,
             partition_fn=_wrap_partition_fn,
             solid_selection=check.opt_nullable_list_param(
                 solid_selection, "solid_selection", of_type=str
@@ -387,6 +400,10 @@ class PartitionSetDefinition(
                 else None,
             ),
         )
+
+    @property
+    def pipeline_name(self) -> str:
+        return self.target.pipeline_name
 
     def run_config_for_partition(self, partition):
         return self.user_defined_run_config_fn_for_partition(partition)
@@ -533,7 +550,7 @@ class PartitionSetDefinition(
         return PartitionScheduleDefinition(
             name=schedule_name,
             cron_schedule=cron_schedule,
-            pipeline_name=self.pipeline_name,
+            pipeline_name=self.target.pipeline_name,
             tags_fn=None,
             solid_selection=self.solid_selection,
             mode=self.mode,

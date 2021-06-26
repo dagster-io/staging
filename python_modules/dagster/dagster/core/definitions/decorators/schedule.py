@@ -242,6 +242,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partition_params=partition_params,
+            job=job,
         )
 
         schedule_def = partition_set.create_schedule_definition(
@@ -394,6 +395,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partition_params=partition_params,
+            job=job,
         )
 
         schedule_def = partition_set.create_schedule_definition(
@@ -535,6 +537,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partition_params=partition_params,
+            job=job,
         )
 
         schedule_def = partition_set.create_schedule_definition(
@@ -691,6 +694,7 @@ def my_schedule_definition(_):
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
             partition_params=partition_params,
+            job=job,
         )
 
         schedule_def = partition_set.create_schedule_definition(
