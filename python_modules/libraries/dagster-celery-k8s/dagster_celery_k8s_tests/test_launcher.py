@@ -180,8 +180,10 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
                 pipeline_name=pipeline_name,
                 run_config=run_config,
                 tags=tags,
+                external_pipeline_origin=fake_external_pipeline.get_external_origin(),
+                pipeline_code_origin=fake_external_pipeline.get_python_origin(),
             )
-            celery_k8s_run_launcher.launch_run(run, fake_external_pipeline)
+            celery_k8s_run_launcher.launch_run(LaunchRunContext(run))
 
             updated_run = instance.get_run_by_id(run.run_id)
             assert updated_run.tags[DOCKER_IMAGE_TAG] == "fake-image-name"
@@ -219,8 +221,10 @@ def test_k8s_executor_config_override(kubeconfig_file):
                 instance,
                 pipeline_name=pipeline_name,
                 run_config={"execution": {"celery-k8s": {}}},
+                external_pipeline_origin=fake_external_pipeline.get_external_origin(),
+                pipeline_code_origin=fake_external_pipeline.get_python_origin(),
             )
-            celery_k8s_run_launcher.launch_run(run, external_pipeline)
+            celery_k8s_run_launcher.launch_run(LaunchRunContext(run))
 
             updated_run = instance.get_run_by_id(run.run_id)
             assert updated_run.tags[DOCKER_IMAGE_TAG] == "my_image:tag"
@@ -233,7 +237,7 @@ def test_k8s_executor_config_override(kubeconfig_file):
                     "execution": {"celery-k8s": {"config": {"job_image": "fake-image-name"}}}
                 },
             )
-            celery_k8s_run_launcher.launch_run(run, external_pipeline)
+            celery_k8s_run_launcher.launch_run(LaunchRunContext(run))
 
             updated_run = instance.get_run_by_id(run.run_id)
             assert updated_run.tags[DOCKER_IMAGE_TAG] == "fake-image-name"

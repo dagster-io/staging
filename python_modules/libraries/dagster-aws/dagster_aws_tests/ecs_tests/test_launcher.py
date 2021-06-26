@@ -85,18 +85,20 @@ def external_pipeline(image):
 
 
 @pytest.fixture
-def run(instance, pipeline):
-    return instance.create_run_for_pipeline(pipeline)
+def run(instance, pipeline, external_pipeline):
+    return instance.create_run_for_pipeline(
+        pipeline,
+        external_pipeline_origin=external_pipeline.get_external_origin(),
+        pipeline_code_origin=external_pipeline.get_python_origin(),
+    )
 
 
-def test_launching(
-    ecs, instance, run, external_pipeline, subnet, network_interface, image, environment
-):
+def test_launching(ecs, instance, run, subnet, network_interface, image, environment):
     assert not run.tags
     initial_task_definitions = ecs.list_task_definitions()["taskDefinitionArns"]
     initial_tasks = ecs.list_tasks()["taskArns"]
 
-    instance.launch_run(run.run_id, external_pipeline)
+    instance.launch_run(run.run_id)
 
     # A new task definition is created
     task_definitions = ecs.list_task_definitions()["taskDefinitionArns"]
@@ -140,10 +142,10 @@ def test_launching(
     assert run.run_id in str(override["command"])
 
 
-def test_termination(instance, run, external_pipeline):
+def test_termination(instance, run):
     assert not instance.run_launcher.can_terminate(run.run_id)
 
-    instance.launch_run(run.run_id, external_pipeline)
+    instance.launch_run(run.run_id)
 
     assert instance.run_launcher.can_terminate(run.run_id)
     assert instance.run_launcher.terminate(run.run_id)

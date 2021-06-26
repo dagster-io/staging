@@ -103,7 +103,7 @@ def test_create_execution_plan_snapshot():
         assert run.execution_plan_snapshot_id == create_execution_plan_snapshot_id(ep_snapshot)
 
 
-def test_submit_run():
+def test_submit_run(bar_workspace, foo_pipeline_handle):
     with instance_for_test(
         overrides={
             "run_coordinator": {
@@ -112,20 +112,18 @@ def test_submit_run():
             }
         }
     ) as instance:
-        with get_foo_pipeline_handle() as pipeline_handle:
+        run = create_run_for_test(
+            instance=instance,
+            pipeline_name=foo_pipeline_handle.pipeline_name,
+            run_id="foo-bar",
+            external_pipeline_origin=foo_pipeline_handle.get_external_origin(),
+            pipeline_code_origin=foo_pipeline_handle.get_python_origin(),
+        )
 
-            run = create_run_for_test(
-                instance=instance,
-                pipeline_name=pipeline_handle.pipeline_name,
-                run_id="foo-bar",
-                external_pipeline_origin=pipeline_handle.get_external_origin(),
-                pipeline_code_origin=pipeline_handle.get_python_origin(),
-            )
+        instance.submit_run(run.run_id, bar_workspace)
 
-            instance.submit_run(run.run_id, None)
-
-            assert len(instance.run_coordinator.queue()) == 1
-            assert instance.run_coordinator.queue()[0].run_id == "foo-bar"
+        assert len(instance.run_coordinator.queue()) == 1
+        assert instance.run_coordinator.queue()[0].run_id == "foo-bar"
 
 
 def test_dagster_home_not_set():

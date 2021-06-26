@@ -15,9 +15,11 @@ class TestCustomRunCoordinator(TestQueuedRunCoordinator):
         coordinator.register_instance(instance)
         yield coordinator
 
-    def test_session_header_decode_failure(self, instance, coordinator):
+    def test_session_header_decode_failure(
+        self, instance, coordinator, bar_workspace, foo_external_pipeline
+    ):
         run_id = "foo-1"
-        with get_foo_external_pipeline() as external_pipeline, patch(
+        with patch(
             "run_attribution_example.custom_run_coordinator.has_request_context"
         ) as mock_has_request_context, patch(
             "run_attribution_example.custom_run_coordinator.warnings"
@@ -26,11 +28,11 @@ class TestCustomRunCoordinator(TestQueuedRunCoordinator):
 
             run = self.create_run(
                 instance,
-                external_pipeline,
+                foo_external_pipeline,
                 run_id=run_id,
                 status=PipelineRunStatus.NOT_STARTED,
             )
-            returned_run = coordinator.submit_run(run, external_pipeline)
+            returned_run = coordinator.submit_run(SubmitRunContext(run, bar_workspace))
 
             assert returned_run.run_id == run_id
             assert returned_run.status == PipelineRunStatus.QUEUED
@@ -39,13 +41,15 @@ class TestCustomRunCoordinator(TestQueuedRunCoordinator):
             mock_warnings.warn.assert_called_once()
             assert mock_warnings.warn.call_args.args[0].startswith("Couldn't decode JWT header")
 
-    def test_session_header_decode_success(self, instance, coordinator):
+    def test_session_header_decode_success(
+        self, instance, coordinator, bar_workspace, foo_external_pipeline
+    ):
         run_id, jwt_header, expected_email = (
             "foo",
             "foo.eyJlbWFpbCI6ICJoZWxsb0BlbGVtZW50bC5jb20ifQ==.bar",
             "hello@elementl.com",
         )
-        with get_foo_external_pipeline() as external_pipeline, patch(
+        with patch(
             "run_attribution_example.custom_run_coordinator.has_request_context"
         ) as mock_has_request_context, patch(
             "run_attribution_example.custom_run_coordinator.request",
@@ -58,11 +62,11 @@ class TestCustomRunCoordinator(TestQueuedRunCoordinator):
 
             run = self.create_run(
                 instance,
-                external_pipeline,
+                foo_external_pipeline,
                 run_id=run_id,
                 status=PipelineRunStatus.NOT_STARTED,
             )
-            returned_run = coordinator.submit_run(run, external_pipeline)
+            returned_run = coordinator.submit_run(SubmitRunContext(run, bar_workspace))
 
             assert returned_run.run_id == run_id
             assert returned_run.status == PipelineRunStatus.QUEUED

@@ -16,6 +16,8 @@ from dagster_test.dagster_core_docker_buildkite import (
     get_test_project_docker_image,
 )
 
+from .api_tests.utils import get_bar_workspace
+
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 HARDCODED_PORT = 8090
 
@@ -141,3 +143,29 @@ def docker_grpc_client(
     ) if not IS_BUILDKITE else nullcontext():
         wait_for_connection(grpc_host, grpc_port)
         yield DagsterGrpcClient(port=grpc_port, host=grpc_host)
+
+
+@pytest.fixture(name="bar_workspace")
+def bar_workspace_fixture():
+    with get_bar_workspace() as workspace:
+        yield workspace
+
+
+@pytest.fixture(name="bar_repo_location")
+def bar_repo_location_fixture(bar_workspace):
+    return bar_workspace.get_repository_location("bar_repo_location")
+
+
+@pytest.fixture(name="bar_repo_handle")
+def bar_repo_handle_fixture(bar_repo_location):
+    return bar_repo_location.get_repository("bar_repo").handle
+
+
+@pytest.fixture(name="bar_pipeline_handle")
+def bar_pipeline_handle_fixture(bar_repo_handle):
+    return PipelineHandle("foo", bar_repo_handle)
+
+
+@pytest.fixture(name="foo_external_pipeline")
+def foo_external_pipeline_fixture(bar_repo_location):
+    return bar_repo_location.get_repository("bar_repo").get_full_external_pipeline("foo")

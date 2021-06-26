@@ -1,17 +1,34 @@
 from abc import ABC, abstractmethod
 
+from typing import NamedTuple, Optional
+
 from dagster.core.instance import MayHaveInstanceWeakref
+
+from .storage.pipeline_run import PipelineRun
+
+
+from ..cli.workspace.workspace import IWorkspace
+
+
+class SubmitRunContext(NamedTuple):
+    """
+    Context available within a run coordinator's submit_run method
+    """
+
+    run: PipelineRun
+    workspace: Optional[IWorkspace]
 
 
 class RunCoordinator(ABC, MayHaveInstanceWeakref):
     @abstractmethod
-    def submit_run(self, pipeline_run, external_pipeline):
+    def submit_run(self, context: SubmitRunContext) -> PipelineRun:
         """
         Submit a run to the run coordinator for execution.
 
         Args:
-            pipeline_run (PipelineRun): The run
-            external_pipeline (ExternalPipeline): The pipeline
+            context (SubmitRunContext): information about the submission - every run coordinator
+            will need the PipelineRun, and some run coordinators may need information from the
+            IWorkspace from which the run was launched.
 
         Returns:
             PipelineRun: The queued run

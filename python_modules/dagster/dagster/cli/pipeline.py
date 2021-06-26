@@ -595,7 +595,8 @@ def execute_launch_command(instance, kwargs):
     check.inst_param(instance, "instance", DagsterInstance)
     config = get_config_from_args(kwargs)
 
-    with get_repository_location_from_kwargs(kwargs) as repo_location:
+    with get_workspace_from_kwargs(kwargs) as workspace:
+        repo_location = get_repository_location_from_workspace(workspace, kwargs.get("location"))
         external_repo = get_external_repository_from_repo_location(
             repo_location, kwargs.get("repository")
         )
@@ -630,7 +631,7 @@ def execute_launch_command(instance, kwargs):
             run_id=kwargs.get("run_id"),
         )
 
-        return instance.submit_run(pipeline_run.run_id, external_pipeline)
+        return instance.submit_run(pipeline_run.run_id, workspace)
 
 
 @pipeline_cli.command(
@@ -825,11 +826,14 @@ def pipeline_backfill_command(**kwargs):
 
 
 def execute_backfill_command(cli_args, print_fn, instance):
-    with get_repository_location_from_kwargs(cli_args) as repo_location:
-        _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_location)
+    with get_workspace_from_kwargs(kwargs) as workspace:
+        repo_location = get_repository_location_from_workspace(workspace)
+        _execute_backfill_command_at_location(
+            cli_args, print_fn, instance, workspace, repo_location
+        )
 
 
-def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_location):
+def _execute_backfill_command_at_location(cli_args, print_fn, instance, workspace, repo_location):
     external_repo = get_external_repository_from_repo_location(
         repo_location, cli_args.get("repository")
     )
@@ -945,7 +949,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
                 partition_data,
             )
             if pipeline_run:
-                instance.submit_run(pipeline_run.run_id, external_pipeline)
+                instance.submit_run(pipeline_run.run_id, workspace)
 
         instance.add_backfill(backfill_job.with_status(BulkActionStatus.COMPLETED))
 

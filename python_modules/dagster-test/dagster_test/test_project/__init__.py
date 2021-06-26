@@ -4,6 +4,8 @@ import subprocess
 import sys
 from contextlib import contextmanager
 
+from collections import namedtuple
+
 from dagster import check
 from dagster.core.code_pointer import FileCodePointer
 from dagster.core.definitions.reconstructable import (
@@ -22,6 +24,7 @@ from dagster.core.host_representation.origin import (
     ExternalRepositoryOrigin,
 )
 from dagster.core.origin import PipelinePythonOrigin, RepositoryPythonOrigin
+from dagster.core.workspace import WorkspaceLoadTarget
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import file_relative_path, git_repository_root
 
@@ -217,33 +220,72 @@ class ReOriginatedExternalScheduleForTest(ExternalSchedule):
         )
 
 
+class TestProjectLoadTarget(
+    namedtuple("_TestProjectLoadTarget", "container_image"), WorkspaceLoadTarget
+):
+    def create_origins(self):
+        return [
+            InProcessRepositoryLocationOrigin(
+                ReconstructableRepository.for_file(
+                    file_relative_path(__file__, "test_pipelines/repo.py"),
+                    "define_demo_execution_repo",
+                    container_image=self.container_image,
+                )
+            )
+        ]
+
+
 @contextmanager
-def get_test_project_external_repo(container_image=None):
-    with InProcessRepositoryLocationOrigin(
-        ReconstructableRepository.for_file(
-            file_relative_path(__file__, "test_pipelines/repo.py"),
-            "define_demo_execution_repo",
-            container_image=container_image,
-        )
-    ).create_location() as location:
+def get_test_project_workspace(instance, container_image=None):
+    with WorkspaceProcessContext(
+        instance, TestProjectLoadTarget(container_image)
+    ) as workspace_process_context:
+        yield workspace_process_context.create_request_context()
+
+
+@contextmanager
+def get_test_project_external_pipeline_hierarchy(instance, pipeline_name, container_image=None):
+    with get_test_project_workspace(instance, container_image) as workspace:
+        location = workspace.get_repository_location(workspace.repository_location_names[0])
+        repo = location.get_repository("demo_execution_repo")
+        pipeline = repo.get_full_external_pipeline(pipeline_name)
+        yield workspace, location, repo, pipeline
+
+
+@contextmanager
+def get_test_project_external_repo(instance, container_image=None):
+    with get_test_project_workspace(instance, container_image) as workspace:
+        location = workspace.get_repository_location(workspace.repository_location_names[0])
         yield location, location.get_repository("demo_execution_repo")
 
 
 @contextmanager
-def get_test_project_external_pipeline(pipeline_name, container_image=None):
-    with get_test_project_external_repo(container_image=container_image) as (_, repo):
-        yield repo.get_full_external_pipeline(pipeline_name)
+def get_test_project_external_pipeline(instance, pipeline_name, container_image=None):
+    with get_test_project_external_pipeline_hierarchy(
+        instance, pipeline_name, container_image
+    ) as workspace, location, repo, pipeline:
+        yield pipeline
 
 
 @contextmanager
-def get_test_project_location_and_external_pipeline(pipeline_name, container_image=None):
-    with get_test_project_external_repo(container_image=container_image) as (location, repo):
-        yield location, repo.get_full_external_pipeline(pipeline_name)
+def get_test_project_workspace_and_external_pipeline(instance, pipeline_name, container_image=None):
+    with get_test_project_external_pipeline_hierarchy(
+        instance, pipeline_name, container_image
+    ) as workspace, location, repo, pipeline:
+        yield workspace, pipeline
 
 
 @contextmanager
-def get_test_project_external_schedule(schedule_name, container_image=None):
-    with get_test_project_external_repo(container_image=container_image) as (_, repo):
+def get_test_project_location_and_external_pipeline(instance, pipeline_name, container_image=None):
+    with get_test_project_external_pipeline_hierarchy(
+        instance, pipeline_name, container_image
+    ) as workspace, location, repo, pipeline:
+        yield location, pipeline
+
+
+@contextmanager
+def get_test_project_external_schedule(instance, schedule_name, container_image=None):
+    with get_test_project_external_repo(instance, container_image=container_image) as (_, repo):
         yield repo.get_external_schedule(schedule_name)
 
 
