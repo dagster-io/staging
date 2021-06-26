@@ -1,7 +1,7 @@
 from dagster import check
 from dagster.core.host_representation.origin import RepositoryLocationOrigin
 from dagster.core.host_representation.repository_location import GrpcServerRepositoryLocation
-from dagster.core.workspace import IWorkspace
+from dagster.core.workspace.workspace import IWorkspace
 
 
 class DynamicWorkspace(IWorkspace):

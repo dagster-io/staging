@@ -74,9 +74,8 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
             dequeue_interval_seconds=config_value.get("dequeue_interval_seconds"),
         )
 
-    def submit_run(self, pipeline_run, external_pipeline):
-        check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
-        check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+    def submit_run(self, context: SubmitRunContext) -> PipelineRun:
+        pipeline_run = context.run
         check.invariant(pipeline_run.status == PipelineRunStatus.NOT_STARTED)
 
         enqueued_event = DagsterEvent(

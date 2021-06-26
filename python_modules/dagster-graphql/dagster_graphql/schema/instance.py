@@ -2,7 +2,7 @@ import sys
 
 import graphene
 from dagster import DagsterInstance, check
-from dagster.core.launcher.base import RunLauncher
+from dagster.core.launcher.base import LaunchRunContext, RunLauncher
 from dagster.daemon.controller import get_daemon_status
 from dagster.daemon.types import DaemonStatus
 

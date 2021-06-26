@@ -230,6 +230,7 @@ def execute_sensor_iteration(
                 yield from _evaluate_sensor(
                     tick_context,
                     instance,
+                    workspace,
                     repo_location,
                     external_repo,
                     external_sensor,
@@ -250,6 +251,7 @@ def execute_sensor_iteration(
 def _evaluate_sensor(
     context,
     instance,
+    workspace,
     repo_location,
     external_repo,
     external_sensor,
