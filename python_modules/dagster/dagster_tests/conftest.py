@@ -16,6 +16,8 @@ from dagster_test.dagster_core_docker_buildkite import (
     get_test_project_docker_image,
 )
 
+from .api_tests.utils import get_bar_workspace
+
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 HARDCODED_PORT = 8090
 

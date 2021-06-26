@@ -169,6 +169,12 @@ def get_workspace_process_context_from_kwargs(instance: DagsterInstance, kwargs)
     return WorkspaceProcessContext(instance, created_workspace_load_target(kwargs))
 
 
+@contextmanager
+def get_workspace_from_kwargs(instance: DagsterInstance, kwargs):
+    with get_workspace_process_context_from_kwargs(instance) as workspace_process_context:
+        yield workspace_process_context.create_request_context()
+
+
 def python_target_click_options():
     return [
         click.option(
@@ -362,17 +368,6 @@ def pipeline_target_argument(f):
     return apply_click_params(repository_target_argument(f), pipeline_option())
 
 
-def get_repository_origin_from_kwargs(kwargs):
-    provided_repo_name = kwargs.get("repository")
-
-    if not provided_repo_name:
-        raise click.UsageError("Must provide --repository to load a repository")
-
-    repository_location_origin = get_repository_location_origin_from_kwargs(kwargs)
-
-    return ExternalRepositoryOrigin(repository_location_origin, provided_repo_name)
-
-
 def get_pipeline_python_origin_from_kwargs(kwargs):
     repository_origin = get_repository_python_origin_from_kwargs(kwargs)
     provided_pipeline_name = kwargs.get("pipeline")
@@ -515,46 +510,45 @@ def get_repository_python_origin_from_kwargs(kwargs):
 
 @contextmanager
 def get_repository_location_from_kwargs(kwargs):
-    origin = get_repository_location_origin_from_kwargs(kwargs)
-    with ProcessGrpcServerRegistry(reload_interval=0, heartbeat_ttl=30) as grpc_server_registry:
-        from dagster.core.workspace.dynamic_workspace import DynamicWorkspace
-
-        with DynamicWorkspace(grpc_server_registry) as workspace:
-            with workspace.get_location(origin) as location:
-                yield location
+    with get_workspace_from_kwargs(kwargs) as workspace:
+        yield get_repository_location_from_workspace(workspace, kwargs.get("location"))
 
 
-def get_repository_location_origin_from_kwargs(kwargs):
-    all_origins = created_workspace_load_target(kwargs).create_origins()
-
-    origins_by_name = {origin.location_name: origin for origin in all_origins}
-
-    provided_location_name = kwargs.get("location")
-
-    if provided_location_name is None and len(origins_by_name) == 1:
-        return next(iter(origins_by_name.values()))
+def get_repository_location_from_workspace(
+    workspace: WorkspaceRequestContext, provided_location_name
+):
+    if provided_location_name is None and len(workspace.repository_location_names) == 1:
+        provided_location_name = workspace.repository_location_names[0]
 
     elif provided_location_name is None:
         raise click.UsageError(
             (
-                "Must provide --location as there are more than one locations "
+                "Must provide --location as there are more than one location "
                 "available. Options are: {}"
-            ).format(_sorted_quoted(origins_by_name.keys()))
+            ).format(_sorted_quoted(workspace.repository_location_names))
         )
 
-    elif not origins_by_name.get(provided_location_name):
+    elif provided_location_name not in workspace.repository_location_names:
         raise click.UsageError(
             (
                 'Location "{provided_location_name}" not found in workspace. '
                 "Found {found_names} instead."
             ).format(
                 provided_location_name=provided_location_name,
-                found_names=_sorted_quoted(origins_by_name.keys()),
+                found_names=_sorted_quoted(workspace.repository_location_names),
+            )
+        )
+
+    elif workspace.has_repository_location_error(provided_location_name):
+        raise click.UsageError(
+            'Error loading location "{provided_location_name}": {error_str}'.format(
+                provided_location_name=provided_location_name,
+                error_str=str(workspace.get_repository_location_error(provided_location_name)),
             )
         )
 
     else:
-        return origins_by_name.get(provided_location_name)
+        return workspace.get_repository_location(provided_location_name)
 
 
 def get_external_repository_from_repo_location(repo_location, provided_repo_name):

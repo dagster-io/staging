@@ -35,19 +35,20 @@ def test_run_always_finishes():  # pylint: disable=redefined-outer-name
             loadable_target_origin=loadable_target_origin, max_workers=4
         )
         with server_process.create_ephemeral_client() as api_client:
-            with GrpcServerRepositoryLocationOrigin(
-                location_name="test",
-                port=api_client.port,
-                socket=api_client.socket,
-                host=api_client.host,
-            ).create_location() as repository_location:
-                external_pipeline = repository_location.get_repository(
-                    "nope"
-                ).get_full_external_pipeline("slow_pipeline")
-
+            with WorkspaceProcessContext(
+                instance,
+                GrpcServerTarget(
+                    host="localhost",
+                    socket=server_process.socket,
+                    port=server_process.port,
+                    location_name="test",
+                ),
+            ) as workspace_process_context:
                 assert instance.get_run_by_id(run_id).status == PipelineRunStatus.NOT_STARTED
-
-                instance.launch_run(run_id=pipeline_run.run_id, external_pipeline=external_pipeline)
+                instance.launch_run(
+                    run_id=pipeline_run.run_id,
+                    workspace=workspace_process_context.create_request_context(),
+                )
 
         # Server process now receives shutdown event, run has not finished yet
         pipeline_run = instance.get_run_by_id(run_id)
@@ -69,25 +70,21 @@ def test_run_always_finishes():  # pylint: disable=redefined-outer-name
 
 def test_terminate_after_shutdown():
     with instance_for_test() as instance:
-        origin = ManagedGrpcPythonEnvRepositoryLocationOrigin(
-            loadable_target_origin=LoadableTargetOrigin(
-                executable_path=sys.executable,
-                attribute="nope",
+        with WorkspaceProcessContext(
+            instance,
+            PythonFileTarget(
                 python_file=file_relative_path(__file__, "test_default_run_launcher.py"),
+                attribute="nope",
+                working_directory=None,
+                location_name="nope",
             ),
-            location_name="nope",
-        )
-        with origin.create_test_location() as repository_location:
-
-            external_pipeline = repository_location.get_repository(
-                "nope"
-            ).get_full_external_pipeline("sleepy_pipeline")
-
+        ) as workspace_process_context:
+            workspace = workspace_process_context.create_request_context()
             pipeline_run = instance.create_run_for_pipeline(
                 pipeline_def=sleepy_pipeline, run_config=None
             )
 
-            instance.launch_run(pipeline_run.run_id, external_pipeline)
+            instance.launch_run(pipeline_run.run_id, workspace)
 
             poll_for_step_start(instance, pipeline_run.run_id)
 
@@ -105,9 +102,7 @@ def test_terminate_after_shutdown():
             )
 
             with pytest.raises(DagsterLaunchFailedError):
-                instance.launch_run(
-                    doomed_to_fail_pipeline_run.run_id, doomed_to_fail_external_pipeline
-                )
+                instance.launch_run(doomed_to_fail_pipeline_run.run_id, workspace)
 
             launcher = instance.run_launcher
 
@@ -128,22 +123,22 @@ def test_server_down():
             loadable_target_origin=loadable_target_origin, max_workers=4, force_port=True
         )
 
-        with server_process.create_ephemeral_client() as api_client:
-            with GrpcServerRepositoryLocationOrigin(
-                location_name="test",
-                port=api_client.port,
-                socket=api_client.socket,
-                host=api_client.host,
-            ).create_location() as repository_location:
-                external_pipeline = repository_location.get_repository(
-                    "nope"
-                ).get_full_external_pipeline("sleepy_pipeline")
-
+        with server_process.create_ephemeral_client():
+            with WorkspaceProcessContext(
+                instance,
+                GrpcServerTarget(
+                    location_name="test",
+                    port=api_client.port,
+                    socket=api_client.socket,
+                    host=api_client.host,
+                ),
+            ) as workspace_process_context:
+                workspace = workspace_process_context.create-create_request_context()
                 pipeline_run = instance.create_run_for_pipeline(
                     pipeline_def=sleepy_pipeline, run_config=None
                 )
 
-                instance.launch_run(pipeline_run.run_id, external_pipeline)
+                instance.launch_run(pipeline_run.run_id, workspace)
 
                 poll_for_step_start(instance, pipeline_run.run_id)
 

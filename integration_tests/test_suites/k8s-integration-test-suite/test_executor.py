@@ -56,8 +56,12 @@ def test_k8s_run_launcher_default(
     pipeline_name = "demo_k8s_executor_pipeline"
     tags = {"key": "value"}
 
-    with get_test_project_location_and_external_pipeline(pipeline_name) as (
+    with get_test_project_external_pipeline_hierarchy(
+        dagster_instance_for_k8s_run_launcher, pipeline_name
+    ) as (
+        workspace,
         location,
+        repo,
         external_pipeline,
     ):
         reoriginated_pipeline = ReOriginatedExternalPipelineForTest(external_pipeline)
@@ -74,10 +78,7 @@ def test_k8s_run_launcher_default(
             external_pipeline_origin=reoriginated_pipeline.get_external_origin(),
             pipeline_code_origin=reoriginated_pipeline.get_python_origin(),
         )
-        dagster_instance_for_k8s_run_launcher.launch_run(
-            run.run_id,
-            reoriginated_pipeline,
-        )
+        dagster_instance_for_k8s_run_launcher.launch_run(run.run_id, workspace)
 
         result = wait_for_job_and_get_raw_logs(
             job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
@@ -123,8 +124,12 @@ def test_k8s_run_launcher_image_from_origin(
     pipeline_name = "demo_k8s_executor_pipeline"
     tags = {"key": "value"}
 
-    with get_test_project_location_and_external_pipeline(pipeline_name, dagster_docker_image) as (
+    with get_test_project_external_pipeline_hierarchy(
+        dagster_instance_for_k8s_run_launcher, pipeline_name, dagster_docker_image
+    ) as (
+        workspace,
         location,
+        repo,
         external_pipeline,
     ):
         reoriginated_pipeline = ReOriginatedExternalPipelineForTest(
@@ -143,7 +148,7 @@ def test_k8s_run_launcher_image_from_origin(
             external_pipeline_origin=reoriginated_pipeline.get_external_origin(),
             pipeline_code_origin=reoriginated_pipeline.get_python_origin(),
         )
-        dagster_instance_for_k8s_run_launcher.launch_run(run.run_id, reoriginated_pipeline)
+        dagster_instance_for_k8s_run_launcher.launch_run(run.run_id, workspace)
 
         result = wait_for_job_and_get_raw_logs(
             job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
@@ -180,8 +185,12 @@ def test_k8s_run_launcher_terminate(
         },
     )
 
-    with get_test_project_location_and_external_pipeline(pipeline_name) as (
+    with get_test_project_external_pipeline_hierarchy(
+        dagster_instance_for_k8s_run_launcher, pipeline_name
+    ) as (
+        workspace,
         location,
+        repo,
         external_pipeline,
     ):
         reoriginated_pipeline = ReOriginatedExternalPipelineForTest(external_pipeline)
@@ -199,7 +208,7 @@ def test_k8s_run_launcher_terminate(
             pipeline_code_origin=reoriginated_pipeline.get_python_origin(),
         )
 
-        dagster_instance_for_k8s_run_launcher.launch_run(run.run_id, reoriginated_pipeline)
+        dagster_instance_for_k8s_run_launcher.launch_run(run.run_id, workspace)
 
         wait_for_job(
             job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher
@@ -265,8 +274,12 @@ def test_k8s_executor_resource_requirements(
     pipeline_name = "resources_limit_pipeline"
     tags = {"key": "value"}
 
-    with get_test_project_location_and_external_pipeline(pipeline_name) as (
+    with get_test_project_external_pipeline_hierarchy(
+        dagster_instance_for_k8s_run_launcher, pipeline_name
+    ) as (
+        workspace,
         location,
+        repo,
         external_pipeline,
     ):
         reoriginated_pipeline = ReOriginatedExternalPipelineForTest(external_pipeline)
@@ -283,7 +296,7 @@ def test_k8s_executor_resource_requirements(
             external_pipeline_origin=reoriginated_pipeline.get_external_origin(),
             pipeline_code_origin=reoriginated_pipeline.get_python_origin(),
         )
-        dagster_instance_for_k8s_run_launcher.launch_run(run.run_id, reoriginated_pipeline)
+        dagster_instance_for_k8s_run_launcher.launch_run(run.run_id, workspace)
 
         result = wait_for_job_and_get_raw_logs(
             job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace_for_k8s_run_launcher

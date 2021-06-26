@@ -26,12 +26,11 @@ class DefaultRunCoordinator(RunCoordinator, ConfigurableClass):
     def from_config_value(cls, inst_data, config_value):
         return cls(inst_data=inst_data, **config_value)
 
-    def submit_run(self, pipeline_run, external_pipeline):
-        check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
-        check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+    def submit_run(self, pipeline_run: PipelineRun, workspace: IWorkspace) -> PipelineRun:
         check.invariant(pipeline_run.status == PipelineRunStatus.NOT_STARTED)
 
-        return self._instance.launch_run(pipeline_run.run_id, external_pipeline)
+        self._instance.launch_run(pipeline_run.run_id, workspace)
+        return pipeline_run
 
     def can_cancel_run(self, run_id):
         return self._instance.run_launcher.can_terminate(run_id)
