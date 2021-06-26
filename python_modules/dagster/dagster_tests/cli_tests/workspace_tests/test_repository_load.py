@@ -6,6 +6,8 @@ from dagster.cli.workspace.cli_target import (
     repository_target_argument,
 )
 from dagster.core.host_representation import ExternalRepository
+from dagster.core.instance import DagsterInstance
+from dagster.core.test_utils import instance_for_test
 from dagster.utils import file_relative_path
 
 
@@ -13,7 +15,11 @@ def load_repository_via_cli_runner(cli_args, repo_assert_fn=None):
     @click.command(name="test_repository_command")
     @repository_target_argument
     def command(**kwargs):
-        with get_external_repository_from_kwargs(kwargs) as external_repo:
+        with get_external_repository_from_kwargs(
+            DagsterInstance.get(),
+            version="",
+            kwargs=kwargs,
+        ) as external_repo:
             if repo_assert_fn:
                 repo_assert_fn(external_repo)
 
@@ -29,8 +35,9 @@ def successfully_load_repository_via_cli(cli_args, repo_assert_fn=None):
         if repo_assert_fn:
             repo_assert_fn(external_repo)
 
-    result = load_repository_via_cli_runner(cli_args, wrapped_repo_assert)
-    assert result.exit_code == 0
+    with instance_for_test():
+        result = load_repository_via_cli_runner(cli_args, wrapped_repo_assert)
+        assert result.exit_code == 0
 
 
 PYTHON_FILE_IN_NAMED_LOCATION_WORKSPACE = file_relative_path(
@@ -116,7 +123,7 @@ def test_missing_location_name_multi_location():
     assert result.exit_code == 2
 
     assert (
-        """Must provide --location as there are more than one locations available. """
+        """Must provide --location as there are multiple locations available. """
         """Options are: ['loaded_from_file', 'loaded_from_module', 'loaded_from_package']"""
     ) in result.stdout
 
