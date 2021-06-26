@@ -1,8 +1,7 @@
 # pylint: disable=redefined-outer-name, protected-access
 import pytest
 from dagster.core.definitions.reconstructable import ReconstructableRepository
-from dagster.core.host_representation.origin import InProcessRepositoryLocationOrigin
-from dagster.core.test_utils import instance_for_test
+from dagster.core.test_utils import instance_for_test, test_in_process_workspace
 
 from . import repo
 
@@ -73,30 +72,40 @@ def pipeline():
 
 
 @pytest.fixture
-def external_pipeline(image):
-    with InProcessRepositoryLocationOrigin(
+def workspace(instance, image):
+    with test_in_process_workspace(
+        instance,
         ReconstructableRepository.for_file(
             repo.__file__, repo.repository.__name__, container_image=image
         ),
-    ).create_location() as location:
-        yield location.get_repository(repo.repository.__name__).get_full_external_pipeline(
-            repo.pipeline.__name__
-        )
+    ) as test_workspace:
+        yield test_workspace
 
 
 @pytest.fixture
-def run(instance, pipeline):
-    return instance.create_run_for_pipeline(pipeline)
+def external_pipeline(workspace):
+    return (
+        workspace.get_repository_location(workspace.repository_location_names[0])
+        .get_repository(repo.repository.__name__)
+        .get_full_external_pipeline(repo.pipeline.__name__)
+    )
 
 
-def test_launching(
-    ecs, instance, run, external_pipeline, subnet, network_interface, image, environment
-):
+@pytest.fixture
+def run(instance, pipeline, external_pipeline):
+    return instance.create_run_for_pipeline(
+        pipeline,
+        external_pipeline_origin=external_pipeline.get_external_origin(),
+        pipeline_code_origin=external_pipeline.get_python_origin(),
+    )
+
+
+def test_launching(ecs, instance, run, subnet, network_interface, image, environment, workspace):
     assert not run.tags
     initial_task_definitions = ecs.list_task_definitions()["taskDefinitionArns"]
     initial_tasks = ecs.list_tasks()["taskArns"]
 
-    instance.launch_run(run.run_id, external_pipeline)
+    instance.launch_run(run.run_id, workspace)
 
     # A new task definition is created
     task_definitions = ecs.list_task_definitions()["taskDefinitionArns"]
@@ -140,10 +149,10 @@ def test_launching(
     assert run.run_id in str(override["command"])
 
 
-def test_termination(instance, run, external_pipeline):
+def test_termination(instance, run, workspace):
     assert not instance.run_launcher.can_terminate(run.run_id)
 
-    instance.launch_run(run.run_id, external_pipeline)
+    instance.launch_run(run.run_id, workspace)
 
     assert instance.run_launcher.can_terminate(run.run_id)
     assert instance.run_launcher.terminate(run.run_id)

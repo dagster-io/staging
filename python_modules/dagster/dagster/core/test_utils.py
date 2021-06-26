@@ -4,17 +4,22 @@ import sys
 import tempfile
 import time
 from contextlib import contextmanager
+from typing import NamedTuple
 
 import pendulum
 import yaml
 from dagster import Shape, check, composite_solid, pipeline, solid
-from dagster.core.host_representation import ExternalPipeline
-from dagster.core.host_representation.origin import ExternalPipelineOrigin
+from dagster.core.host_representation.origin import (
+    ExternalPipelineOrigin,
+    InProcessRepositoryLocationOrigin,
+)
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import RunLauncher
-from dagster.core.run_coordinator import RunCoordinator
+from dagster.core.run_coordinator import RunCoordinator, SubmitRunContext
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.telemetry import cleanup_telemetry_logger
+from dagster.core.workspace.context import WorkspaceProcessContext
+from dagster.core.workspace.load_target import WorkspaceLoadTarget
 from dagster.serdes import ConfigurableClass
 from dagster.seven import nullcontext
 from dagster.seven.compat.pendulum import create_pendulum_time, mock_pendulum_timezone
@@ -291,7 +296,7 @@ class ExplodingRunLauncher(RunLauncher, ConfigurableClass):
     def from_config_value(inst_data, config_value):
         return ExplodingRunLauncher(inst_data=inst_data)
 
-    def launch_run(self, run, external_pipeline):
+    def launch_run(self, context):
         raise NotImplementedError("The entire purpose of this is to throw on launch")
 
     def join(self, timeout=30):
@@ -311,9 +316,9 @@ class MockedRunLauncher(RunLauncher, ConfigurableClass):
 
         super().__init__()
 
-    def launch_run(self, run, external_pipeline):
+    def launch_run(self, context):
+        run = context.run
         check.inst_param(run, "run", PipelineRun)
-        check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
         check.invariant(run.status == PipelineRunStatus.STARTING)
         self._queue.append(run)
         return run
@@ -349,9 +354,8 @@ class MockedRunCoordinator(RunCoordinator, ConfigurableClass):
 
         super().__init__()
 
-    def submit_run(self, pipeline_run, external_pipeline):
-        check.inst_param(pipeline_run, "run", PipelineRun)
-        check.opt_inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+    def submit_run(self, context: SubmitRunContext):
+        pipeline_run = context.run
         check.inst(pipeline_run.external_pipeline_origin, ExternalPipelineOrigin)
         self._queue.append(pipeline_run)
         return pipeline_run
@@ -410,3 +414,19 @@ def mock_system_timezone(override_timezone):
 
 def get_mocked_system_timezone():
     return _mocked_system_timezone["timezone"]
+
+
+# Test utility for creating a test workspace for a function
+class TestInProcessWorkspaceLoadTarget(NamedTuple, WorkspaceLoadTarget):
+    origin: InProcessRepositoryLocationOrigin
+
+    def create_origins(self):
+        return [self.origin]
+
+
+@contextmanager
+def test_in_process_workspace(instance, recon_repo):
+    with WorkspaceProcessContext(
+        instance, TestInProcessWorkspaceLoadTarget(InProcessRepositoryLocationOrigin(recon_repo))
+    ) as workspace_process_context:
+        yield workspace_process_context.create_request_context()
