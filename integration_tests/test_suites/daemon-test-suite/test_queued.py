@@ -24,7 +24,7 @@ def assert_events_in_order(logs, expected_events):
     assert filtered_logged_events == expected_events
 
 
-def test_queue_from_schedule_and_sensor(tmpdir, foo_example_repo):
+def test_queue_from_schedule_and_sensor(tmpdir, foo_example_workspace, foo_example_repo):
     dagster_home_path = tmpdir.strpath
     with setup_instance(
         dagster_home_path,
@@ -44,7 +44,7 @@ def test_queue_from_schedule_and_sensor(tmpdir, foo_example_repo):
 
         with start_daemon(timeout=180):
             run = create_run(instance, external_pipeline)
-            instance.submit_run(run.run_id, external_pipeline)
+            instance.submit_run(run.run_id, foo_example_workspace)
 
             runs = [
                 poll_for_finished_run(instance, run.run_id),
@@ -72,7 +72,7 @@ def test_queue_from_schedule_and_sensor(tmpdir, foo_example_repo):
                 )
 
 
-def test_queued_runs(tmpdir, foo_example_repo):
+def test_queued_runs(tmpdir, foo_example_workspace, foo_example_repo):
     dagster_home_path = tmpdir.strpath
     with setup_instance(
         dagster_home_path,
@@ -88,7 +88,7 @@ def test_queued_runs(tmpdir, foo_example_repo):
 
             run = create_run(instance, external_pipeline)
 
-            instance.submit_run(run.run_id, external_pipeline)
+            instance.submit_run(run.run_id, foo_example_workspace)
 
             poll_for_finished_run(instance, run.run_id)
 

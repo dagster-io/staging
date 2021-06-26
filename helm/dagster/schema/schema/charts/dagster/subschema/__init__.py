@@ -11,6 +11,6 @@ from .migrate import Migrate
 from .postgresql import PostgreSQL
 from .rabbitmq import RabbitMQ
 from .redis import Redis
-from .run_launcher import RunLauncher
+from .run_launcher import LaunchRunContext, RunLauncher
 from .scheduler import Scheduler
 from .service_account import ServiceAccount

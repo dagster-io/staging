@@ -210,7 +210,7 @@ class IWorkspaceRequestContext:
         )
 
 
-class WorkspaceRequestContext(IWorkspaceRequestContext):
+class WorkspaceRequestContext(IWorkspaceRequestContext, IWorkspace):
     def __init__(
         self,
         instance: DagsterInstance,
@@ -242,6 +242,25 @@ class WorkspaceRequestContext(IWorkspaceRequestContext):
     @property
     def read_only(self) -> bool:
         return self.process_context.read_only
+
+    def get_location(self, origin):
+        entry = self._workspace_snapshot.get(location_name)
+
+        if not entry:
+            raise Exception(f"Location {origin.location_name} not found in workspace")
+
+        if entry.origin != origin:
+            raise Exception(f"Origins for location {origin.location_name} did not match")
+
+        if entry.load_error:
+            raise Exception(
+                f"Error loading location {origin.location_name} : {str(entry.load_error)}"
+            )
+
+        if not entry.repository_location:
+            raise Exception(f"No location loaded on {origin.location_name} in workspace")
+
+        return entry.repository_location
 
 
 class IWorkspaceProcessContext(ABC):

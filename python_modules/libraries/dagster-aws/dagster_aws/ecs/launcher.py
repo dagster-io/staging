@@ -4,7 +4,7 @@ from typing import Any, Dict, List
 
 import boto3
 import requests
-from dagster.core.launcher.base import RunLauncher
+from dagster.core.launcher.base import LaunchRunContext, RunLauncher
 from dagster.grpc.types import ExecuteRunArgs
 from dagster.serdes import ConfigurableClass, serialize_dagster_namedtuple
 from dagster.utils.backcompat import experimental
@@ -46,7 +46,8 @@ class EcsRunLauncher(RunLauncher, ConfigurableClass):
         cluster = self._task_metadata().cluster
         return {"ecs/task_arn": task_arn, "ecs/cluster": cluster}
 
-    def launch_run(self, run, external_pipeline):
+    def launch_run(self, context: LaunchRunContext) -> None:
+
         """
         Launch a run in an ECS task.
 
@@ -62,8 +63,9 @@ class EcsRunLauncher(RunLauncher, ConfigurableClass):
         1. The command is replaced with a call to `dagster api execute_run`
         2. The image is overridden with the pipeline's origin's image.
         """
+        run = context.run
         metadata = self._task_metadata()
-        pipeline_origin = external_pipeline.get_python_origin()
+        pipeline_origin = run.pipeline_code_origin
         image = pipeline_origin.repository_origin.container_image
 
         input_json = serialize_dagster_namedtuple(
@@ -138,8 +140,6 @@ class EcsRunLauncher(RunLauncher, ConfigurableClass):
             pipeline_run=run,
             cls=self.__class__,
         )
-
-        return run.run_id
 
     def can_terminate(self, run_id):
         arn = self._instance.get_run_by_id(run_id).tags.get("ecs/task_arn")

@@ -26,7 +26,7 @@ class TestQueuedRunCoordinator:
     ```
     """
 
-    @pytest.fixture()
+    @pytest.fixture
     def instance(self):
         overrides = {
             "run_launcher": {"module": "dagster.core.test_utils", "class": "MockedRunLauncher"}
@@ -34,7 +34,7 @@ class TestQueuedRunCoordinator:
         with instance_for_test(overrides=overrides) as inst:
             yield inst
 
-    @pytest.fixture()
+    @pytest.fixture
     def coordinator(self, instance):  # pylint: disable=redefined-outer-name
         run_coordinator = QueuedRunCoordinator()
         run_coordinator.register_instance(instance)
@@ -93,40 +93,41 @@ class TestQueuedRunCoordinator:
             ) as _:
                 pass
 
-    def test_submit_run(self, instance, coordinator):  # pylint: disable=redefined-outer-name
-        with get_foo_external_pipeline() as external_pipeline:
-            run = self.create_run(
-                instance, external_pipeline, run_id="foo-1", status=PipelineRunStatus.NOT_STARTED
-            )
-            returned_run = coordinator.submit_run(run, external_pipeline)
-            assert returned_run.run_id == "foo-1"
-            assert returned_run.status == PipelineRunStatus.QUEUED
+    def test_submit_run(
+        self, instance, coordinator, bar_workspace, foo_external_pipeline
+    ):  # pylint: disable=redefined-outer-name
+        run = self.create_run(
+            instance, foo_external_pipeline, run_id="foo-1", status=PipelineRunStatus.NOT_STARTED
+        )
+        returned_run = coordinator.submit_run(SubmitRunContext(run, bar_workspace))
+        assert returned_run.run_id == "foo-1"
+        assert returned_run.status == PipelineRunStatus.QUEUED
 
-            assert len(instance.run_launcher.queue()) == 0
-            stored_run = instance.get_run_by_id("foo-1")
-            assert stored_run.status == PipelineRunStatus.QUEUED
+        assert len(instance.run_launcher.queue()) == 0
+        stored_run = instance.get_run_by_id("foo-1")
+        assert stored_run.status == PipelineRunStatus.QUEUED
 
     def test_submit_run_checks_status(
-        self, instance, coordinator
+        self, instance, coordinator, bar_workspace, foo_external_pipeline
     ):  # pylint: disable=redefined-outer-name
-        with get_foo_external_pipeline() as external_pipeline:
-            run = self.create_run(
-                instance, external_pipeline, run_id="foo-1", status=PipelineRunStatus.QUEUED
-            )
-            with pytest.raises(CheckError):
-                coordinator.submit_run(run, external_pipeline)
+        run = self.create_run(
+            instance, foo_external_pipeline, run_id="foo-1", status=PipelineRunStatus.QUEUED
+        )
+        with pytest.raises(CheckError):
+            coordinator.submit_run(SubmitRunContext(run, bar_workspace))
 
-    def test_cancel_run(self, instance, coordinator):  # pylint: disable=redefined-outer-name
-        with get_foo_external_pipeline() as external_pipeline:
-            run = self.create_run(
-                instance, external_pipeline, run_id="foo-1", status=PipelineRunStatus.NOT_STARTED
-            )
-            assert not coordinator.can_cancel_run(run.run_id)
+    def test_cancel_run(
+        self, instance, coordinator, bar_workspace, foo_external_pipeline
+    ):  # pylint: disable=redefined-outer-name
+        run = self.create_run(
+            instance, foo_external_pipeline, run_id="foo-1", status=PipelineRunStatus.NOT_STARTED
+        )
+        assert not coordinator.can_cancel_run(run.run_id)
 
-            coordinator.submit_run(run, external_pipeline)
-            assert coordinator.can_cancel_run(run.run_id)
+        coordinator.submit_run(SubmitRunContext(run, bar_workspace))
+        assert coordinator.can_cancel_run(run.run_id)
 
-            coordinator.cancel_run(run.run_id)
-            stored_run = instance.get_run_by_id("foo-1")
-            assert stored_run.status == PipelineRunStatus.CANCELED
-            assert not coordinator.can_cancel_run(run.run_id)
+        coordinator.cancel_run(run.run_id)
+        stored_run = instance.get_run_by_id("foo-1")
+        assert stored_run.status == PipelineRunStatus.CANCELED
+        assert not coordinator.can_cancel_run(run.run_id)

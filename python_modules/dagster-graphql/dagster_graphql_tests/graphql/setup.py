@@ -107,13 +107,22 @@ def create_main_recon_repo():
 
 
 @contextmanager
+def get_main_workspace():
+    with Workspace(
+        PythonFileTarget(
+            python_file=file_relative_path(__file__, "setup.py"),
+            attribute=main_repo_name(),
+            working_directory=None,
+            location_name=main_repo_location_name(),
+        )
+    ) as workspace:
+        yield workspace
+
+
+@contextmanager
 def get_main_external_repo():
-    with location_origin_from_python_file(
-        python_file=file_relative_path(__file__, "setup.py"),
-        attribute=main_repo_name(),
-        working_directory=None,
-        location_name=main_repo_location_name(),
-    ).create_test_location() as location:
+    with get_main_workspace() as workspace:
+        location = workspace.get_repository_location(main_repo_location_name())
         yield location.get_repository(main_repo_name())
 
 

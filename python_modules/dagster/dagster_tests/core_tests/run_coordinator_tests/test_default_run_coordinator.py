@@ -35,23 +35,25 @@ def create_run(instance, external_pipeline, **kwargs):  # pylint: disable=redefi
     return create_run_for_test(instance, **pipeline_args)
 
 
-def test_submit_run(instance, coodinator):  # pylint: disable=redefined-outer-name
-    with get_foo_external_pipeline() as external_pipeline:
-        run = create_run(instance, external_pipeline, run_id="foo-1")
-        returned_run = coodinator.submit_run(run, external_pipeline)
-        assert returned_run.run_id == "foo-1"
-        assert returned_run.status == PipelineRunStatus.STARTING
+def test_submit_run(
+    instance, coodinator, bar_workspace, foo_external_pipeline
+):  # pylint: disable=redefined-outer-name
+    run = create_run(instance, foo_external_pipeline, run_id="foo-1")
+    returned_run = coodinator.submit_run(run, bar_workspace)
+    assert returned_run.run_id == "foo-1"
+    assert returned_run.status == PipelineRunStatus.STARTING
 
-        assert len(instance.run_launcher.queue()) == 1
-        assert instance.run_launcher.queue()[0].run_id == "foo-1"
-        assert instance.run_launcher.queue()[0].status == PipelineRunStatus.STARTING
-        assert instance.get_run_by_id("foo-1")
+    assert len(instance.run_launcher.queue()) == 1
+    assert instance.run_launcher.queue()[0].run_id == "foo-1"
+    assert instance.run_launcher.queue()[0].status == PipelineRunStatus.STARTING
+    assert instance.get_run_by_id("foo-1")
 
 
-def test_submit_run_checks_status(instance, coodinator):  # pylint: disable=redefined-outer-name
-    with get_foo_external_pipeline() as external_pipeline:
-        run = create_run(
-            instance, external_pipeline, run_id="foo-1", status=PipelineRunStatus.STARTED
-        )
-        with pytest.raises(CheckError):
-            coodinator.submit_run(run, external_pipeline)
+def test_submit_run_checks_status(
+    instance, coodinator, bar_workspace, foo_external_pipeline
+):  # pylint: disable=redefined-outer-name
+    run = create_run(
+        instance, foo_external_pipeline, run_id="foo-1", status=PipelineRunStatus.STARTED
+    )
+    with pytest.raises(CheckError):
+        coodinator.submit_run(run, bar_workspace)

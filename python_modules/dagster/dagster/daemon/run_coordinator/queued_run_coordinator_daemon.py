@@ -199,16 +199,6 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
         return sorted(runs, key=get_priority, reverse=True)
 
     def _dequeue_run(self, instance, run, workspace):
-        repository_location_origin = (
-            run.external_pipeline_origin.external_repository_origin.repository_location_origin
-        )
-
-        location = workspace.get_location(repository_location_origin)
-
-        external_pipeline = external_pipeline_from_location(
-            location, run.external_pipeline_origin, run.solid_selection
-        )
-
         # double check that the run is still queued before dequeing
         reloaded_run = instance.get_run_by_id(run.run_id)
 
@@ -236,4 +226,4 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
         )
         instance.handle_new_event(event_record)
 
-        instance.launch_run(run.run_id, external_pipeline)
+        instance.launch_run(LaunchRunContext(run, workspace))

@@ -122,8 +122,9 @@ class PartitionBackfill(
         )
 
 
-def submit_backfill_runs(instance, repo_location, backfill_job, partition_names=None):
+def submit_backfill_runs(instance, workspace, repo_location, backfill_job, partition_names=None):
     check.inst_param(instance, "instance", DagsterInstance)
+    check.inst_param(workspace, "workspace", IWorkspace)
     check.inst_param(repo_location, "repo_location", RepositoryLocation)
     check.inst_param(backfill_job, "backfill_job", PartitionBackfill)
 
@@ -163,7 +164,7 @@ def submit_backfill_runs(instance, repo_location, backfill_job, partition_names=
             # we skip runs in certain cases, e.g. we are running a `from_failure` backfill job
             # and the partition has had a successful run since the time the backfill was
             # scheduled
-            instance.submit_run(pipeline_run.run_id, external_pipeline)
+            instance.submit_run(pipeline_run.run_id, workspace)
             yield pipeline_run.run_id
         yield None
 

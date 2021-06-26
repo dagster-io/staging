@@ -25,9 +25,23 @@ def get_example_repository_location():
 
 
 @pytest.fixture
-def foo_example_repo():
-    with get_example_repository_location() as location:
-        yield location.get_repository("example_repo")
+def foo_example_workspace():
+    with Workspace(
+        PythonFileTarget(
+            python_file=file_relative_path(__file__, "repo.py"),
+            attribute=None,
+            working_directory=None,
+            location_name="example_repo_location",
+        )
+    ) as workspace:
+        yield workspace
+
+
+@pytest.fixture
+def foo_example_repo(foo_example_workspace):
+    return foo_example_workspace.get_repository_location("example_repo_location").get_repository(
+        "example_repo"
+    )
 
 
 @pytest.fixture
