@@ -6,8 +6,8 @@ from contextlib import AbstractContextManager
 
 import pendulum
 from dagster import DagsterInstance, check
-from dagster.cli.workspace.workspace import IWorkspace
 from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
+from dagster.core.workspace import IWorkspace
 from dagster.daemon.backfill import execute_backfill_iteration
 from dagster.daemon.sensor import execute_sensor_iteration_loop
 from dagster.daemon.types import DaemonHeartbeat

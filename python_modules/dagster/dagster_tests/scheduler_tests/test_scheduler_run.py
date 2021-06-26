@@ -22,7 +22,6 @@ from dagster import (
     schedule,
     solid,
 )
-from dagster.cli.workspace.dynamic_workspace import DynamicWorkspace
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.definitions.run_request import RunRequest
 from dagster.core.host_representation import (
@@ -37,6 +36,7 @@ from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFil
 from dagster.core.storage.tags import PARTITION_NAME_TAG, SCHEDULED_EXECUTION_TIME_TAG
 from dagster.core.test_utils import instance_for_test, mock_system_timezone
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
+from dagster.core.workspace.dynamic_workspace import DynamicWorkspace
 from dagster.daemon import get_default_daemon_logger
 from dagster.scheduler.scheduler import launch_scheduled_runs
 from dagster.seven.compat.pendulum import create_pendulum_time, to_timezone
