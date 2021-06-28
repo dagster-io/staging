@@ -358,7 +358,7 @@ def test_job_with_partitions():
 
     @repository
     def test():
-        return [bare.to_job(resource_defs={}, partitions=_partitions)]
+        return [bare.to_job(resources={}, partitions=_partitions)]
 
     assert test.get_partition_set_def("bare_default_partition_set")
     # do it twice to make sure we don't overwrite cache on second time

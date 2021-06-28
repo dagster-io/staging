@@ -368,7 +368,7 @@ class RepositoryData:
                     partition_sets[partition_set_def.name] = partition_set_def
             elif isinstance(definition, GraphDefinition):
                 # error experience when this fails can be improved
-                coerced = definition.to_job(resource_defs={})
+                coerced = definition.to_job(resources={})
                 pipelines[coerced.name] = coerced
             else:
                 check.failed(f"Unexpected repository entry {definition}")

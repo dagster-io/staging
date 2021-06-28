@@ -51,12 +51,12 @@ def event_reports():
     make_event_reports()
 
 
-@sensor(job=event_reports.to_job(resource_defs={"mode": ResourceDefinition.none_resource()}))
+@sensor(job=event_reports.to_job(resources={"mode": ResourceDefinition.none_resource()}))
 def event_reports_sensor():
     pass
 
 
-event_reports_dev = event_reports.to_job(resource_defs={"mode": ResourceDefinition.none_resource()})
+event_reports_dev = event_reports.to_job(resources={"mode": ResourceDefinition.none_resource()})
 
 
 @graph
@@ -69,12 +69,12 @@ def crm_ingest():
     ingest_interactions()
 
 
-crm_ingest_dev = crm_ingest.to_job(resource_defs={"crm": ResourceDefinition.none_resource()})
+crm_ingest_dev = crm_ingest.to_job(resources={"crm": ResourceDefinition.none_resource()})
 
 
 @schedule(
     job=crm_ingest.to_job(
-        name="crm_ingest_instance1", resource_defs={"crm": ResourceDefinition.none_resource()}
+        name="crm_ingest_instance1", resources={"crm": ResourceDefinition.none_resource()}
     ),
     cron_schedule="0 0 * * *",
 )
@@ -84,7 +84,7 @@ def crm_ingest_instance1_schedule(_):
 
 @schedule(
     job=crm_ingest.to_job(
-        name="crm_ingest_instance2", resource_defs={"crm": ResourceDefinition.none_resource()}
+        name="crm_ingest_instance2", resources={"crm": ResourceDefinition.none_resource()}
     ),
     cron_schedule="0 0 * * *",
 )
@@ -104,11 +104,11 @@ def content_recommender_training():
 
 
 content_recommender_training_dev = content_recommender_training.to_job(
-    resource_defs={"mlflow": ResourceDefinition.none_resource()}
+    resources={"mlflow": ResourceDefinition.none_resource()}
 )
 
 content_recommender_training_prod = content_recommender_training.to_job(
-    resource_defs={"mlflow": ResourceDefinition.none_resource()}
+    resources={"mlflow": ResourceDefinition.none_resource()}
 )
 
 
