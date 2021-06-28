@@ -51,12 +51,12 @@ def event_reports():
     make_event_reports()
 
 
-@sensor(job=event_reports.to_job(resource_defs={"mode": ResourceDefinition.none_resource()}))
+@sensor(job=event_reports.to_job(resources={"mode": ResourceDefinition.none_resource()}))
 def event_reports_sensor():
     pass
 
 
-event_reports_dev = event_reports.to_job(resource_defs={"mode": ResourceDefinition.none_resource()})
+event_reports_dev = event_reports.to_job(resources={"mode": ResourceDefinition.none_resource()})
 
 
 @graph
@@ -69,7 +69,7 @@ def crm_ingest():
     ingest_interactions()
 
 
-crm_ingest_dev = crm_ingest.to_job(resource_defs={"crm": ResourceDefinition.none_resource()})
+crm_ingest_dev = crm_ingest.to_job(resources={"crm": ResourceDefinition.none_resource()})
 
 
 @schedule(

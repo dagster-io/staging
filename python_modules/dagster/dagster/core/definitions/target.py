@@ -29,7 +29,7 @@ class DirectTarget(NamedTuple("_DirectTarget", [("pipeline", PipelineDefinition)
         if isinstance(graph, PipelineDefinition):
             pipeline = graph
         else:
-            pipeline = graph.to_job(resource_defs={})
+            pipeline = graph.to_job(resources={})
 
         check.invariant(
             len(pipeline.mode_definitions) == 1,

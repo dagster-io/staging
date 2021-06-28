@@ -362,7 +362,7 @@ class GraphDefinition(NodeDefinition):
     def to_job(
         self,
         name: Optional[str] = None,
-        resource_defs: Optional[Dict[str, "ResourceDefinition"]] = None,
+        resources: Optional[Dict[str, Any]] = None,
         config_mapping: Union[ConfigMapping, Dict[str, Any]] = None,
         default_config: Optional[Dict[str, Any]] = None,
         partitions: Optional[Callable[[], List[Any]]] = None,
@@ -372,6 +372,8 @@ class GraphDefinition(NodeDefinition):
         For experimenting with "job" flows
         """
         from .pipeline import PipelineDefinition
+        from .resource import ResourceDefinition
+        from ..storage.io_manager import IOManager, IOManagerDefinition
 
         tags = check.opt_dict_param(tags, "tags", key_type=str, value_type=str)
 
@@ -392,6 +394,16 @@ class GraphDefinition(NodeDefinition):
             check.failed(f"Unexpected config_mapping value {config_mapping}")
 
         job_name = name or self.name
+
+        resources = check.opt_dict_param(resources, "resources", key_type=str)
+        resource_defs = {}
+        for resource_key, resource in resources.items():
+            if isinstance(resource, ResourceDefinition):
+                resource_defs[resource_key] = resource
+            elif isinstance(resource, IOManager):
+                resource_defs[resource_key] = IOManagerDefinition.hardcoded_io_manager(resource)
+            else:
+                resource_defs[resource_key] = ResourceDefinition.hardcoded_resource(resource)
 
         presets = None
         if default_config:
