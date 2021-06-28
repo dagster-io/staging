@@ -189,7 +189,7 @@ class Solid:
             is not None
         )
 
-    def container_mapped_input(self, input_name: str) -> InputMapping:
+    def container_mapped_input(self, input_name: str) -> Optional[InputMapping]:
         return self.graph_definition.input_mapping_for_pointer(InputPointer(self.name, input_name))
 
     def container_maps_fan_in_input(self, input_name: str, fan_in_index: int) -> bool:
