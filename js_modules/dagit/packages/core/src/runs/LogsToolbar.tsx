@@ -14,6 +14,7 @@ import {Select} from '@blueprintjs/select';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
+import {useClipboard} from '../app/browser';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -258,6 +259,8 @@ const StructuredLogToolbar = ({
   const [copyIcon, setCopyIcon] = React.useState<IconName>(IconNames.CLIPBOARD);
   const logQueryString = logQueryToString(filter.logQuery);
   const [queryString, setQueryString] = React.useState<string>(() => logQueryString);
+  const clipboardAPI = useClipboard();
+
   const selectedStep = filter.logQuery.find((v) => v.token === 'step')?.value || null;
   const filterText = filter.logQuery.reduce((accum, value) => accum + value.value, '');
 
@@ -338,18 +341,22 @@ const StructuredLogToolbar = ({
         })}
       </div>
       {selectedStep && <LogsToolbarDivider />}
-      <div style={{minWidth: 15, flex: 1}} />
-      <div style={{marginRight: '8px'}}>
-        <Button
-          small
-          icon={copyIcon}
-          onClick={() => {
-            navigator.clipboard.writeText(window.location.href);
-            setCopyIcon(IconNames.SAVED);
-          }}
-          text="Copy URL"
-        />
-      </div>
+      {clipboardAPI ? (
+        <>
+          <div style={{minWidth: 15, flex: 1}} />
+          <div style={{marginRight: '8px'}}>
+            <Button
+              small
+              icon={copyIcon}
+              onClick={() => {
+                clipboardAPI.writeText(window.location.href);
+                setCopyIcon(IconNames.SAVED);
+              }}
+              text="Copy URL"
+            />
+          </div>
+        </>
+      ) : null}
     </>
   );
 };

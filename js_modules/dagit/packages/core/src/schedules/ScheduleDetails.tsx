@@ -1,8 +1,10 @@
-import {Colors, Tooltip} from '@blueprintjs/core';
+import {Colors} from '@blueprintjs/core';
+import {Tooltip2 as Tooltip} from '@blueprintjs/popover2';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
 
 import {useFeatureFlags} from '../app/Flags';
+import {useClipboard} from '../app/browser';
 import {TickTag} from '../jobs/JobTick';
 import {RepositoryLink} from '../nav/RepositoryLink';
 import {PipelineReference} from '../pipelines/PipelineReference';
@@ -37,6 +39,7 @@ export const ScheduleDetails: React.FC<{
   const {repoAddress, schedule, countdownDuration, countdownStatus, onRefresh} = props;
   const {cronSchedule, executionTimezone, futureTicks, name, partitionSet, pipelineName} = schedule;
   const {flagPipelineModeTuples} = useFeatureFlags();
+  const clipboardAPI = useClipboard();
 
   const [copyText, setCopyText] = React.useState('Click to copy');
 
@@ -63,13 +66,14 @@ export const ScheduleDetails: React.FC<{
   const latestTick = ticks.length > 0 ? ticks[0] : null;
 
   const copyId = () => {
-    navigator.clipboard.writeText(id);
+    clipboardAPI?.writeText(id);
     setCopyText('Copied!');
   };
 
   const running = status === JobStatus.RUNNING;
   const countdownRefreshing = countdownStatus === 'idle' || timeRemaining === 0;
   const seconds = Math.floor(timeRemaining / 1000);
+  const idText = <span style={{fontFamily: FontFamily.monospace}}>{`id: ${id.slice(0, 8)}`}</span>;
 
   return (
     <Group direction="column" spacing={16}>
@@ -107,11 +111,15 @@ export const ScheduleDetails: React.FC<{
                 seconds={seconds}
                 onRefresh={onRefresh}
               />
-              <Tooltip content={copyText}>
-                <ButtonLink color={{link: Colors.GRAY3, hover: Colors.GRAY1}} onClick={copyId}>
-                  <span style={{fontFamily: FontFamily.monospace}}>{`id: ${id.slice(0, 8)}`}</span>
-                </ButtonLink>
-              </Tooltip>
+              {clipboardAPI ? (
+                <Tooltip content={copyText}>
+                  <ButtonLink color={{link: Colors.GRAY3, hover: Colors.GRAY1}} onClick={copyId}>
+                    {idText}
+                  </ButtonLink>
+                </Tooltip>
+              ) : (
+                idText
+              )}
             </Group>
           </Box>
         }
