@@ -5,6 +5,7 @@ from dagster import ConfigMapping, DagsterInvalidDefinitionError, execute_pipeli
 from dagster.core.definitions.decorators.graph import graph
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.execution.execute import execute_in_process
+from dagster.core.storage.mem_io_manager import InMemoryIOManager
 
 
 def get_solids():
@@ -61,7 +62,7 @@ def test_with_resources():
         needs_resource()
 
     # proxy for "executable/job"
-    my_job = my_graph.to_job(resource_defs={"a": a_resource})
+    my_job = my_graph.to_job(resources={"a": a_resource})
     assert my_job.name == "my_graph"
     result = execute_pipeline(my_job)
     assert result.success
@@ -84,7 +85,7 @@ def test_config_mapping_val():
         do_stuff()
 
     job = needs_config.to_job(
-        resource_defs={"date": date},
+        resources={"date": date},
         config_mapping={
             "solids": {"do_stuff": {"config": {"msg": "i am here"}}},
             "resources": {"date": {"config": "6/3"}},
@@ -119,7 +120,7 @@ def test_config_mapping_fn():
         }
 
     job = needs_config.to_job(
-        resource_defs={"date": date},
+        resources={"date": date},
         config_mapping=ConfigMapping(
             config_schema={"date": str},  # top level has to be dict
             config_fn=_mapped,
@@ -148,7 +149,7 @@ def test_default_config():
         do_stuff()
 
     job = needs_config.to_job(
-        resource_defs={"date": date},
+        resources={"date": date},
         default_config={
             "solids": {"do_stuff": {"config": {"msg": "i am here"}}},
             "resources": {"date": {"config": "6/3"}},
@@ -183,7 +184,7 @@ def test_default_config_with_mapping_fn():
         }
 
     job = needs_config.to_job(
-        resource_defs={"date": date},
+        resources={"date": date},
         config_mapping=ConfigMapping(
             config_schema={"date": str},  # top level has to be dict
             config_fn=_mapped,
@@ -295,4 +296,18 @@ def test_tags_on_job():
     assert job.tags == tags
 
     result = execute_pipeline(job)
+    assert result.success
+
+
+def test_resource_instances_on_job():
+    @solid(required_resource_keys={"foo"})
+    def basic_test(context):
+        assert context.resources.foo == "bar"
+
+    @graph
+    def basic_graph():
+        basic_test()
+
+    my_job = basic_graph.to_job(resources={"foo": "bar", "io_manager": InMemoryIOManager()})
+    result = execute_pipeline(my_job)
     assert result.success
