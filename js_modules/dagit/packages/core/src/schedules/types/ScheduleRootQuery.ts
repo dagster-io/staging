@@ -117,7 +117,7 @@ export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_ticks 
 }
 
 export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   name: string;
   jobType: InstigationType;

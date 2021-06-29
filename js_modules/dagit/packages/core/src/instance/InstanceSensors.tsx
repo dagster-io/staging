@@ -131,10 +131,10 @@ const INSTANCE_SENSORS_QUERY = gql`
       ...PythonErrorFragment
     }
     unloadableJobStatesOrError {
-      ... on JobStates {
+      ... on InstigationStates {
         results {
           id
-          ...JobStateFragment
+          ...InstigationStateFragment
         }
       }
       ...PythonErrorFragment

@@ -12,7 +12,7 @@ from .errors import (
     GrapheneSensorNotFoundError,
 )
 from .inputs import GrapheneSensorSelector
-from .instigation import GrapheneFutureInstigationTick, GrapheneJobState
+from .instigation import GrapheneFutureInstigationTick, GrapheneInstigationState
 from .util import non_null_list
 
 
@@ -23,7 +23,7 @@ class GrapheneSensor(graphene.ObjectType):
     pipelineName = graphene.String()
     solidSelection = graphene.List(graphene.String)
     mode = graphene.String()
-    sensorState = graphene.NonNull(GrapheneJobState)
+    sensorState = graphene.NonNull(GrapheneInstigationState)
     minIntervalSeconds = graphene.NonNull(graphene.Int)
     description = graphene.String()
     nextTick = graphene.Field(GrapheneFutureInstigationTick)
@@ -58,7 +58,7 @@ class GrapheneSensor(graphene.ObjectType):
         return f"{self.name}:{self.pipelineName}" if self.pipelineName else self.name
 
     def resolve_sensorState(self, _graphene_info):
-        return GrapheneJobState(self._sensor_state)
+        return GrapheneInstigationState(self._sensor_state)
 
     def resolve_nextTick(self, graphene_info):
         return get_sensor_next_tick(graphene_info, self._sensor_state)
@@ -104,7 +104,7 @@ class GrapheneStartSensorMutation(graphene.Mutation):
 
 
 class GrapheneStopSensorMutationResult(graphene.ObjectType):
-    jobState = graphene.Field(GrapheneJobState)
+    jobState = graphene.Field(GrapheneInstigationState)
 
     class Meta:
         name = "StopSensorMutationResult"
@@ -117,7 +117,7 @@ class GrapheneStopSensorMutationResult(graphene.ObjectType):
         if not self._job_state:
             return None
 
-        return GrapheneJobState(job_state=self._job_state)
+        return GrapheneInstigationState(job_state=self._job_state)
 
 
 class GrapheneStopSensorMutationResultOrError(graphene.Union):

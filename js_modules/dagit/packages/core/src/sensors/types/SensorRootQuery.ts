@@ -76,7 +76,7 @@ export interface SensorRootQuery_sensorOrError_Sensor_sensorState_ticks {
 }
 
 export interface SensorRootQuery_sensorOrError_Sensor_sensorState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   name: string;
   jobType: InstigationType;

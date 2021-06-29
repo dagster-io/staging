@@ -11,7 +11,7 @@ import { InstigationStatus } from "./../../types/globalTypes";
 // ====================================================
 
 export interface NavSensorFragment_sensorState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   status: InstigationStatus;
 }

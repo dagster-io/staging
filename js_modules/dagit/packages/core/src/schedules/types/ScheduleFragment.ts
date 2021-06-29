@@ -92,7 +92,7 @@ export interface ScheduleFragment_scheduleState_ticks {
 }
 
 export interface ScheduleFragment_scheduleState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   name: string;
   jobType: InstigationType;

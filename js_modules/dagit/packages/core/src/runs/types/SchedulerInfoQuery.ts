@@ -157,7 +157,7 @@ export interface SchedulerInfoQuery_repositoriesOrError_RepositoryConnection_nod
 }
 
 export interface SchedulerInfoQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   name: string;
   jobType: InstigationType;

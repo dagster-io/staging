@@ -11,7 +11,7 @@ import { InstigationStatus } from "./../../types/globalTypes";
 // ====================================================
 
 export interface StopSchedule_stopRunningSchedule_ScheduleStateResult_scheduleState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   status: InstigationStatus;
   runningCount: number;

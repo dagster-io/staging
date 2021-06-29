@@ -5,12 +5,12 @@ import {Line, ChartComponentProps} from 'react-chartjs-2';
 import {InstigationTickStatus} from '../types/globalTypes';
 
 import {
-  TickHistoryQuery_jobStateOrError_JobState_ticks,
-  TickHistoryQuery_jobStateOrError_JobState_nextTick,
+  TickHistoryQuery_jobStateOrError_InstigationState_ticks,
+  TickHistoryQuery_jobStateOrError_InstigationState_nextTick,
 } from './types/TickHistoryQuery';
 
-type FutureTick = TickHistoryQuery_jobStateOrError_JobState_nextTick;
-type InstigationTick = TickHistoryQuery_jobStateOrError_JobState_ticks;
+type FutureTick = TickHistoryQuery_jobStateOrError_InstigationState_nextTick;
+type InstigationTick = TickHistoryQuery_jobStateOrError_InstigationState_ticks;
 
 const COLOR_MAP = {
   [InstigationTickStatus.SUCCESS]: Colors.BLUE3,

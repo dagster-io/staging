@@ -17,7 +17,7 @@ export interface NavQuery_workspaceOrError_Workspace_locationEntries_locationOrL
 }
 
 export interface NavQuery_workspaceOrError_Workspace_locationEntries_locationOrLoadError_RepositoryLocation_repositories_pipelines_schedules_scheduleState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   status: InstigationStatus;
 }
@@ -31,7 +31,7 @@ export interface NavQuery_workspaceOrError_Workspace_locationEntries_locationOrL
 }
 
 export interface NavQuery_workspaceOrError_Workspace_locationEntries_locationOrLoadError_RepositoryLocation_repositories_pipelines_sensors_sensorState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   status: InstigationStatus;
 }

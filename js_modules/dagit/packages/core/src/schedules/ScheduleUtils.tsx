@@ -35,7 +35,7 @@ export const SCHEDULE_FRAGMENT = gql`
     }
     scheduleState {
       id
-      ...JobStateFragment
+      ...InstigationStateFragment
     }
     futureTicks(limit: 5) {
       results {
@@ -78,10 +78,10 @@ export const SCHEDULES_ROOT_QUERY = gql`
       ...SchedulerFragment
     }
     unloadableJobStatesOrError(jobType: $jobType) {
-      ... on JobStates {
+      ... on InstigationStates {
         results {
           id
-          ...JobStateFragment
+          ...InstigationStateFragment
         }
       }
       ...PythonErrorFragment

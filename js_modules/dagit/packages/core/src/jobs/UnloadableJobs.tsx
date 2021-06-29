@@ -22,10 +22,10 @@ import {RepositoryOriginInformation} from '../workspace/RepositoryInformation';
 
 import {TickTag} from './JobTick';
 import {JobRunStatus} from './JobUtils';
-import {JobStateFragment} from './types/JobStateFragment';
+import {InstigationStateFragment} from './types/InstigationStateFragment';
 
 export const UnloadableSensors: React.FunctionComponent<{
-  sensorStates: JobStateFragment[];
+  sensorStates: InstigationStateFragment[];
 }> = ({sensorStates}) => {
   if (!sensorStates.length) {
     return null;
@@ -55,7 +55,7 @@ export const UnloadableSensors: React.FunctionComponent<{
 };
 
 export const UnloadableSchedules: React.FunctionComponent<{
-  scheduleStates: JobStateFragment[];
+  scheduleStates: InstigationStateFragment[];
 }> = ({scheduleStates}) => {
   if (!scheduleStates.length) {
     return null;
@@ -126,7 +126,7 @@ const UnloadableScheduleInfo = () => (
   </Box>
 );
 
-const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) => {
+const SensorStateRow = ({sensorState}: {sensorState: InstigationStateFragment}) => {
   const {id, name, status, repositoryOrigin, ticks} = sensorState;
 
   const [stopSensor, {loading: toggleOffInFlight}] = useMutation<StopSensor>(STOP_SENSOR_MUTATION, {
@@ -184,7 +184,7 @@ const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) => {
 };
 
 const ScheduleStateRow: React.FunctionComponent<{
-  scheduleState: JobStateFragment;
+  scheduleState: InstigationStateFragment;
 }> = ({scheduleState}) => {
   const [stopSchedule, {loading: toggleOffInFlight}] = useMutation<StopSchedule>(
     STOP_SCHEDULE_MUTATION,

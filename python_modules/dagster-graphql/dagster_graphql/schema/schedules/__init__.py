@@ -18,7 +18,7 @@ from ..errors import (
     GrapheneSchedulerNotDefinedError,
 )
 from ..inputs import GrapheneRepositorySelector, GrapheneScheduleSelector
-from ..instigation import GrapheneJobState
+from ..instigation import GrapheneInstigationState
 from .schedules import (
     GrapheneSchedule,
     GrapheneScheduleOrError,
@@ -100,7 +100,7 @@ class GrapheneReconcileSchedulerStateMutation(graphene.Mutation):
 
 
 class GrapheneScheduleStateResult(graphene.ObjectType):
-    scheduleState = graphene.NonNull(GrapheneJobState)
+    scheduleState = graphene.NonNull(GrapheneInstigationState)
 
     class Meta:
         name = "ScheduleStateResult"
