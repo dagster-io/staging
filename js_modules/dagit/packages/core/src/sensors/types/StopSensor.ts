@@ -14,7 +14,7 @@ export interface StopSensor_stopSensor_ReadOnlyError {
   __typename: "ReadOnlyError";
 }
 
-export interface StopSensor_stopSensor_StopSensorMutationResult_jobState {
+export interface StopSensor_stopSensor_StopSensorMutationResult_instigationState {
   __typename: "InstigationState";
   id: string;
   status: InstigationStatus;
@@ -22,7 +22,7 @@ export interface StopSensor_stopSensor_StopSensorMutationResult_jobState {
 
 export interface StopSensor_stopSensor_StopSensorMutationResult {
   __typename: "StopSensorMutationResult";
-  jobState: StopSensor_stopSensor_StopSensorMutationResult_jobState | null;
+  instigationState: StopSensor_stopSensor_StopSensorMutationResult_instigationState | null;
 }
 
 export interface StopSensor_stopSensor_PythonError {
