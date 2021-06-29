@@ -53,12 +53,12 @@ class GrapheneInstigationTickStatus(graphene.Enum):
         name = "InstigationTickStatus"
 
 
-class GrapheneSensorJobData(graphene.ObjectType):
+class GrapheneSensorData(graphene.ObjectType):
     lastTickTimestamp = graphene.Float()
     lastRunKey = graphene.String()
 
     class Meta:
-        name = "SensorJobData"
+        name = "SensorData"
 
     def __init__(self, job_specific_data):
         check.inst_param(job_specific_data, "job_specific_data", SensorJobData)
@@ -68,12 +68,12 @@ class GrapheneSensorJobData(graphene.ObjectType):
         )
 
 
-class GrapheneScheduleJobData(graphene.ObjectType):
+class GrapheneScheduleData(graphene.ObjectType):
     cronSchedule = graphene.NonNull(graphene.String)
     startTimestamp = graphene.Float()
 
     class Meta:
-        name = "ScheduleJobData"
+        name = "ScheduleData"
 
     def __init__(self, job_specific_data):
         check.inst_param(job_specific_data, "job_specific_data", ScheduleJobData)
@@ -83,10 +83,10 @@ class GrapheneScheduleJobData(graphene.ObjectType):
         )
 
 
-class GrapheneJobSpecificData(graphene.Union):
+class GrapheneInstigationTypeSpecificData(graphene.Union):
     class Meta:
-        types = (GrapheneSensorJobData, GrapheneScheduleJobData)
-        name = "JobSpecificData"
+        types = (GrapheneSensorData, GrapheneScheduleData)
+        name = "InstigationTypeSpecificData"
 
 
 class GrapheneJobTick(graphene.ObjectType):
@@ -255,7 +255,7 @@ class GrapheneJobState(graphene.ObjectType):
     jobType = graphene.NonNull(GrapheneInstigationType)
     status = graphene.NonNull(GrapheneInstigationStatus)
     repositoryOrigin = graphene.NonNull(GrapheneRepositoryOrigin)
-    jobSpecificData = graphene.Field(GrapheneJobSpecificData)
+    jobSpecificData = graphene.Field(GrapheneInstigationTypeSpecificData)
     runs = graphene.Field(
         non_null_list("dagster_graphql.schema.pipelines.pipeline.GraphenePipelineRun"),
         limit=graphene.Int(),
@@ -291,10 +291,10 @@ class GrapheneJobState(graphene.ObjectType):
             return None
 
         if self._job_state.job_type == JobType.SENSOR:
-            return GrapheneSensorJobData(self._job_state.job_specific_data)
+            return GrapheneSensorData(self._job_state.job_specific_data)
 
         if self._job_state.job_type == JobType.SCHEDULE:
-            return GrapheneScheduleJobData(self._job_state.job_specific_data)
+            return GrapheneScheduleData(self._job_state.job_specific_data)
 
         return None
 
@@ -372,12 +372,12 @@ class GrapheneJobStatesOrError(graphene.Union):
 types = [
     GrapheneFutureJobTick,
     GrapheneFutureJobTicks,
-    GrapheneJobSpecificData,
+    GrapheneInstigationTypeSpecificData,
     GrapheneJobState,
     GrapheneJobStateOrError,
     GrapheneJobStates,
     GrapheneJobStatesOrError,
     GrapheneJobTick,
-    GrapheneScheduleJobData,
-    GrapheneSensorJobData,
+    GrapheneScheduleData,
+    GrapheneSensorData,
 ]

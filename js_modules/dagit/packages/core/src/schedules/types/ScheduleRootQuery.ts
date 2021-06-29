@@ -74,17 +74,17 @@ export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_reposi
   repositoryLocationMetadata: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_SensorJobData {
-  __typename: "SensorJobData";
+export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_SensorData {
+  __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_ScheduleJobData {
-  __typename: "ScheduleJobData";
+export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_ScheduleData {
+  __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData = ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_SensorJobData | ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_ScheduleJobData;
+export type ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData = ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_SensorData | ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_ScheduleData;
 
 export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_runs {
   __typename: "PipelineRun";

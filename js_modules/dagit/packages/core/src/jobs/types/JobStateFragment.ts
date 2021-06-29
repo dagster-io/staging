@@ -24,17 +24,17 @@ export interface JobStateFragment_repositoryOrigin {
   repositoryLocationMetadata: JobStateFragment_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface JobStateFragment_jobSpecificData_SensorJobData {
-  __typename: "SensorJobData";
+export interface JobStateFragment_jobSpecificData_SensorData {
+  __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface JobStateFragment_jobSpecificData_ScheduleJobData {
-  __typename: "ScheduleJobData";
+export interface JobStateFragment_jobSpecificData_ScheduleData {
+  __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type JobStateFragment_jobSpecificData = JobStateFragment_jobSpecificData_SensorJobData | JobStateFragment_jobSpecificData_ScheduleJobData;
+export type JobStateFragment_jobSpecificData = JobStateFragment_jobSpecificData_SensorData | JobStateFragment_jobSpecificData_ScheduleData;
 
 export interface JobStateFragment_runs {
   __typename: "PipelineRun";

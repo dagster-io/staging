@@ -197,7 +197,7 @@ const ScheduleStateRow: React.FunctionComponent<{
   const {id, name, ticks, status, repositoryOrigin, jobSpecificData} = scheduleState;
   const latestTick = ticks.length > 0 ? ticks[0] : null;
   const cronSchedule =
-    jobSpecificData && jobSpecificData.__typename === 'ScheduleJobData'
+    jobSpecificData && jobSpecificData.__typename === 'ScheduleData'
       ? jobSpecificData.cronSchedule
       : null;
   const onChangeSwitch = async () => {

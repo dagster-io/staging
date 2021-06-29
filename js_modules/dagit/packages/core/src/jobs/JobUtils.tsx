@@ -42,10 +42,10 @@ export const JOB_STATE_FRAGMENT = gql`
       ...RepositoryOriginFragment
     }
     jobSpecificData {
-      ... on SensorJobData {
+      ... on SensorData {
         lastRunKey
       }
-      ... on ScheduleJobData {
+      ... on ScheduleData {
         cronSchedule
       }
     }

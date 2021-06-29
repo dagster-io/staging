@@ -33,17 +33,17 @@ export interface SensorRootQuery_sensorOrError_Sensor_sensorState_repositoryOrig
   repositoryLocationMetadata: SensorRootQuery_sensorOrError_Sensor_sensorState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_SensorJobData {
-  __typename: "SensorJobData";
+export interface SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_SensorData {
+  __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_ScheduleJobData {
-  __typename: "ScheduleJobData";
+export interface SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_ScheduleData {
+  __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData = SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_SensorJobData | SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_ScheduleJobData;
+export type SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData = SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_SensorData | SensorRootQuery_sensorOrError_Sensor_sensorState_jobSpecificData_ScheduleData;
 
 export interface SensorRootQuery_sensorOrError_Sensor_sensorState_runs {
   __typename: "PipelineRun";

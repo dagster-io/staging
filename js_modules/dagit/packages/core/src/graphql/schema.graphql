@@ -901,7 +901,7 @@ type JobState {
   jobType: InstigationType!
   status: InstigationStatus!
   repositoryOrigin: RepositoryOrigin!
-  jobSpecificData: JobSpecificData
+  jobSpecificData: InstigationTypeSpecificData
   runs(limit: Int): [PipelineRun!]!
   runsCount: Int!
   ticks(dayRange: Int, dayOffset: Int, limit: Int): [JobTick!]!
@@ -919,14 +919,14 @@ enum InstigationStatus {
   STOPPED
 }
 
-union JobSpecificData = SensorJobData | ScheduleJobData
+union InstigationTypeSpecificData = SensorData | ScheduleData
 
-type SensorJobData {
+type SensorData {
   lastTickTimestamp: Float
   lastRunKey: String
 }
 
-type ScheduleJobData {
+type ScheduleData {
   cronSchedule: String!
   startTimestamp: Float
 }

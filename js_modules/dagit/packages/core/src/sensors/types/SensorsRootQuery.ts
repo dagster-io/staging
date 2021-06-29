@@ -46,17 +46,17 @@ export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_rep
   repositoryLocationMetadata: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_SensorJobData {
-  __typename: "SensorJobData";
+export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_SensorData {
+  __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_ScheduleJobData {
-  __typename: "ScheduleJobData";
+export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_ScheduleData {
+  __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData = SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_SensorJobData | SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_ScheduleJobData;
+export type SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData = SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_SensorData | SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_ScheduleData;
 
 export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_runs {
   __typename: "PipelineRun";
@@ -136,17 +136,17 @@ export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_r
   repositoryLocationMetadata: SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_SensorJobData {
-  __typename: "SensorJobData";
+export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_SensorData {
+  __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_ScheduleJobData {
-  __typename: "ScheduleJobData";
+export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_ScheduleData {
+  __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData = SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_SensorJobData | SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_ScheduleJobData;
+export type SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData = SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_SensorData | SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData_ScheduleData;
 
 export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_runs {
   __typename: "PipelineRun";
