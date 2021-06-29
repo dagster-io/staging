@@ -15,7 +15,7 @@ export interface StopSensor_stopSensor_ReadOnlyError {
 }
 
 export interface StopSensor_stopSensor_StopSensorMutationResult_jobState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   status: InstigationStatus;
 }

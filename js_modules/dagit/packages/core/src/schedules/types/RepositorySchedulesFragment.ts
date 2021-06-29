@@ -98,7 +98,7 @@ export interface RepositorySchedulesFragment_schedules_scheduleState_ticks {
 }
 
 export interface RepositorySchedulesFragment_schedules_scheduleState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   name: string;
   jobType: InstigationType;

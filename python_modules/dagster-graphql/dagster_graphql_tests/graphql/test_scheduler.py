@@ -89,8 +89,8 @@ query getSchedule($scheduleSelector: ScheduleSelector!, $ticksAfter: Float) {
 
 GET_UNLOADABLE_QUERY = """
 query getUnloadableSchedules {
-  unloadableJobStatesOrError(jobType: SCHEDULE) {
-    ... on JobStates {
+  unloadableInstigationStatesOrError(instigationType: SCHEDULE) {
+    ... on InstigationStates {
       results {
         id
         name

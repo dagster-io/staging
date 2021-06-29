@@ -76,7 +76,7 @@ def stop_sensor(graphene_info, job_origin_id):
 
 @capture_error
 def get_unloadable_sensor_states_or_error(graphene_info):
-    from ..schema.instigation import GrapheneJobState, GrapheneJobStates
+    from ..schema.instigation import GrapheneInstigationState, GrapheneInstigationStates
 
     sensor_states = graphene_info.context.instance.all_stored_job_state(job_type=JobType.SENSOR)
     external_sensors = [
@@ -96,8 +96,8 @@ def get_unloadable_sensor_states_or_error(graphene_info):
         if sensor_state.job_origin_id not in sensor_origin_ids
     ]
 
-    return GrapheneJobStates(
-        results=[GrapheneJobState(job_state=job_state) for job_state in unloadable_states]
+    return GrapheneInstigationStates(
+        results=[GrapheneInstigationState(job_state=job_state) for job_state in unloadable_states]
     )
 
 

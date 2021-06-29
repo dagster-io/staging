@@ -10,8 +10,8 @@ type Query {
   schedulesOrError(repositorySelector: RepositorySelector!): SchedulesOrError!
   sensorOrError(sensorSelector: SensorSelector!): SensorOrError!
   sensorsOrError(repositorySelector: RepositorySelector!): SensorsOrError!
-  jobStateOrError(jobSelector: JobSelector!): JobStateOrError!
-  unloadableJobStatesOrError(jobType: InstigationType): JobStatesOrError!
+  jobStateOrError(jobSelector: JobSelector!): InstigationStateOrError!
+  unloadableJobStatesOrError(jobType: InstigationType): InstigationStatesOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
@@ -889,13 +889,13 @@ type Schedule {
   mode: String!
   executionTimezone: String
   description: String
-  scheduleState: JobState!
+  scheduleState: InstigationState!
   partitionSet: PartitionSet
   futureTicks(cursor: Float, limit: Int): FutureInstigationTicks!
   futureTick(tickTimestamp: Int!): FutureInstigationTick!
 }
 
-type JobState {
+type InstigationState {
   id: ID!
   name: String!
   jobType: InstigationType!
@@ -1045,7 +1045,7 @@ type Sensor {
   pipelineName: String
   solidSelection: [String]
   mode: String
-  sensorState: JobState!
+  sensorState: InstigationState!
   minIntervalSeconds: Int!
   description: String
   nextTick: FutureInstigationTick
@@ -1196,7 +1196,7 @@ type Sensors {
   results: [Sensor!]!
 }
 
-union JobStateOrError = JobState | PythonError
+union InstigationStateOrError = InstigationState | PythonError
 
 input JobSelector {
   repositoryName: String!
@@ -1204,10 +1204,10 @@ input JobSelector {
   jobName: String!
 }
 
-union JobStatesOrError = JobStates | PythonError
+union InstigationStatesOrError = InstigationStates | PythonError
 
-type JobStates {
-  results: [JobState!]!
+type InstigationStates {
+  results: [InstigationState!]!
 }
 
 union PartitionSetsOrError = PartitionSets | PipelineNotFoundError | PythonError
@@ -1459,13 +1459,13 @@ type ReconcileSchedulerStateSuccess {
 union ScheduleMutationResult = PythonError | ScheduleStateResult
 
 type ScheduleStateResult {
-  scheduleState: JobState!
+  scheduleState: InstigationState!
 }
 
 union StopSensorMutationResultOrError = StopSensorMutationResult | ReadOnlyError | PythonError
 
 type StopSensorMutationResult {
-  jobState: JobState
+  jobState: InstigationState
 }
 
 union TerminatePipelineExecutionResult = TerminatePipelineExecutionSuccess | TerminatePipelineExecutionFailure | PipelineRunNotFoundError | ReadOnlyError | PythonError

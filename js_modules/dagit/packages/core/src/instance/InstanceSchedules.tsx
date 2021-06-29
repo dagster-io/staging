@@ -134,10 +134,10 @@ const INSTANCE_SCHEDULES_QUERY = gql`
       ...SchedulerFragment
     }
     unloadableJobStatesOrError {
-      ... on JobStates {
+      ... on InstigationStates {
         results {
           id
-          ...JobStateFragment
+          ...InstigationStateFragment
         }
       }
       ...PythonErrorFragment

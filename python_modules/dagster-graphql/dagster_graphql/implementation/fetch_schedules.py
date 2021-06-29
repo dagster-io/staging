@@ -24,7 +24,7 @@ def reconcile_scheduler_state(graphene_info, repository_selector):
 
 @capture_error
 def start_schedule(graphene_info, schedule_selector):
-    from ..schema.instigation import GrapheneJobState
+    from ..schema.instigation import GrapheneInstigationState
     from ..schema.schedules import GrapheneScheduleStateResult
 
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
@@ -35,18 +35,18 @@ def start_schedule(graphene_info, schedule_selector):
     schedule_state = instance.start_schedule_and_update_storage_state(
         repository.get_external_schedule(schedule_selector.schedule_name)
     )
-    return GrapheneScheduleStateResult(GrapheneJobState(schedule_state))
+    return GrapheneScheduleStateResult(GrapheneInstigationState(schedule_state))
 
 
 @capture_error
 def stop_schedule(graphene_info, schedule_origin_id):
-    from ..schema.instigation import GrapheneJobState
+    from ..schema.instigation import GrapheneInstigationState
     from ..schema.schedules import GrapheneScheduleStateResult
 
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     instance = graphene_info.context.instance
     schedule_state = instance.stop_schedule_and_update_storage_state(schedule_origin_id)
-    return GrapheneScheduleStateResult(GrapheneJobState(schedule_state))
+    return GrapheneScheduleStateResult(GrapheneInstigationState(schedule_state))
 
 
 @capture_error

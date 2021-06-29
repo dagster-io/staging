@@ -51,7 +51,11 @@ from ..inputs import (
     GrapheneSensorSelector,
 )
 from ..instance import GrapheneInstance
-from ..instigation import GrapheneJobStateOrError, GrapheneJobStatesOrError, GrapheneInstigationType
+from ..instigation import (
+    GrapheneInstigationStateOrError,
+    GrapheneInstigationStatesOrError,
+    GrapheneInstigationType,
+)
 from ..partition_sets import GraphenePartitionSetOrError, GraphenePartitionSetsOrError
 from ..pipelines.config_result import GraphenePipelineConfigValidationResult
 from ..pipelines.pipeline import GraphenePipelineRunOrError
@@ -116,12 +120,12 @@ class GrapheneQuery(graphene.ObjectType):
     )
 
     jobStateOrError = graphene.Field(
-        graphene.NonNull(GrapheneJobStateOrError),
+        graphene.NonNull(GrapheneInstigationStateOrError),
         jobSelector=graphene.NonNull(GrapheneJobSelector),
     )
 
     unloadableJobStatesOrError = graphene.Field(
-        graphene.NonNull(GrapheneJobStatesOrError),
+        graphene.NonNull(GrapheneInstigationStatesOrError),
         jobType=graphene.Argument(GrapheneInstigationType),
     )
 

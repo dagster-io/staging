@@ -360,7 +360,7 @@ const OverviewSection = ({title, children}: {title: string; children: any}) => {
 };
 
 const OVERVIEW_JOB_FRAGMENT = gql`
-  fragment OverviewJobFragment on JobState {
+  fragment OverviewJobFragment on InstigationState {
     id
     runsCount
     lastRuns: runs(limit: 1) {

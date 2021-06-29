@@ -37,7 +37,7 @@ export interface OverviewJobFragment_runs {
 }
 
 export interface OverviewJobFragment {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   runsCount: number;
   lastRuns: OverviewJobFragment_lastRuns[];

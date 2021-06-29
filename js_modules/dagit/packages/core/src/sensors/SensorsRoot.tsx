@@ -110,10 +110,10 @@ const SENSORS_ROOT_QUERY = gql`
       }
     }
     unloadableJobStatesOrError(jobType: $jobType) {
-      ... on JobStates {
+      ... on InstigationStates {
         results {
           id
-          ...JobStateFragment
+          ...InstigationStateFragment
         }
       }
       ...PythonErrorFragment
