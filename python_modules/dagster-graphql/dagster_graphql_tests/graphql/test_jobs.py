@@ -15,7 +15,7 @@ from .graphql_context_test_suite import (  # get_dict_recon_repo,
 
 GET_JOB_QUERY = """
 query JobQuery($instigationSelector: InstigationSelector!) {
-  jobStateOrError(instigationSelector: $instigationSelector) {
+  instigationStateOrError(instigationSelector: $instigationSelector) {
     __typename
     ... on PythonError {
       message

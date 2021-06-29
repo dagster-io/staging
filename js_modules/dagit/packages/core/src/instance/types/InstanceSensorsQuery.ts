@@ -224,98 +224,98 @@ export interface InstanceSensorsQuery_repositoriesOrError_PythonError {
 
 export type InstanceSensorsQuery_repositoriesOrError = InstanceSensorsQuery_repositoriesOrError_RepositoryConnection | InstanceSensorsQuery_repositoriesOrError_PythonError;
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata {
   __typename: "RepositoryMetadata";
   key: string;
   value: string;
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin {
   __typename: "RepositoryOrigin";
   id: string;
   repositoryLocationName: string;
   repositoryName: string;
-  repositoryLocationMetadata: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata[];
+  repositoryLocationMetadata: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_SensorData {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData = InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_SensorData | InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData;
+export type InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData = InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_SensorData | InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData;
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_runs {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_runs {
   __typename: "PipelineRun";
   id: string;
   runId: string;
   status: PipelineRunStatus;
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error_cause {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error_cause {
   __typename: "PythonError";
   message: string;
   stack: string[];
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error {
   __typename: "PythonError";
   message: string;
   stack: string[];
-  cause: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error_cause | null;
+  cause: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error_cause | null;
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_ticks {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks {
   __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
   skipReason: string | null;
   runIds: string[];
-  error: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error | null;
+  error: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error | null;
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results {
   __typename: "InstigationState";
   id: string;
   name: string;
   instigationType: InstigationType;
   status: InstigationStatus;
-  repositoryOrigin: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin;
-  typeSpecificData: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData | null;
-  runs: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_runs[];
-  ticks: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results_ticks[];
+  repositoryOrigin: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin;
+  typeSpecificData: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData | null;
+  runs: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_runs[];
+  ticks: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks[];
   runningCount: number;
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates {
   __typename: "InstigationStates";
-  results: InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates_results[];
+  results: InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates_results[];
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_PythonError_cause {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_PythonError_cause {
   __typename: "PythonError";
   message: string;
   stack: string[];
 }
 
-export interface InstanceSensorsQuery_unloadableJobStatesOrError_PythonError {
+export interface InstanceSensorsQuery_unloadableInstigationStatesOrError_PythonError {
   __typename: "PythonError";
   message: string;
   stack: string[];
-  cause: InstanceSensorsQuery_unloadableJobStatesOrError_PythonError_cause | null;
+  cause: InstanceSensorsQuery_unloadableInstigationStatesOrError_PythonError_cause | null;
 }
 
-export type InstanceSensorsQuery_unloadableJobStatesOrError = InstanceSensorsQuery_unloadableJobStatesOrError_InstigationStates | InstanceSensorsQuery_unloadableJobStatesOrError_PythonError;
+export type InstanceSensorsQuery_unloadableInstigationStatesOrError = InstanceSensorsQuery_unloadableInstigationStatesOrError_InstigationStates | InstanceSensorsQuery_unloadableInstigationStatesOrError_PythonError;
 
 export interface InstanceSensorsQuery {
   instance: InstanceSensorsQuery_instance;
   workspaceOrError: InstanceSensorsQuery_workspaceOrError;
   repositoriesOrError: InstanceSensorsQuery_repositoriesOrError;
-  unloadableJobStatesOrError: InstanceSensorsQuery_unloadableJobStatesOrError;
+  unloadableInstigationStatesOrError: InstanceSensorsQuery_unloadableInstigationStatesOrError;
 }

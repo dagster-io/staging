@@ -194,94 +194,94 @@ export interface SchedulesRootQuery_scheduler_PythonError {
 
 export type SchedulesRootQuery_scheduler = SchedulesRootQuery_scheduler_SchedulerNotDefinedError | SchedulesRootQuery_scheduler_Scheduler | SchedulesRootQuery_scheduler_PythonError;
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata {
   __typename: "RepositoryMetadata";
   key: string;
   value: string;
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin {
   __typename: "RepositoryOrigin";
   id: string;
   repositoryLocationName: string;
   repositoryName: string;
-  repositoryLocationMetadata: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata[];
+  repositoryLocationMetadata: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_SensorData {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData = SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_SensorData | SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData;
+export type SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData = SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_SensorData | SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData;
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_runs {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_runs {
   __typename: "PipelineRun";
   id: string;
   runId: string;
   status: PipelineRunStatus;
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error_cause {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error_cause {
   __typename: "PythonError";
   message: string;
   stack: string[];
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error {
   __typename: "PythonError";
   message: string;
   stack: string[];
-  cause: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error_cause | null;
+  cause: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error_cause | null;
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_ticks {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks {
   __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
   skipReason: string | null;
   runIds: string[];
-  error: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_ticks_error | null;
+  error: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks_error | null;
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results {
   __typename: "InstigationState";
   id: string;
   name: string;
   instigationType: InstigationType;
   status: InstigationStatus;
-  repositoryOrigin: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin;
-  typeSpecificData: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData | null;
-  runs: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_runs[];
-  ticks: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results_ticks[];
+  repositoryOrigin: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_repositoryOrigin;
+  typeSpecificData: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_typeSpecificData | null;
+  runs: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_runs[];
+  ticks: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results_ticks[];
   runningCount: number;
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates {
   __typename: "InstigationStates";
-  results: SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates_results[];
+  results: SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates_results[];
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_PythonError_cause {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_PythonError_cause {
   __typename: "PythonError";
   message: string;
   stack: string[];
 }
 
-export interface SchedulesRootQuery_unloadableJobStatesOrError_PythonError {
+export interface SchedulesRootQuery_unloadableInstigationStatesOrError_PythonError {
   __typename: "PythonError";
   message: string;
   stack: string[];
-  cause: SchedulesRootQuery_unloadableJobStatesOrError_PythonError_cause | null;
+  cause: SchedulesRootQuery_unloadableInstigationStatesOrError_PythonError_cause | null;
 }
 
-export type SchedulesRootQuery_unloadableJobStatesOrError = SchedulesRootQuery_unloadableJobStatesOrError_InstigationStates | SchedulesRootQuery_unloadableJobStatesOrError_PythonError;
+export type SchedulesRootQuery_unloadableInstigationStatesOrError = SchedulesRootQuery_unloadableInstigationStatesOrError_InstigationStates | SchedulesRootQuery_unloadableInstigationStatesOrError_PythonError;
 
 export interface SchedulesRootQuery_instance_daemonHealth_allDaemonStatuses_lastHeartbeatErrors_cause {
   __typename: "PythonError";
@@ -320,11 +320,11 @@ export interface SchedulesRootQuery_instance {
 export interface SchedulesRootQuery {
   repositoryOrError: SchedulesRootQuery_repositoryOrError;
   scheduler: SchedulesRootQuery_scheduler;
-  unloadableJobStatesOrError: SchedulesRootQuery_unloadableJobStatesOrError;
+  unloadableInstigationStatesOrError: SchedulesRootQuery_unloadableInstigationStatesOrError;
   instance: SchedulesRootQuery_instance;
 }
 
 export interface SchedulesRootQueryVariables {
   repositorySelector: RepositorySelector;
-  jobType: InstigationType;
+  instigationType: InstigationType;
 }

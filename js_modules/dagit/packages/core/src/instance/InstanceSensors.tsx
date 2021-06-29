@@ -41,16 +41,16 @@ export const InstanceSensors = React.memo(() => {
 });
 
 const AllSensors: React.FC<{data: InstanceSensorsQuery}> = ({data}) => {
-  const {instance, repositoriesOrError, unloadableJobStatesOrError} = data;
+  const {instance, repositoriesOrError, unloadableInstigationStatesOrError} = data;
 
   if (repositoriesOrError.__typename === 'PythonError') {
     return <PythonErrorInfo error={repositoriesOrError} />;
   }
-  if (unloadableJobStatesOrError.__typename === 'PythonError') {
-    return <PythonErrorInfo error={unloadableJobStatesOrError} />;
+  if (unloadableInstigationStatesOrError.__typename === 'PythonError') {
+    return <PythonErrorInfo error={unloadableInstigationStatesOrError} />;
   }
 
-  const unloadableJobs = unloadableJobStatesOrError.results;
+  const unloadableJobs = unloadableInstigationStatesOrError.results;
   const withSensors = repositoriesOrError.nodes.filter((repository) => repository.sensors.length);
 
   const sensorDefinitionsSection = withSensors.length ? (
@@ -130,7 +130,7 @@ const INSTANCE_SENSORS_QUERY = gql`
       }
       ...PythonErrorFragment
     }
-    unloadableJobStatesOrError {
+    unloadableInstigationStatesOrError {
       ... on InstigationStates {
         results {
           id
