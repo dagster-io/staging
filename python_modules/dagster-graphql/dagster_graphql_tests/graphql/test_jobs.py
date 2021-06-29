@@ -15,7 +15,7 @@ from .graphql_context_test_suite import (  # get_dict_recon_repo,
 
 GET_JOB_QUERY = """
 query JobQuery($instigationSelector: InstigationSelector!) {
-  jobStateOrError(instigationSelector: $instigationSelector) {
+  instigationStateOrError(instigationSelector: $instigationSelector) {
     __typename
     ... on PythonError {
       message
@@ -65,8 +65,8 @@ class TestNextTickRepository(
         )
 
         assert result.data
-        assert result.data["jobStateOrError"]["__typename"] == "JobState"
-        next_tick = result.data["jobStateOrError"]["nextTick"]
+        assert result.data["instigationStateOrError"]["__typename"] == "JobState"
+        next_tick = result.data["instigationStateOrError"]["nextTick"]
         assert next_tick
 
     def test_sensor_next_tick(self, graphql_context):
@@ -90,6 +90,6 @@ class TestNextTickRepository(
         )
 
         assert result.data
-        assert result.data["jobStateOrError"]["__typename"] == "JobState"
-        next_tick = result.data["jobStateOrError"]["nextTick"]
+        assert result.data["instigationStateOrError"]["__typename"] == "JobState"
+        next_tick = result.data["instigationStateOrError"]["nextTick"]
         assert next_tick

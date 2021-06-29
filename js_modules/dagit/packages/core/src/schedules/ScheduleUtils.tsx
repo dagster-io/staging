@@ -65,7 +65,7 @@ export const REPOSITORY_SCHEDULES_FRAGMENT = gql`
 `;
 
 export const SCHEDULES_ROOT_QUERY = gql`
-  query SchedulesRootQuery($repositorySelector: RepositorySelector!, $jobType: InstigationType!) {
+  query SchedulesRootQuery($repositorySelector: RepositorySelector!, $instigationType: InstigationType!) {
     repositoryOrError(repositorySelector: $repositorySelector) {
       __typename
       ... on Repository {
@@ -77,7 +77,7 @@ export const SCHEDULES_ROOT_QUERY = gql`
     scheduler {
       ...SchedulerFragment
     }
-    unloadableJobStatesOrError(jobType: $jobType) {
+    unloadableInstigationStatesOrError(instigationType: $instigationType) {
       ... on InstigationStates {
         results {
           id

@@ -40,16 +40,16 @@ export const InstanceSchedules = React.memo(() => {
 });
 
 const AllSchedules: React.FC<{data: InstanceSchedulesQuery}> = ({data}) => {
-  const {instance, scheduler, repositoriesOrError, unloadableJobStatesOrError} = data;
+  const {instance, scheduler, repositoriesOrError, unloadableInstigationStatesOrError} = data;
 
   if (repositoriesOrError.__typename === 'PythonError') {
     return <PythonErrorInfo error={repositoriesOrError} />;
   }
-  if (unloadableJobStatesOrError.__typename === 'PythonError') {
-    return <PythonErrorInfo error={unloadableJobStatesOrError} />;
+  if (unloadableInstigationStatesOrError.__typename === 'PythonError') {
+    return <PythonErrorInfo error={unloadableInstigationStatesOrError} />;
   }
 
-  const unloadableJobs = unloadableJobStatesOrError.results;
+  const unloadableJobs = unloadableInstigationStatesOrError.results;
   const withSchedules = repositoriesOrError.nodes.filter(
     (repository) => repository.schedules.length,
   );
@@ -133,7 +133,7 @@ const INSTANCE_SCHEDULES_QUERY = gql`
     scheduler {
       ...SchedulerFragment
     }
-    unloadableJobStatesOrError {
+    unloadableInstigationStatesOrError {
       ... on InstigationStates {
         results {
           id

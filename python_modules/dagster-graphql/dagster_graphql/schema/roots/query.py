@@ -119,14 +119,14 @@ class GrapheneQuery(graphene.ObjectType):
         repositorySelector=graphene.NonNull(GrapheneRepositorySelector),
     )
 
-    jobStateOrError = graphene.Field(
+    instigationStateOrError = graphene.Field(
         graphene.NonNull(GrapheneInstigationStateOrError),
         instigationSelector=graphene.NonNull(GrapheneInstigationSelector),
     )
 
-    unloadableJobStatesOrError = graphene.Field(
+    unloadableInstigationStatesOrError = graphene.Field(
         graphene.NonNull(GrapheneInstigationStatesOrError),
-        jobType=graphene.Argument(GrapheneInstigationType),
+        instigationType=graphene.Argument(GrapheneInstigationType),
     )
 
     partitionSetsOrError = graphene.Field(
@@ -273,13 +273,13 @@ class GrapheneQuery(graphene.ObjectType):
             RepositorySelector.from_graphql_input(kwargs.get("repositorySelector")),
         )
 
-    def resolve_jobStateOrError(self, graphene_info, instigationSelector):
+    def resolve_instigationStateOrError(self, graphene_info, instigationSelector):
         return get_job_state_or_error(
             graphene_info, InstigationSelector.from_graphql_input(instigationSelector)
         )
 
-    def resolve_unloadableJobStatesOrError(self, graphene_info, **kwargs):
-        job_type = JobType(kwargs["jobType"]) if "jobType" in kwargs else None
+    def resolve_unloadableInstigationStatesOrError(self, graphene_info, **kwargs):
+        job_type = JobType(kwargs["instigationType"]) if "instigationType" in kwargs else None
         return get_unloadable_job_states_or_error(graphene_info, job_type)
 
     def resolve_pipelineOrError(self, graphene_info, **kwargs):
