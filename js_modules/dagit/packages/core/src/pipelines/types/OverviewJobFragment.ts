@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { PipelineRunStatus, JobStatus } from "./../../types/globalTypes";
+import { PipelineRunStatus, InstigationStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: OverviewJobFragment
@@ -42,5 +42,5 @@ export interface OverviewJobFragment {
   runsCount: number;
   lastRuns: OverviewJobFragment_lastRuns[];
   runs: OverviewJobFragment_runs[];
-  status: JobStatus;
+  status: InstigationStatus;
 }

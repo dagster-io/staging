@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { RepositorySelector, InstigationType, JobStatus, PipelineRunStatus, JobTickStatus } from "./../../types/globalTypes";
+import { RepositorySelector, InstigationType, InstigationStatus, PipelineRunStatus, JobTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: SensorsRootQuery
@@ -93,7 +93,7 @@ export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState {
   id: string;
   name: string;
   jobType: InstigationType;
-  status: JobStatus;
+  status: InstigationStatus;
   repositoryOrigin: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_repositoryOrigin;
   jobSpecificData: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData | null;
   runs: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_runs[];
@@ -183,7 +183,7 @@ export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results {
   id: string;
   name: string;
   jobType: InstigationType;
-  status: JobStatus;
+  status: InstigationStatus;
   repositoryOrigin: SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_repositoryOrigin;
   jobSpecificData: SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData | null;
   runs: SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_runs[];

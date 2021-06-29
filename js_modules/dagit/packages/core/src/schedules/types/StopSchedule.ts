@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { JobStatus } from "./../../types/globalTypes";
+import { InstigationStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL mutation operation: StopSchedule
@@ -13,7 +13,7 @@ import { JobStatus } from "./../../types/globalTypes";
 export interface StopSchedule_stopRunningSchedule_ScheduleStateResult_scheduleState {
   __typename: "JobState";
   id: string;
-  status: JobStatus;
+  status: InstigationStatus;
   runningCount: number;
 }
 

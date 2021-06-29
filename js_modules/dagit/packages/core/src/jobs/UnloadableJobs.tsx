@@ -11,7 +11,7 @@ import {humanCronString} from '../schedules/humanCronString';
 import {StopSchedule} from '../schedules/types/StopSchedule';
 import {displaySensorMutationErrors, STOP_SENSOR_MUTATION} from '../sensors/SensorMutations';
 import {StopSensor} from '../sensors/types/StopSensor';
-import {InstigationType, JobStatus} from '../types/globalTypes';
+import {InstigationType, InstigationStatus} from '../types/globalTypes';
 import {Alert} from '../ui/Alert';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
@@ -135,7 +135,7 @@ const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) => {
   const [showRepositoryOrigin, setShowRepositoryOrigin] = React.useState(false);
 
   const onChangeSwitch = () => {
-    if (status === JobStatus.RUNNING) {
+    if (status === InstigationStatus.RUNNING) {
       stopSensor({variables: {jobOriginId: id}});
     }
   };
@@ -146,11 +146,11 @@ const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) => {
     <tr key={name}>
       <td style={{width: 60}}>
         <Switch
-          disabled={toggleOffInFlight || status === JobStatus.STOPPED}
+          disabled={toggleOffInFlight || status === InstigationStatus.STOPPED}
           large
           innerLabelChecked="on"
           innerLabel="off"
-          checked={status === JobStatus.RUNNING}
+          checked={status === InstigationStatus.RUNNING}
           onChange={onChangeSwitch}
         />
       </td>
@@ -201,7 +201,7 @@ const ScheduleStateRow: React.FunctionComponent<{
       ? jobSpecificData.cronSchedule
       : null;
   const onChangeSwitch = async () => {
-    if (status === JobStatus.RUNNING) {
+    if (status === InstigationStatus.RUNNING) {
       await confirm({
         title: 'Are you sure you want to stop this schedule?',
         description:
@@ -217,9 +217,9 @@ const ScheduleStateRow: React.FunctionComponent<{
     <tr key={name}>
       <td style={{width: 60}}>
         <Switch
-          checked={status === JobStatus.RUNNING}
+          checked={status === InstigationStatus.RUNNING}
           large={true}
-          disabled={status !== JobStatus.RUNNING || toggleOffInFlight}
+          disabled={status !== InstigationStatus.RUNNING || toggleOffInFlight}
           innerLabelChecked="on"
           innerLabel="off"
           onChange={onChangeSwitch}

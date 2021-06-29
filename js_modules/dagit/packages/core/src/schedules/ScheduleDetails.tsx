@@ -6,7 +6,7 @@ import {useFeatureFlags} from '../app/Flags';
 import {TickTag} from '../jobs/JobTick';
 import {RepositoryLink} from '../nav/RepositoryLink';
 import {PipelineReference} from '../pipelines/PipelineReference';
-import {JobStatus, InstigationType} from '../types/globalTypes';
+import {InstigationStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {CountdownStatus, useCountdown} from '../ui/Countdown';
@@ -67,7 +67,7 @@ export const ScheduleDetails: React.FC<{
     setCopyText('Copied!');
   };
 
-  const running = status === JobStatus.RUNNING;
+  const running = status === InstigationStatus.RUNNING;
   const countdownRefreshing = countdownStatus === 'idle' || timeRemaining === 0;
   const seconds = Math.floor(timeRemaining / 1000);
 

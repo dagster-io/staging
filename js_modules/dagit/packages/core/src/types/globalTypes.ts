@@ -68,14 +68,14 @@ export enum EvaluationErrorReason {
   SELECTOR_FIELD_ERROR = "SELECTOR_FIELD_ERROR",
 }
 
+export enum InstigationStatus {
+  RUNNING = "RUNNING",
+  STOPPED = "STOPPED",
+}
+
 export enum InstigationType {
   SCHEDULE = "SCHEDULE",
   SENSOR = "SENSOR",
-}
-
-export enum JobStatus {
-  RUNNING = "RUNNING",
-  STOPPED = "STOPPED",
 }
 
 export enum JobTickStatus {

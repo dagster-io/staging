@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { JobStatus } from "./../../types/globalTypes";
+import { InstigationStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL mutation operation: StopSensor
@@ -17,7 +17,7 @@ export interface StopSensor_stopSensor_ReadOnlyError {
 export interface StopSensor_stopSensor_StopSensorMutationResult_jobState {
   __typename: "JobState";
   id: string;
-  status: JobStatus;
+  status: InstigationStatus;
 }
 
 export interface StopSensor_stopSensor_StopSensorMutationResult {

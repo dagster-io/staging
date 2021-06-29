@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { RepositoryLocationLoadStatus, InstigationType, JobStatus, PipelineRunStatus, JobTickStatus } from "./../../types/globalTypes";
+import { RepositoryLocationLoadStatus, InstigationType, InstigationStatus, PipelineRunStatus, JobTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: InstanceSensorsQuery
@@ -173,7 +173,7 @@ export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_n
   id: string;
   name: string;
   jobType: InstigationType;
-  status: JobStatus;
+  status: InstigationStatus;
   repositoryOrigin: InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_sensors_sensorState_repositoryOrigin;
   jobSpecificData: InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_sensors_sensorState_jobSpecificData | null;
   runs: InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_sensors_sensorState_runs[];
@@ -285,7 +285,7 @@ export interface InstanceSensorsQuery_unloadableJobStatesOrError_JobStates_resul
   id: string;
   name: string;
   jobType: InstigationType;
-  status: JobStatus;
+  status: InstigationStatus;
   repositoryOrigin: InstanceSensorsQuery_unloadableJobStatesOrError_JobStates_results_repositoryOrigin;
   jobSpecificData: InstanceSensorsQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData | null;
   runs: InstanceSensorsQuery_unloadableJobStatesOrError_JobStates_results_runs[];

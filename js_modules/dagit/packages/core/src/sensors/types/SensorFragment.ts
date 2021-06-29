@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { InstigationType, JobStatus, PipelineRunStatus, JobTickStatus } from "./../../types/globalTypes";
+import { InstigationType, InstigationStatus, PipelineRunStatus, JobTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: SensorFragment
@@ -76,7 +76,7 @@ export interface SensorFragment_sensorState {
   id: string;
   name: string;
   jobType: InstigationType;
-  status: JobStatus;
+  status: InstigationStatus;
   repositoryOrigin: SensorFragment_sensorState_repositoryOrigin;
   jobSpecificData: SensorFragment_sensorState_jobSpecificData | null;
   runs: SensorFragment_sensorState_runs[];

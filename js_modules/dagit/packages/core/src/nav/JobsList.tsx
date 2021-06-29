@@ -4,7 +4,7 @@ import React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {JobStatus, InstigationType} from '../types/globalTypes';
+import {InstigationStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {Group} from '../ui/Group';
 import {BorderSetting} from '../ui/types';
@@ -19,7 +19,7 @@ type Item = {
   label: string;
   repoPath: string;
   jobType: InstigationType;
-  status: JobStatus;
+  status: InstigationStatus;
 };
 
 interface JobsListProps {
@@ -205,7 +205,7 @@ export const JobsList: React.FC<JobsListProps> = ({repos, repoPath, selector}) =
                     {p.label}
                   </Label>
                 </Box>
-                {p.status === JobStatus.RUNNING ? (
+                {p.status === InstigationStatus.RUNNING ? (
                   <Box margin={{left: 4}}>
                     <StatusDot size={9} />
                   </Box>

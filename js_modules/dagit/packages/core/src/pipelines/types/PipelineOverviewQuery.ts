@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { PipelineSelector, PipelineRunStatus, JobStatus } from "./../../types/globalTypes";
+import { PipelineSelector, PipelineRunStatus, InstigationStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: PipelineOverviewQuery
@@ -339,7 +339,7 @@ export interface PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_
   runsCount: number;
   lastRuns: PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_schedules_scheduleState_lastRuns[];
   runs: PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_schedules_scheduleState_runs[];
-  status: JobStatus;
+  status: InstigationStatus;
 }
 
 export interface PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_schedules_futureTicks_results {
@@ -392,7 +392,7 @@ export interface PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_
   runsCount: number;
   lastRuns: PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_sensors_sensorState_lastRuns[];
   runs: PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_sensors_sensorState_runs[];
-  status: JobStatus;
+  status: InstigationStatus;
 }
 
 export interface PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_sensors_nextTick {

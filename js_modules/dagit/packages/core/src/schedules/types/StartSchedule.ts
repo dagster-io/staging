@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { ScheduleSelector, JobStatus } from "./../../types/globalTypes";
+import { ScheduleSelector, InstigationStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL mutation operation: StartSchedule
@@ -13,7 +13,7 @@ import { ScheduleSelector, JobStatus } from "./../../types/globalTypes";
 export interface StartSchedule_startSchedule_ScheduleStateResult_scheduleState {
   __typename: "JobState";
   id: string;
-  status: JobStatus;
+  status: InstigationStatus;
   runningCount: number;
 }
 

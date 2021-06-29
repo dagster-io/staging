@@ -35,12 +35,12 @@ class GrapheneInstigationType(graphene.Enum):
         name = "InstigationType"
 
 
-class GrapheneJobStatus(graphene.Enum):
+class GrapheneInstigationStatus(graphene.Enum):
     RUNNING = "RUNNING"
     STOPPED = "STOPPED"
 
     class Meta:
-        name = "JobStatus"
+        name = "InstigationStatus"
 
 
 class GrapheneJobTickStatus(graphene.Enum):
@@ -253,7 +253,7 @@ class GrapheneJobState(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     name = graphene.NonNull(graphene.String)
     jobType = graphene.NonNull(GrapheneInstigationType)
-    status = graphene.NonNull(GrapheneJobStatus)
+    status = graphene.NonNull(GrapheneInstigationStatus)
     repositoryOrigin = graphene.NonNull(GrapheneRepositoryOrigin)
     jobSpecificData = graphene.Field(GrapheneJobSpecificData)
     runs = graphene.Field(

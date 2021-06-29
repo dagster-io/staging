@@ -6,7 +6,7 @@ import {TickTag} from '../jobs/JobTick';
 import {RepositoryLink} from '../nav/RepositoryLink';
 import {PipelineReference} from '../pipelines/PipelineReference';
 import {TimestampDisplay} from '../schedules/TimestampDisplay';
-import {JobStatus, InstigationType} from '../types/globalTypes';
+import {InstigationStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {CountdownStatus, useCountdown} from '../ui/Countdown';
 import {Group} from '../ui/Group';
@@ -77,7 +77,7 @@ export const SensorDetails: React.FC<{
             <Box margin={{horizontal: 12}}>
               <SensorSwitch repoAddress={repoAddress} sensor={sensor} />
             </Box>
-            {sensor.nextTick && daemonHealth && status === JobStatus.RUNNING ? (
+            {sensor.nextTick && daemonHealth && status === InstigationStatus.RUNNING ? (
               <Group direction="row" spacing={4}>
                 <div>Next tick:</div>
                 <TimestampDisplay timestamp={sensor.nextTick.timestamp} />
