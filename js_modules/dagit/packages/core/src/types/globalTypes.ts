@@ -166,10 +166,10 @@ export interface ExecutionTag {
   value: string;
 }
 
-export interface JobSelector {
+export interface InstigationSelector {
   repositoryName: string;
   repositoryLocationName: string;
-  jobName: string;
+  name: string;
 }
 
 export interface LaunchBackfillParams {

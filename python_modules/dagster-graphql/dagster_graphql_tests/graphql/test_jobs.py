@@ -14,8 +14,8 @@ from .graphql_context_test_suite import (  # get_dict_recon_repo,
 )
 
 GET_JOB_QUERY = """
-query JobQuery($jobSelector: JobSelector!) {
-  jobStateOrError(jobSelector: $jobSelector) {
+query JobQuery($instigationSelector: InstigationSelector!) {
+  jobStateOrError(instigationSelector: $instigationSelector) {
     __typename
     ... on PythonError {
       message
@@ -61,7 +61,7 @@ class TestNextTickRepository(
         # need to be running in order to generate a future tick
         graphql_context.instance.start_schedule_and_update_storage_state(external_schedule)
         result = execute_dagster_graphql(
-            graphql_context, GET_JOB_QUERY, variables={"jobSelector": job_selector}
+            graphql_context, GET_JOB_QUERY, variables={"instigationSelector": job_selector}
         )
 
         assert result.data
@@ -86,7 +86,7 @@ class TestNextTickRepository(
         _create_sensor_tick(graphql_context.instance)
 
         result = execute_dagster_graphql(
-            graphql_context, GET_JOB_QUERY, variables={"jobSelector": job_selector}
+            graphql_context, GET_JOB_QUERY, variables={"instigationSelector": job_selector}
         )
 
         assert result.data

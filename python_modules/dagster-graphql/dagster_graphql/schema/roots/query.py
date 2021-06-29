@@ -2,7 +2,7 @@ import graphene
 from dagster import check
 from dagster.core.definitions.events import AssetKey
 from dagster.core.host_representation import (
-    JobSelector,
+    InstigationSelector,
     RepositorySelector,
     ScheduleSelector,
     SensorSelector,
@@ -43,7 +43,7 @@ from ..external import (
 )
 from ..inputs import (
     GrapheneAssetKeyInput,
-    GrapheneJobSelector,
+    GrapheneInstigationSelector,
     GraphenePipelineRunsFilter,
     GraphenePipelineSelector,
     GrapheneRepositorySelector,
@@ -121,7 +121,7 @@ class GrapheneQuery(graphene.ObjectType):
 
     jobStateOrError = graphene.Field(
         graphene.NonNull(GrapheneInstigationStateOrError),
-        jobSelector=graphene.NonNull(GrapheneJobSelector),
+        instigationSelector=graphene.NonNull(GrapheneInstigationSelector),
     )
 
     unloadableJobStatesOrError = graphene.Field(
@@ -273,8 +273,10 @@ class GrapheneQuery(graphene.ObjectType):
             RepositorySelector.from_graphql_input(kwargs.get("repositorySelector")),
         )
 
-    def resolve_jobStateOrError(self, graphene_info, jobSelector):
-        return get_job_state_or_error(graphene_info, JobSelector.from_graphql_input(jobSelector))
+    def resolve_jobStateOrError(self, graphene_info, instigationSelector):
+        return get_job_state_or_error(
+            graphene_info, InstigationSelector.from_graphql_input(instigationSelector)
+        )
 
     def resolve_unloadableJobStatesOrError(self, graphene_info, **kwargs):
         job_type = JobType(kwargs["jobType"]) if "jobType" in kwargs else None
