@@ -18,7 +18,7 @@ import {Link} from 'react-router-dom';
 import {TickTag} from '../jobs/JobTick';
 import {JobRunStatus} from '../jobs/JobUtils';
 import {PipelineReference} from '../pipelines/PipelineReference';
-import {JobStatus, JobType} from '../types/globalTypes';
+import {JobStatus, InstigationType} from '../types/globalTypes';
 import {Group} from '../ui/Group';
 import {Table} from '../ui/Table';
 import {Code} from '../ui/Text';
@@ -218,7 +218,7 @@ const ScheduleRow: React.FC<{
       </td>
       <td>
         {latestTick ? (
-          <TickTag tick={latestTick} jobType={JobType.SCHEDULE} />
+          <TickTag tick={latestTick} jobType={InstigationType.SCHEDULE} />
         ) : (
           <span style={{color: Colors.GRAY4}}>None</span>
         )}

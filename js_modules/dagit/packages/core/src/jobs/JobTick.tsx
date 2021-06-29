@@ -18,7 +18,7 @@ import {showCustomAlert} from '../app/CustomAlertProvider';
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from '../app/PythonErrorInfo';
 import {assertUnreachable} from '../app/Util';
 import {RunTable, RUN_TABLE_RUN_FRAGMENT} from '../runs/RunTable';
-import {JobTickStatus, JobType} from '../types/globalTypes';
+import {JobTickStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -30,7 +30,7 @@ import {TickTagFragment} from './types/TickTagFragment';
 
 export const TickTag: React.FunctionComponent<{
   tick: TickTagFragment;
-  jobType?: JobType;
+  jobType?: InstigationType;
 }> = ({tick, jobType}) => {
   const [open, setOpen] = React.useState<boolean>(false);
   switch (tick.status) {
@@ -108,7 +108,7 @@ export const TickTag: React.FunctionComponent<{
             onClick={() =>
               showCustomAlert({
                 title: jobType
-                  ? jobType === JobType.SCHEDULE
+                  ? jobType === InstigationType.SCHEDULE
                     ? 'Schedule Response'
                     : 'Sensor Response'
                   : 'Python Error',

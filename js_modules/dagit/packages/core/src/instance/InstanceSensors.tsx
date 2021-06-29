@@ -8,7 +8,7 @@ import {UnloadableSensors} from '../jobs/UnloadableJobs';
 import {SENSOR_FRAGMENT} from '../sensors/SensorFragment';
 import {SensorInfo} from '../sensors/SensorInfo';
 import {SensorsTable} from '../sensors/SensorsTable';
-import {JobType} from '../types/globalTypes';
+import {InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {Group} from '../ui/Group';
 import {Loading} from '../ui/Loading';
@@ -70,7 +70,7 @@ const AllSensors: React.FC<{data: InstanceSensorsQuery}> = ({data}) => {
     </Group>
   ) : null;
 
-  const unloadableSensors = unloadableJobs.filter((state) => state.jobType === JobType.SENSOR);
+  const unloadableSensors = unloadableJobs.filter((state) => state.jobType === InstigationType.SENSOR);
   const unloadableSensorsSection = unloadableSensors.length ? (
     <UnloadableSensors sensorStates={unloadableSensors} />
   ) : null;

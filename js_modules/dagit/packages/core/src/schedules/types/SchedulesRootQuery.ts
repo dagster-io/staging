@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { RepositorySelector, JobType, PipelineRunStatus, JobStatus, JobTickStatus } from "./../../types/globalTypes";
+import { RepositorySelector, InstigationType, PipelineRunStatus, JobStatus, JobTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: SchedulesRootQuery
@@ -105,7 +105,7 @@ export interface SchedulesRootQuery_repositoryOrError_Repository_schedules_sched
   __typename: "JobState";
   id: string;
   name: string;
-  jobType: JobType;
+  jobType: InstigationType;
   status: JobStatus;
   repositoryOrigin: SchedulesRootQuery_repositoryOrError_Repository_schedules_scheduleState_repositoryOrigin;
   jobSpecificData: SchedulesRootQuery_repositoryOrError_Repository_schedules_scheduleState_jobSpecificData | null;
@@ -254,7 +254,7 @@ export interface SchedulesRootQuery_unloadableJobStatesOrError_JobStates_results
   __typename: "JobState";
   id: string;
   name: string;
-  jobType: JobType;
+  jobType: InstigationType;
   status: JobStatus;
   repositoryOrigin: SchedulesRootQuery_unloadableJobStatesOrError_JobStates_results_repositoryOrigin;
   jobSpecificData: SchedulesRootQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData | null;
@@ -326,5 +326,5 @@ export interface SchedulesRootQuery {
 
 export interface SchedulesRootQueryVariables {
   repositorySelector: RepositorySelector;
-  jobType: JobType;
+  jobType: InstigationType;
 }

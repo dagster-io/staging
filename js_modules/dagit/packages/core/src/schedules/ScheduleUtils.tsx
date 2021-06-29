@@ -65,7 +65,7 @@ export const REPOSITORY_SCHEDULES_FRAGMENT = gql`
 `;
 
 export const SCHEDULES_ROOT_QUERY = gql`
-  query SchedulesRootQuery($repositorySelector: RepositorySelector!, $jobType: JobType!) {
+  query SchedulesRootQuery($repositorySelector: RepositorySelector!, $jobType: InstigationType!) {
     repositoryOrError(repositorySelector: $repositorySelector) {
       __typename
       ... on Repository {

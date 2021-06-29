@@ -6,7 +6,7 @@ import {useFeatureFlags} from '../app/Flags';
 import {TickTag} from '../jobs/JobTick';
 import {RepositoryLink} from '../nav/RepositoryLink';
 import {PipelineReference} from '../pipelines/PipelineReference';
-import {JobStatus, JobType} from '../types/globalTypes';
+import {JobStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {CountdownStatus, useCountdown} from '../ui/Countdown';
@@ -133,7 +133,7 @@ export const ScheduleDetails: React.FC<{
                   timezone={executionTimezone}
                   timeFormat={TIME_FORMAT}
                 />
-                <TickTag tick={latestTick} jobType={JobType.SCHEDULE} />
+                <TickTag tick={latestTick} jobType={InstigationType.SCHEDULE} />
               </Group>
             ) : (
               'Schedule has never run'

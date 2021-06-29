@@ -17,7 +17,7 @@ import {Line, ChartComponentProps} from 'react-chartjs-2';
 import {showCustomAlert} from '../app/CustomAlertProvider';
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from '../app/PythonErrorInfo';
 import {TimestampDisplay} from '../schedules/TimestampDisplay';
-import {JobTickStatus, JobType} from '../types/globalTypes';
+import {JobTickStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -170,7 +170,7 @@ export const JobTickHistory = ({
   const {ticks, nextTick, jobType} = data.jobStateOrError;
   const displayedTicks = ticks.filter((tick) =>
     tick.status === JobTickStatus.SKIPPED
-      ? jobType === JobType.SCHEDULE && shownStates[tick.status]
+      ? jobType === InstigationType.SCHEDULE && shownStates[tick.status]
       : shownStates[tick.status],
   );
   const StatusFilter = ({status}: {status: JobTickStatus}) => (
@@ -221,7 +221,7 @@ export const JobTickHistory = ({
             <Group direction="row" spacing={16}>
               <StatusFilter status={JobTickStatus.SUCCESS} />
               <StatusFilter status={JobTickStatus.FAILURE} />
-              {jobType === JobType.SCHEDULE ? (
+              {jobType === InstigationType.SCHEDULE ? (
                 <StatusFilter status={JobTickStatus.SKIPPED} />
               ) : null}
             </Group>

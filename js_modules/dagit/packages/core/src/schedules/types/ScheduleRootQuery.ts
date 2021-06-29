@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { ScheduleSelector, PipelineRunStatus, JobType, JobStatus, JobTickStatus } from "./../../types/globalTypes";
+import { ScheduleSelector, PipelineRunStatus, InstigationType, JobStatus, JobTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: ScheduleRootQuery
@@ -120,7 +120,7 @@ export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState {
   __typename: "JobState";
   id: string;
   name: string;
-  jobType: JobType;
+  jobType: InstigationType;
   status: JobStatus;
   repositoryOrigin: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_repositoryOrigin;
   jobSpecificData: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData | null;

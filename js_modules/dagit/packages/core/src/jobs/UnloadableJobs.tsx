@@ -11,7 +11,7 @@ import {humanCronString} from '../schedules/humanCronString';
 import {StopSchedule} from '../schedules/types/StopSchedule';
 import {displaySensorMutationErrors, STOP_SENSOR_MUTATION} from '../sensors/SensorMutations';
 import {StopSensor} from '../sensors/types/StopSensor';
-import {JobType, JobStatus} from '../types/globalTypes';
+import {InstigationType, JobStatus} from '../types/globalTypes';
 import {Alert} from '../ui/Alert';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
@@ -169,7 +169,7 @@ const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) => {
       </td>
       <td>
         {latestTick ? (
-          <TickTag tick={latestTick} jobType={JobType.SENSOR} />
+          <TickTag tick={latestTick} jobType={InstigationType.SENSOR} />
         ) : (
           <span style={{color: Colors.GRAY4}}>None</span>
         )}
@@ -256,7 +256,7 @@ const ScheduleStateRow: React.FunctionComponent<{
           )}
         </div>
       </td>
-      <td>{latestTick ? <TickTag tick={latestTick} jobType={JobType.SCHEDULE} /> : null}</td>
+      <td>{latestTick ? <TickTag tick={latestTick} jobType={InstigationType.SCHEDULE} /> : null}</td>
       <td>
         <JobRunStatus jobState={scheduleState} />
       </td>

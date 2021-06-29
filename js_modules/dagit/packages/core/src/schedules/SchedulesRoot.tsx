@@ -6,7 +6,7 @@ import * as React from 'react';
 import {PythonErrorInfo} from '../app/PythonErrorInfo';
 import {useDocumentTitle} from '../hooks/useDocumentTitle';
 import {UnloadableSchedules} from '../jobs/UnloadableJobs';
-import {JobType} from '../types/globalTypes';
+import {InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {Group} from '../ui/Group';
 import {Loading} from '../ui/Loading';
@@ -28,7 +28,7 @@ export const SchedulesRoot = ({repoAddress}: {repoAddress: RepoAddress}) => {
   const queryResult = useQuery<SchedulesRootQuery>(SCHEDULES_ROOT_QUERY, {
     variables: {
       repositorySelector: repositorySelector,
-      jobType: JobType.SCHEDULE,
+      jobType: InstigationType.SCHEDULE,
     },
     fetchPolicy: 'cache-and-network',
     pollInterval: 50 * 1000,

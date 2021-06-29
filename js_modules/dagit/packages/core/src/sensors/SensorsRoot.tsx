@@ -8,7 +8,7 @@ import {useDocumentTitle} from '../hooks/useDocumentTitle';
 import {INSTANCE_HEALTH_FRAGMENT} from '../instance/InstanceHealthFragment';
 import {JOB_STATE_FRAGMENT} from '../jobs/JobUtils';
 import {UnloadableSensors} from '../jobs/UnloadableJobs';
-import {JobType} from '../types/globalTypes';
+import {InstigationType} from '../types/globalTypes';
 import {Group} from '../ui/Group';
 import {Loading} from '../ui/Loading';
 import {Page} from '../ui/Page';
@@ -32,7 +32,7 @@ export const SensorsRoot = (props: Props) => {
   const queryResult = useQuery<SensorsRootQuery>(SENSORS_ROOT_QUERY, {
     variables: {
       repositorySelector: repositorySelector,
-      jobType: JobType.SENSOR,
+      jobType: InstigationType.SENSOR,
     },
     fetchPolicy: 'cache-and-network',
     pollInterval: 50 * 1000,
@@ -98,7 +98,7 @@ export const SensorsRoot = (props: Props) => {
 };
 
 const SENSORS_ROOT_QUERY = gql`
-  query SensorsRootQuery($repositorySelector: RepositorySelector!, $jobType: JobType!) {
+  query SensorsRootQuery($repositorySelector: RepositorySelector!, $jobType: InstigationType!) {
     sensorsOrError(repositorySelector: $repositorySelector) {
       __typename
       ...PythonErrorFragment

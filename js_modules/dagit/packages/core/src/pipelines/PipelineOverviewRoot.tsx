@@ -20,7 +20,7 @@ import {
   RUN_ACTION_MENU_FRAGMENT,
   RUN_TIME_FRAGMENT,
 } from '../runs/RunUtils';
-import {JobType} from '../types/globalTypes';
+import {InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {Loading} from '../ui/Loading';
 import {Table} from '../ui/Table';
@@ -156,7 +156,7 @@ export const PipelineOverviewRoot: React.FC<Props> = (props) => {
                           name={schedule.name}
                           key={schedule.name}
                           jobState={schedule.scheduleState}
-                          jobType={JobType.SCHEDULE}
+                          jobType={InstigationType.SCHEDULE}
                           nextTick={schedule.futureTicks.results[0]}
                         />
                       ))}
@@ -178,7 +178,7 @@ export const PipelineOverviewRoot: React.FC<Props> = (props) => {
                           name={sensor.name}
                           key={sensor.name}
                           jobState={sensor.sensorState}
-                          jobType={JobType.SENSOR}
+                          jobType={InstigationType.SENSOR}
                           nextTick={sensor.nextTick || undefined}
                         />
                       ))}
@@ -256,7 +256,7 @@ const OverviewJob = ({
   repoAddress: RepoAddress;
   name: string;
   jobState: OverviewJobFragment;
-  jobType: JobType;
+  jobType: InstigationType;
   nextTick?: {
     timestamp: number;
   };
@@ -268,7 +268,7 @@ const OverviewJob = ({
         <Link
           to={workspacePathFromAddress(
             repoAddress,
-            `/${jobType === JobType.SCHEDULE ? 'schedules' : 'sensors'}/${name}`,
+            `/${jobType === InstigationType.SCHEDULE ? 'schedules' : 'sensors'}/${name}`,
           )}
         >
           {name}

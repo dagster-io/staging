@@ -27,12 +27,12 @@ from .tags import GraphenePipelineTag
 from .util import non_null_list
 
 
-class GrapheneJobType(graphene.Enum):
+class GrapheneInstigationType(graphene.Enum):
     SCHEDULE = "SCHEDULE"
     SENSOR = "SENSOR"
 
     class Meta:
-        name = "JobType"
+        name = "InstigationType"
 
 
 class GrapheneJobStatus(graphene.Enum):
@@ -252,7 +252,7 @@ class GrapheneFutureJobTicks(graphene.ObjectType):
 class GrapheneJobState(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     name = graphene.NonNull(graphene.String)
-    jobType = graphene.NonNull(GrapheneJobType)
+    jobType = graphene.NonNull(GrapheneInstigationType)
     status = graphene.NonNull(GrapheneJobStatus)
     repositoryOrigin = graphene.NonNull(GrapheneRepositoryOrigin)
     jobSpecificData = graphene.Field(GrapheneJobSpecificData)

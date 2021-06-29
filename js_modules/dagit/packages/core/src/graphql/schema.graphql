@@ -11,7 +11,7 @@ type Query {
   sensorOrError(sensorSelector: SensorSelector!): SensorOrError!
   sensorsOrError(repositorySelector: RepositorySelector!): SensorsOrError!
   jobStateOrError(jobSelector: JobSelector!): JobStateOrError!
-  unloadableJobStatesOrError(jobType: JobType): JobStatesOrError!
+  unloadableJobStatesOrError(jobType: InstigationType): JobStatesOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
@@ -898,7 +898,7 @@ type Schedule {
 type JobState {
   id: ID!
   name: String!
-  jobType: JobType!
+  jobType: InstigationType!
   status: JobStatus!
   repositoryOrigin: RepositoryOrigin!
   jobSpecificData: JobSpecificData
@@ -909,7 +909,7 @@ type JobState {
   runningCount: Int!
 }
 
-enum JobType {
+enum InstigationType {
   SCHEDULE
   SENSOR
 }

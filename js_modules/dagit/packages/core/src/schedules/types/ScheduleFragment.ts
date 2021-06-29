@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { PipelineRunStatus, JobType, JobStatus, JobTickStatus } from "./../../types/globalTypes";
+import { PipelineRunStatus, InstigationType, JobStatus, JobTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: ScheduleFragment
@@ -95,7 +95,7 @@ export interface ScheduleFragment_scheduleState {
   __typename: "JobState";
   id: string;
   name: string;
-  jobType: JobType;
+  jobType: InstigationType;
   status: JobStatus;
   repositoryOrigin: ScheduleFragment_scheduleState_repositoryOrigin;
   jobSpecificData: ScheduleFragment_scheduleState_jobSpecificData | null;

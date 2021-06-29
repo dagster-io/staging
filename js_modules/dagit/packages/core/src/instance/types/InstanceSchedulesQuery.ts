@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { PipelineRunStatus, JobType, JobStatus, JobTickStatus } from "./../../types/globalTypes";
+import { PipelineRunStatus, InstigationType, JobStatus, JobTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: InstanceSchedulesQuery
@@ -141,7 +141,7 @@ export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection
   __typename: "JobState";
   id: string;
   name: string;
-  jobType: JobType;
+  jobType: InstigationType;
   status: JobStatus;
   repositoryOrigin: InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_repositoryOrigin;
   jobSpecificData: InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_jobSpecificData | null;
@@ -289,7 +289,7 @@ export interface InstanceSchedulesQuery_unloadableJobStatesOrError_JobStates_res
   __typename: "JobState";
   id: string;
   name: string;
-  jobType: JobType;
+  jobType: InstigationType;
   status: JobStatus;
   repositoryOrigin: InstanceSchedulesQuery_unloadableJobStatesOrError_JobStates_results_repositoryOrigin;
   jobSpecificData: InstanceSchedulesQuery_unloadableJobStatesOrError_JobStates_results_jobSpecificData | null;
