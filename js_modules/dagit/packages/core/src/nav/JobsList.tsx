@@ -183,7 +183,8 @@ export const JobsList: React.FC<JobsListProps> = ({repos, repoPath, selector}) =
           const border: BorderSetting | null = isSelected
             ? {side: 'left', width: 4, color: isSelected ? Colors.COBALT3 : Colors.GRAY3}
             : null;
-          const icon = p.instigationType === InstigationType.SCHEDULE ? 'time' : 'automatic-updates';
+          const icon =
+            p.instigationType === InstigationType.SCHEDULE ? 'time' : 'automatic-updates';
 
           return (
             <Item key={p.to} className={`${isSelected ? 'selected' : ''}`} to={p.to}>

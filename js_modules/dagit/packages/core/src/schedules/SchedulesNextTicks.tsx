@@ -61,7 +61,8 @@ export const SchedulesNextTicks: React.FC<{
 
     const futureTickSchedules = schedules.filter(
       (schedule) =>
-        schedule.futureTicks.results.length && schedule.scheduleState.status === InstigationStatus.RUNNING,
+        schedule.futureTicks.results.length &&
+        schedule.scheduleState.status === InstigationStatus.RUNNING,
     );
 
     const minMaxTimestamp = Math.min(
