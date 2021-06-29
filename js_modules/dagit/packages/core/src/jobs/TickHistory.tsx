@@ -167,10 +167,10 @@ export const JobTickHistory = ({
     return <PythonErrorInfo error={data.jobStateOrError} />;
   }
 
-  const {ticks, nextTick, jobType} = data.jobStateOrError;
+  const {ticks, nextTick, instigationType} = data.jobStateOrError;
   const displayedTicks = ticks.filter((tick) =>
     tick.status === InstigationTickStatus.SKIPPED
-      ? jobType === InstigationType.SCHEDULE && shownStates[tick.status]
+      ? instigationType === InstigationType.SCHEDULE && shownStates[tick.status]
       : shownStates[tick.status],
   );
   const StatusFilter = ({status}: {status: InstigationTickStatus}) => (
@@ -221,7 +221,7 @@ export const JobTickHistory = ({
             <Group direction="row" spacing={16}>
               <StatusFilter status={InstigationTickStatus.SUCCESS} />
               <StatusFilter status={InstigationTickStatus.FAILURE} />
-              {jobType === InstigationType.SCHEDULE ? (
+              {instigationType === InstigationType.SCHEDULE ? (
                 <StatusFilter status={InstigationTickStatus.SKIPPED} />
               ) : null}
             </Group>
@@ -532,7 +532,7 @@ const JOB_TICK_HISTORY_QUERY = gql`
       __typename
       ... on InstigationState {
         id
-        jobType
+        instigationType
         nextTick {
           timestamp
         }

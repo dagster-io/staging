@@ -35,13 +35,13 @@ export const JOB_STATE_FRAGMENT = gql`
   fragment InstigationStateFragment on InstigationState {
     id
     name
-    jobType
+    instigationType
     status
     repositoryOrigin {
       id
       ...RepositoryOriginFragment
     }
-    jobSpecificData {
+    typeSpecificData {
       ... on SensorData {
         lastRunKey
       }

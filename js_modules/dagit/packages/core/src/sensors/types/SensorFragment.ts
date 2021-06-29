@@ -29,17 +29,17 @@ export interface SensorFragment_sensorState_repositoryOrigin {
   repositoryLocationMetadata: SensorFragment_sensorState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface SensorFragment_sensorState_jobSpecificData_SensorData {
+export interface SensorFragment_sensorState_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface SensorFragment_sensorState_jobSpecificData_ScheduleData {
+export interface SensorFragment_sensorState_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type SensorFragment_sensorState_jobSpecificData = SensorFragment_sensorState_jobSpecificData_SensorData | SensorFragment_sensorState_jobSpecificData_ScheduleData;
+export type SensorFragment_sensorState_typeSpecificData = SensorFragment_sensorState_typeSpecificData_SensorData | SensorFragment_sensorState_typeSpecificData_ScheduleData;
 
 export interface SensorFragment_sensorState_runs {
   __typename: "PipelineRun";
@@ -75,10 +75,10 @@ export interface SensorFragment_sensorState {
   __typename: "InstigationState";
   id: string;
   name: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   status: InstigationStatus;
   repositoryOrigin: SensorFragment_sensorState_repositoryOrigin;
-  jobSpecificData: SensorFragment_sensorState_jobSpecificData | null;
+  typeSpecificData: SensorFragment_sensorState_typeSpecificData | null;
   runs: SensorFragment_sensorState_runs[];
   ticks: SensorFragment_sensorState_ticks[];
   runningCount: number;

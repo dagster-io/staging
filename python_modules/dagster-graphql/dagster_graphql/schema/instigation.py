@@ -252,10 +252,10 @@ class GrapheneFutureInstigationTicks(graphene.ObjectType):
 class GrapheneInstigationState(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     name = graphene.NonNull(graphene.String)
-    jobType = graphene.NonNull(GrapheneInstigationType)
+    instigationType = graphene.NonNull(GrapheneInstigationType)
     status = graphene.NonNull(GrapheneInstigationStatus)
     repositoryOrigin = graphene.NonNull(GrapheneRepositoryOrigin)
-    jobSpecificData = graphene.Field(GrapheneInstigationTypeSpecificData)
+    typeSpecificData = graphene.Field(GrapheneInstigationTypeSpecificData)
     runs = graphene.Field(
         non_null_list("dagster_graphql.schema.pipelines.pipeline.GraphenePipelineRun"),
         limit=graphene.Int(),
@@ -278,7 +278,7 @@ class GrapheneInstigationState(graphene.ObjectType):
         super().__init__(
             id=job_state.job_origin_id,
             name=job_state.name,
-            jobType=job_state.job_type,
+            instigationType=job_state.job_type,
             status=job_state.status,
         )
 
@@ -286,7 +286,7 @@ class GrapheneInstigationState(graphene.ObjectType):
         origin = self._job_state.origin.external_repository_origin
         return GrapheneRepositoryOrigin(origin)
 
-    def resolve_jobSpecificData(self, _graphene_info):
+    def resolve_typeSpecificData(self, _graphene_info):
         if not self._job_state.job_specific_data:
             return None
 

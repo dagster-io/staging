@@ -218,7 +218,7 @@ const ScheduleRow: React.FC<{
       </td>
       <td>
         {latestTick ? (
-          <TickTag tick={latestTick} jobType={InstigationType.SCHEDULE} />
+          <TickTag tick={latestTick} instigationType={InstigationType.SCHEDULE} />
         ) : (
           <span style={{color: Colors.GRAY4}}>None</span>
         )}

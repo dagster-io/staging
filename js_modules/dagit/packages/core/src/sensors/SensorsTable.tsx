@@ -97,7 +97,7 @@ const SensorRow: React.FC<{
       <td>{humanizeSensorInterval(sensor.minIntervalSeconds)}</td>
       <td>
         {latestTick ? (
-          <TickTag tick={latestTick} jobType={InstigationType.SENSOR} />
+          <TickTag tick={latestTick} instigationType={InstigationType.SENSOR} />
         ) : (
           <span style={{color: Colors.GRAY4}}>None</span>
         )}

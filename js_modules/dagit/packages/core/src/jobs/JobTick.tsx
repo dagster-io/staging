@@ -30,8 +30,8 @@ import {TickTagFragment} from './types/TickTagFragment';
 
 export const TickTag: React.FunctionComponent<{
   tick: TickTagFragment;
-  jobType?: InstigationType;
-}> = ({tick, jobType}) => {
+  instigationType?: InstigationType;
+}> = ({tick, instigationType}) => {
   const [open, setOpen] = React.useState<boolean>(false);
   switch (tick.status) {
     case InstigationTickStatus.STARTED:
@@ -107,8 +107,8 @@ export const TickTag: React.FunctionComponent<{
           <LinkButton
             onClick={() =>
               showCustomAlert({
-                title: jobType
-                  ? jobType === InstigationType.SCHEDULE
+                title: instigationType
+                  ? instigationType === InstigationType.SCHEDULE
                     ? 'Schedule Response'
                     : 'Sensor Response'
                   : 'Python Error',

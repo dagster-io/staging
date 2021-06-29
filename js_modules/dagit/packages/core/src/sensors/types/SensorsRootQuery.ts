@@ -46,17 +46,17 @@ export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_rep
   repositoryLocationMetadata: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_SensorData {
+export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_ScheduleData {
+export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData = SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_SensorData | SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData_ScheduleData;
+export type SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_typeSpecificData = SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_typeSpecificData_SensorData | SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_typeSpecificData_ScheduleData;
 
 export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_runs {
   __typename: "PipelineRun";
@@ -92,10 +92,10 @@ export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState {
   __typename: "InstigationState";
   id: string;
   name: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   status: InstigationStatus;
   repositoryOrigin: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_repositoryOrigin;
-  jobSpecificData: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_jobSpecificData | null;
+  typeSpecificData: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_typeSpecificData | null;
   runs: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_runs[];
   ticks: SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_ticks[];
   runningCount: number;
@@ -136,17 +136,17 @@ export interface SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_r
   repositoryLocationMetadata: SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_jobSpecificData_SensorData {
+export interface SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_jobSpecificData_ScheduleData {
+export interface SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_jobSpecificData = SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_jobSpecificData_SensorData | SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_jobSpecificData_ScheduleData;
+export type SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData = SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_SensorData | SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData_ScheduleData;
 
 export interface SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_runs {
   __typename: "PipelineRun";
@@ -182,10 +182,10 @@ export interface SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_r
   __typename: "InstigationState";
   id: string;
   name: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   status: InstigationStatus;
   repositoryOrigin: SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_repositoryOrigin;
-  jobSpecificData: SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_jobSpecificData | null;
+  typeSpecificData: SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_typeSpecificData | null;
   runs: SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_runs[];
   ticks: SensorsRootQuery_unloadableJobStatesOrError_InstigationStates_results_ticks[];
   runningCount: number;
