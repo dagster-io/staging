@@ -178,12 +178,12 @@ def default_execution_params():
     }
 
 
-def _get_unloadable_schedule_origin(job_name):
+def _get_unloadable_schedule_origin(name):
     working_directory = os.path.dirname(__file__)
     recon_repo = ReconstructableRepository.for_file(__file__, "doesnt_exist", working_directory)
     return ExternalRepositoryOrigin(
         InProcessRepositoryLocationOrigin(recon_repo), "fake_repository"
-    ).get_job_origin(job_name)
+    ).get_job_origin(name)
 
 
 def test_get_schedule_definitions_for_repository(graphql_context):

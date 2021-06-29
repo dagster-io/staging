@@ -1,6 +1,6 @@
 from dagster import check
 from dagster.core.definitions.run_request import JobType
-from dagster.core.host_representation import JobSelector
+from dagster.core.host_representation import InstigationSelector
 from dagster.core.scheduler.job import JobStatus
 
 from .utils import capture_error
@@ -36,25 +36,25 @@ def get_unloadable_job_states_or_error(graphene_info, job_type=None):
 def get_job_state_or_error(graphene_info, selector):
     from ..schema.instigation import GrapheneInstigationState
 
-    check.inst_param(selector, "selector", JobSelector)
+    check.inst_param(selector, "selector", InstigationSelector)
     location = graphene_info.context.get_repository_location(selector.location_name)
     repository = location.get_repository(selector.repository_name)
 
-    if repository.has_external_sensor(selector.job_name):
-        external_sensor = repository.get_external_sensor(selector.job_name)
+    if repository.has_external_sensor(selector.name):
+        external_sensor = repository.get_external_sensor(selector.name)
         job_state = graphene_info.context.instance.get_job_state(
             external_sensor.get_external_origin_id()
         )
         if not job_state:
             job_state = external_sensor.get_default_job_state(graphene_info.context.instance)
-    elif repository.has_external_schedule(selector.job_name):
-        external_schedule = repository.get_external_schedule(selector.job_name)
+    elif repository.has_external_schedule(selector.name):
+        external_schedule = repository.get_external_schedule(selector.name)
         job_state = graphene_info.context.instance.get_job_state(
             external_schedule.get_external_origin_id()
         )
         if not job_state:
             job_state = external_schedule.get_default_job_state(graphene_info.context.instance)
     else:
-        check.failed(f"Could not find a definition for {selector.job_name}")
+        check.failed(f"Could not find a definition for {selector.name}")
 
     return GrapheneInstigationState(job_state=job_state)

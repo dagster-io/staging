@@ -10,7 +10,7 @@ type Query {
   schedulesOrError(repositorySelector: RepositorySelector!): SchedulesOrError!
   sensorOrError(sensorSelector: SensorSelector!): SensorOrError!
   sensorsOrError(repositorySelector: RepositorySelector!): SensorsOrError!
-  jobStateOrError(jobSelector: JobSelector!): InstigationStateOrError!
+  jobStateOrError(instigationSelector: InstigationSelector!): InstigationStateOrError!
   unloadableJobStatesOrError(jobType: InstigationType): InstigationStatesOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
@@ -1198,10 +1198,10 @@ type Sensors {
 
 union InstigationStateOrError = InstigationState | PythonError
 
-input JobSelector {
+input InstigationSelector {
   repositoryName: String!
   repositoryLocationName: String!
-  jobName: String!
+  name: String!
 }
 
 union InstigationStatesOrError = InstigationStates | PythonError
