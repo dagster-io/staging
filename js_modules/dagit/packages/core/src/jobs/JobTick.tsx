@@ -211,7 +211,7 @@ const LinkButton = styled.button`
 `;
 
 export const TICK_TAG_FRAGMENT = gql`
-  fragment TickTagFragment on JobTick {
+  fragment TickTagFragment on InstigationTick {
     id
     status
     timestamp

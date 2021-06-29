@@ -147,7 +147,7 @@ export interface SchedulerInfoQuery_repositoriesOrError_RepositoryConnection_nod
 }
 
 export interface SchedulerInfoQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -170,7 +170,7 @@ export interface SchedulerInfoQuery_repositoriesOrError_RepositoryConnection_nod
 }
 
 export interface SchedulerInfoQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_futureTicks_results {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 

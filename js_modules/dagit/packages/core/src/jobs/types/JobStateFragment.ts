@@ -57,7 +57,7 @@ export interface JobStateFragment_ticks_error {
 }
 
 export interface JobStateFragment_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;

@@ -89,7 +89,7 @@ class GrapheneInstigationTypeSpecificData(graphene.Union):
         name = "InstigationTypeSpecificData"
 
 
-class GrapheneJobTick(graphene.ObjectType):
+class GrapheneInstigationTick(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     status = graphene.NonNull(GrapheneInstigationTickStatus)
     timestamp = graphene.NonNull(graphene.Float)
@@ -100,7 +100,7 @@ class GrapheneJobTick(graphene.ObjectType):
     originRunIds = non_null_list(graphene.String)
 
     class Meta:
-        name = "JobTick"
+        name = "InstigationTick"
 
     def __init__(self, _, job_tick):
         self._job_tick = check.inst_param(job_tick, "job_tick", JobTick)
@@ -134,12 +134,12 @@ class GrapheneJobTick(graphene.ObjectType):
         ]
 
 
-class GrapheneFutureJobTick(graphene.ObjectType):
+class GrapheneFutureInstigationTick(graphene.ObjectType):
     timestamp = graphene.NonNull(graphene.Float)
     evaluationResult = graphene.Field(lambda: GrapheneTickEvaluation)
 
     class Meta:
-        name = "FutureJobTick"
+        name = "FutureInstigationTick"
 
     def __init__(self, job_state, timestamp):
         self._job_state = check.inst_param(job_state, "job_state", JobState)
@@ -241,8 +241,8 @@ class GrapheneRunRequest(graphene.ObjectType):
         return yaml.dump(self._run_request.run_config, default_flow_style=False, allow_unicode=True)
 
 
-class GrapheneFutureJobTicks(graphene.ObjectType):
-    results = non_null_list(GrapheneFutureJobTick)
+class GrapheneFutureInstigationTicks(graphene.ObjectType):
+    results = non_null_list(GrapheneFutureInstigationTick)
     cursor = graphene.NonNull(graphene.Float)
 
     class Meta:
@@ -262,12 +262,12 @@ class GrapheneJobState(graphene.ObjectType):
     )
     runsCount = graphene.NonNull(graphene.Int)
     ticks = graphene.Field(
-        non_null_list(GrapheneJobTick),
+        non_null_list(GrapheneInstigationTick),
         dayRange=graphene.Int(),
         dayOffset=graphene.Int(),
         limit=graphene.Int(),
     )
-    nextTick = graphene.Field(GrapheneFutureJobTick)
+    nextTick = graphene.Field(GrapheneFutureInstigationTick)
     runningCount = graphene.NonNull(graphene.Int)  # remove with cron scheduler
 
     class Meta:
@@ -328,7 +328,7 @@ class GrapheneJobState(graphene.ObjectType):
             else None
         )
         return [
-            GrapheneJobTick(graphene_info, tick)
+            GrapheneInstigationTick(graphene_info, tick)
             for tick in graphene_info.context.instance.get_job_ticks(
                 self._job_state.job_origin_id, before=before, after=after, limit=limit
             )
@@ -370,14 +370,14 @@ class GrapheneJobStatesOrError(graphene.Union):
 
 
 types = [
-    GrapheneFutureJobTick,
-    GrapheneFutureJobTicks,
+    GrapheneFutureInstigationTick,
+    GrapheneFutureInstigationTicks,
     GrapheneInstigationTypeSpecificData,
     GrapheneJobState,
     GrapheneJobStateOrError,
     GrapheneJobStates,
     GrapheneJobStatesOrError,
-    GrapheneJobTick,
+    GrapheneInstigationTick,
     GrapheneScheduleData,
     GrapheneSensorData,
 ]

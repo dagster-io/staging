@@ -5,12 +5,12 @@ import {Line, ChartComponentProps} from 'react-chartjs-2';
 import {InstigationTickStatus} from '../types/globalTypes';
 
 import {
-  JobTickHistoryQuery_jobStateOrError_JobState_ticks,
-  JobTickHistoryQuery_jobStateOrError_JobState_nextTick,
-} from './types/JobTickHistoryQuery';
+  TickHistoryQuery_jobStateOrError_JobState_ticks,
+  TickHistoryQuery_jobStateOrError_JobState_nextTick,
+} from './types/TickHistoryQuery';
 
-type FutureTick = JobTickHistoryQuery_jobStateOrError_JobState_nextTick;
-type JobTick = JobTickHistoryQuery_jobStateOrError_JobState_ticks;
+type FutureTick = TickHistoryQuery_jobStateOrError_JobState_nextTick;
+type InstigationTick = TickHistoryQuery_jobStateOrError_JobState_ticks;
 
 const COLOR_MAP = {
   [InstigationTickStatus.SUCCESS]: Colors.BLUE3,
@@ -22,10 +22,10 @@ const COLOR_MAP = {
 const REFRESH_INTERVAL = 100;
 
 export const LiveTickTimeline: React.FC<{
-  ticks: JobTick[];
+  ticks: InstigationTick[];
   nextTick: FutureTick | null;
-  onHoverTick: (JobTick?: any) => void;
-  onSelectTick: (JobTick?: any) => void;
+  onHoverTick: (InstigationTick?: any) => void;
+  onSelectTick: (InstigationTick?: any) => void;
 }> = ({ticks, nextTick, onHoverTick, onSelectTick}) => {
   const [now, setNow] = React.useState<number>(Date.now());
   const [graphNow, setGraphNow] = React.useState<number>(Date.now());

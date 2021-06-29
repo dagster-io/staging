@@ -28,7 +28,7 @@ export interface SensorsRootQuery_sensorsOrError_PythonError {
 }
 
 export interface SensorsRootQuery_sensorsOrError_Sensors_results_nextTick {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
@@ -79,7 +79,7 @@ export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_tic
 }
 
 export interface SensorsRootQuery_sensorsOrError_Sensors_results_sensorState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -169,7 +169,7 @@ export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_t
 }
 
 export interface SensorsRootQuery_unloadableJobStatesOrError_JobStates_results_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;

@@ -88,7 +88,7 @@ export interface RepositorySchedulesFragment_schedules_scheduleState_ticks_error
 }
 
 export interface RepositorySchedulesFragment_schedules_scheduleState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -111,7 +111,7 @@ export interface RepositorySchedulesFragment_schedules_scheduleState {
 }
 
 export interface RepositorySchedulesFragment_schedules_futureTicks_results {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 

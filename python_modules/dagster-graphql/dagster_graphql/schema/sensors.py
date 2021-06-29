@@ -12,7 +12,7 @@ from .errors import (
     GrapheneSensorNotFoundError,
 )
 from .inputs import GrapheneSensorSelector
-from .instigation import GrapheneFutureJobTick, GrapheneJobState
+from .instigation import GrapheneFutureInstigationTick, GrapheneJobState
 from .util import non_null_list
 
 
@@ -26,7 +26,7 @@ class GrapheneSensor(graphene.ObjectType):
     sensorState = graphene.NonNull(GrapheneJobState)
     minIntervalSeconds = graphene.NonNull(graphene.Int)
     description = graphene.String()
-    nextTick = graphene.Field(GrapheneFutureJobTick)
+    nextTick = graphene.Field(GrapheneFutureInstigationTick)
 
     class Meta:
         name = "Sensor"

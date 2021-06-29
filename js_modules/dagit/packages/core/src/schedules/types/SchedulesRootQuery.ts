@@ -92,7 +92,7 @@ export interface SchedulesRootQuery_repositoryOrError_Repository_schedules_sched
 }
 
 export interface SchedulesRootQuery_repositoryOrError_Repository_schedules_scheduleState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -115,7 +115,7 @@ export interface SchedulesRootQuery_repositoryOrError_Repository_schedules_sched
 }
 
 export interface SchedulesRootQuery_repositoryOrError_Repository_schedules_futureTicks_results {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
@@ -241,7 +241,7 @@ export interface SchedulesRootQuery_unloadableJobStatesOrError_JobStates_results
 }
 
 export interface SchedulesRootQuery_unloadableJobStatesOrError_JobStates_results_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;

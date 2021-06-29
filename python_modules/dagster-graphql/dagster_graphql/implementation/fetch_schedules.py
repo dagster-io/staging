@@ -118,7 +118,7 @@ def get_schedule_or_error(graphene_info, schedule_selector):
 
 
 def get_schedule_next_tick(graphene_info, schedule_state):
-    from ..schema.instigation import GrapheneFutureJobTick
+    from ..schema.instigation import GrapheneFutureInstigationTick
 
     if schedule_state.status != JobStatus.RUNNING:
         return None
@@ -141,4 +141,4 @@ def get_schedule_next_tick(graphene_info, schedule_state):
     )
 
     next_timestamp = next(time_iter).timestamp()
-    return GrapheneFutureJobTick(schedule_state, next_timestamp)
+    return GrapheneFutureInstigationTick(schedule_state, next_timestamp)

@@ -24,7 +24,7 @@ export interface TickTagFragment_error {
 }
 
 export interface TickTagFragment {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;

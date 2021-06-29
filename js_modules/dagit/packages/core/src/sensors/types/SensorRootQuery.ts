@@ -15,7 +15,7 @@ export interface SensorRootQuery_sensorOrError_SensorNotFoundError {
 }
 
 export interface SensorRootQuery_sensorOrError_Sensor_nextTick {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
@@ -66,7 +66,7 @@ export interface SensorRootQuery_sensorOrError_Sensor_sensorState_ticks_error {
 }
 
 export interface SensorRootQuery_sensorOrError_Sensor_sensorState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;

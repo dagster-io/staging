@@ -892,7 +892,7 @@ type Schedule {
   scheduleState: JobState!
   partitionSet: PartitionSet
   futureTicks(cursor: Float, limit: Int): FutureJobTicks!
-  futureTick(tickTimestamp: Int!): FutureJobTick!
+  futureTick(tickTimestamp: Int!): FutureInstigationTick!
 }
 
 type JobState {
@@ -904,8 +904,8 @@ type JobState {
   jobSpecificData: InstigationTypeSpecificData
   runs(limit: Int): [PipelineRun!]!
   runsCount: Int!
-  ticks(dayRange: Int, dayOffset: Int, limit: Int): [JobTick!]!
-  nextTick: FutureJobTick
+  ticks(dayRange: Int, dayOffset: Int, limit: Int): [InstigationTick!]!
+  nextTick: FutureInstigationTick
   runningCount: Int!
 }
 
@@ -931,7 +931,7 @@ type ScheduleData {
   startTimestamp: Float
 }
 
-type JobTick {
+type InstigationTick {
   id: ID!
   status: InstigationTickStatus!
   timestamp: Float!
@@ -949,7 +949,7 @@ enum InstigationTickStatus {
   FAILURE
 }
 
-type FutureJobTick {
+type FutureInstigationTick {
   timestamp: Float!
   evaluationResult: TickEvaluation
 }
@@ -1034,7 +1034,7 @@ type PartitionStatus {
 }
 
 type FutureJobTicks {
-  results: [FutureJobTick!]!
+  results: [FutureInstigationTick!]!
   cursor: Float!
 }
 
@@ -1048,7 +1048,7 @@ type Sensor {
   sensorState: JobState!
   minIntervalSeconds: Int!
   description: String
-  nextTick: FutureJobTick
+  nextTick: FutureInstigationTick
 }
 
 type PipelinePreset {
