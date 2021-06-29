@@ -133,7 +133,7 @@ export const ScheduleDetails: React.FC<{
                   timezone={executionTimezone}
                   timeFormat={TIME_FORMAT}
                 />
-                <TickTag tick={latestTick} jobType={InstigationType.SCHEDULE} />
+                <TickTag tick={latestTick} instigationType={InstigationType.SCHEDULE} />
               </Group>
             ) : (
               'Schedule has never run'

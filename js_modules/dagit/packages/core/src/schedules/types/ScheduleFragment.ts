@@ -49,17 +49,17 @@ export interface ScheduleFragment_scheduleState_repositoryOrigin {
   repositoryLocationMetadata: ScheduleFragment_scheduleState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface ScheduleFragment_scheduleState_jobSpecificData_SensorData {
+export interface ScheduleFragment_scheduleState_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface ScheduleFragment_scheduleState_jobSpecificData_ScheduleData {
+export interface ScheduleFragment_scheduleState_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type ScheduleFragment_scheduleState_jobSpecificData = ScheduleFragment_scheduleState_jobSpecificData_SensorData | ScheduleFragment_scheduleState_jobSpecificData_ScheduleData;
+export type ScheduleFragment_scheduleState_typeSpecificData = ScheduleFragment_scheduleState_typeSpecificData_SensorData | ScheduleFragment_scheduleState_typeSpecificData_ScheduleData;
 
 export interface ScheduleFragment_scheduleState_runs {
   __typename: "PipelineRun";
@@ -95,10 +95,10 @@ export interface ScheduleFragment_scheduleState {
   __typename: "InstigationState";
   id: string;
   name: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   status: InstigationStatus;
   repositoryOrigin: ScheduleFragment_scheduleState_repositoryOrigin;
-  jobSpecificData: ScheduleFragment_scheduleState_jobSpecificData | null;
+  typeSpecificData: ScheduleFragment_scheduleState_typeSpecificData | null;
   runs: ScheduleFragment_scheduleState_runs[];
   ticks: ScheduleFragment_scheduleState_ticks[];
   runningCount: number;

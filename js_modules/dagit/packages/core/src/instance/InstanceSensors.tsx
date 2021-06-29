@@ -70,7 +70,7 @@ const AllSensors: React.FC<{data: InstanceSensorsQuery}> = ({data}) => {
     </Group>
   ) : null;
 
-  const unloadableSensors = unloadableJobs.filter((state) => state.jobType === InstigationType.SENSOR);
+  const unloadableSensors = unloadableJobs.filter((state) => state.instigationType === InstigationType.SENSOR);
   const unloadableSensorsSection = unloadableSensors.length ? (
     <UnloadableSensors sensorStates={unloadableSensors} />
   ) : null;

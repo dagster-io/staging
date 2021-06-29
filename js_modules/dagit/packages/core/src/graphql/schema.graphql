@@ -898,10 +898,10 @@ type Schedule {
 type InstigationState {
   id: ID!
   name: String!
-  jobType: InstigationType!
+  instigationType: InstigationType!
   status: InstigationStatus!
   repositoryOrigin: RepositoryOrigin!
-  jobSpecificData: InstigationTypeSpecificData
+  typeSpecificData: InstigationTypeSpecificData
   runs(limit: Int): [PipelineRun!]!
   runsCount: Int!
   ticks(dayRange: Int, dayOffset: Int, limit: Int): [InstigationTick!]!

@@ -115,7 +115,7 @@ export const SensorDetails: React.FC<{
             value: latestTick ? (
               <Group direction="row" spacing={8} alignItems="center">
                 <TimestampDisplay timestamp={latestTick.timestamp} />
-                <TickTag tick={latestTick} jobType={InstigationType.SENSOR} />
+                <TickTag tick={latestTick} instigationType={InstigationType.SENSOR} />
               </Group>
             ) : (
               'Sensor has never run'

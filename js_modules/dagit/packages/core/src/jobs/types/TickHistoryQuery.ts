@@ -42,7 +42,7 @@ export interface TickHistoryQuery_jobStateOrError_InstigationState_ticks {
 export interface TickHistoryQuery_jobStateOrError_InstigationState {
   __typename: "InstigationState";
   id: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   nextTick: TickHistoryQuery_jobStateOrError_InstigationState_nextTick | null;
   ticks: TickHistoryQuery_jobStateOrError_InstigationState_ticks[];
 }
