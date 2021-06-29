@@ -29,9 +29,9 @@ import {RepoAddress} from '../workspace/types';
 import {TICK_TAG_FRAGMENT, RunList, TickTag, FailedRunList} from './JobTick';
 import {LiveTickTimeline} from './LiveTickTimeline';
 import {
-  JobTickHistoryQuery,
-  JobTickHistoryQuery_jobStateOrError_JobState_ticks,
-} from './types/JobTickHistoryQuery';
+  TickHistoryQuery,
+  TickHistoryQuery_jobStateOrError_JobState_ticks,
+} from './types/TickHistoryQuery';
 
 import 'chartjs-plugin-zoom';
 
@@ -93,7 +93,7 @@ const TABS = [
   {id: 'all', label: 'All'},
 ];
 
-type JobTick = JobTickHistoryQuery_jobStateOrError_JobState_ticks;
+type InstigationTick = TickHistoryQuery_jobStateOrError_JobState_ticks;
 const MILLIS_PER_DAY = 86400 * 1000;
 
 export const JobTickHistory = ({
@@ -113,7 +113,7 @@ export const JobTickHistory = ({
   );
   const [pollingPaused, pausePolling] = React.useState<boolean>(false);
   const [selectedTick, setSelectedTick] = React.useState<
-    JobTickHistoryQuery_jobStateOrError_JobState_ticks | undefined
+    TickHistoryQuery_jobStateOrError_JobState_ticks | undefined
   >();
   React.useEffect(() => {
     if (!showRecent && selectedTab === 'recent') {
@@ -121,7 +121,7 @@ export const JobTickHistory = ({
     }
   }, [selectedTab, showRecent]);
   const selectedRange = TABS.find((x) => x.id === selectedTab)?.range;
-  const {data} = useQuery<JobTickHistoryQuery>(JOB_TICK_HISTORY_QUERY, {
+  const {data} = useQuery<TickHistoryQuery>(JOB_TICK_HISTORY_QUERY, {
     variables: {
       jobSelector: {
         ...repoAddressToSelector(repoAddress),
@@ -181,7 +181,7 @@ export const JobTickHistory = ({
       onClick={() => setShownStates({...shownStates, [status]: !shownStates[status]})}
     />
   );
-  const onTickClick = (tick?: JobTick) => {
+  const onTickClick = (tick?: InstigationTick) => {
     setSelectedTick(tick);
     if (!tick) {
       return;
@@ -193,7 +193,7 @@ export const JobTickHistory = ({
       });
     }
   };
-  const onTickHover = (tick?: JobTick) => {
+  const onTickHover = (tick?: InstigationTick) => {
     if (!tick) {
       pausePolling(false);
     }
@@ -291,15 +291,15 @@ interface Bounds {
 }
 
 const TickHistoryGraph: React.FC<{
-  ticks: JobTick[];
-  selectedTick?: JobTick;
-  onSelectTick: (tick: JobTick) => void;
-  onHoverTick: (tick?: JobTick) => void;
+  ticks: InstigationTick[];
+  selectedTick?: InstigationTick;
+  onSelectTick: (tick: InstigationTick) => void;
+  onHoverTick: (tick?: InstigationTick) => void;
   selectedTab: string;
   maxBounds?: Bounds;
 }> = ({ticks, selectedTick, onSelectTick, onHoverTick, selectedTab, maxBounds}) => {
   const [bounds, setBounds] = React.useState<Bounds | null>(null);
-  const [hoveredTick, setHoveredTick] = React.useState<JobTick | undefined>();
+  const [hoveredTick, setHoveredTick] = React.useState<InstigationTick | undefined>();
   React.useEffect(() => {
     setBounds(null);
   }, [selectedTab]);
@@ -527,7 +527,7 @@ const TickHistoryGraph: React.FC<{
 };
 
 const JOB_TICK_HISTORY_QUERY = gql`
-  query JobTickHistoryQuery($jobSelector: JobSelector!, $dayRange: Int, $limit: Int) {
+  query TickHistoryQuery($jobSelector: JobSelector!, $dayRange: Int, $limit: Int) {
     jobStateOrError(jobSelector: $jobSelector) {
       __typename
       ... on JobState {

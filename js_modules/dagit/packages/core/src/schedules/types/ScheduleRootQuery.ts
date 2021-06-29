@@ -107,7 +107,7 @@ export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_ticks_
 }
 
 export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -130,12 +130,12 @@ export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState {
 }
 
 export interface ScheduleRootQuery_scheduleOrError_Schedule_futureTicks_results {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
 export interface ScheduleRootQuery_scheduleOrError_Schedule_futureTicks {
-  __typename: "FutureJobTicks";
+  __typename: "FutureInstigationTicks";
   results: ScheduleRootQuery_scheduleOrError_Schedule_futureTicks_results[];
 }
 

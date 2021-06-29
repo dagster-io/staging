@@ -82,7 +82,7 @@ export interface ScheduleFragment_scheduleState_ticks_error {
 }
 
 export interface ScheduleFragment_scheduleState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -105,12 +105,12 @@ export interface ScheduleFragment_scheduleState {
 }
 
 export interface ScheduleFragment_futureTicks_results {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
 export interface ScheduleFragment_futureTicks {
-  __typename: "FutureJobTicks";
+  __typename: "FutureInstigationTicks";
   results: ScheduleFragment_futureTicks_results[];
 }
 

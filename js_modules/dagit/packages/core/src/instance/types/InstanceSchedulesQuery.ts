@@ -128,7 +128,7 @@ export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection
 }
 
 export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -151,12 +151,12 @@ export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection
 }
 
 export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_futureTicks_results {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
 export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_futureTicks {
-  __typename: "FutureJobTicks";
+  __typename: "FutureInstigationTicks";
   results: InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_futureTicks_results[];
 }
 
@@ -276,7 +276,7 @@ export interface InstanceSchedulesQuery_unloadableJobStatesOrError_JobStates_res
 }
 
 export interface InstanceSchedulesQuery_unloadableJobStatesOrError_JobStates_results_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;

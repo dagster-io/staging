@@ -108,7 +108,7 @@ export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_n
 }
 
 export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_sensors_nextTick {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
@@ -159,7 +159,7 @@ export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_n
 }
 
 export interface InstanceSensorsQuery_repositoriesOrError_RepositoryConnection_nodes_sensors_sensorState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
@@ -271,7 +271,7 @@ export interface InstanceSensorsQuery_unloadableJobStatesOrError_JobStates_resul
 }
 
 export interface InstanceSensorsQuery_unloadableJobStatesOrError_JobStates_results_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;

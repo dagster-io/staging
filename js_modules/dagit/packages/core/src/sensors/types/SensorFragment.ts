@@ -11,7 +11,7 @@ import { InstigationType, InstigationStatus, PipelineRunStatus, InstigationTickS
 // ====================================================
 
 export interface SensorFragment_nextTick {
-  __typename: "FutureJobTick";
+  __typename: "FutureInstigationTick";
   timestamp: number;
 }
 
@@ -62,7 +62,7 @@ export interface SensorFragment_sensorState_ticks_error {
 }
 
 export interface SensorFragment_sensorState_ticks {
-  __typename: "JobTick";
+  __typename: "InstigationTick";
   id: string;
   status: InstigationTickStatus;
   timestamp: number;
