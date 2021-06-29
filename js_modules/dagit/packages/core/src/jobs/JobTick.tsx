@@ -18,7 +18,7 @@ import {showCustomAlert} from '../app/CustomAlertProvider';
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from '../app/PythonErrorInfo';
 import {assertUnreachable} from '../app/Util';
 import {RunTable, RUN_TABLE_RUN_FRAGMENT} from '../runs/RunTable';
-import {JobTickStatus, InstigationType} from '../types/globalTypes';
+import {InstigationTickStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -34,13 +34,13 @@ export const TickTag: React.FunctionComponent<{
 }> = ({tick, jobType}) => {
   const [open, setOpen] = React.useState<boolean>(false);
   switch (tick.status) {
-    case JobTickStatus.STARTED:
+    case InstigationTickStatus.STARTED:
       return (
         <Tag minimal={true} intent={Intent.NONE}>
           Started
         </Tag>
       );
-    case JobTickStatus.SUCCESS:
+    case InstigationTickStatus.SUCCESS:
       if (!tick.runIds.length) {
         return (
           <Tag minimal={true} intent={Intent.PRIMARY}>
@@ -74,7 +74,7 @@ export const TickTag: React.FunctionComponent<{
           </Dialog>
         </>
       );
-    case JobTickStatus.SKIPPED:
+    case InstigationTickStatus.SKIPPED:
       if (!tick.skipReason) {
         return (
           <Tag minimal={true} intent={Intent.WARNING}>
@@ -94,7 +94,7 @@ export const TickTag: React.FunctionComponent<{
           </Tag>
         </Tooltip>
       );
-    case JobTickStatus.FAILURE:
+    case InstigationTickStatus.FAILURE:
       if (!tick.error) {
         return (
           <Tag minimal={true} intent={Intent.DANGER}>

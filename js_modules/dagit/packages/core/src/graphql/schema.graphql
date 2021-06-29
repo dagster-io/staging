@@ -933,7 +933,7 @@ type ScheduleJobData {
 
 type JobTick {
   id: ID!
-  status: JobTickStatus!
+  status: InstigationTickStatus!
   timestamp: Float!
   runIds: [String!]!
   error: PythonError
@@ -942,7 +942,7 @@ type JobTick {
   originRunIds: [String!]!
 }
 
-enum JobTickStatus {
+enum InstigationTickStatus {
   STARTED
   SKIPPED
   SUCCESS
@@ -1757,7 +1757,7 @@ enum ScheduleStatus {
 
 type ScheduleTick {
   tickId: String!
-  status: JobTickStatus!
+  status: InstigationTickStatus!
   timestamp: Float!
   tickSpecificData: ScheduleTickSpecificData
 }

@@ -2,7 +2,7 @@ import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import {Line, ChartComponentProps} from 'react-chartjs-2';
 
-import {JobTickStatus} from '../types/globalTypes';
+import {InstigationTickStatus} from '../types/globalTypes';
 
 import {
   JobTickHistoryQuery_jobStateOrError_JobState_ticks,
@@ -13,10 +13,10 @@ type FutureTick = JobTickHistoryQuery_jobStateOrError_JobState_nextTick;
 type JobTick = JobTickHistoryQuery_jobStateOrError_JobState_ticks;
 
 const COLOR_MAP = {
-  [JobTickStatus.SUCCESS]: Colors.BLUE3,
-  [JobTickStatus.FAILURE]: Colors.RED3,
-  [JobTickStatus.STARTED]: Colors.GRAY3,
-  [JobTickStatus.SKIPPED]: Colors.GOLD3,
+  [InstigationTickStatus.SUCCESS]: Colors.BLUE3,
+  [InstigationTickStatus.FAILURE]: Colors.RED3,
+  [InstigationTickStatus.STARTED]: Colors.GRAY3,
+  [InstigationTickStatus.SKIPPED]: Colors.GOLD3,
 };
 
 const REFRESH_INTERVAL = 100;
@@ -162,16 +162,16 @@ export const LiveTickTimeline: React.FC<{
             return '';
           }
           const tick = ticks[tooltipItem.index];
-          if (tick.status === JobTickStatus.SKIPPED && tick.skipReason) {
+          if (tick.status === InstigationTickStatus.SKIPPED && tick.skipReason) {
             return tick.skipReason;
           }
-          if (tick.status === JobTickStatus.SUCCESS && tick.runIds.length) {
+          if (tick.status === InstigationTickStatus.SUCCESS && tick.runIds.length) {
             return tick.runIds;
           }
-          if (tick.status === JobTickStatus.SUCCESS && tick.originRunIds) {
+          if (tick.status === InstigationTickStatus.SUCCESS && tick.originRunIds) {
             return tick.originRunIds;
           }
-          if (tick.status === JobTickStatus.FAILURE && tick.error?.message) {
+          if (tick.status === InstigationTickStatus.FAILURE && tick.error?.message) {
             return tick.error.message;
           }
           return '';

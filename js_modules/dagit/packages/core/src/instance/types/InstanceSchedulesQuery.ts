@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { PipelineRunStatus, InstigationType, InstigationStatus, JobTickStatus } from "./../../types/globalTypes";
+import { PipelineRunStatus, InstigationType, InstigationStatus, InstigationTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: InstanceSchedulesQuery
@@ -130,7 +130,7 @@ export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection
 export interface InstanceSchedulesQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_ticks {
   __typename: "JobTick";
   id: string;
-  status: JobTickStatus;
+  status: InstigationTickStatus;
   timestamp: number;
   skipReason: string | null;
   runIds: string[];
@@ -278,7 +278,7 @@ export interface InstanceSchedulesQuery_unloadableJobStatesOrError_JobStates_res
 export interface InstanceSchedulesQuery_unloadableJobStatesOrError_JobStates_results_ticks {
   __typename: "JobTick";
   id: string;
-  status: JobTickStatus;
+  status: InstigationTickStatus;
   timestamp: number;
   skipReason: string | null;
   runIds: string[];

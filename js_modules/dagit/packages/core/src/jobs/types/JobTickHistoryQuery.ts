@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { JobSelector, InstigationType, JobTickStatus } from "./../../types/globalTypes";
+import { JobSelector, InstigationType, InstigationTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: JobTickHistoryQuery
@@ -31,7 +31,7 @@ export interface JobTickHistoryQuery_jobStateOrError_JobState_ticks_error {
 export interface JobTickHistoryQuery_jobStateOrError_JobState_ticks {
   __typename: "JobTick";
   id: string;
-  status: JobTickStatus;
+  status: InstigationTickStatus;
   timestamp: number;
   skipReason: string | null;
   runIds: string[];

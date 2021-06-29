@@ -73,16 +73,16 @@ export enum InstigationStatus {
   STOPPED = "STOPPED",
 }
 
-export enum InstigationType {
-  SCHEDULE = "SCHEDULE",
-  SENSOR = "SENSOR",
-}
-
-export enum JobTickStatus {
+export enum InstigationTickStatus {
   FAILURE = "FAILURE",
   SKIPPED = "SKIPPED",
   STARTED = "STARTED",
   SUCCESS = "SUCCESS",
+}
+
+export enum InstigationType {
+  SCHEDULE = "SCHEDULE",
+  SENSOR = "SENSOR",
 }
 
 export enum LocationStateChangeEventType {

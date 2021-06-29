@@ -17,7 +17,7 @@ import {Line, ChartComponentProps} from 'react-chartjs-2';
 import {showCustomAlert} from '../app/CustomAlertProvider';
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from '../app/PythonErrorInfo';
 import {TimestampDisplay} from '../schedules/TimestampDisplay';
-import {JobTickStatus, InstigationType} from '../types/globalTypes';
+import {InstigationTickStatus, InstigationType} from '../types/globalTypes';
 import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -38,30 +38,30 @@ import 'chartjs-plugin-zoom';
 const MIN_ZOOM_RANGE = 30 * 60 * 1000; // 30 minutes
 
 const COLOR_MAP = {
-  [JobTickStatus.SUCCESS]: Colors.BLUE3,
-  [JobTickStatus.FAILURE]: Colors.RED3,
-  [JobTickStatus.STARTED]: Colors.GRAY3,
-  [JobTickStatus.SKIPPED]: Colors.GOLD3,
+  [InstigationTickStatus.SUCCESS]: Colors.BLUE3,
+  [InstigationTickStatus.FAILURE]: Colors.RED3,
+  [InstigationTickStatus.STARTED]: Colors.GRAY3,
+  [InstigationTickStatus.SKIPPED]: Colors.GOLD3,
 };
 
 interface ShownStatusState {
-  [JobTickStatus.SUCCESS]: boolean;
-  [JobTickStatus.FAILURE]: boolean;
-  [JobTickStatus.STARTED]: boolean;
-  [JobTickStatus.SKIPPED]: boolean;
+  [InstigationTickStatus.SUCCESS]: boolean;
+  [InstigationTickStatus.FAILURE]: boolean;
+  [InstigationTickStatus.STARTED]: boolean;
+  [InstigationTickStatus.SKIPPED]: boolean;
 }
 
 const DEFAULT_SHOWN_STATUS_STATE = {
-  [JobTickStatus.SUCCESS]: true,
-  [JobTickStatus.FAILURE]: true,
-  [JobTickStatus.STARTED]: true,
-  [JobTickStatus.SKIPPED]: true,
+  [InstigationTickStatus.SUCCESS]: true,
+  [InstigationTickStatus.FAILURE]: true,
+  [InstigationTickStatus.STARTED]: true,
+  [InstigationTickStatus.SKIPPED]: true,
 };
 const STATUS_TEXT_MAP = {
-  [JobTickStatus.SUCCESS]: 'Requested',
-  [JobTickStatus.FAILURE]: 'Failed',
-  [JobTickStatus.STARTED]: 'Started',
-  [JobTickStatus.SKIPPED]: 'Skipped',
+  [InstigationTickStatus.SUCCESS]: 'Requested',
+  [InstigationTickStatus.FAILURE]: 'Failed',
+  [InstigationTickStatus.STARTED]: 'Started',
+  [InstigationTickStatus.SKIPPED]: 'Skipped',
 };
 
 const TABS = [
@@ -169,11 +169,11 @@ export const JobTickHistory = ({
 
   const {ticks, nextTick, jobType} = data.jobStateOrError;
   const displayedTicks = ticks.filter((tick) =>
-    tick.status === JobTickStatus.SKIPPED
+    tick.status === InstigationTickStatus.SKIPPED
       ? jobType === InstigationType.SCHEDULE && shownStates[tick.status]
       : shownStates[tick.status],
   );
-  const StatusFilter = ({status}: {status: JobTickStatus}) => (
+  const StatusFilter = ({status}: {status: InstigationTickStatus}) => (
     <Checkbox
       label={STATUS_TEXT_MAP[status]}
       checked={shownStates[status]}
@@ -186,7 +186,7 @@ export const JobTickHistory = ({
     if (!tick) {
       return;
     }
-    if (tick.error && tick.status === JobTickStatus.FAILURE) {
+    if (tick.error && tick.status === InstigationTickStatus.FAILURE) {
       showCustomAlert({
         title: 'Python Error',
         body: <PythonErrorInfo error={tick.error} />,
@@ -219,10 +219,10 @@ export const JobTickHistory = ({
         <>
           <Box flex={{justifyContent: 'flex-end'}}>
             <Group direction="row" spacing={16}>
-              <StatusFilter status={JobTickStatus.SUCCESS} />
-              <StatusFilter status={JobTickStatus.FAILURE} />
+              <StatusFilter status={InstigationTickStatus.SUCCESS} />
+              <StatusFilter status={InstigationTickStatus.FAILURE} />
               {jobType === InstigationType.SCHEDULE ? (
-                <StatusFilter status={JobTickStatus.SKIPPED} />
+                <StatusFilter status={InstigationTickStatus.SKIPPED} />
               ) : null}
             </Group>
           </Box>
@@ -247,25 +247,25 @@ export const JobTickHistory = ({
       <Dialog
         isOpen={
           selectedTick &&
-          (selectedTick.status === JobTickStatus.SUCCESS ||
-            selectedTick.status === JobTickStatus.SKIPPED)
+          (selectedTick.status === InstigationTickStatus.SUCCESS ||
+            selectedTick.status === InstigationTickStatus.SKIPPED)
         }
         onClose={() => setSelectedTick(undefined)}
         style={{
-          width: selectedTick && selectedTick.status === JobTickStatus.SUCCESS ? '90vw' : '50vw',
+          width: selectedTick && selectedTick.status === InstigationTickStatus.SUCCESS ? '90vw' : '50vw',
         }}
         title={selectedTick ? <TimestampDisplay timestamp={selectedTick.timestamp} /> : null}
       >
         {selectedTick ? (
           <Box background={Colors.WHITE} padding={16} margin={{bottom: 16}}>
-            {selectedTick.status === JobTickStatus.SUCCESS ? (
+            {selectedTick.status === InstigationTickStatus.SUCCESS ? (
               selectedTick.runIds.length ? (
                 <RunList runIds={selectedTick.runIds} />
               ) : (
                 <FailedRunList originRunIds={selectedTick.originRunIds} />
               )
             ) : null}
-            {selectedTick.status === JobTickStatus.SKIPPED ? (
+            {selectedTick.status === InstigationTickStatus.SKIPPED ? (
               <Group direction="row" spacing={16}>
                 <TickTag tick={selectedTick} />
                 <span>{selectedTick.skipReason || 'No skip reason provided'}</span>
@@ -423,13 +423,13 @@ const TickHistoryGraph: React.FC<{
           if (!hoveredTick) {
             return '';
           }
-          if (hoveredTick.status === JobTickStatus.SKIPPED && hoveredTick.skipReason) {
+          if (hoveredTick.status === InstigationTickStatus.SKIPPED && hoveredTick.skipReason) {
             return snippet(hoveredTick.skipReason);
           }
-          if (hoveredTick.status === JobTickStatus.SUCCESS && hoveredTick.runIds.length) {
+          if (hoveredTick.status === InstigationTickStatus.SUCCESS && hoveredTick.runIds.length) {
             return hoveredTick.runIds;
           }
-          if (hoveredTick.status === JobTickStatus.FAILURE && hoveredTick.error?.message) {
+          if (hoveredTick.status === InstigationTickStatus.FAILURE && hoveredTick.error?.message) {
             return snippet(hoveredTick.error.message);
           }
           return '';

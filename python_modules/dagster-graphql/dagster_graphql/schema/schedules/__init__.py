@@ -25,7 +25,7 @@ from .schedules import (
     GrapheneSchedules,
     GrapheneSchedulesOrError,
 )
-from .ticks import GrapheneJobTickStatus
+from .ticks import GrapheneInstigationTickStatus
 
 
 class GrapheneScheduleStatus(graphene.Enum):
@@ -148,7 +148,7 @@ def types():
 
     # Double check mutations don't appear twice
     return [
-        GrapheneJobTickStatus,
+        GrapheneInstigationTickStatus,
         GrapheneReconcileSchedulerStateMutation,
         GrapheneReconcileSchedulerStateMutationResult,
         GrapheneReconcileSchedulerStateSuccess,

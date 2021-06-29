@@ -43,14 +43,14 @@ class GrapheneInstigationStatus(graphene.Enum):
         name = "InstigationStatus"
 
 
-class GrapheneJobTickStatus(graphene.Enum):
+class GrapheneInstigationTickStatus(graphene.Enum):
     STARTED = "STARTED"
     SKIPPED = "SKIPPED"
     SUCCESS = "SUCCESS"
     FAILURE = "FAILURE"
 
     class Meta:
-        name = "JobTickStatus"
+        name = "InstigationTickStatus"
 
 
 class GrapheneSensorJobData(graphene.ObjectType):
@@ -91,7 +91,7 @@ class GrapheneJobSpecificData(graphene.Union):
 
 class GrapheneJobTick(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
-    status = graphene.NonNull(GrapheneJobTickStatus)
+    status = graphene.NonNull(GrapheneInstigationTickStatus)
     timestamp = graphene.NonNull(graphene.Float)
     runIds = non_null_list(graphene.String)
     error = graphene.Field(GraphenePythonError)
