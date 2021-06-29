@@ -32,7 +32,7 @@ from dagster.core.execution.plan.handle import StepHandle
 from dagster.core.execution.plan.objects import StepFailureData, StepSuccessData
 from dagster.core.execution.stats import StepEventStatus
 from dagster.core.storage.event_log import InMemoryEventLogStorage, SqlEventLogStorage
-from dagster.core.storage.event_log.base import EventsCursor
+from dagster.core.storage.event_log.base import EventLogRecord, EventsCursor
 from dagster.core.storage.event_log.migration import REINDEX_DATA_MIGRATIONS, migrate_asset_key_data
 from dagster.core.storage.event_log.sqlite.sqlite_event_log import SqliteEventLogStorage
 from dagster.core.test_utils import instance_for_test
@@ -822,6 +822,12 @@ class TestEventLogStorage:
         event = events[0]
         assert isinstance(event, EventLogEntry)
         assert event.dagster_event.event_type_value == DagsterEventType.ASSET_MATERIALIZATION.value
+
+        records = storage.get_asset_event_records(asset_key)
+        assert len(records) == 1
+        record = records[0]
+        assert isinstance(record, EventLogRecord)
+        assert record.event_log_entry == event
 
     def test_asset_events_error_parsing(self, storage):
         if not isinstance(storage, SqlEventLogStorage):

@@ -159,6 +159,19 @@ class EventLogStorage(ABC, MayHaveInstanceWeakref):
         pass
 
     @abstractmethod
+    def get_asset_event_records(
+        self,
+        asset_key: AssetKey,
+        partitions: Optional[List[str]] = None,
+        after_cursor: Optional[int] = None,
+        before_cursor: Optional[int] = None,
+        before_timestamp: Optional[float] = None,
+        limit: Optional[int] = None,
+        ascending: Optional[bool] = False,
+    ) -> Iterable[EventLogRecord]:
+        pass
+
+    @abstractmethod
     def get_asset_run_ids(self, asset_key: AssetKey) -> Iterable[str]:
         pass
 
