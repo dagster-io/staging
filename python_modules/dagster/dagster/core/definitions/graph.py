@@ -19,11 +19,13 @@ from dagster.core.definitions.config import ConfigMapping
 from dagster.core.definitions.definition_config_schema import IDefinitionConfigSchema
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.storage.io_manager import io_manager
 from dagster.core.types.dagster_type import (
     DagsterType,
     DagsterTypeKind,
     construct_dagster_type_dictionary,
 )
+from dagster.utils import merge_dicts
 from dagster.utils.backcompat import experimental
 from toposort import CircularDependencyError, toposort_flatten
 
@@ -45,6 +47,7 @@ from .solid_container import create_execution_structure, validate_dependency_dic
 if TYPE_CHECKING:
     from .resource import ResourceDefinition
     from .solid import SolidDefinition
+    from .executor import ExecutorDefinition
 
 
 def _check_node_defs_arg(graph_name: str, node_defs: List[NodeDefinition]):
@@ -381,11 +384,13 @@ class GraphDefinition(NodeDefinition):
         partitions: Optional[Callable[[], List[Any]]] = None,
         tags: Optional[Dict[str, str]] = None,
         logger_defs: Optional[Dict[str, LoggerDefinition]] = None,
+        executor_def: Optional["ExecutorDefinition"] = None,
     ):
         """
         For experimenting with "job" flows
         """
         from .pipeline import PipelineDefinition
+        from .executor import ExecutorDefinition, multiprocess_executor
 
         tags = check.opt_dict_param(tags, "tags", key_type=str, value_type=str)
 
@@ -407,6 +412,18 @@ class GraphDefinition(NodeDefinition):
 
         job_name = name or self.name
 
+        if executor_def is None:
+            executors = [multiprocess_executor]
+        else:
+            executors = [check.inst_param(executor_def, "executor_def", ExecutorDefinition)]
+
+        if resource_defs and "io_manager" in resource_defs:
+            resource_defs_with_defaults = resource_defs
+        else:
+            resource_defs_with_defaults = merge_dicts(
+                {"io_manager": default_job_io_manager}, resource_defs or {}
+            )
+
         presets = None
         if default_config:
             presets = [
@@ -426,8 +443,9 @@ class GraphDefinition(NodeDefinition):
                         graph_def=self,
                         mode_defs=[
                             ModeDefinition(
-                                resource_defs=resource_defs,
+                                resource_defs=resource_defs_with_defaults,
                                 logger_defs=logger_defs,
+                                executor_defs=executors,
                             )
                         ],
                     )
@@ -449,8 +467,9 @@ class GraphDefinition(NodeDefinition):
             graph_def=self,
             mode_defs=[
                 ModeDefinition(
-                    resource_defs=resource_defs,
+                    resource_defs=resource_defs_with_defaults,
                     logger_defs=logger_defs,
+                    executor_defs=executors,
                     _config_mapping=config_mapping,
                     _partitions=partitions,
                 )
@@ -691,3 +710,12 @@ def _set_default(config_shape: Shape, cfg_value: Dict[str, Any]) -> Shape:
         fields=updated_fields,
         description="run config schema with default values from default_config",
     )
+
+
+@io_manager(
+    description="The default io manager for Jobs. Uses filesystem but switches to in-memory when invoked through execute_in_process."
+)
+def default_job_io_manager(init_context):
+    from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
+
+    return PickledObjectFilesystemIOManager(base_dir=init_context.instance.storage_directory())

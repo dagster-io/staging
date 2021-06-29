@@ -110,7 +110,7 @@ class InProcessGraphResult(NodeExecutionResult):
     def __init__(
         self,
         graph_def: GraphDefinition,
-        handle: SolidHandle,
+        handle: Optional[SolidHandle],
         all_events: List[DagsterEvent],
         output_capture: Optional[Dict[StepOutputHandle, Any]],
     ):

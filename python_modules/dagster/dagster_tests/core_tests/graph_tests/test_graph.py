@@ -1,15 +1,7 @@
 from typing import Dict
 
 import pytest
-from dagster import (
-    ConfigMapping,
-    DagsterInvalidDefinitionError,
-    execute_pipeline,
-    logger,
-    resource,
-    solid,
-)
-from dagster.core.definitions.decorators.graph import graph
+from dagster import ConfigMapping, DagsterInvalidDefinitionError, graph, logger, resource, solid
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.execution.execute import execute_in_process
 
@@ -70,7 +62,7 @@ def test_with_resources():
     # proxy for "executable/job"
     my_job = my_graph.to_job(resource_defs={"a": a_resource})
     assert my_job.name == "my_graph"
-    result = execute_pipeline(my_job)
+    result = my_job.execute_in_process()
     assert result.success
 
 
@@ -98,9 +90,9 @@ def test_config_mapping_val():
         },
     )
 
-    result = execute_pipeline(job)
+    result = job.execute_in_process()
     assert result.success
-    assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/3"
+    assert result.result_for_node("do_stuff").output_values["result"] == "i am here on 6/3"
 
 
 def test_config_mapping_fn():
@@ -133,9 +125,9 @@ def test_config_mapping_fn():
         ),
     )
 
-    result = execute_pipeline(job, run_config={"date": "6/4"})
+    result = job.execute_in_process(run_config={"date": "6/4"})
     assert result.success
-    assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/4"
+    assert result.result_for_node("do_stuff").output_values["result"] == "i am here on 6/4"
 
 
 def test_default_config():
@@ -162,9 +154,9 @@ def test_default_config():
         },
     )
 
-    result = execute_pipeline(job)
+    result = job.execute_in_process()
     assert result.success
-    assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/3"
+    assert result.result_for_node("do_stuff").output_values["result"] == "i am here on 6/3"
 
 
 def test_default_config_with_mapping_fn():
@@ -198,9 +190,9 @@ def test_default_config_with_mapping_fn():
         default_config={"date": "6/4"},
     )
 
-    result = execute_pipeline(job)
+    result = job.execute_in_process()
     assert result.success
-    assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/4"
+    assert result.result_for_node("do_stuff").output_values["result"] == "i am here on 6/4"
 
 
 def test_suffix():
@@ -301,7 +293,7 @@ def test_tags_on_job():
     job = basic_graph.to_job(tags=tags)
     assert job.tags == tags
 
-    result = execute_pipeline(job)
+    result = job.execute_in_process()
     assert result.success
 
 
