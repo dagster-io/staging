@@ -256,7 +256,11 @@ const ScheduleStateRow: React.FunctionComponent<{
           )}
         </div>
       </td>
-      <td>{latestTick ? <TickTag tick={latestTick} instigationType={InstigationType.SCHEDULE} /> : null}</td>
+      <td>
+        {latestTick ? (
+          <TickTag tick={latestTick} instigationType={InstigationType.SCHEDULE} />
+        ) : null}
+      </td>
       <td>
         <JobRunStatus jobState={scheduleState} />
       </td>

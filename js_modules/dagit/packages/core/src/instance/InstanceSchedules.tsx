@@ -72,7 +72,9 @@ const AllSchedules: React.FC<{data: InstanceSchedulesQuery}> = ({data}) => {
     </Group>
   ) : null;
 
-  const unloadableSchedules = unloadableJobs.filter((state) => state.instigationType === InstigationType.SCHEDULE);
+  const unloadableSchedules = unloadableJobs.filter(
+    (state) => state.instigationType === InstigationType.SCHEDULE,
+  );
 
   const unloadableSchedulesSection = unloadableSchedules.length ? (
     <UnloadableSchedules scheduleStates={unloadableSchedules} />

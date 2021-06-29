@@ -39,7 +39,12 @@ export const SchedulesRoot = ({repoAddress}: {repoAddress: RepoAddress}) => {
     <Page>
       <Loading queryResult={queryResult} allowStaleData={true}>
         {(result) => {
-          const {repositoryOrError, scheduler, unloadableInstigationStatesOrError, instance} = result;
+          const {
+            repositoryOrError,
+            scheduler,
+            unloadableInstigationStatesOrError,
+            instance,
+          } = result;
           let schedulesSection = null;
 
           if (repositoryOrError.__typename === 'PythonError') {

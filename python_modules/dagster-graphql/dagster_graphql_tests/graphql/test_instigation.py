@@ -4,7 +4,7 @@ from dagster.daemon import get_default_daemon_logger
 from dagster.daemon.sensor import execute_sensor_iteration
 from dagster_graphql.test.utils import (
     execute_dagster_graphql,
-    infer_job_selector,
+    infer_instigation_selector,
     infer_repository_selector,
 )
 
@@ -56,7 +56,7 @@ class TestNextTickRepository(
 
         schedule_name = "no_config_pipeline_hourly_schedule"
         external_schedule = external_repository.get_external_schedule(schedule_name)
-        job_selector = infer_job_selector(graphql_context, schedule_name)
+        job_selector = infer_instigation_selector(graphql_context, schedule_name)
 
         # need to be running in order to generate a future tick
         graphql_context.instance.start_schedule_and_update_storage_state(external_schedule)
@@ -78,7 +78,7 @@ class TestNextTickRepository(
 
         sensor_name = "always_no_config_sensor"
         external_sensor = external_repository.get_external_sensor(sensor_name)
-        job_selector = infer_job_selector(graphql_context, sensor_name)
+        job_selector = infer_instigation_selector(graphql_context, sensor_name)
 
         # need to be running and create a sensor tick in the last 30 seconds in order to generate a
         # future tick

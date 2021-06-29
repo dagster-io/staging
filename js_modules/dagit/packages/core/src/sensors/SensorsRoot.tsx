@@ -98,7 +98,10 @@ export const SensorsRoot = (props: Props) => {
 };
 
 const SENSORS_ROOT_QUERY = gql`
-  query SensorsRootQuery($repositorySelector: RepositorySelector!, $instigationType: InstigationType!) {
+  query SensorsRootQuery(
+    $repositorySelector: RepositorySelector!
+    $instigationType: InstigationType!
+  ) {
     sensorsOrError(repositorySelector: $repositorySelector) {
       __typename
       ...PythonErrorFragment
