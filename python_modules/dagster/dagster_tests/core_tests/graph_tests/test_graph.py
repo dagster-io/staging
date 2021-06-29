@@ -1,8 +1,15 @@
 from typing import Dict
 
 import pytest
-from dagster import ConfigMapping, DagsterInvalidDefinitionError, execute_pipeline, resource, solid
-from dagster.core.definitions.decorators.graph import graph
+from dagster import (
+    ConfigMapping,
+    DagsterInvalidDefinitionError,
+    execute_pipeline,
+    graph,
+    reconstructable,
+    resource,
+    solid,
+)
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.execution.execute import execute_in_process
 
@@ -47,7 +54,7 @@ def test_composite_graph():
     assert isinstance(add_two, GraphDefinition)
 
 
-def test_with_resources():
+def _resource_job():
     @resource
     def a_resource(_):
         return "a"
@@ -61,13 +68,18 @@ def test_with_resources():
         needs_resource()
 
     # proxy for "executable/job"
-    my_job = my_graph.to_job(resource_defs={"a": a_resource})
+    return my_graph.to_job(resource_defs={"a": a_resource})
+
+
+def test_with_resources(instance):
+    my_job = _resource_job()
     assert my_job.name == "my_graph"
-    result = execute_pipeline(my_job)
+
+    result = execute_pipeline(reconstructable(_resource_job), instance=instance)
     assert result.success
 
 
-def test_config_mapping_val():
+def _config_mapped_job():
     @resource(config_schema=str)
     def date(context) -> str:
         return context.resource_config
@@ -83,7 +95,7 @@ def test_config_mapping_val():
     def needs_config():
         do_stuff()
 
-    job = needs_config.to_job(
+    return needs_config.to_job(
         resource_defs={"date": date},
         config_mapping={
             "solids": {"do_stuff": {"config": {"msg": "i am here"}}},
@@ -91,12 +103,14 @@ def test_config_mapping_val():
         },
     )
 
-    result = execute_pipeline(job)
+
+def test_config_mapping_val(instance):
+    result = execute_pipeline(reconstructable(_config_mapped_job), instance=instance)
     assert result.success
     assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/3"
 
 
-def test_config_mapping_fn():
+def _config_mapped_with_schema_job():
     @resource(config_schema=str)
     def date(context) -> str:
         return context.resource_config
@@ -118,7 +132,7 @@ def test_config_mapping_fn():
             "resources": {"date": {"config": val["date"]}},
         }
 
-    job = needs_config.to_job(
+    return needs_config.to_job(
         resource_defs={"date": date},
         config_mapping=ConfigMapping(
             config_schema={"date": str},  # top level has to be dict
@@ -126,12 +140,18 @@ def test_config_mapping_fn():
         ),
     )
 
-    result = execute_pipeline(job, run_config={"date": "6/4"})
+
+def test_config_mapping_fn(instance):
+    result = execute_pipeline(
+        reconstructable(_config_mapped_with_schema_job),
+        instance=instance,
+        run_config={"date": "6/4"},
+    )
     assert result.success
     assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/4"
 
 
-def test_default_config():
+def _default_config_job():
     @resource(config_schema=str)
     def date(context) -> str:
         return context.resource_config
@@ -147,7 +167,7 @@ def test_default_config():
     def needs_config():
         do_stuff()
 
-    job = needs_config.to_job(
+    return needs_config.to_job(
         resource_defs={"date": date},
         default_config={
             "solids": {"do_stuff": {"config": {"msg": "i am here"}}},
@@ -155,12 +175,14 @@ def test_default_config():
         },
     )
 
-    result = execute_pipeline(job)
+
+def test_default_config(instance):
+    result = execute_pipeline(reconstructable(_default_config_job), instance=instance)
     assert result.success
     assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/3"
 
 
-def test_default_config_with_mapping_fn():
+def _default_with_config_mapping_job():
     @resource(config_schema=str)
     def date(context) -> str:
         return context.resource_config
@@ -182,7 +204,7 @@ def test_default_config_with_mapping_fn():
             "resources": {"date": {"config": val["date"]}},
         }
 
-    job = needs_config.to_job(
+    return needs_config.to_job(
         resource_defs={"date": date},
         config_mapping=ConfigMapping(
             config_schema={"date": str},  # top level has to be dict
@@ -191,7 +213,9 @@ def test_default_config_with_mapping_fn():
         default_config={"date": "6/4"},
     )
 
-    result = execute_pipeline(job)
+
+def test_default_config_with_mapping_fn(instance):
+    result = execute_pipeline(reconstructable(_default_with_config_mapping_job), instance=instance)
     assert result.success
     assert result.result_for_solid("do_stuff").output_value() == "i am here on 6/4"
 
@@ -293,6 +317,3 @@ def test_tags_on_job():
     tags = {"my_tag": "yes"}
     job = basic_graph.to_job(tags=tags)
     assert job.tags == tags
-
-    result = execute_pipeline(job)
-    assert result.success
