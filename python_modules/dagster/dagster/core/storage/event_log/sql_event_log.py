@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional
+from typing import Iterable, List, Optional
 
 import pendulum
 import sqlalchemy as db
@@ -743,12 +743,42 @@ class SqlEventLogStorage(EventLogStorage):
         after_cursor=None,
         limit=None,
         ascending=False,
-        include_cursor=False,
         before_timestamp=None,
         cursor=None,  # deprecated
+        include_cursor=False,  # deprecated
     ):
         check.inst_param(asset_key, "asset_key", AssetKey)
         check.opt_list_param(partitions, "partitions", of_type=str)
+        before_cursor, after_cursor = extract_asset_events_cursor(
+            cursor, before_cursor, after_cursor, ascending
+        )
+        event_records = self.get_asset_event_records(
+            asset_key=asset_key,
+            partitions=partitions,
+            before_cursor=before_cursor,
+            after_cursor=after_cursor,
+            limit=limit,
+            ascending=ascending,
+            before_timestamp=before_timestamp,
+        )
+        if include_cursor:
+            return [tuple([record.storage_id, record.event_log_entry]) for record in event_records]
+        else:
+            return [record.event_log_entry for record in event_records]
+
+    def get_asset_event_records(
+        self,
+        asset_key: AssetKey,
+        partitions: Optional[List[str]] = None,
+        after_cursor: int = None,
+        before_cursor: int = None,
+        before_timestamp: int = None,
+        limit: int = None,
+        ascending: bool = False,
+    ) -> Iterable[EventLogRecord]:
+        check.inst_param(asset_key, "asset_key", AssetKey)
+        check.opt_list_param(partitions, "partitions", of_type=str)
+
         query = db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event]).where(
             db.or_(
                 SqlEventLogStorageTable.c.asset_key == asset_key.to_string(),
@@ -757,14 +787,8 @@ class SqlEventLogStorage(EventLogStorage):
         )
         if partitions:
             query = query.where(SqlEventLogStorageTable.c.partition.in_(partitions))
-
         asset_details = self._get_asset_details(asset_key)
         query = self._add_asset_wipe_filter_to_query(query, asset_details)
-
-        before_cursor, after_cursor = extract_asset_events_cursor(
-            cursor, before_cursor, after_cursor, ascending
-        )
-
         query = self._add_cursor_limit_to_query(
             query,
             before_cursor,
@@ -773,10 +797,8 @@ class SqlEventLogStorage(EventLogStorage):
             before_timestamp=before_timestamp,
             ascending=ascending,
         )
-
         with self.index_connection() as conn:
             results = conn.execute(query).fetchall()
-
         events = []
         for row_id, json_str in results:
             try:
@@ -788,10 +810,8 @@ class SqlEventLogStorage(EventLogStorage):
                         )
                     )
                     continue
-                if include_cursor:
-                    events.append(tuple([row_id, event_record]))
-                else:
-                    events.append(event_record)
+
+                events.append(EventLogRecord(storage_id=row_id, event_log_entry=event_record))
             except seven.JSONDecodeError:
                 logging.warning("Could not parse asset event record id `{}`.".format(row_id))
         return events
