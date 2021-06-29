@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { JobSelector, InstigationType, InstigationTickStatus } from "./../../types/globalTypes";
+import { InstigationSelector, InstigationType, InstigationTickStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: TickHistoryQuery
@@ -67,7 +67,7 @@ export interface TickHistoryQuery {
 }
 
 export interface TickHistoryQueryVariables {
-  jobSelector: JobSelector;
+  instigationSelector: InstigationSelector;
   dayRange?: number | null;
   limit?: number | null;
 }

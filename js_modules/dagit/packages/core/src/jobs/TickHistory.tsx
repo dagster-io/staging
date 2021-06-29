@@ -97,12 +97,12 @@ type InstigationTick = TickHistoryQuery_jobStateOrError_InstigationState_ticks;
 const MILLIS_PER_DAY = 86400 * 1000;
 
 export const JobTickHistory = ({
-  jobName,
+  name,
   repoAddress,
   onHighlightRunIds,
   showRecent,
 }: {
-  jobName: string;
+  name: string;
   repoAddress: RepoAddress;
   onHighlightRunIds: (runIds: string[]) => void;
   showRecent?: boolean;
@@ -123,9 +123,9 @@ export const JobTickHistory = ({
   const selectedRange = TABS.find((x) => x.id === selectedTab)?.range;
   const {data} = useQuery<TickHistoryQuery>(JOB_TICK_HISTORY_QUERY, {
     variables: {
-      jobSelector: {
+      instigationSelector: {
         ...repoAddressToSelector(repoAddress),
-        jobName,
+        name,
       },
       dayRange: selectedRange,
       limit: selectedTab === 'recent' ? 15 : undefined,
@@ -252,7 +252,8 @@ export const JobTickHistory = ({
         }
         onClose={() => setSelectedTick(undefined)}
         style={{
-          width: selectedTick && selectedTick.status === InstigationTickStatus.SUCCESS ? '90vw' : '50vw',
+          width:
+            selectedTick && selectedTick.status === InstigationTickStatus.SUCCESS ? '90vw' : '50vw',
         }}
         title={selectedTick ? <TimestampDisplay timestamp={selectedTick.timestamp} /> : null}
       >
@@ -527,8 +528,8 @@ const TickHistoryGraph: React.FC<{
 };
 
 const JOB_TICK_HISTORY_QUERY = gql`
-  query TickHistoryQuery($jobSelector: JobSelector!, $dayRange: Int, $limit: Int) {
-    jobStateOrError(jobSelector: $jobSelector) {
+  query TickHistoryQuery($instigationSelector: InstigationSelector!, $dayRange: Int, $limit: Int) {
+    jobStateOrError(instigationSelector: $instigationSelector) {
       __typename
       ... on InstigationState {
         id
