@@ -8,7 +8,7 @@ from ..errors import (
     GrapheneRepositoryNotFoundError,
     GrapheneScheduleNotFoundError,
 )
-from ..jobs import GrapheneFutureJobTick, GrapheneFutureJobTicks, GrapheneJobState
+from ..instigation import GrapheneFutureJobTick, GrapheneFutureJobTicks, GrapheneJobState
 from ..util import non_null_list
 
 

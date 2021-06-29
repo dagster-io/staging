@@ -12,7 +12,7 @@ from .errors import (
     GrapheneSensorNotFoundError,
 )
 from .inputs import GrapheneSensorSelector
-from .jobs import GrapheneFutureJobTick, GrapheneJobState
+from .instigation import GrapheneFutureJobTick, GrapheneJobState
 from .util import non_null_list
 
 

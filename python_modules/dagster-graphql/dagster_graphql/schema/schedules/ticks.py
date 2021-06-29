@@ -2,7 +2,7 @@ import graphene
 from dagster.core.scheduler.job import JobTickStatus
 
 from ..errors import GraphenePythonError
-from ..jobs import GrapheneJobTickStatus
+from ..instigation import GrapheneJobTickStatus
 
 
 class GrapheneScheduleTickSuccessData(graphene.ObjectType):

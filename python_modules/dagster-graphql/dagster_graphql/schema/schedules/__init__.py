@@ -18,7 +18,7 @@ from ..errors import (
     GrapheneSchedulerNotDefinedError,
 )
 from ..inputs import GrapheneRepositorySelector, GrapheneScheduleSelector
-from ..jobs import GrapheneJobState
+from ..instigation import GrapheneJobState
 from .schedules import (
     GrapheneSchedule,
     GrapheneScheduleOrError,

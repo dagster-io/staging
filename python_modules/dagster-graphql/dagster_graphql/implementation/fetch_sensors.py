@@ -76,7 +76,7 @@ def stop_sensor(graphene_info, job_origin_id):
 
 @capture_error
 def get_unloadable_sensor_states_or_error(graphene_info):
-    from ..schema.jobs import GrapheneJobState, GrapheneJobStates
+    from ..schema.instigation import GrapheneJobState, GrapheneJobStates
 
     sensor_states = graphene_info.context.instance.all_stored_job_state(job_type=JobType.SENSOR)
     external_sensors = [
@@ -119,7 +119,7 @@ def get_sensors_for_pipeline(graphene_info, pipeline_selector):
 
 
 def get_sensor_next_tick(graphene_info, sensor_state):
-    from ..schema.jobs import GrapheneFutureJobTick
+    from ..schema.instigation import GrapheneFutureJobTick
 
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.inst_param(sensor_state, "sensor_state", JobState)

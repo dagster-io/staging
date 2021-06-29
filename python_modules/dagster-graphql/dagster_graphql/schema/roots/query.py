@@ -51,7 +51,7 @@ from ..inputs import (
     GrapheneSensorSelector,
 )
 from ..instance import GrapheneInstance
-from ..jobs import GrapheneJobStateOrError, GrapheneJobStatesOrError, GrapheneJobType
+from ..instigation import GrapheneJobStateOrError, GrapheneJobStatesOrError, GrapheneJobType
 from ..partition_sets import GraphenePartitionSetOrError, GraphenePartitionSetsOrError
 from ..pipelines.config_result import GraphenePipelineConfigValidationResult
 from ..pipelines.pipeline import GraphenePipelineRunOrError

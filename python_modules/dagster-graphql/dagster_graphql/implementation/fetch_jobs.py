@@ -8,7 +8,7 @@ from .utils import capture_error
 
 @capture_error
 def get_unloadable_job_states_or_error(graphene_info, job_type=None):
-    from ..schema.jobs import GrapheneJobState, GrapheneJobStates
+    from ..schema.instigation import GrapheneJobState, GrapheneJobStates
 
     check.opt_inst_param(job_type, "job_type", JobType)
     job_states = graphene_info.context.instance.all_stored_job_state(job_type=job_type)
@@ -34,7 +34,7 @@ def get_unloadable_job_states_or_error(graphene_info, job_type=None):
 
 @capture_error
 def get_job_state_or_error(graphene_info, selector):
-    from ..schema.jobs import GrapheneJobState
+    from ..schema.instigation import GrapheneJobState
 
     check.inst_param(selector, "selector", JobSelector)
     location = graphene_info.context.get_repository_location(selector.location_name)
