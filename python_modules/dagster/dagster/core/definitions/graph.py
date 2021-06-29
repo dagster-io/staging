@@ -24,6 +24,7 @@ from dagster.core.types.dagster_type import (
     DagsterTypeKind,
     construct_dagster_type_dictionary,
 )
+from dagster.utils import merge_dicts
 from dagster.utils.backcompat import experimental
 from toposort import CircularDependencyError, toposort_flatten
 
@@ -44,6 +45,7 @@ from .solid_container import create_execution_structure, validate_dependency_dic
 if TYPE_CHECKING:
     from .solid import SolidDefinition
     from .resource import ResourceDefinition
+    from .executor import ExecutorDefinition
 
 
 def _check_node_defs_arg(graph_name: str, node_defs: List[NodeDefinition]):
@@ -367,11 +369,14 @@ class GraphDefinition(NodeDefinition):
         default_config: Optional[Dict[str, Any]] = None,
         partitions: Optional[Callable[[], List[Any]]] = None,
         tags: Optional[Dict[str, str]] = None,
+        executor_def: Optional["ExecutorDefinition"] = None,
     ):
         """
         For experimenting with "job" flows
         """
         from .pipeline import PipelineDefinition
+        from .executor import ExecutorDefinition, multiprocess_executor
+        from dagster.core.storage.fs_io_manager import fs_io_manager
 
         tags = check.opt_dict_param(tags, "tags", key_type=str, value_type=str)
 
@@ -392,6 +397,18 @@ class GraphDefinition(NodeDefinition):
             check.failed(f"Unexpected config_mapping value {config_mapping}")
 
         job_name = name or self.name
+
+        if executor_def is None:
+            executors = [multiprocess_executor]
+        else:
+            executors = [check.inst_param(executor_def, "executor_def", ExecutorDefinition)]
+
+        if resource_defs and "io_manager" in resource_defs:
+            resource_defs_with_defaults = resource_defs
+        else:
+            resource_defs_with_defaults = merge_dicts(
+                {"io_manager": fs_io_manager}, resource_defs or {}
+            )
 
         presets = None
         if default_config:
@@ -417,7 +434,8 @@ class GraphDefinition(NodeDefinition):
                         config_mapping=self._config_mapping,
                         mode_defs=[
                             ModeDefinition(
-                                resource_defs=resource_defs,
+                                resource_defs=resource_defs_with_defaults,
+                                executor_defs=executors,
                             )
                         ],
                     )
@@ -444,9 +462,10 @@ class GraphDefinition(NodeDefinition):
             config_mapping=self._config_mapping,
             mode_defs=[
                 ModeDefinition(
-                    resource_defs=resource_defs,
+                    resource_defs=resource_defs_with_defaults,
                     _config_mapping=config_mapping,
                     _partitions=partitions,
+                    executor_defs=executors,
                 )
             ],
             preset_defs=presets,
