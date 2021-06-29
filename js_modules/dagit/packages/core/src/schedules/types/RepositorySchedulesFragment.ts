@@ -55,17 +55,17 @@ export interface RepositorySchedulesFragment_schedules_scheduleState_repositoryO
   repositoryLocationMetadata: RepositorySchedulesFragment_schedules_scheduleState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface RepositorySchedulesFragment_schedules_scheduleState_jobSpecificData_SensorData {
+export interface RepositorySchedulesFragment_schedules_scheduleState_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface RepositorySchedulesFragment_schedules_scheduleState_jobSpecificData_ScheduleData {
+export interface RepositorySchedulesFragment_schedules_scheduleState_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type RepositorySchedulesFragment_schedules_scheduleState_jobSpecificData = RepositorySchedulesFragment_schedules_scheduleState_jobSpecificData_SensorData | RepositorySchedulesFragment_schedules_scheduleState_jobSpecificData_ScheduleData;
+export type RepositorySchedulesFragment_schedules_scheduleState_typeSpecificData = RepositorySchedulesFragment_schedules_scheduleState_typeSpecificData_SensorData | RepositorySchedulesFragment_schedules_scheduleState_typeSpecificData_ScheduleData;
 
 export interface RepositorySchedulesFragment_schedules_scheduleState_runs {
   __typename: "PipelineRun";
@@ -101,10 +101,10 @@ export interface RepositorySchedulesFragment_schedules_scheduleState {
   __typename: "InstigationState";
   id: string;
   name: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   status: InstigationStatus;
   repositoryOrigin: RepositorySchedulesFragment_schedules_scheduleState_repositoryOrigin;
-  jobSpecificData: RepositorySchedulesFragment_schedules_scheduleState_jobSpecificData | null;
+  typeSpecificData: RepositorySchedulesFragment_schedules_scheduleState_typeSpecificData | null;
   runs: RepositorySchedulesFragment_schedules_scheduleState_runs[];
   ticks: RepositorySchedulesFragment_schedules_scheduleState_ticks[];
   runningCount: number;

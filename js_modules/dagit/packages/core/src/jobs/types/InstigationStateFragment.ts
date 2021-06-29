@@ -24,17 +24,17 @@ export interface InstigationStateFragment_repositoryOrigin {
   repositoryLocationMetadata: InstigationStateFragment_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface InstigationStateFragment_jobSpecificData_SensorData {
+export interface InstigationStateFragment_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface InstigationStateFragment_jobSpecificData_ScheduleData {
+export interface InstigationStateFragment_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type InstigationStateFragment_jobSpecificData = InstigationStateFragment_jobSpecificData_SensorData | InstigationStateFragment_jobSpecificData_ScheduleData;
+export type InstigationStateFragment_typeSpecificData = InstigationStateFragment_typeSpecificData_SensorData | InstigationStateFragment_typeSpecificData_ScheduleData;
 
 export interface InstigationStateFragment_runs {
   __typename: "PipelineRun";
@@ -70,10 +70,10 @@ export interface InstigationStateFragment {
   __typename: "InstigationState";
   id: string;
   name: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   status: InstigationStatus;
   repositoryOrigin: InstigationStateFragment_repositoryOrigin;
-  jobSpecificData: InstigationStateFragment_jobSpecificData | null;
+  typeSpecificData: InstigationStateFragment_typeSpecificData | null;
   runs: InstigationStateFragment_runs[];
   ticks: InstigationStateFragment_ticks[];
   runningCount: number;

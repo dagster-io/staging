@@ -74,17 +74,17 @@ export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_reposi
   repositoryLocationMetadata: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_repositoryOrigin_repositoryLocationMetadata[];
 }
 
-export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_SensorData {
+export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_typeSpecificData_SensorData {
   __typename: "SensorData";
   lastRunKey: string | null;
 }
 
-export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_ScheduleData {
+export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_typeSpecificData_ScheduleData {
   __typename: "ScheduleData";
   cronSchedule: string;
 }
 
-export type ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData = ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_SensorData | ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData_ScheduleData;
+export type ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_typeSpecificData = ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_typeSpecificData_SensorData | ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_typeSpecificData_ScheduleData;
 
 export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_runs {
   __typename: "PipelineRun";
@@ -120,10 +120,10 @@ export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState {
   __typename: "InstigationState";
   id: string;
   name: string;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   status: InstigationStatus;
   repositoryOrigin: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_repositoryOrigin;
-  jobSpecificData: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_jobSpecificData | null;
+  typeSpecificData: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_typeSpecificData | null;
   runs: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_runs[];
   ticks: ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_ticks[];
   runningCount: number;

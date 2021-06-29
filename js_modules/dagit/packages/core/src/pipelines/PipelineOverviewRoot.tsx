@@ -156,7 +156,7 @@ export const PipelineOverviewRoot: React.FC<Props> = (props) => {
                           name={schedule.name}
                           key={schedule.name}
                           jobState={schedule.scheduleState}
-                          jobType={InstigationType.SCHEDULE}
+                          instigationType={InstigationType.SCHEDULE}
                           nextTick={schedule.futureTicks.results[0]}
                         />
                       ))}
@@ -178,7 +178,7 @@ export const PipelineOverviewRoot: React.FC<Props> = (props) => {
                           name={sensor.name}
                           key={sensor.name}
                           jobState={sensor.sensorState}
-                          jobType={InstigationType.SENSOR}
+                          instigationType={InstigationType.SENSOR}
                           nextTick={sensor.nextTick || undefined}
                         />
                       ))}
@@ -250,13 +250,13 @@ const OverviewJob = ({
   repoAddress,
   name,
   jobState,
-  jobType,
+  instigationType,
   nextTick,
 }: {
   repoAddress: RepoAddress;
   name: string;
   jobState: OverviewJobFragment;
-  jobType: InstigationType;
+  instigationType: InstigationType;
   nextTick?: {
     timestamp: number;
   };
@@ -268,7 +268,7 @@ const OverviewJob = ({
         <Link
           to={workspacePathFromAddress(
             repoAddress,
-            `/${jobType === InstigationType.SCHEDULE ? 'schedules' : 'sensors'}/${name}`,
+            `/${instigationType === InstigationType.SCHEDULE ? 'schedules' : 'sensors'}/${name}`,
           )}
         >
           {name}

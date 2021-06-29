@@ -169,7 +169,7 @@ const SensorStateRow = ({sensorState}: {sensorState: InstigationStateFragment}) 
       </td>
       <td>
         {latestTick ? (
-          <TickTag tick={latestTick} jobType={InstigationType.SENSOR} />
+          <TickTag tick={latestTick} instigationType={InstigationType.SENSOR} />
         ) : (
           <span style={{color: Colors.GRAY4}}>None</span>
         )}
@@ -194,11 +194,11 @@ const ScheduleStateRow: React.FunctionComponent<{
   );
   const [showRepositoryOrigin, setShowRepositoryOrigin] = React.useState(false);
   const confirm = useConfirmation();
-  const {id, name, ticks, status, repositoryOrigin, jobSpecificData} = scheduleState;
+  const {id, name, ticks, status, repositoryOrigin, typeSpecificData} = scheduleState;
   const latestTick = ticks.length > 0 ? ticks[0] : null;
   const cronSchedule =
-    jobSpecificData && jobSpecificData.__typename === 'ScheduleData'
-      ? jobSpecificData.cronSchedule
+    typeSpecificData && typeSpecificData.__typename === 'ScheduleData'
+      ? typeSpecificData.cronSchedule
       : null;
   const onChangeSwitch = async () => {
     if (status === InstigationStatus.RUNNING) {
@@ -256,7 +256,7 @@ const ScheduleStateRow: React.FunctionComponent<{
           )}
         </div>
       </td>
-      <td>{latestTick ? <TickTag tick={latestTick} jobType={InstigationType.SCHEDULE} /> : null}</td>
+      <td>{latestTick ? <TickTag tick={latestTick} instigationType={InstigationType.SCHEDULE} /> : null}</td>
       <td>
         <JobRunStatus jobState={scheduleState} />
       </td>
