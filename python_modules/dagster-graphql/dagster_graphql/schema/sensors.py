@@ -104,7 +104,7 @@ class GrapheneStartSensorMutation(graphene.Mutation):
 
 
 class GrapheneStopSensorMutationResult(graphene.ObjectType):
-    jobState = graphene.Field(GrapheneInstigationState)
+    instigationState = graphene.Field(GrapheneInstigationState)
 
     class Meta:
         name = "StopSensorMutationResult"
@@ -113,7 +113,7 @@ class GrapheneStopSensorMutationResult(graphene.ObjectType):
         super().__init__()
         self._job_state = check.inst_param(job_state, "job_state", JobState)
 
-    def resolve_jobState(self, _graphene_info):
+    def resolve_instigationState(self, _graphene_info):
         if not self._job_state:
             return None
 

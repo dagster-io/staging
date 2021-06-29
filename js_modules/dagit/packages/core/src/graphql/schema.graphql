@@ -1465,7 +1465,7 @@ type ScheduleStateResult {
 union StopSensorMutationResultOrError = StopSensorMutationResult | ReadOnlyError | PythonError
 
 type StopSensorMutationResult {
-  jobState: InstigationState
+  instigationState: InstigationState
 }
 
 union TerminatePipelineExecutionResult = TerminatePipelineExecutionSuccess | TerminatePipelineExecutionFailure | PipelineRunNotFoundError | ReadOnlyError | PythonError
