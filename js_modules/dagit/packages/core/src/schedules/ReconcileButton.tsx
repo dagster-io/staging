@@ -20,7 +20,7 @@ export const ReconcileButton: React.FC<{repoAddress: RepoAddress}> = ({repoAddre
       query: SCHEDULES_ROOT_QUERY,
       variables: {
         repositorySelector: repositorySelector,
-        jobType: InstigationType.SCHEDULE,
+        instigationType: InstigationType.SCHEDULE,
       },
     },
   ];

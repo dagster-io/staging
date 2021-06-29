@@ -30,7 +30,7 @@ import {TICK_TAG_FRAGMENT, RunList, TickTag, FailedRunList} from './JobTick';
 import {LiveTickTimeline} from './LiveTickTimeline';
 import {
   TickHistoryQuery,
-  TickHistoryQuery_jobStateOrError_InstigationState_ticks,
+  TickHistoryQuery_instigationStateOrError_InstigationState_ticks,
 } from './types/TickHistoryQuery';
 
 import 'chartjs-plugin-zoom';
@@ -93,7 +93,7 @@ const TABS = [
   {id: 'all', label: 'All'},
 ];
 
-type InstigationTick = TickHistoryQuery_jobStateOrError_InstigationState_ticks;
+type InstigationTick = TickHistoryQuery_instigationStateOrError_InstigationState_ticks;
 const MILLIS_PER_DAY = 86400 * 1000;
 
 export const JobTickHistory = ({
@@ -113,7 +113,7 @@ export const JobTickHistory = ({
   );
   const [pollingPaused, pausePolling] = React.useState<boolean>(false);
   const [selectedTick, setSelectedTick] = React.useState<
-    TickHistoryQuery_jobStateOrError_InstigationState_ticks | undefined
+    TickHistoryQuery_instigationStateOrError_InstigationState_ticks | undefined
   >();
   React.useEffect(() => {
     if (!showRecent && selectedTab === 'recent') {
@@ -163,11 +163,11 @@ export const JobTickHistory = ({
     );
   }
 
-  if (data.jobStateOrError.__typename === 'PythonError') {
-    return <PythonErrorInfo error={data.jobStateOrError} />;
+  if (data.instigationStateOrError.__typename === 'PythonError') {
+    return <PythonErrorInfo error={data.instigationStateOrError} />;
   }
 
-  const {ticks, nextTick, instigationType} = data.jobStateOrError;
+  const {ticks, nextTick, instigationType} = data.instigationStateOrError;
   const displayedTicks = ticks.filter((tick) =>
     tick.status === InstigationTickStatus.SKIPPED
       ? instigationType === InstigationType.SCHEDULE && shownStates[tick.status]
@@ -529,7 +529,7 @@ const TickHistoryGraph: React.FC<{
 
 const JOB_TICK_HISTORY_QUERY = gql`
   query TickHistoryQuery($instigationSelector: InstigationSelector!, $dayRange: Int, $limit: Int) {
-    jobStateOrError(instigationSelector: $instigationSelector) {
+    instigationStateOrError(instigationSelector: $instigationSelector) {
       __typename
       ... on InstigationState {
         id

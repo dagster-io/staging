@@ -89,7 +89,7 @@ query getSchedule($scheduleSelector: ScheduleSelector!, $ticksAfter: Float) {
 
 GET_UNLOADABLE_QUERY = """
 query getUnloadableSchedules {
-  unloadableJobStatesOrError(jobType: SCHEDULE) {
+  unloadableInstigationStatesOrError(instigationType: SCHEDULE) {
     ... on JobStates {
       results {
         id
@@ -434,5 +434,8 @@ def test_get_unloadable_job(graphql_context):
         )
 
     result = execute_dagster_graphql(graphql_context, GET_UNLOADABLE_QUERY)
-    assert len(result.data["unloadableJobStatesOrError"]["results"]) == 1
-    assert result.data["unloadableJobStatesOrError"]["results"][0]["name"] == "unloadable_running"
+    assert len(result.data["unloadableInstigationStatesOrError"]["results"]) == 1
+    assert (
+        result.data["unloadableInstigationStatesOrError"]["results"][0]["name"]
+        == "unloadable_running"
+    )

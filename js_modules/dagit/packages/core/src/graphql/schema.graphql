@@ -10,8 +10,8 @@ type Query {
   schedulesOrError(repositorySelector: RepositorySelector!): SchedulesOrError!
   sensorOrError(sensorSelector: SensorSelector!): SensorOrError!
   sensorsOrError(repositorySelector: RepositorySelector!): SensorsOrError!
-  jobStateOrError(instigationSelector: InstigationSelector!): InstigationStateOrError!
-  unloadableJobStatesOrError(jobType: InstigationType): InstigationStatesOrError!
+  instigationStateOrError(instigationSelector: InstigationSelector!): InstigationStateOrError!
+  unloadableInstigationStatesOrError(instigationType: InstigationType): InstigationStatesOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
