@@ -22,7 +22,7 @@ export interface JobsListQuery_schedulesOrError_Schedules_results_scheduleState_
 }
 
 export interface JobsListQuery_schedulesOrError_Schedules_results_scheduleState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   repositoryOrigin: JobsListQuery_schedulesOrError_Schedules_results_scheduleState_repositoryOrigin;
   status: InstigationStatus;
@@ -54,7 +54,7 @@ export interface JobsListQuery_sensorsOrError_Sensors_results_sensorState_reposi
 }
 
 export interface JobsListQuery_sensorsOrError_Sensors_results_sensorState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   repositoryOrigin: JobsListQuery_sensorsOrError_Sensors_results_sensorState_repositoryOrigin;
   status: InstigationStatus;

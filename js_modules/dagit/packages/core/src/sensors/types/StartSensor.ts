@@ -15,7 +15,7 @@ export interface StartSensor_startSensor_SensorNotFoundError {
 }
 
 export interface StartSensor_startSensor_Sensor_sensorState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   status: InstigationStatus;
 }

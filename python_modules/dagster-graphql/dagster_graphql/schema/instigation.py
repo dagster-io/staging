@@ -249,7 +249,7 @@ class GrapheneFutureInstigationTicks(graphene.ObjectType):
         name = "FutureInstigationTicks"
 
 
-class GrapheneJobState(graphene.ObjectType):
+class GrapheneInstigationState(graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     name = graphene.NonNull(graphene.String)
     jobType = graphene.NonNull(GrapheneInstigationType)
@@ -271,7 +271,7 @@ class GrapheneJobState(graphene.ObjectType):
     runningCount = graphene.NonNull(graphene.Int)  # remove with cron scheduler
 
     class Meta:
-        name = "JobState"
+        name = "InstigationState"
 
     def __init__(self, job_state):
         self._job_state = check.inst_param(job_state, "job_state", JobState)
@@ -350,33 +350,33 @@ class GrapheneJobState(graphene.ObjectType):
             )
 
 
-class GrapheneJobStates(graphene.ObjectType):
-    results = non_null_list(GrapheneJobState)
+class GrapheneInstigationStates(graphene.ObjectType):
+    results = non_null_list(GrapheneInstigationState)
 
     class Meta:
-        name = "JobStates"
+        name = "InstigationStates"
 
 
-class GrapheneJobStateOrError(graphene.Union):
+class GrapheneInstigationStateOrError(graphene.Union):
     class Meta:
-        name = "JobStateOrError"
-        types = (GrapheneJobState, GraphenePythonError)
+        name = "InstigationStateOrError"
+        types = (GrapheneInstigationState, GraphenePythonError)
 
 
-class GrapheneJobStatesOrError(graphene.Union):
+class GrapheneInstigationStatesOrError(graphene.Union):
     class Meta:
-        types = (GrapheneJobStates, GraphenePythonError)
-        name = "JobStatesOrError"
+        types = (GrapheneInstigationStates, GraphenePythonError)
+        name = "InstigationStatesOrError"
 
 
 types = [
     GrapheneFutureInstigationTick,
     GrapheneFutureInstigationTicks,
     GrapheneInstigationTypeSpecificData,
-    GrapheneJobState,
-    GrapheneJobStateOrError,
-    GrapheneJobStates,
-    GrapheneJobStatesOrError,
+    GrapheneInstigationState,
+    GrapheneInstigationStateOrError,
+    GrapheneInstigationStates,
+    GrapheneInstigationStatesOrError,
     GrapheneInstigationTick,
     GrapheneScheduleData,
     GrapheneSensorData,

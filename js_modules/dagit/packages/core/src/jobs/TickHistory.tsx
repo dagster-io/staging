@@ -30,7 +30,7 @@ import {TICK_TAG_FRAGMENT, RunList, TickTag, FailedRunList} from './JobTick';
 import {LiveTickTimeline} from './LiveTickTimeline';
 import {
   TickHistoryQuery,
-  TickHistoryQuery_jobStateOrError_JobState_ticks,
+  TickHistoryQuery_jobStateOrError_InstigationState_ticks,
 } from './types/TickHistoryQuery';
 
 import 'chartjs-plugin-zoom';
@@ -93,7 +93,7 @@ const TABS = [
   {id: 'all', label: 'All'},
 ];
 
-type InstigationTick = TickHistoryQuery_jobStateOrError_JobState_ticks;
+type InstigationTick = TickHistoryQuery_jobStateOrError_InstigationState_ticks;
 const MILLIS_PER_DAY = 86400 * 1000;
 
 export const JobTickHistory = ({
@@ -113,7 +113,7 @@ export const JobTickHistory = ({
   );
   const [pollingPaused, pausePolling] = React.useState<boolean>(false);
   const [selectedTick, setSelectedTick] = React.useState<
-    TickHistoryQuery_jobStateOrError_JobState_ticks | undefined
+    TickHistoryQuery_jobStateOrError_InstigationState_ticks | undefined
   >();
   React.useEffect(() => {
     if (!showRecent && selectedTab === 'recent') {
@@ -530,7 +530,7 @@ const JOB_TICK_HISTORY_QUERY = gql`
   query TickHistoryQuery($jobSelector: JobSelector!, $dayRange: Int, $limit: Int) {
     jobStateOrError(jobSelector: $jobSelector) {
       __typename
-      ... on JobState {
+      ... on InstigationState {
         id
         jobType
         nextTick {

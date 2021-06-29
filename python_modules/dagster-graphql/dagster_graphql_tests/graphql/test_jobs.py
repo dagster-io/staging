@@ -21,7 +21,7 @@ query JobQuery($jobSelector: JobSelector!) {
       message
       stack
     }
-    ... on JobState {
+    ... on InstigationState {
         id
         nextTick {
             timestamp
@@ -65,8 +65,8 @@ class TestNextTickRepository(
         )
 
         assert result.data
-        assert result.data["jobStateOrError"]["__typename"] == "JobState"
-        next_tick = result.data["jobStateOrError"]["nextTick"]
+        assert result.data["instigationStateOrError"]["__typename"] == "InstigationState"
+        next_tick = result.data["instigationStateOrError"]["nextTick"]
         assert next_tick
 
     def test_sensor_next_tick(self, graphql_context):
@@ -90,6 +90,6 @@ class TestNextTickRepository(
         )
 
         assert result.data
-        assert result.data["jobStateOrError"]["__typename"] == "JobState"
-        next_tick = result.data["jobStateOrError"]["nextTick"]
+        assert result.data["instigationStateOrError"]["__typename"] == "InstigationState"
+        next_tick = result.data["instigationStateOrError"]["nextTick"]
         assert next_tick

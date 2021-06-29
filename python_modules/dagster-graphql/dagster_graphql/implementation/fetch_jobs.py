@@ -8,7 +8,7 @@ from .utils import capture_error
 
 @capture_error
 def get_unloadable_job_states_or_error(graphene_info, job_type=None):
-    from ..schema.instigation import GrapheneJobState, GrapheneJobStates
+    from ..schema.instigation import GrapheneInstigationState, GrapheneInstigationStates
 
     check.opt_inst_param(job_type, "job_type", JobType)
     job_states = graphene_info.context.instance.all_stored_job_state(job_type=job_type)
@@ -27,14 +27,14 @@ def get_unloadable_job_states_or_error(graphene_info, job_type=None):
         if job_state.job_origin_id not in job_origin_ids and job_state.status == JobStatus.RUNNING
     ]
 
-    return GrapheneJobStates(
-        results=[GrapheneJobState(job_state=job_state) for job_state in unloadable_states]
+    return GrapheneInstigationStates(
+        results=[GrapheneInstigationState(job_state=job_state) for job_state in unloadable_states]
     )
 
 
 @capture_error
 def get_job_state_or_error(graphene_info, selector):
-    from ..schema.instigation import GrapheneJobState
+    from ..schema.instigation import GrapheneInstigationState
 
     check.inst_param(selector, "selector", JobSelector)
     location = graphene_info.context.get_repository_location(selector.location_name)
@@ -57,4 +57,4 @@ def get_job_state_or_error(graphene_info, selector):
     else:
         check.failed(f"Could not find a definition for {selector.job_name}")
 
-    return GrapheneJobState(job_state=job_state)
+    return GrapheneInstigationState(job_state=job_state)

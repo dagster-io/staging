@@ -11,7 +11,7 @@ from ..errors import (
 from ..instigation import (
     GrapheneFutureInstigationTick,
     GrapheneFutureInstigationTicks,
-    GrapheneJobState,
+    GrapheneInstigationState,
 )
 from ..util import non_null_list
 
@@ -25,7 +25,7 @@ class GrapheneSchedule(graphene.ObjectType):
     mode = graphene.NonNull(graphene.String)
     execution_timezone = graphene.Field(graphene.String)
     description = graphene.String()
-    scheduleState = graphene.NonNull(GrapheneJobState)
+    scheduleState = graphene.NonNull(GrapheneInstigationState)
     partition_set = graphene.Field("dagster_graphql.schema.partition_sets.GraphenePartitionSet")
     futureTicks = graphene.NonNull(
         GrapheneFutureInstigationTicks, cursor=graphene.Float(), limit=graphene.Int()
@@ -58,7 +58,7 @@ class GrapheneSchedule(graphene.ObjectType):
             pipeline_name=external_schedule.pipeline_name,
             solid_selection=external_schedule.solid_selection,
             mode=external_schedule.mode,
-            scheduleState=GrapheneJobState(self._schedule_state),
+            scheduleState=GrapheneInstigationState(self._schedule_state),
             execution_timezone=(
                 self._external_schedule.execution_timezone
                 if self._external_schedule.execution_timezone

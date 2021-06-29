@@ -72,7 +72,7 @@ export interface SensorFragment_sensorState_ticks {
 }
 
 export interface SensorFragment_sensorState {
-  __typename: "JobState";
+  __typename: "InstigationState";
   id: string;
   name: string;
   jobType: InstigationType;
