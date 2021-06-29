@@ -152,10 +152,23 @@ class EventLogStorage(ABC, MayHaveInstanceWeakref):
         after_cursor: int = None,
         limit: int = None,
         ascending: bool = False,
-        include_cursor: bool = False,
         before_timestamp=None,
         cursor: int = None,  # deprecated
+        include_cursor: bool = False,  # deprecated
     ) -> Union[Iterable[EventLogEntry], Iterable[Tuple[int, EventLogEntry]]]:
+        pass
+
+    @abstractmethod
+    def get_asset_event_records(
+        self,
+        asset_key: AssetKey,
+        partitions: Optional[List[str]] = None,
+        after_cursor: int = None,
+        before_cursor: int = None,
+        before_timestamp: int = None,
+        limit: int = None,
+        ascending: bool = False,
+    ) -> Iterable[EventLogRecord]:
         pass
 
     @abstractmethod

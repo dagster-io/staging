@@ -35,6 +35,7 @@ from dagster.serdes import ConfigurableClass
 from dagster.seven import get_current_datetime_in_utc
 from dagster.utils.error import serializable_error_info_from_exc_info
 
+
 from .config import DAGSTER_CONFIG_YAML_FILENAME, is_dagster_home_set
 from .ref import InstanceRef
 
@@ -1039,6 +1040,23 @@ class DagsterInstance:
 
     def has_asset_key(self, asset_key: AssetKey) -> bool:
         return self._event_storage.has_asset_key(asset_key)
+
+    def event_records_for_asset_key(
+        self,
+        asset_key: AssetKey,
+        after_cursor: int = None,
+        before_cursor: int = None,
+        limit: int = None,
+        ascending: bool = False,
+    ) -> Iterable["EventLogRecord"]:
+        check.inst_param(asset_key, "asset_key", AssetKey)
+        return self._event_storage.get_asset_event_records(
+            asset_key=asset_key,
+            after_cursor=after_cursor,
+            before_cursor=before_cursor,
+            limit=limit,
+            ascending=ascending,
+        )
 
     def events_for_asset_key(
         self,
