@@ -1,43 +1,67 @@
+from enum import Enum
 from typing import Dict
 
 from dagster.core.workspace.context import IWorkspaceProcessContext
 
+
+class Permission(str, Enum):
+    """
+    This enum subclasses str and Enum so that we can serialize it when calling json.dumps
+    on a dictionary with Permission keys.
+    """
+
+    LAUNCH_PIPELINE_EXECUTION = "LAUNCH_PIPELINE_EXECUTION"
+    LAUNCH_PIPELINE_REEXECUTION = "LAUNCH_PIPELINE_REEXECUTION"
+    RECONCILE_SCHEDULER_STATE = "RECONCILE_SCHEDULER_STATE"
+    START_SCHEDULE = "START_SCHEDULE"
+    STOP_RUNNING_SCHEDULE = "STOP_RUNNING_SCHEDULE"
+    START_SENSOR = "START_SENSOR"
+    STOP_SENSOR = "STOP_SENSOR"
+    TERMINATE_PIPELINE_EXECUTION = "TERMINATE_PIPELINE_EXECUTION"
+    DELETE_PIPELINE_RUN = "DELETE_PIPELINE_RUN"
+    RELOAD_REPOSITORY_LOCATION = "RELOAD_REPOSITORY_LOCATION"
+    RELOAD_WORKSPACE = "RELOAD_WORKSPACE"
+    WIPE_ASSETS = "WIPE_ASSETS"
+    LAUNCH_PARTITION_BACKFILL = "LAUNCH_PARTITION_BACKFILL"
+    CANCEL_PARTITION_BACKFILL = "CANCEL_PARTITION_BACKFILL"
+
+
 VIEWER_PERMISSIONS = {
-    "launch_pipeline_execution": False,
-    "launch_pipeline_reexecution": False,
-    "reconcile_scheduler_state": False,
-    "start_schedule": False,
-    "stop_running_schedule": False,
-    "start_sensor": False,
-    "stop_sensor": False,
-    "terminate_pipeline_execution": False,
-    "delete_pipeline_run": False,
-    "reload_repository_location": False,
-    "reload_workspace": False,
-    "wipe_assets": False,
-    "launch_partition_backfill": False,
-    "cancel_partition_backfill": False,
+    Permission.LAUNCH_PIPELINE_EXECUTION: False,
+    Permission.LAUNCH_PIPELINE_REEXECUTION: False,
+    Permission.RECONCILE_SCHEDULER_STATE: False,
+    Permission.START_SCHEDULE: False,
+    Permission.STOP_RUNNING_SCHEDULE: False,
+    Permission.START_SENSOR: False,
+    Permission.STOP_SENSOR: False,
+    Permission.TERMINATE_PIPELINE_EXECUTION: False,
+    Permission.DELETE_PIPELINE_RUN: False,
+    Permission.RELOAD_REPOSITORY_LOCATION: False,
+    Permission.RELOAD_WORKSPACE: False,
+    Permission.WIPE_ASSETS: False,
+    Permission.LAUNCH_PARTITION_BACKFILL: False,
+    Permission.CANCEL_PARTITION_BACKFILL: False,
 }
 
 EDITOR_PERMISSIONS = {
-    "launch_pipeline_execution": True,
-    "launch_pipeline_reexecution": True,
-    "reconcile_scheduler_state": True,
-    "start_schedule": True,
-    "stop_running_schedule": True,
-    "start_sensor": True,
-    "stop_sensor": True,
-    "terminate_pipeline_execution": True,
-    "delete_pipeline_run": True,
-    "reload_repository_location": True,
-    "reload_workspace": True,
-    "wipe_assets": True,
-    "launch_partition_backfill": True,
-    "cancel_partition_backfill": True,
+    Permission.LAUNCH_PIPELINE_EXECUTION: False,
+    Permission.LAUNCH_PIPELINE_REEXECUTION: False,
+    Permission.RECONCILE_SCHEDULER_STATE: False,
+    Permission.START_SCHEDULE: False,
+    Permission.STOP_RUNNING_SCHEDULE: False,
+    Permission.START_SENSOR: False,
+    Permission.STOP_SENSOR: False,
+    Permission.TERMINATE_PIPELINE_EXECUTION: False,
+    Permission.DELETE_PIPELINE_RUN: False,
+    Permission.RELOAD_REPOSITORY_LOCATION: False,
+    Permission.RELOAD_WORKSPACE: False,
+    Permission.WIPE_ASSETS: False,
+    Permission.LAUNCH_PARTITION_BACKFILL: False,
+    Permission.CANCEL_PARTITION_BACKFILL: False,
 }
 
 
-def get_user_permissions(context: IWorkspaceProcessContext) -> Dict[str, bool]:
+def get_user_permissions(context: IWorkspaceProcessContext) -> Dict[Permission, bool]:
     if context.read_only:
         return VIEWER_PERMISSIONS
     else:
