@@ -1,6 +1,6 @@
 import time
 from collections import OrderedDict, defaultdict
-from typing import Dict
+from typing import Dict, Iterable, List, Optional
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
@@ -171,10 +171,37 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
         after_cursor=None,
         limit=None,
         ascending=False,
-        include_cursor=False,
         before_timestamp=None,
         cursor=None,
+        include_cursor=False,
     ):
+        before_cursor, after_cursor = extract_asset_events_cursor(
+            cursor, before_cursor, after_cursor, ascending
+        )
+        event_records = self.get_asset_event_records(
+            asset_key=asset_key,
+            partitions=partitions,
+            before_cursor=before_cursor,
+            after_cursor=after_cursor,
+            limit=limit,
+            ascending=ascending,
+            before_timestamp=before_timestamp,
+        )
+        if include_cursor:
+            return [tuple(record.storage_id, record.event_log_entry) for record in event_records]
+        else:
+            return [record.event_log_entry for record in event_records]
+
+    def get_asset_event_records(
+        self,
+        asset_key: AssetKey,
+        partitions: Optional[List[str]] = None,
+        after_cursor: int = None,
+        before_cursor: int = None,
+        before_timestamp: int = None,
+        limit: int = None,
+        ascending: bool = False,
+    ) -> Iterable[EventLogRecord]:
         asset_events = []
         for records in self._logs.values():
             asset_events += [
@@ -186,29 +213,22 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
                 and self._wiped_asset_keys[record.dagster_event.asset_key] < record.timestamp
             ]
 
-        before_cursor, after_cursor = extract_asset_events_cursor(
-            cursor, before_cursor, after_cursor, ascending
-        )
-
-        events_with_ids = [
-            tuple([event_id, event])
+        event_records = [
+            EventLogRecord(storage_id=event_id, event_log_entry=event)
             for event_id, event in enumerate(asset_events)
             if (after_cursor is None or event_id > after_cursor)
             and (before_cursor is None or event_id < before_cursor)
             and (before_timestamp is None or event.timestamp < before_timestamp)
         ]
 
-        events_with_ids = sorted(
-            events_with_ids, key=lambda x: x[1].timestamp, reverse=not ascending
+        event_records = sorted(
+            event_records, key=lambda x: x.event_log_entry.timestamp, reverse=not ascending
         )
 
         if limit:
-            events_with_ids = events_with_ids[:limit]
+            event_records = event_records[:limit]
 
-        if include_cursor:
-            return events_with_ids
-
-        return [event for _id, event in events_with_ids]
+        return event_records
 
     def get_asset_run_ids(self, asset_key):
         asset_run_ids = set()

@@ -34,17 +34,18 @@ def get_asset_events(graphene_info, asset_key, partitions=None, limit=None, befo
     check.inst_param(asset_key, "asset_key", AssetKey)
     check.opt_int_param(limit, "limit")
     instance = graphene_info.context.instance
-    events = instance.events_for_asset_key(
+    event_records = instance.event_records_for_asset_key(
         asset_key,
         partitions=partitions,
         before_timestamp=before_timestamp,
         limit=limit,
     )
     return [
-        event
-        for record_id, event in events
-        if event.is_dagster_event
-        and event.dagster_event.event_type_value == DagsterEventType.ASSET_MATERIALIZATION.value
+        event_record.event_log_entry
+        for event_record in event_records
+        if event_record.event_log_entry.is_dagster_event
+        and event_record.event_log_entry.dagster_event.event_type_value
+        == DagsterEventType.ASSET_MATERIALIZATION.value
     ]
 
 

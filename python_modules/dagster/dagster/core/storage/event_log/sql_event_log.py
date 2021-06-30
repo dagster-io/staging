@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional, Iterable, List
+from typing import Iterable, List, Optional
 
 import pendulum
 import sqlalchemy as db
