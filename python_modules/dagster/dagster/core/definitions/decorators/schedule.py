@@ -8,7 +8,7 @@ from dagster.core.definitions.partition import (
     PartitionScheduleDefinition,
     PartitionSetDefinition,
     ScheduleType,
-    TimeBasedPartitionParams,
+    TimeBasedPartitions,
 )
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError
@@ -223,7 +223,7 @@ def my_schedule_definition(_):
 
         fmt = DEFAULT_MONTHLY_FORMAT
 
-        partition_params = TimeBasedPartitionParams(
+        partitions = TimeBasedPartitions(
             schedule_type=ScheduleType.MONTHLY,
             start=start_date,
             execution_day=execution_day_of_month,
@@ -236,21 +236,21 @@ def my_schedule_definition(_):
 
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,
+            pipeline_name=pipeline_name,  # type: ignore[arg-type]
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
-            partition_params=partition_params,
+            partitions=partitions,
         )
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,
-            partition_params.get_cron_schedule(),
+            partitions.get_cron_schedule(),
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn()
+                execution_time_to_partition_fn=partitions.get_execution_time_to_partition_fn()
             ),
             execution_timezone=execution_timezone,
             description=description,
@@ -375,7 +375,7 @@ def my_schedule_definition(_):
 
         fmt = DEFAULT_DATE_FORMAT
 
-        partition_params = TimeBasedPartitionParams(
+        partitions = TimeBasedPartitions(
             schedule_type=ScheduleType.WEEKLY,
             start=start_date,
             execution_time=execution_time,
@@ -388,21 +388,21 @@ def my_schedule_definition(_):
 
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,
+            pipeline_name=pipeline_name,  # type: ignore[arg-type]
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
-            partition_params=partition_params,
+            partitions=partitions,
         )
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,
-            partition_params.get_cron_schedule(),
+            partitions.get_cron_schedule(),
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn(),
+                execution_time_to_partition_fn=partitions.get_execution_time_to_partition_fn(),
             ),
             execution_timezone=execution_timezone,
             description=description,
@@ -517,7 +517,7 @@ def my_schedule_definition(_):
             )
             tags_fn_for_partition_value = lambda partition: tags_fn(partition.value)
 
-        partition_params = TimeBasedPartitionParams(
+        partitions = TimeBasedPartitions(
             schedule_type=ScheduleType.DAILY,
             start=start_date,
             execution_time=execution_time,
@@ -529,21 +529,21 @@ def my_schedule_definition(_):
 
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,
+            pipeline_name=pipeline_name,  # type: ignore[arg-type]
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
-            partition_params=partition_params,
+            partitions=partitions,
         )
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,
-            partition_params.get_cron_schedule(),
+            partitions.get_cron_schedule(),
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn(),
+                execution_time_to_partition_fn=partitions.get_execution_time_to_partition_fn(),
             ),
             execution_timezone=execution_timezone,
             description=description,
@@ -673,7 +673,7 @@ def my_schedule_definition(_):
             else DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE
         )
 
-        partition_params = TimeBasedPartitionParams(
+        partitions = TimeBasedPartitions(
             schedule_type=ScheduleType.HOURLY,
             start=start_date,
             execution_time=execution_time,
@@ -685,21 +685,21 @@ def my_schedule_definition(_):
 
         partition_set = PartitionSetDefinition(
             name="{}_partitions".format(schedule_name),
-            pipeline_name=pipeline_name,
+            pipeline_name=pipeline_name,  # type: ignore[arg-type]
             run_config_fn_for_partition=lambda partition: fn(partition.value),
             solid_selection=solid_selection,
             tags_fn_for_partition=tags_fn_for_partition_value,
             mode=mode,
-            partition_params=partition_params,
+            partitions=partitions,
         )
 
         schedule_def = partition_set.create_schedule_definition(
             schedule_name,
-            partition_params.get_cron_schedule(),
+            partitions.get_cron_schedule(),
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_offset_partition_selector(
-                execution_time_to_partition_fn=partition_params.get_execution_time_to_partition_fn(),
+                execution_time_to_partition_fn=partitions.get_execution_time_to_partition_fn(),
             ),
             execution_timezone=execution_timezone,
             description=description,
