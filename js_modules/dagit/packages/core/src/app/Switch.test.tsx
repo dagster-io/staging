@@ -228,7 +228,7 @@ describe('Switch', () => {
         initialEntries: ['/gated/check'],
       };
 
-      const permissions = {...PERMISSIONS_ALLOW_ALL, reload_repository_location: false};
+      const permissions = {...PERMISSIONS_ALLOW_ALL, RELOAD_REPOSITORY_LOCATION: false};
 
       render(
         <TestProvider appContextProps={{permissions}} routerProps={routerProps}>

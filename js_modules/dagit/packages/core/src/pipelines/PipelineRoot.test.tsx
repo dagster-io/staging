@@ -84,7 +84,7 @@ describe('PipelineRoot', () => {
       const routerProps = {
         initialEntries: [`${path}/playground`],
       };
-      const permissions = {...PERMISSIONS_ALLOW_ALL, launch_pipeline_execution: false};
+      const permissions = {...PERMISSIONS_ALLOW_ALL, LAUNCH_PIPELINE_EXECUTION: false};
 
       render(
         <TestProvider

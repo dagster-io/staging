@@ -297,7 +297,7 @@ class WorkspaceProcessContext(IWorkspaceProcessContext):
         # lazy import for perf
         from rx.subjects import Subject
 
-        self._instance = check.inst_param(instance, "instance", DagsterInstance)
+        self._instance: DagsterInstance = check.inst_param(instance, "instance", DagsterInstance)
         self._workspace = workspace
 
         self._location_state_events = Subject()
@@ -310,7 +310,7 @@ class WorkspaceProcessContext(IWorkspaceProcessContext):
         self._set_state_subscribers()
 
     @property
-    def instance(self):
+    def instance(self) -> DagsterInstance:
         return self._instance
 
     @property
