@@ -44,7 +44,7 @@ describe('PipelineRoot', () => {
   const pipelineName = 'pipez';
   const path = `/workspace/${repoAddressAsString(repoAddress)}/pipelines/${pipelineName}:default`;
 
-  it('renders definition by default', async () => {
+  it('renders overview by default', async () => {
     const routerProps = {
       initialEntries: [path],
     };
@@ -56,7 +56,7 @@ describe('PipelineRoot', () => {
 
     await waitFor(() => {
       const selected = screen.getByRole('tab', {selected: true});
-      expect(selected.textContent).toMatch(/definition/i);
+      expect(selected.textContent).toMatch(/overview/i);
     });
   });
 

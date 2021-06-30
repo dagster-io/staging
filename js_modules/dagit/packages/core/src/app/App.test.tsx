@@ -100,9 +100,7 @@ describe('App', () => {
       render(
         <TestProvider
           routerProps={{
-            initialEntries: [
-              '/workspace/my_repository@my_location/pipelines/foo_pipeline:default/overview',
-            ],
+            initialEntries: ['/workspace/my_repository@my_location/pipelines/foo_pipeline:default'],
           }}
           apolloProps={{mocks: [defaultMocks, mocks]}}
         >
