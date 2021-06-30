@@ -2,7 +2,7 @@ import logging
 from abc import abstractmethod
 from collections import defaultdict
 from datetime import datetime
-from typing import Optional, Iterable, List
+from typing import Iterable, List, Optional
 
 import pendulum
 import sqlalchemy as db
@@ -762,7 +762,7 @@ class SqlEventLogStorage(EventLogStorage):
             before_timestamp=before_timestamp,
         )
         if include_cursor:
-            return [tuple(record.storage_id, record.event_log_entry) for record in event_records]
+            return [tuple([record.storage_id, record.event_log_entry]) for record in event_records]
         else:
             return [record.event_log_entry for record in event_records]
 
