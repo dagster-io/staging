@@ -272,6 +272,7 @@ def _evaluate_sensor(
     if not sensor_runtime_data.run_requests:
         if sensor_runtime_data.pipeline_run_reactions:
             for pipeline_run_reaction in sensor_runtime_data.pipeline_run_reactions:
+                # HERE
                 origin_run_id = pipeline_run_reaction.pipeline_run.run_id
                 message = (
                     f'Sensor "{external_sensor.name}" processed failure of run {origin_run_id}.'

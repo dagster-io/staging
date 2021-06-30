@@ -157,6 +157,19 @@ def pipeline_failure_sensor(
                 pipeline_run = run_records[0].pipeline_run
                 update_timestamp = run_records[0].update_timestamp
 
+                # skip if the failed pipeline does not belong to the current repository
+                pipeline_repo_name = (
+                    pipeline_run.external_pipeline_origin.external_repository_origin.repository_name
+                )
+                if pipeline_repo_name != context.repository_name:
+                    context.update_cursor(
+                        PipelineFailureSensorCursor(
+                            record_id=storage_id, update_timestamp=update_timestamp.isoformat()
+                        ).to_json()
+                    )
+                    yield SkipReason()
+                    return
+
                 serializable_error = None
 
                 try:
