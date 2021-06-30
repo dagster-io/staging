@@ -1,8 +1,8 @@
-# pylint: disable=redefined-outer-name, protected-access
+# pylint: disable=redefined-outer-name, protected-access, unused-argument
 import pytest
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation.origin import InProcessRepositoryLocationOrigin
-from dagster.core.test_utils import instance_for_test
+from dagster.core.test_utils import instance_for_test_tempdir
 
 from . import repo
 
@@ -46,7 +46,7 @@ def task(ecs, network_interface, security_group, task_definition):
 
 
 @pytest.fixture
-def instance(ecs, ec2, task, monkeypatch, requests_mock):
+def metadata(task, monkeypatch, requests_mock):
     container_uri = "http://metadata_host"
     monkeypatch.setenv("ECS_CONTAINER_METADATA_URI_V4", container_uri)
     container = task["containers"][0]["name"]
@@ -60,11 +60,25 @@ def instance(ecs, ec2, task, monkeypatch, requests_mock):
             "TaskARN": task["taskArn"],
         },
     )
-    overrides = {"run_launcher": {"module": "dagster_aws.ecs", "class": "EcsRunLauncher"}}
-    with instance_for_test(overrides) as instance:
-        monkeypatch.setattr(instance.run_launcher, "ecs", ecs)
-        monkeypatch.setattr(instance.run_launcher, "ec2", ec2)
-        yield instance
+
+
+@pytest.fixture
+def build_instance(ecs, ec2, metadata, monkeypatch, tmpdir):
+    def builder(config=None):
+        overrides = {
+            "run_launcher": {
+                "module": "dagster_aws.ecs",
+                "class": "EcsRunLauncher",
+                "config": {**(config or {})},
+            }
+        }
+
+        with instance_for_test_tempdir(str(tmpdir), overrides) as instance:
+            monkeypatch.setattr(instance.run_launcher, "ecs", ecs)
+            monkeypatch.setattr(instance.run_launcher, "ec2", ec2)
+            return instance
+
+    return builder
 
 
 @pytest.fixture
@@ -84,15 +98,13 @@ def external_pipeline(image):
         )
 
 
-@pytest.fixture
-def run(instance, pipeline):
-    return instance.create_run_for_pipeline(pipeline)
-
-
 def test_launching(
-    ecs, instance, run, external_pipeline, subnet, network_interface, image, environment
+    ecs, build_instance, pipeline, external_pipeline, subnet, network_interface, image, environment
 ):
+    instance = build_instance()
+    run = instance.create_run_for_pipeline(pipeline)
     assert not run.tags
+
     initial_task_definitions = ecs.list_task_definitions()["taskDefinitionArns"]
     initial_tasks = ecs.list_tasks()["taskArns"]
 
@@ -140,7 +152,11 @@ def test_launching(
     assert run.run_id in str(override["command"])
 
 
-def test_termination(instance, run, external_pipeline):
+def test_termination(build_instance, pipeline, external_pipeline):
+    instance = build_instance()
+
+    run = instance.create_run_for_pipeline(pipeline)
+
     assert not instance.run_launcher.can_terminate(run.run_id)
 
     instance.launch_run(run.run_id, external_pipeline)
