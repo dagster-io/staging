@@ -15,15 +15,18 @@ import {
   RUN_TIME_FRAGMENT,
   titleForRun,
 } from '../runs/RunUtils';
-import {JobType, PipelineSelector} from '../types/globalTypes';
+import {JobType} from '../types/globalTypes';
 import {Loading} from '../ui/Loading';
 import {Table} from '../ui/Table';
 import {FontFamily} from '../ui/styles';
+import {usePipelineSelector} from '../workspace/WorkspaceContext';
 import {RepoAddress} from '../workspace/types';
 import {workspacePathFromAddress} from '../workspace/workspacePath';
 
 import {NonIdealPipelineQueryResult} from './NonIdealPipelineQueryResult';
+import {PipelineExplorerPath} from './PipelinePathUtils';
 import {SidebarSection} from './SidebarComponents';
+import {SidebarModeSection, SIDEBAR_MODE_INFO_FRAGMENT} from './SidebarModeSection';
 import {
   JobOverviewSidebarQuery,
   JobOverviewSidebarQueryVariables,
@@ -33,18 +36,19 @@ import {OverviewJobFragment} from './types/OverviewJobFragment';
 
 type Run = JobOverviewSidebarQuery_pipelineSnapshotOrError_PipelineSnapshot_runs;
 
-export const SidebarJobOverview: React.FC<{
+export const SidebarPipelineOrJobOverview: React.FC<{
   repoAddress: RepoAddress;
-  pipelineSelector: PipelineSelector;
+  explorerPath: PipelineExplorerPath;
 }> = (props) => {
   const {flagPipelineModeTuples} = useFeatureFlags();
+  const pipelineSelector = usePipelineSelector(props.repoAddress, props.explorerPath.pipelineName);
 
   const queryResult = useQuery<JobOverviewSidebarQuery, JobOverviewSidebarQueryVariables>(
     JOB_OVERVIEW_SIDEBAR_QUERY,
     {
       fetchPolicy: 'cache-and-network',
       partialRefetch: true,
-      variables: {pipelineSelector: props.pipelineSelector, limit: 5},
+      variables: {pipelineSelector: pipelineSelector, limit: 5},
     },
   );
 
@@ -55,13 +59,25 @@ export const SidebarJobOverview: React.FC<{
           return <NonIdealPipelineQueryResult result={pipelineSnapshotOrError} />;
         }
 
-        const schedules = pipelineSnapshotOrError.schedules;
-        const sensors = pipelineSnapshotOrError.sensors;
+        let schedules = pipelineSnapshotOrError.schedules;
+        let sensors = pipelineSnapshotOrError.sensors;
+        let modes = pipelineSnapshotOrError.modes;
+
+        if (flagPipelineModeTuples) {
+          schedules = schedules.filter((m) => m.mode === props.explorerPath.pipelineMode);
+          sensors = sensors.filter((m) => m.mode === props.explorerPath.pipelineMode);
+          modes = modes.filter((m) => m.name === props.explorerPath.pipelineMode);
+        }
 
         return (
           <div>
             <SidebarSection title={'Description'}>
               {pipelineSnapshotOrError.description || 'No description provided'}
+            </SidebarSection>
+            <SidebarSection title={'Resources'}>
+              {modes.map((mode) => (
+                <SidebarModeSection mode={mode} key={mode.name} />
+              ))}
             </SidebarSection>
             <SidebarSection title={'Schedule'}>
               {schedules.length ? (
@@ -289,6 +305,10 @@ const JOB_OVERVIEW_SIDEBAR_QUERY = gql`
         name
         description
 
+        modes {
+          id
+          ...SidebarModeInfoFragment
+        }
         runs(limit: $limit) {
           ...RunActionMenuFragment
           ...RunTimeFragment
@@ -303,6 +323,7 @@ const JOB_OVERVIEW_SIDEBAR_QUERY = gql`
         schedules {
           id
           name
+          mode
           scheduleState {
             id
             ...OverviewJobFragment
@@ -316,6 +337,7 @@ const JOB_OVERVIEW_SIDEBAR_QUERY = gql`
         sensors {
           id
           name
+          mode
           sensorState {
             id
             ...OverviewJobFragment
@@ -337,6 +359,7 @@ const JOB_OVERVIEW_SIDEBAR_QUERY = gql`
     }
   }
   ${OVERVIEW_JOB_FRAGMENT}
+  ${SIDEBAR_MODE_INFO_FRAGMENT}
   ${RUN_TIME_FRAGMENT}
   ${RUN_ACTION_MENU_FRAGMENT}
 `;

@@ -49,7 +49,10 @@ describe('App', () => {
 
   it('renders left nav without error', async () => {
     render(
-      <TestProvider apolloProps={{mocks: defaultMocks}}>
+      <TestProvider
+        apolloProps={{mocks: defaultMocks}}
+        routerProps={{initialEntries: ['/workspace/my_repository@my_location']}}
+      >
         <App />
       </TestProvider>,
     );
@@ -94,6 +97,8 @@ describe('App', () => {
           runs: () => new MockList(0),
           schedules: () => new MockList(0),
           sensors: () => new MockList(0),
+          modes: () => new MockList(0),
+          solidHandle: null,
         }),
       };
 
