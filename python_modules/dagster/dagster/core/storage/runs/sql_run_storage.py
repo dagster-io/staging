@@ -241,7 +241,18 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         query = self._runs_query(filters, cursor, limit)
 
         rows = self.fetchall(query)
-        return self._rows_to_runs(rows)
+        runs = self._rows_to_runs(rows)
+        return self._filter_by_non_schema(filters, runs)
+
+    def _filter_by_non_schema(self, filters, runs):
+        filters = check.opt_inst_param(
+            filters, "filters", PipelineRunsFilter, default=PipelineRunsFilter()
+        )
+        filtered_runs = []
+        for run in runs:
+            if not filters.mode or run.mode == filters.mode:
+                filtered_runs.append(run)
+        return filtered_runs
 
     def get_runs_count(self, filters=None):
         subquery = self._runs_query(filters=filters).alias("subquery")

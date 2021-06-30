@@ -30,6 +30,7 @@ class GraphenePipelineRunsFilter(graphene.InputObjectType):
     statuses = graphene.List(graphene.NonNull(GraphenePipelineRunStatus))
     snapshotId = graphene.Field(graphene.String)
     updatedAfter = graphene.Field(graphene.String)
+    mode = graphene.Field(graphene.String)
 
     class Meta:
         description = """This type represents a filter on pipeline runs.
@@ -60,6 +61,7 @@ class GraphenePipelineRunsFilter(graphene.InputObjectType):
             statuses=statuses,
             snapshot_id=self.snapshotId,
             updated_after=updated_after,
+            mode=self.mode,
         )
 
 
