@@ -440,6 +440,7 @@ class FromMultipleSources(
         return handles
 
     def _step_output_handles_no_output(self, step_context):
+        # its this ........
         # FIXME https://github.com/dagster-io/dagster/issues/3511
         # this is a stopgap which asks the instance to check the event logs to find out step skipping
         step_output_handles_with_output = set()

@@ -7,6 +7,7 @@ import time
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
+from typing import List
 
 from dagster import (
     Any,
@@ -33,6 +34,7 @@ from dagster import (
     PythonObjectDagsterType,
     ScheduleDefinition,
     ScheduleEvaluationContext,
+    SolidExecutionContext,
     String,
     check,
     composite_solid,
@@ -670,26 +672,34 @@ def retry_config_resource(context):
 
 @pipeline(mode_defs=[ModeDefinition(resource_defs={"retry_count": retry_config_resource})])
 def eventually_successful():
-    @solid(output_defs=[OutputDefinition(Int)])
-    def spawn(_):
+    @solid
+    def spawn() -> int:
         return 0
 
     @solid(
-        input_defs=[InputDefinition("depth", Int)],
-        output_defs=[OutputDefinition(Int)],
         required_resource_keys={"retry_count"},
     )
-    def fail(context, depth):
+    def fail(context: SolidExecutionContext, depth: int) -> int:
         if context.resources.retry_count <= depth:
             raise Exception("fail")
 
         return depth + 1
 
     @solid
-    def reset(_, depth):
+    def reset(depth: int) -> int:
         return depth
 
-    reset(fail(fail(fail(spawn()))))
+    @solid
+    def collect(fan_in: List[int]):
+        if fan_in != [1, 2, 3]:
+            raise Exception(f"Fan in failed, expected [1, 2, 3] got {fan_in}")
+
+    s = spawn()
+    f1 = fail(s)
+    f2 = fail(f1)
+    f3 = fail(f2)
+    reset(f3)
+    collect([f1, f2, f3])
 
 
 @pipeline
