@@ -619,3 +619,26 @@ class PartitionScheduleDefinition(ScheduleDefinition):
 
     def get_partition_set(self):
         return self._partition_set
+
+
+class PartitionsConfig(Generic[T]):
+    """Defines a way of parameterizing a job where the job can be run on one of a discrete set of
+    partitions, and each partition corresponds to run configuration for the job."""
+
+    def __init__(
+        self,
+        partitions: Partitions[T],
+        run_config_for_partition_fn: Callable[[Partition[T]], Dict[str, Any]],
+    ):
+        self._partitions = check.inst_param(partitions, "partitions", Partitions)
+        self._run_config_for_partition_fn = check.callable_param(
+            run_config_for_partition_fn, "run_config_for_partition_fn"
+        )
+
+    @property
+    def partitions(self) -> Partitions[T]:
+        return self._partitions
+
+    @property
+    def run_config_for_partition_fn(self) -> Callable[[Partition[T]], Dict[str, Any]]:
+        return self._run_config_for_partition_fn
