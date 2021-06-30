@@ -34,7 +34,7 @@ export const SidebarPipelineInfo: React.FC<ISidebarPipelineInfoProps> = ({pipeli
   return (
     <div>
       <SectionInner>
-        <SidebarSubhead>Pipeline</SidebarSubhead>
+        <SidebarSubhead>{flagPipelineModeTuples ? 'Graph' : 'Pipeline'}</SidebarSubhead>
         <SidebarTitle>{breakOnUnderscores(pipeline.name)}</SidebarTitle>
         <SidebarSubhead>Mode</SidebarSubhead>
         {flagPipelineModeTuples && (
