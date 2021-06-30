@@ -1,4 +1,5 @@
 # pylint: disable=redefined-outer-name, protected-access, unused-argument
+import boto3
 import pytest
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation.origin import InProcessRepositoryLocationOrigin
@@ -63,7 +64,18 @@ def metadata(task, monkeypatch, requests_mock):
 
 
 @pytest.fixture
-def build_instance(ecs, ec2, metadata, monkeypatch, tmpdir):
+def stub_aws(ecs, ec2, monkeypatch):
+    # Any call to boto3.client() will return ecs.
+    # Any call to boto3.resource() will return ec2.
+    # This only works because our launcher happens to use a client for ecs and
+    # a resource for ec2 - if that were to change or if new aws objects were to
+    # be introduced, this fixture would need to be refactored.
+    monkeypatch.setattr(boto3, "client", lambda *args, **kwargs: ecs)
+    monkeypatch.setattr(boto3, "resource", lambda *args, **kwargs: ec2)
+
+
+@pytest.fixture
+def build_instance(stub_aws, metadata, monkeypatch, tmpdir):
     def builder(config=None):
         overrides = {
             "run_launcher": {
@@ -74,8 +86,6 @@ def build_instance(ecs, ec2, metadata, monkeypatch, tmpdir):
         }
 
         with instance_for_test_tempdir(str(tmpdir), overrides) as instance:
-            monkeypatch.setattr(instance.run_launcher, "ecs", ecs)
-            monkeypatch.setattr(instance.run_launcher, "ec2", ec2)
             return instance
 
     return builder
