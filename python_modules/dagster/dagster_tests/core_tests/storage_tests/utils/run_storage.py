@@ -133,6 +133,36 @@ class TestRunStorage:
         assert len(some_runs) == 1
         assert some_runs[0].run_id == one
 
+    def test_fetch_by_mode(self, storage):
+        assert storage
+        one = make_new_run_id()
+        two = make_new_run_id()
+        storage.add_run(
+            TestRunStorage.build_run(run_id=one, pipeline_name="some_pipeline", mode="foo")
+        )
+        storage.add_run(
+            TestRunStorage.build_run(run_id=two, pipeline_name="some_pipeline", mode="bar")
+        )
+        assert len(storage.get_runs()) == 2
+        some_runs = storage.get_runs(PipelineRunsFilter(mode="foo"))
+        assert len(some_runs) == 1
+        assert some_runs[0].run_id == one
+
+    def test_filter_by_mode_with_limit(self, storage):
+
+        # Construct records with target mode after non-target mode, to ensure that limit limits
+        # records retrieved, not scanned.
+        for i in range(20):
+            run_id = make_new_run_id()
+            mode = "foo" if i < 10 else "bar"
+            storage.add_run(
+                TestRunStorage.build_run(run_id=run_id, pipeline_name="some_pipeline", mode=mode)
+            )
+
+        assert len(storage.get_runs()) == 20
+        assert len(storage.get_runs(PipelineRunsFilter(mode="bar"))) == 10
+        assert len(storage.get_runs(PipelineRunsFilter(mode="bar"), limit=5)) == 5
+
     def test_fetch_by_snapshot_id(self, storage):
         assert storage
         pipeline_def_a = PipelineDefinition(name="some_pipeline", solid_defs=[])
