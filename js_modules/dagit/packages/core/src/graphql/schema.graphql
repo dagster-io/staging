@@ -70,6 +70,7 @@ type Pipeline implements SolidContainer & IPipelineSnapshot {
   solidHandle(handleID: String!): SolidHandle
   tags: [PipelineTag!]!
   id: ID!
+  graph: [CompositeSolidDefinition!]!
   runs(cursor: String, limit: Int): [PipelineRun!]!
   schedules: [Schedule!]!
   sensors: [Sensor!]!
@@ -255,6 +256,27 @@ type SolidHandle {
 type PipelineTag {
   key: String!
   value: String!
+}
+
+type CompositeSolidDefinition implements ISolidDefinition & SolidContainer {
+  name: String!
+  description: String
+  metadata: [MetadataItemDefinition!]!
+  inputDefinitions: [InputDefinition!]!
+  outputDefinitions: [OutputDefinition!]!
+  solids: [Solid!]!
+  inputMappings: [InputMapping!]!
+  outputMappings: [OutputMapping!]!
+}
+
+type InputMapping {
+  mappedInput: Input!
+  definition: InputDefinition!
+}
+
+type OutputMapping {
+  mappedOutput: Output!
+  definition: OutputDefinition!
 }
 
 type PipelineRun {
@@ -1133,6 +1155,7 @@ type PipelineSnapshot implements IPipelineSnapshot & PipelineReference {
   tags: [PipelineTag!]!
   solidSelection: [String!]
   id: ID!
+  graph: [CompositeSolidDefinition!]!
   runs(cursor: String, limit: Int): [PipelineRun!]!
   schedules: [Schedule!]!
   sensors: [Sensor!]!
@@ -1917,25 +1940,4 @@ type RunGroups {
 
 type StopSensorMutation {
   Output: StopSensorMutationResultOrError!
-}
-
-type CompositeSolidDefinition implements ISolidDefinition & SolidContainer {
-  name: String!
-  description: String
-  metadata: [MetadataItemDefinition!]!
-  inputDefinitions: [InputDefinition!]!
-  outputDefinitions: [OutputDefinition!]!
-  solids: [Solid!]!
-  inputMappings: [InputMapping!]!
-  outputMappings: [OutputMapping!]!
-}
-
-type InputMapping {
-  mappedInput: Input!
-  definition: InputDefinition!
-}
-
-type OutputMapping {
-  mappedOutput: Output!
-  definition: OutputDefinition!
 }

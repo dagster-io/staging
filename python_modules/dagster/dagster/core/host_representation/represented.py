@@ -17,15 +17,13 @@ class RepresentedPipeline(ABC):
     def __init__(self, pipeline_index):
         self._pipeline_index = check.inst_param(pipeline_index, "pipeline_index", PipelineIndex)
 
-    # Temporary method to allow for incrementally
-    # replacing pipeline index with the representation hierarchy
-    # Chosen for grepability
-    def get_pipeline_index_for_compat(self):
-        return self._pipeline_index
-
     @property
     def name(self):
         return self._pipeline_index.name
+
+    @property
+    def graph_name(self):
+        return self._pipeline_index.graph_name
 
     @property
     def description(self):

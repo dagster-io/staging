@@ -1067,62 +1067,8 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
       }
     }
   },
-  "dep_structure_snapshot": {
-    "__class__": "DependencyStructureSnapshot",
-    "solid_invocation_snaps": [
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [
-          {
-            "__class__": "InputDependencySnap",
-            "input_name": "value",
-            "is_dynamic_collect": false,
-            "upstream_output_snaps": [
-              {
-                "__class__": "OutputHandleSnap",
-                "output_name": "result",
-                "solid_name": "return_one"
-              }
-            ]
-          }
-        ],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "passthrough",
-        "solid_name": "passone",
-        "tags": {}
-      },
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [
-          {
-            "__class__": "InputDependencySnap",
-            "input_name": "value",
-            "is_dynamic_collect": false,
-            "upstream_output_snaps": [
-              {
-                "__class__": "OutputHandleSnap",
-                "output_name": "result",
-                "solid_name": "return_one"
-              }
-            ]
-          }
-        ],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "passthrough",
-        "solid_name": "passtwo",
-        "tags": {}
-      },
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "return_one",
-        "solid_name": "return_one",
-        "tags": {}
-      }
-    ]
-  },
   "description": null,
+  "graph": "single_dep_pipeline",
   "lineage_snapshot": null,
   "mode_def_snaps": [
     {
@@ -1167,7 +1113,74 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
   "name": "single_dep_pipeline",
   "solid_definitions_snapshot": {
     "__class__": "SolidDefinitionsSnapshot",
-    "composite_solid_def_snaps": [],
+    "graph_def_snaps": [
+      {
+        "__class__": "GraphDefSnap",
+        "config_field_snap": null,
+        "dep_structure_snapshot": {
+          "__class__": "DependencyStructureSnapshot",
+          "solid_invocation_snaps": [
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [
+                {
+                  "__class__": "InputDependencySnap",
+                  "input_name": "value",
+                  "is_dynamic_collect": false,
+                  "upstream_output_snaps": [
+                    {
+                      "__class__": "OutputHandleSnap",
+                      "output_name": "result",
+                      "solid_name": "return_one"
+                    }
+                  ]
+                }
+              ],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "passthrough",
+              "solid_name": "passone",
+              "tags": {}
+            },
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [
+                {
+                  "__class__": "InputDependencySnap",
+                  "input_name": "value",
+                  "is_dynamic_collect": false,
+                  "upstream_output_snaps": [
+                    {
+                      "__class__": "OutputHandleSnap",
+                      "output_name": "result",
+                      "solid_name": "return_one"
+                    }
+                  ]
+                }
+              ],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "passthrough",
+              "solid_name": "passtwo",
+              "tags": {}
+            },
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "return_one",
+              "solid_name": "return_one",
+              "tags": {}
+            }
+          ]
+        },
+        "description": null,
+        "input_def_snaps": [],
+        "input_mapping_snaps": [],
+        "name": "single_dep_pipeline",
+        "output_def_snaps": [],
+        "output_mapping_snaps": [],
+        "tags": {}
+      }
+    ],
     "solid_def_snaps": [
       {
         "__class__": "SolidDefSnap",
@@ -1235,7 +1248,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_dep_fan_out 2'] = '90a2f08212ad5b17025e6e1f2a12f28dfa5349d4'
+snapshots['test_basic_dep_fan_out 2'] = '1a5ab7af59af0427363c3a9d15edc4005bcaa0de'
 
 snapshots['test_basic_fan_in 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -2298,54 +2311,8 @@ snapshots['test_basic_fan_in 1'] = '''{
       }
     }
   },
-  "dep_structure_snapshot": {
-    "__class__": "DependencyStructureSnapshot",
-    "solid_invocation_snaps": [
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "return_nothing",
-        "solid_name": "nothing_one",
-        "tags": {}
-      },
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "return_nothing",
-        "solid_name": "nothing_two",
-        "tags": {}
-      },
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [
-          {
-            "__class__": "InputDependencySnap",
-            "input_name": "nothing",
-            "is_dynamic_collect": false,
-            "upstream_output_snaps": [
-              {
-                "__class__": "OutputHandleSnap",
-                "output_name": "result",
-                "solid_name": "nothing_one"
-              },
-              {
-                "__class__": "OutputHandleSnap",
-                "output_name": "result",
-                "solid_name": "nothing_two"
-              }
-            ]
-          }
-        ],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "take_nothings",
-        "solid_name": "take_nothings",
-        "tags": {}
-      }
-    ]
-  },
   "description": null,
+  "graph": "fan_in_test",
   "lineage_snapshot": null,
   "mode_def_snaps": [
     {
@@ -2390,7 +2357,66 @@ snapshots['test_basic_fan_in 1'] = '''{
   "name": "fan_in_test",
   "solid_definitions_snapshot": {
     "__class__": "SolidDefinitionsSnapshot",
-    "composite_solid_def_snaps": [],
+    "graph_def_snaps": [
+      {
+        "__class__": "GraphDefSnap",
+        "config_field_snap": null,
+        "dep_structure_snapshot": {
+          "__class__": "DependencyStructureSnapshot",
+          "solid_invocation_snaps": [
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "return_nothing",
+              "solid_name": "nothing_one",
+              "tags": {}
+            },
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "return_nothing",
+              "solid_name": "nothing_two",
+              "tags": {}
+            },
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [
+                {
+                  "__class__": "InputDependencySnap",
+                  "input_name": "nothing",
+                  "is_dynamic_collect": false,
+                  "upstream_output_snaps": [
+                    {
+                      "__class__": "OutputHandleSnap",
+                      "output_name": "result",
+                      "solid_name": "nothing_one"
+                    },
+                    {
+                      "__class__": "OutputHandleSnap",
+                      "output_name": "result",
+                      "solid_name": "nothing_two"
+                    }
+                  ]
+                }
+              ],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "take_nothings",
+              "solid_name": "take_nothings",
+              "tags": {}
+            }
+          ]
+        },
+        "description": null,
+        "input_def_snaps": [],
+        "input_mapping_snaps": [],
+        "name": "fan_in_test",
+        "output_def_snaps": [],
+        "output_mapping_snaps": [],
+        "tags": {}
+      }
+    ],
     "solid_def_snaps": [
       {
         "__class__": "SolidDefSnap",
@@ -2458,7 +2484,7 @@ snapshots['test_basic_fan_in 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_fan_in 2'] = '1a2dbcc9bcbe0db8ac41eeba0f73b0899207fd46'
+snapshots['test_basic_fan_in 2'] = 'f364cb26c4952637207b2ec7480a3ef4709e924f'
 
 snapshots['test_deserialize_solid_def_snaps_multi_type_config 1'] = '''{
   "__class__": "ConfigTypeSnap",
@@ -3536,20 +3562,8 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
       }
     }
   },
-  "dep_structure_snapshot": {
-    "__class__": "DependencyStructureSnapshot",
-    "solid_invocation_snaps": [
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "noop_solid",
-        "solid_name": "noop_solid",
-        "tags": {}
-      }
-    ]
-  },
   "description": null,
+  "graph": "noop_pipeline",
   "lineage_snapshot": null,
   "mode_def_snaps": [
     {
@@ -3594,7 +3608,32 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
   "name": "noop_pipeline",
   "solid_definitions_snapshot": {
     "__class__": "SolidDefinitionsSnapshot",
-    "composite_solid_def_snaps": [],
+    "graph_def_snaps": [
+      {
+        "__class__": "GraphDefSnap",
+        "config_field_snap": null,
+        "dep_structure_snapshot": {
+          "__class__": "DependencyStructureSnapshot",
+          "solid_invocation_snaps": [
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "noop_solid",
+              "solid_name": "noop_solid",
+              "tags": {}
+            }
+          ]
+        },
+        "description": null,
+        "input_def_snaps": [],
+        "input_mapping_snaps": [],
+        "name": "noop_pipeline",
+        "output_def_snaps": [],
+        "output_mapping_snaps": [],
+        "tags": {}
+      }
+    ],
     "solid_def_snaps": [
       {
         "__class__": "SolidDefSnap",
@@ -3628,7 +3667,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_empty_pipeline_snap_props 2'] = '966a50e2092e6915a4434006c6edf4aafd2aea0a'
+snapshots['test_empty_pipeline_snap_props 2'] = '5c21ea9a79a3eb0de67c76c42f9f315baf718a67'
 
 snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -4673,20 +4712,8 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
       }
     }
   },
-  "dep_structure_snapshot": {
-    "__class__": "DependencyStructureSnapshot",
-    "solid_invocation_snaps": [
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "noop_solid",
-        "solid_name": "noop_solid",
-        "tags": {}
-      }
-    ]
-  },
   "description": null,
+  "graph": "noop_pipeline",
   "lineage_snapshot": null,
   "mode_def_snaps": [
     {
@@ -4731,7 +4758,32 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
   "name": "noop_pipeline",
   "solid_definitions_snapshot": {
     "__class__": "SolidDefinitionsSnapshot",
-    "composite_solid_def_snaps": [],
+    "graph_def_snaps": [
+      {
+        "__class__": "GraphDefSnap",
+        "config_field_snap": null,
+        "dep_structure_snapshot": {
+          "__class__": "DependencyStructureSnapshot",
+          "solid_invocation_snaps": [
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "noop_solid",
+              "solid_name": "noop_solid",
+              "tags": {}
+            }
+          ]
+        },
+        "description": null,
+        "input_def_snaps": [],
+        "input_mapping_snaps": [],
+        "name": "noop_pipeline",
+        "output_def_snaps": [],
+        "output_mapping_snaps": [],
+        "tags": {}
+      }
+    ],
     "solid_def_snaps": [
       {
         "__class__": "SolidDefSnap",
@@ -6000,20 +6052,8 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
       }
     }
   },
-  "dep_structure_snapshot": {
-    "__class__": "DependencyStructureSnapshot",
-    "solid_invocation_snaps": [
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "noop_solid",
-        "solid_name": "noop_solid",
-        "tags": {}
-      }
-    ]
-  },
   "description": "desc",
+  "graph": "noop_pipeline",
   "lineage_snapshot": null,
   "mode_def_snaps": [
     {
@@ -6058,7 +6098,32 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
   "name": "noop_pipeline",
   "solid_definitions_snapshot": {
     "__class__": "SolidDefinitionsSnapshot",
-    "composite_solid_def_snaps": [],
+    "graph_def_snaps": [
+      {
+        "__class__": "GraphDefSnap",
+        "config_field_snap": null,
+        "dep_structure_snapshot": {
+          "__class__": "DependencyStructureSnapshot",
+          "solid_invocation_snaps": [
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "noop_solid",
+              "solid_name": "noop_solid",
+              "tags": {}
+            }
+          ]
+        },
+        "description": null,
+        "input_def_snaps": [],
+        "input_mapping_snaps": [],
+        "name": "noop_pipeline",
+        "output_def_snaps": [],
+        "output_mapping_snaps": [],
+        "tags": {}
+      }
+    ],
     "solid_def_snaps": [
       {
         "__class__": "SolidDefSnap",
@@ -6094,7 +6159,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
   }
 }'''
 
-snapshots['test_pipeline_snap_all_props 2'] = 'b1e5a50f73e7cbbdc0ec64fc42546f6ab64786a7'
+snapshots['test_pipeline_snap_all_props 2'] = 'f20f18f9578c6b847ccd3a95e4be860578c5ec68'
 
 snapshots['test_two_invocations_deps_snap 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -7148,28 +7213,8 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
       }
     }
   },
-  "dep_structure_snapshot": {
-    "__class__": "DependencyStructureSnapshot",
-    "solid_invocation_snaps": [
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "noop_solid",
-        "solid_name": "one",
-        "tags": {}
-      },
-      {
-        "__class__": "SolidInvocationSnap",
-        "input_dep_snaps": [],
-        "is_dynamic_mapped": false,
-        "solid_def_name": "noop_solid",
-        "solid_name": "two",
-        "tags": {}
-      }
-    ]
-  },
   "description": null,
+  "graph": "two_solid_pipeline",
   "lineage_snapshot": null,
   "mode_def_snaps": [
     {
@@ -7214,7 +7259,40 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
   "name": "two_solid_pipeline",
   "solid_definitions_snapshot": {
     "__class__": "SolidDefinitionsSnapshot",
-    "composite_solid_def_snaps": [],
+    "graph_def_snaps": [
+      {
+        "__class__": "GraphDefSnap",
+        "config_field_snap": null,
+        "dep_structure_snapshot": {
+          "__class__": "DependencyStructureSnapshot",
+          "solid_invocation_snaps": [
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "noop_solid",
+              "solid_name": "one",
+              "tags": {}
+            },
+            {
+              "__class__": "SolidInvocationSnap",
+              "input_dep_snaps": [],
+              "is_dynamic_mapped": false,
+              "solid_def_name": "noop_solid",
+              "solid_name": "two",
+              "tags": {}
+            }
+          ]
+        },
+        "description": null,
+        "input_def_snaps": [],
+        "input_mapping_snaps": [],
+        "name": "two_solid_pipeline",
+        "output_def_snaps": [],
+        "output_mapping_snaps": [],
+        "tags": {}
+      }
+    ],
     "solid_def_snaps": [
       {
         "__class__": "SolidDefSnap",
@@ -7248,4 +7326,4 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_two_invocations_deps_snap 2'] = '2ab347c3f075879e49bfc047b8f4c49f4e9f551d'
+snapshots['test_two_invocations_deps_snap 2'] = '2dc538833950ea301edbdc4e6a4376164ca48354'

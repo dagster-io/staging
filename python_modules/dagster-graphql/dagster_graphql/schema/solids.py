@@ -1,8 +1,10 @@
+from functools import lru_cache
+
 import graphene
 from dagster import check
 from dagster.core.definitions import SolidHandle
 from dagster.core.host_representation import RepresentedPipeline
-from dagster.core.snap import CompositeSolidDefSnap, DependencyStructureIndex, SolidDefSnap
+from dagster.core.snap import DependencyStructureIndex, GraphDefSnap, SolidDefSnap
 
 from .config_types import GrapheneConfigTypeField
 from .dagster_types import GrapheneDagsterType, to_dagster_type
@@ -306,7 +308,7 @@ def build_solid_handles(represented_pipeline, current_dep_index, parent=None):
             parent=parent if parent else None,
         )
         solid_def_snap = represented_pipeline.get_solid_def_snap(solid_def_name)
-        if isinstance(solid_def_snap, CompositeSolidDefSnap):
+        if isinstance(solid_def_snap, GraphDefSnap):
             all_handle += build_solid_handles(
                 represented_pipeline,
                 represented_pipeline.get_dep_structure_index(solid_def_name),
@@ -457,21 +459,14 @@ class GrapheneSolid(graphene.ObjectType):
         return self._solid_invocation_snap.is_dynamic_mapped
 
 
-class GrapheneSolidContainer(graphene.Interface):
-    solids = non_null_list(GrapheneSolid)
-
-    class Meta:
-        name = "SolidContainer"
-
-
-class GrapheneCompositeSolidDefinition(graphene.ObjectType, ISolidDefinitionMixin):
+class GrapheneGraphDefinition(graphene.ObjectType, ISolidDefinitionMixin):
     solids = non_null_list(GrapheneSolid)
     input_mappings = non_null_list(GrapheneInputMapping)
     output_mappings = non_null_list(GrapheneOutputMapping)
 
     class Meta:
-        interfaces = (GrapheneISolidDefinition, GrapheneSolidContainer)
-        name = "CompositeSolidDefinition"
+        interfaces = GrapheneISolidDefinition
+        name = "GraphDefinition"
 
     def __init__(self, represented_pipeline, solid_def_name):
         self._represented_pipeline = check.inst_param(
@@ -484,6 +479,24 @@ class GrapheneCompositeSolidDefinition(graphene.ObjectType, ISolidDefinitionMixi
 
     def resolve_solids(self, _graphene_info):
         return build_solids(self._represented_pipeline, self._comp_solid_dep_index)
+
+    def resolve_solid_handle(self, _graphene_info, handleID):
+        return _get_solid_handles(self._represented_pipeline).get(handleID)
+
+    def resolve_solid_handles(self, _graphene_info, **kwargs):
+        handles = _get_solid_handles(self._represented_pipeline)
+        parentHandleID = kwargs.get("parentHandleID")
+
+        if parentHandleID == "":
+            handles = {key: handle for key, handle in handles.items() if not handle.parent}
+        elif parentHandleID is not None:
+            handles = {
+                key: handle
+                for key, handle in handles.items()
+                if handle.parent and handle.parent.handleID.to_string() == parentHandleID
+            }
+
+        return [handles[key] for key in sorted(handles)]
 
     def resolve_output_mappings(self, _graphene_info):
         return [
@@ -506,6 +519,17 @@ class GrapheneCompositeSolidDefinition(graphene.ObjectType, ISolidDefinitionMixi
             )
             for input_def_snap in self._solid_def_snap.input_def_snaps
         ]
+
+
+@lru_cache(maxsize=32)
+def _get_solid_handles(represented_pipeline):
+    check.inst_param(represented_pipeline, "represented_pipeline", RepresentedPipeline)
+    return {
+        str(item.handleID): item
+        for item in build_solid_handles(
+            represented_pipeline, represented_pipeline.dep_structure_index
+        )
+    }
 
 
 class GrapheneSolidHandle(graphene.ObjectType):
@@ -533,14 +557,14 @@ def build_solid_definition(represented_pipeline, solid_def_name):
     if isinstance(solid_def_snap, SolidDefSnap):
         return GrapheneSolidDefinition(represented_pipeline, solid_def_snap.name)
 
-    if isinstance(solid_def_snap, CompositeSolidDefSnap):
-        return GrapheneCompositeSolidDefinition(represented_pipeline, solid_def_snap.name)
+    if isinstance(solid_def_snap, GraphDefSnap):
+        return GrapheneGraphDefinition(represented_pipeline, solid_def_snap.name)
 
     check.failed("Unknown solid definition type {type}".format(type=type(solid_def_snap)))
 
 
 types = [
-    GrapheneCompositeSolidDefinition,
+    GrapheneGraphDefinition,
     GrapheneInput,
     GrapheneInputDefinition,
     GrapheneInputMapping,
@@ -550,7 +574,6 @@ types = [
     GrapheneOutputMapping,
     GrapheneResourceRequirement,
     GrapheneSolid,
-    GrapheneSolidContainer,
     GrapheneSolidDefinition,
     GrapheneSolidHandle,
 ]
