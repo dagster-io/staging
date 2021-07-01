@@ -284,13 +284,19 @@ One benefit of this pattern is that it enables cross-pipeline and even cross-rep
 Here is an example of a sensor that listens for asset materializations for a given asset key `my_table`:
 
 ```python file=/concepts/partitions_schedules_sensors/sensors/sensors.py startafter=start_asset_sensors_marker endbefore=end_asset_sensors_marker
-from dagster import AssetKey
+from dagster import AssetKey, EventLogFilter, DagsterEventType
 
 
 @sensor(pipeline_name="my_pipeline")
 def my_asset_sensor(context):
-    event_records = context.instance.event_records_for_asset_key(
-        AssetKey("my_table"), after_cursor=context.cursor, ascending=False, limit=1
+    event_records = context.instance.get_event_records(
+        EventLogFilter(
+            event_type=DagsterEventType.ASSET_MATERIALIZATION,
+            asset_key=AssetKey("my_table"),
+            after_cursor=context.cursor,
+        ),
+        ascending=False,
+        limit=1,
     )
     if not event_records:
         return

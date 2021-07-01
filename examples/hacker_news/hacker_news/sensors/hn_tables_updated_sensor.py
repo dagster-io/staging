@@ -1,4 +1,4 @@
-from dagster import AssetKey, RunRequest, sensor
+from dagster import AssetKey, EventLogFilter, RunRequest, sensor
 
 
 @sensor(pipeline_name="story_recommender", mode="prod")
@@ -9,16 +9,20 @@ def story_recommender_on_hn_table_update(context):
     else:
         last_comments_key, last_stories_key = None, None
 
-    comments_event_records = context.instance.event_records_for_asset_key(
-        AssetKey(["snowflake", "hackernews", "comments"]),
-        after_cursor=last_comments_key,
+    comments_event_records = context.instance.get_event_records(
+        EventLogFilter(
+            asset_key=AssetKey(["snowflake", "hackernews", "comments"]),
+            after_cursor=last_comments_key,
+        ),
         ascending=False,
         limit=1,
     )
 
-    stories_event_records = context.instance.event_records_for_asset_key(
-        AssetKey(["snowflake", "hackernews", "stories"]),
-        after_cursor=last_stories_key,
+    stories_event_records = context.instance.get_event_records(
+        EventLogFilter(
+            asset_key=AssetKey(["snowflake", "hackernews", "stories"]),
+            after_cursor=last_stories_key,
+        ),
         ascending=False,
         limit=1,
     )

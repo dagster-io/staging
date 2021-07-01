@@ -8,8 +8,10 @@ from dagster.core.storage.event_log.base import EventLogRecord
 from hacker_news.sensors.hn_tables_updated_sensor import story_recommender_on_hn_table_update
 
 
-def get_mock_event_records_for_asset_key(asset_events: List[Tuple[str, int]]):
-    def event_records_for_asset_key(asset_key, after_cursor, **_kwargs):
+def get_mock_event_records(asset_events: List[Tuple[str, int]]):
+    def event_records(events_filter, **_kwargs):
+        asset_key = events_filter.asset_key
+        after_cursor = events_filter.after_cursor
         matching_events = [
             event
             for event in asset_events
@@ -19,14 +21,12 @@ def get_mock_event_records_for_asset_key(asset_events: List[Tuple[str, int]]):
             EventLogRecord(storage_id=event[1], event_log_entry=None) for event in matching_events
         ]
 
-    return event_records_for_asset_key
+    return event_records
 
 
-@mock.patch("dagster.core.instance.DagsterInstance.event_records_for_asset_key")
-def test_first_events(mock_event_records_for_asset_key):
-    mock_event_records_for_asset_key.side_effect = get_mock_event_records_for_asset_key(
-        [("comments", 1), ("stories", 2)]
-    )
+@mock.patch("dagster.core.instance.DagsterInstance.get_event_records")
+def test_first_events(mock_event_records):
+    mock_event_records.side_effect = get_mock_event_records([("comments", 1), ("stories", 2)])
 
     with tempfile.TemporaryDirectory() as tmpdir_path:
         context = SensorEvaluationContext(
@@ -40,11 +40,9 @@ def test_first_events(mock_event_records_for_asset_key):
         assert requests[0].run_key == "1|2"
 
 
-@mock.patch("dagster.core.instance.DagsterInstance.event_records_for_asset_key")
-def test_nothing_new(mock_event_records_for_asset_key):
-    mock_event_records_for_asset_key.side_effect = get_mock_event_records_for_asset_key(
-        [("comments", 1), ("stories", 2)]
-    )
+@mock.patch("dagster.core.instance.DagsterInstance.get_event_records")
+def test_nothing_new(mock_event_records):
+    mock_event_records.side_effect = get_mock_event_records([("comments", 1), ("stories", 2)])
 
     with tempfile.TemporaryDirectory() as tmpdir_path:
         context = SensorEvaluationContext(
@@ -57,9 +55,9 @@ def test_nothing_new(mock_event_records_for_asset_key):
         assert len(requests) == 0
 
 
-@mock.patch("dagster.core.instance.DagsterInstance.event_records_for_asset_key")
-def test_new_comments_old_stories(mock_event_records_for_asset_key):
-    mock_event_records_for_asset_key.side_effect = get_mock_event_records_for_asset_key(
+@mock.patch("dagster.core.instance.DagsterInstance.get_event_records")
+def test_new_comments_old_stories(mock_event_records):
+    mock_event_records.side_effect = get_mock_event_records(
         [("comments", 1), ("comments", 2), ("stories", 2)]
     )
 
@@ -74,9 +72,9 @@ def test_new_comments_old_stories(mock_event_records_for_asset_key):
         assert len(requests) == 0
 
 
-@mock.patch("dagster.core.instance.DagsterInstance.event_records_for_asset_key")
-def test_old_comments_new_stories(mock_event_records_for_asset_key):
-    mock_event_records_for_asset_key.side_effect = get_mock_event_records_for_asset_key(
+@mock.patch("dagster.core.instance.DagsterInstance.get_event_records")
+def test_old_comments_new_stories(mock_event_records):
+    mock_event_records.side_effect = get_mock_event_records(
         [("comments", 1), ("stories", 2), ("stories", 3)]
     )
 
@@ -92,9 +90,9 @@ def test_old_comments_new_stories(mock_event_records_for_asset_key):
         assert len(requests) == 0
 
 
-@mock.patch("dagster.core.instance.DagsterInstance.event_records_for_asset_key")
-def test_both_new(mock_event_records_for_asset_key):
-    mock_event_records_for_asset_key.side_effect = get_mock_event_records_for_asset_key(
+@mock.patch("dagster.core.instance.DagsterInstance.get_event_records")
+def test_both_new(mock_event_records):
+    mock_event_records.side_effect = get_mock_event_records(
         [("comments", 1), ("comments", 2), ("stories", 2), ("stories", 3)]
     )
 
