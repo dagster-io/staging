@@ -32,7 +32,11 @@ from dagster.core.execution.plan.handle import StepHandle
 from dagster.core.execution.plan.objects import StepFailureData, StepSuccessData
 from dagster.core.execution.stats import StepEventStatus
 from dagster.core.storage.event_log import InMemoryEventLogStorage, SqlEventLogStorage
-from dagster.core.storage.event_log.base import EventLogRecord, EventsCursor
+from dagster.core.storage.event_log.base import (
+    EventLogFilter,
+    EventLogRecord,
+    RunShardedEventsCursor,
+)
 from dagster.core.storage.event_log.migration import REINDEX_DATA_MIGRATIONS, migrate_asset_key_data
 from dagster.core.storage.event_log.sqlite.sqlite_event_log import SqliteEventLogStorage
 from dagster.core.test_utils import instance_for_test
@@ -823,7 +827,7 @@ class TestEventLogStorage:
         assert isinstance(event, EventLogEntry)
         assert event.dagster_event.event_type_value == DagsterEventType.ASSET_MATERIALIZATION.value
 
-        records = storage.get_asset_event_records(asset_key)
+        records = storage.get_event_records(EventLogFilter(asset_key=asset_key))
         assert len(records) == 1
         record = records[0]
         assert isinstance(record, EventLogRecord)
@@ -1001,19 +1005,19 @@ class TestEventLogStorage:
         assert not list(
             filter(
                 lambda r: r.storage_id <= 2,
-                storage.get_event_records(after_cursor=EventsCursor(id=2)),
+                storage.get_event_records(after_cursor=RunShardedEventsCursor(id=2)),
             )
         )
         assert [
             i.storage_id
             for i in storage.get_event_records(
-                after_cursor=EventsCursor(id=min_record_num + 2), ascending=True, limit=2
+                after_cursor=RunShardedEventsCursor(id=min_record_num + 2), ascending=True, limit=2
             )
         ] == [min_record_num + 3, min_record_num + 4]
         assert [
             i.storage_id
             for i in storage.get_event_records(
-                after_cursor=EventsCursor(id=min_record_num + 2), ascending=False, limit=2
+                after_cursor=RunShardedEventsCursor(id=min_record_num + 2), ascending=False, limit=2
             )
         ] == [max_record_num, max_record_num - 1]
 
@@ -1109,7 +1113,7 @@ class TestEventLogStorage:
 
             # of_type
             filtered_records = storage.get_event_records(
-                after_cursor=EventsCursor(
+                after_cursor=RunShardedEventsCursor(
                     id=0, run_updated_after=run_records[-1].update_timestamp
                 ),  # events after first run
                 of_type=DagsterEventType.PIPELINE_SUCCESS,

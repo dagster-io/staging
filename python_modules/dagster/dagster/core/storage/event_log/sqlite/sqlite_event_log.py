@@ -4,14 +4,17 @@ import os
 import sqlite3
 import threading
 import time
+import warnings
 from collections import defaultdict
 from contextlib import contextmanager
+from typing import Iterable, Optional
 
 import sqlalchemy as db
-from dagster import StringSource, check, seven
+from dagster import check, seven
+from dagster.config.source import StringSource
 from dagster.core.events import DagsterEventType
 from dagster.core.events.log import EventLogEntry
-from dagster.core.storage.event_log.base import EventLogRecord
+from dagster.core.storage.event_log.base import EventLogFilter, EventLogRecord
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.sql import (
     check_alembic_revision,
@@ -34,7 +37,7 @@ from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 
 from ..schema import SqlEventLogStorageMetadata, SqlEventLogStorageTable
-from ..sql_event_log import EventsCursor, SqlEventLogStorage
+from ..sql_event_log import RunShardedEventsCursor, SqlEventLogStorage
 
 INDEX_SHARD_NAME = "index"
 
@@ -235,34 +238,65 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
 
     def get_event_records(
         self,
-        after_cursor=None,
-        limit=None,
-        ascending=False,
-        of_type=None,
-    ):
+        events_filter: Optional[EventLogFilter] = None,
+        limit: Optional[int] = None,
+        ascending: Optional[bool] = False,
+    ) -> Iterable[EventLogRecord]:
         """Overridden method to enable cross-run event queries in sqlite.
 
         The record id in sqlite does not auto increment cross runs, so instead of fetching events
         after record id, we only fetch events whose runs updated after update_timestamp.
         """
-        check.opt_inst_param(after_cursor, "after_cursor", EventsCursor)
+        check.opt_inst_param(events_filter, "events_filter", EventLogFilter)
         check.opt_int_param(limit, "limit")
         check.bool_param(ascending, "ascending")
-        check.opt_inst_param(of_type, "of_type", DagsterEventType)
+
+        is_asset_query = (
+            events_filter
+            and events_filter.event_type == DagsterEventType.ASSET_MATERIALIZATION.value
+        )
+        if is_asset_query:
+            # asset materializations get mirrored into the index shard, so no custom run shard-aware
+            # cursor logic needed
+            return super(SqliteEventLogStorage, self).get_event_records(
+                events_filter=events_filter, limit=limit, ascending=ascending
+            )
 
         query = db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event])
-        if of_type:
-            query = query.where(SqlEventLogStorageTable.c.dagster_event_type == of_type.value)
-        if limit:
-            query = query.limit(limit)
-        if ascending:
-            query = query.order_by(SqlEventLogStorageTable.c.timestamp.asc())
+        if events_filter and events_filter.asset_key:
+            asset_details = self._get_asset_details(events_filter.asset_key)
         else:
-            query = query.order_by(SqlEventLogStorageTable.c.timestamp.desc())
+            asset_details = None
+
+        if not events_filter or not (
+            isinstance(events_filter.after_cursor, RunShardedEventsCursor)
+        ):
+            warnings.warn(
+                """
+                Called `get_event_records` on a run-sharded event log storage with a query that
+                is not run aware (e.g. not using a RunShardedEventsCursor).  This likely has poor
+                performance characteristics.  Consider adding a RunShardedEventsCursor to your query
+                or switching your instance configuration to use a non-run sharded event log storage
+                (e.g. PostgresEventLogStorage, ConsolidatedSqliteEventLogStorage)
+            """
+            )
+
+        query = self._apply_filter_limit_to_query(
+            query=query,
+            events_filter=events_filter,
+            limit=limit,
+            ascending=ascending,
+            asset_details=asset_details,
+            apply_cursor_filters=False,  # run-sharded cursor filters don't really make sense
+        )
 
         # workaround for the run-shard sqlite to enable cross-run queries: get a list of run_ids
         # whose events may qualify the query, and then open run_connection per run_id at a time.
-        run_updated_after = after_cursor.run_updated_after if after_cursor else None
+        run_updated_after = (
+            events_filter.after_cursor.run_updated_after
+            if events_filter and isinstance(events_filter.after_cursor, RunShardedEventsCursor)
+            else None
+        )
         run_records = self._instance.get_run_records(
             filters=PipelineRunsFilter(updated_after=run_updated_after),
             limit=limit,
