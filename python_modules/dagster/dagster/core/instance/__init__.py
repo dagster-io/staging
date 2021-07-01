@@ -52,7 +52,7 @@ if TYPE_CHECKING:
     from dagster.core.host_representation import HistoricalPipeline
     from dagster.core.snap import PipelineSnapshot
     from dagster.daemon.types import DaemonHeartbeat
-    from dagster.core.storage.event_log.base import EventLogRecord
+    from dagster.core.storage.event_log.base import EventLogFilter, EventLogRecord
 
 
 def is_memoized_run(tags):
@@ -1041,46 +1041,13 @@ class DagsterInstance:
     def has_asset_key(self, asset_key: AssetKey) -> bool:
         return self._event_storage.has_asset_key(asset_key)
 
-    def event_records_for_asset_key(
+    def get_event_records(
         self,
-        asset_key: AssetKey,
-        partitions: Optional[List[str]] = None,
-        after_cursor: int = None,
-        before_cursor: int = None,
-        before_timestamp: int = None,
-        limit: int = None,
-        ascending: bool = False,
+        events_filter: Optional["EventLogFilter"] = None,
+        limit: Optional[int] = None,
+        ascending: Optional[bool] = False,
     ) -> Iterable["EventLogRecord"]:
-        """Return a list of asset materialization event records stored in event log storage,
-        corresponding to the given asset key.
-
-        Args:
-            asset_key (AssetKey): Asset key for which to get asset materialization event records.
-            partitions (Optional[List[str]]): Filter parameter such that only asset materialization
-                events with a partition value matching one of the provided values.
-            after_cursor (Optional[int]): Filter parameter such that only records with storage_id
-                greater than the provided value are returned.
-            before_cursor (Optional[int]): Filter parameter such that only records with storage_id
-                less than the provided value are returned.
-            before_timestamp (Optional[int]): Filter parameter such that only event records for
-                events with timestamp less than the provided value are returned.
-            limit (Optional[int]): Number of results to get. Defaults to infinite.
-            ascending (Optional[bool]): Sort the result in ascending order if True, descending
-                otherwise. Defaults to descending.
-
-        Returns:
-            Iterable[EventLogRecord]: Iterable of event log records stored in the event log storage.
-        """
-        check.inst_param(asset_key, "asset_key", AssetKey)
-        return self._event_storage.get_asset_event_records(
-            asset_key=asset_key,
-            partitions=partitions,
-            after_cursor=after_cursor,
-            before_cursor=before_cursor,
-            before_timestamp=before_timestamp,
-            limit=limit,
-            ascending=ascending,
-        )
+        return self._event_storage.get_event_records(events_filter, limit, ascending)
 
     def events_for_asset_key(
         self,
