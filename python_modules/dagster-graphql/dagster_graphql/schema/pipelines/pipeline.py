@@ -37,6 +37,7 @@ from ..repository_origin import GrapheneRepositoryOrigin
 from ..schedules.schedules import GrapheneSchedule
 from ..sensors import GrapheneSensor
 from ..solids import (
+    GrapheneGraphDefinition,
     GrapheneSolid,
     GrapheneSolidContainer,
     GrapheneSolidHandle,
@@ -281,6 +282,55 @@ class GraphenePipelineRun(graphene.ObjectType):
         return [from_event_record(event, self._pipeline_run.pipeline_name) for event in events]
 
 
+# class GrapheneGraph(graphene.ObjectType):
+#     name = graphene.NonNull(graphene.String)
+#     description = graphene.String()
+#     id = graphene.NonNull(graphene.ID)
+#     solids = non_null_list(GrapheneSolid)
+#     solid_handles = graphene.Field(
+#         non_null_list(GrapheneSolidHandle), parentHandleID=graphene.String()
+#     )
+#     solid_handle = graphene.Field(
+#         GrapheneSolidHandle,
+#         handleID=graphene.Argument(graphene.NonNull(graphene.String)),
+#     )
+
+#     class Meta:
+#         name = "Graph"
+
+#     def __init__(self, represented_pipeline):
+#         super().__init__(self)
+#         self._represented_pipeline = represented_pipeline
+
+#     def resolve_name(self, _graphene_info):
+#         return self._represented_pipeline.graph_name
+
+#     def resolve_solids(self, _graphene_info):
+#         represented_pipeline = self._represented_pipeline
+#         return build_solids(
+#             represented_pipeline,
+#             represented_pipeline.dep_structure_index,
+#         )
+
+#     def resolve_solid_handle(self, _graphene_info, handleID):
+#         return _get_solid_handles(self._represented_pipeline).get(handleID)
+
+#     def resolve_solid_handles(self, _graphene_info, **kwargs):
+#         handles = _get_solid_handles(self._represented_pipeline)
+#         parentHandleID = kwargs.get("parentHandleID")
+
+#         if parentHandleID == "":
+#             handles = {key: handle for key, handle in handles.items() if not handle.parent}
+#         elif parentHandleID is not None:
+#             handles = {
+#                 key: handle
+#                 for key, handle in handles.items()
+#                 if handle.parent and handle.parent.handleID.to_string() == parentHandleID
+#             }
+
+#         return [handles[key] for key in sorted(handles)]
+
+
 class GrapheneIPipelineSnapshotMixin:
     # Mixin this class to implement IPipelineSnapshot
     #
@@ -298,15 +348,8 @@ class GrapheneIPipelineSnapshotMixin:
         graphene.NonNull(GrapheneDagsterTypeOrError),
         dagsterTypeName=graphene.Argument(graphene.NonNull(graphene.String)),
     )
-    solids = non_null_list(GrapheneSolid)
+    graph = non_null_list(GrapheneGraphDefinition)
     modes = non_null_list(GrapheneMode)
-    solid_handles = graphene.Field(
-        non_null_list(GrapheneSolidHandle), parentHandleID=graphene.String()
-    )
-    solid_handle = graphene.Field(
-        GrapheneSolidHandle,
-        handleID=graphene.Argument(graphene.NonNull(graphene.String)),
-    )
     tags = non_null_list(GraphenePipelineTag)
     runs = graphene.Field(
         non_null_list(GraphenePipelineRun),
@@ -331,6 +374,11 @@ class GrapheneIPipelineSnapshotMixin:
 
     def resolve_name(self, _graphene_info):
         return self.get_represented_pipeline().name
+
+    def resolve_graph(self, _graphene_info):
+        return GrapheneGraphDefinition(
+            self.get_represented_pipeline(), self.get_represented_pipeline().graph_name
+        )
 
     def resolve_description(self, _graphene_info):
         return self.get_represented_pipeline().description
@@ -363,13 +411,6 @@ class GrapheneIPipelineSnapshotMixin:
             represented_pipeline.get_dagster_type_by_name(type_name).key,
         )
 
-    def resolve_solids(self, _graphene_info):
-        represented_pipeline = self.get_represented_pipeline()
-        return build_solids(
-            represented_pipeline,
-            represented_pipeline.dep_structure_index,
-        )
-
     def resolve_modes(self, _graphene_info):
         represented_pipeline = self.get_represented_pipeline()
         return [
@@ -382,24 +423,6 @@ class GrapheneIPipelineSnapshotMixin:
                 represented_pipeline.mode_def_snaps, key=lambda item: item.name
             )
         ]
-
-    def resolve_solid_handle(self, _graphene_info, handleID):
-        return _get_solid_handles(self.get_represented_pipeline()).get(handleID)
-
-    def resolve_solid_handles(self, _graphene_info, **kwargs):
-        handles = _get_solid_handles(self.get_represented_pipeline())
-        parentHandleID = kwargs.get("parentHandleID")
-
-        if parentHandleID == "":
-            handles = {key: handle for key, handle in handles.items() if not handle.parent}
-        elif parentHandleID is not None:
-            handles = {
-                key: handle
-                for key, handle in handles.items()
-                if handle.parent and handle.parent.handleID.to_string() == parentHandleID
-            }
-
-        return [handles[key] for key in sorted(handles)]
 
     def resolve_tags(self, _graphene_info):
         represented_pipeline = self.get_represented_pipeline()

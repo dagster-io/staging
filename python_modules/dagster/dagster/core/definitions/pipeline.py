@@ -1,5 +1,16 @@
 from functools import update_wrapper
-from typing import TYPE_CHECKING, AbstractSet, Any, Dict, FrozenSet, List, Optional, Set, Union
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Dict,
+    FrozenSet,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Union,
+)
 
 from dagster import check
 from dagster.core.definitions.policy import RetryPolicy
@@ -344,6 +355,11 @@ class PipelineDefinition:
     @property
     def all_solid_defs(self) -> List[NodeDefinition]:
         return list(self._all_node_defs.values())
+
+    # all_solid_defs should be removed in favor of all_node_defs
+    @property
+    def all_node_defs(self) -> Iterable[NodeDefinition]:
+        return self._all_node_defs.values()
 
     @property
     def top_level_solid_defs(self) -> List[NodeDefinition]:

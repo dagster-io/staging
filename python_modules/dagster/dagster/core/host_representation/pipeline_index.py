@@ -26,10 +26,11 @@ class PipelineIndex:
                 "Mismatch in IDs between pipeline_snapshot lineage and parent_pipeline_snapshot",
             )
 
+        # node_defs_snap_index
         self._solid_defs_snaps_index = {
             sd.name: sd
             for sd in pipeline_snapshot.solid_definitions_snapshot.solid_def_snaps
-            + pipeline_snapshot.solid_definitions_snapshot.composite_solid_def_snaps
+            + pipeline_snapshot.solid_definitions_snapshot.graph_def_snaps
         }
 
         self._dagster_type_snaps_by_name_index = {
@@ -38,13 +39,16 @@ class PipelineIndex:
             if dagster_type_snap.name
         }
 
+        # self.dep_structure_index = DependencyStructureIndex(
+        #     pipeline_snapshot.dep_structure_snapshot
+        # )
         self.dep_structure_index = DependencyStructureIndex(
-            pipeline_snapshot.dep_structure_snapshot
+            self._solid_defs_snaps_index[pipeline_snapshot.graph].dep_structure_snapshot
         )
 
         self._comp_dep_structures = {
             comp_snap.name: DependencyStructureIndex(comp_snap.dep_structure_snapshot)
-            for comp_snap in pipeline_snapshot.solid_definitions_snapshot.composite_solid_def_snaps
+            for comp_snap in pipeline_snapshot.solid_definitions_snapshot.graph_def_snaps
         }
 
         self.pipeline_snapshot_id = create_pipeline_snapshot_id(pipeline_snapshot)

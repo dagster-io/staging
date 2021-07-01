@@ -2,7 +2,7 @@ import graphene
 from dagster import check
 from dagster.core.definitions import SolidHandle
 from dagster.core.host_representation import RepresentedPipeline
-from dagster.core.snap import CompositeSolidDefSnap, DependencyStructureIndex, SolidDefSnap
+from dagster.core.snap import DependencyStructureIndex, GraphDefSnap, SolidDefSnap
 
 from .config_types import GrapheneConfigTypeField
 from .dagster_types import GrapheneDagsterType, to_dagster_type
@@ -306,7 +306,7 @@ def build_solid_handles(represented_pipeline, current_dep_index, parent=None):
             parent=parent if parent else None,
         )
         solid_def_snap = represented_pipeline.get_solid_def_snap(solid_def_name)
-        if isinstance(solid_def_snap, CompositeSolidDefSnap):
+        if isinstance(solid_def_snap, GraphDefSnap):
             all_handle += build_solid_handles(
                 represented_pipeline,
                 represented_pipeline.get_dep_structure_index(solid_def_name),
@@ -464,7 +464,7 @@ class GrapheneSolidContainer(graphene.Interface):
         name = "SolidContainer"
 
 
-class GrapheneCompositeSolidDefinition(graphene.ObjectType, ISolidDefinitionMixin):
+class GrapheneGraphDefinition(graphene.ObjectType, ISolidDefinitionMixin):
     solids = non_null_list(GrapheneSolid)
     input_mappings = non_null_list(GrapheneInputMapping)
     output_mappings = non_null_list(GrapheneOutputMapping)
@@ -533,14 +533,14 @@ def build_solid_definition(represented_pipeline, solid_def_name):
     if isinstance(solid_def_snap, SolidDefSnap):
         return GrapheneSolidDefinition(represented_pipeline, solid_def_snap.name)
 
-    if isinstance(solid_def_snap, CompositeSolidDefSnap):
-        return GrapheneCompositeSolidDefinition(represented_pipeline, solid_def_snap.name)
+    if isinstance(solid_def_snap, GraphDefSnap):
+        return GrapheneGraphDefinition(represented_pipeline, solid_def_snap.name)
 
     check.failed("Unknown solid definition type {type}".format(type=type(solid_def_snap)))
 
 
 types = [
-    GrapheneCompositeSolidDefinition,
+    GrapheneGraphDefinition,
     GrapheneInput,
     GrapheneInputDefinition,
     GrapheneInputMapping,

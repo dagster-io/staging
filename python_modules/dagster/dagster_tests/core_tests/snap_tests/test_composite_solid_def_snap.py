@@ -1,9 +1,5 @@
 from dagster import composite_solid, solid
-from dagster.core.snap import (
-    CompositeSolidDefSnap,
-    DependencyStructureIndex,
-    build_composite_solid_def_snap,
-)
+from dagster.core.snap import DependencyStructureIndex, GraphDefSnap, build_graph_def_snap
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 
 
@@ -16,9 +12,9 @@ def test_noop_comp_solid_definition():
     def comp_solid():
         noop_solid()
 
-    comp_solid_meta = build_composite_solid_def_snap(comp_solid)
+    comp_solid_meta = build_graph_def_snap(comp_solid)
 
-    assert isinstance(comp_solid_meta, CompositeSolidDefSnap)
+    assert isinstance(comp_solid_meta, GraphDefSnap)
     assert (
         deserialize_json_to_dagster_namedtuple(serialize_dagster_namedtuple(comp_solid_meta))
         == comp_solid_meta
@@ -38,9 +34,9 @@ def test_basic_comp_solid_definition():
     def comp_solid():
         take_one(return_one())
 
-    comp_solid_meta = build_composite_solid_def_snap(comp_solid)
+    comp_solid_meta = build_graph_def_snap(comp_solid)
 
-    assert isinstance(comp_solid_meta, CompositeSolidDefSnap)
+    assert isinstance(comp_solid_meta, GraphDefSnap)
     assert (
         deserialize_json_to_dagster_namedtuple(serialize_dagster_namedtuple(comp_solid_meta))
         == comp_solid_meta
@@ -66,9 +62,9 @@ def test_complex_comp_solid_definition():
     def comp_solid(this_number):
         take_many([return_one(), this_number, return_one.alias("return_one_also")()])
 
-    comp_solid_meta = build_composite_solid_def_snap(comp_solid)
+    comp_solid_meta = build_graph_def_snap(comp_solid)
 
-    assert isinstance(comp_solid_meta, CompositeSolidDefSnap)
+    assert isinstance(comp_solid_meta, GraphDefSnap)
     assert (
         deserialize_json_to_dagster_namedtuple(serialize_dagster_namedtuple(comp_solid_meta))
         == comp_solid_meta
