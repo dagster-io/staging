@@ -529,7 +529,7 @@ class PipelineSubsetDefinition(PipelineDefinition):
         return list(self._solid_dict.keys())
 
     @property
-    def parent_pipeline_def(self) -> Optional["PipelineDefinition"]:
+    def parent_pipeline_def(self) -> PipelineDefinition:
         return self._parent_pipeline_def
 
     def get_parent_pipeline_snapshot(self) -> Optional["PipelineSnapshot"]:
