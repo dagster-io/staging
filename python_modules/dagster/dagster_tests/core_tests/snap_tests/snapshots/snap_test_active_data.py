@@ -1075,20 +1075,8 @@ snapshots['test_external_pipeline_data 1'] = '''{
         }
       }
     },
-    "dep_structure_snapshot": {
-      "__class__": "DependencyStructureSnapshot",
-      "solid_invocation_snaps": [
-        {
-          "__class__": "SolidInvocationSnap",
-          "input_dep_snaps": [],
-          "is_dynamic_mapped": false,
-          "solid_def_name": "a_solid",
-          "solid_name": "a_solid",
-          "tags": {}
-        }
-      ]
-    },
     "description": null,
+    "graph": "a_pipeline",
     "lineage_snapshot": null,
     "mode_def_snaps": [
       {
@@ -1171,7 +1159,32 @@ snapshots['test_external_pipeline_data 1'] = '''{
     "name": "a_pipeline",
     "solid_definitions_snapshot": {
       "__class__": "SolidDefinitionsSnapshot",
-      "composite_solid_def_snaps": [],
+      "graph_def_snaps": [
+        {
+          "__class__": "GraphDefSnap",
+          "config_field_snap": null,
+          "dep_structure_snapshot": {
+            "__class__": "DependencyStructureSnapshot",
+            "solid_invocation_snaps": [
+              {
+                "__class__": "SolidInvocationSnap",
+                "input_dep_snaps": [],
+                "is_dynamic_mapped": false,
+                "solid_def_name": "a_solid",
+                "solid_name": "a_solid",
+                "tags": {}
+              }
+            ]
+          },
+          "description": null,
+          "input_def_snaps": [],
+          "input_mapping_snaps": [],
+          "name": "a_pipeline",
+          "output_def_snaps": [],
+          "output_mapping_snaps": [],
+          "tags": {}
+        }
+      ],
       "solid_def_snaps": [
         {
           "__class__": "SolidDefSnap",
@@ -2287,20 +2300,8 @@ snapshots['test_external_repository_data 1'] = '''{
             }
           }
         },
-        "dep_structure_snapshot": {
-          "__class__": "DependencyStructureSnapshot",
-          "solid_invocation_snaps": [
-            {
-              "__class__": "SolidInvocationSnap",
-              "input_dep_snaps": [],
-              "is_dynamic_mapped": false,
-              "solid_def_name": "a_solid",
-              "solid_name": "a_solid",
-              "tags": {}
-            }
-          ]
-        },
         "description": null,
+        "graph": "a_pipeline",
         "lineage_snapshot": null,
         "mode_def_snaps": [
           {
@@ -2383,7 +2384,32 @@ snapshots['test_external_repository_data 1'] = '''{
         "name": "a_pipeline",
         "solid_definitions_snapshot": {
           "__class__": "SolidDefinitionsSnapshot",
-          "composite_solid_def_snaps": [],
+          "graph_def_snaps": [
+            {
+              "__class__": "GraphDefSnap",
+              "config_field_snap": null,
+              "dep_structure_snapshot": {
+                "__class__": "DependencyStructureSnapshot",
+                "solid_invocation_snaps": [
+                  {
+                    "__class__": "SolidInvocationSnap",
+                    "input_dep_snaps": [],
+                    "is_dynamic_mapped": false,
+                    "solid_def_name": "a_solid",
+                    "solid_name": "a_solid",
+                    "tags": {}
+                  }
+                ]
+              },
+              "description": null,
+              "input_def_snaps": [],
+              "input_mapping_snaps": [],
+              "name": "a_pipeline",
+              "output_def_snaps": [],
+              "output_mapping_snaps": [],
+              "tags": {}
+            }
+          ],
           "solid_def_snaps": [
             {
               "__class__": "SolidDefSnap",

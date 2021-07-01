@@ -4,6 +4,7 @@ from dagster import check
 from dagster.config.snap import ConfigFieldSnap, snap_from_field
 from dagster.core.definitions import (
     CompositeSolidDefinition,
+    GraphDefinition,
     InputDefinition,
     InputMapping,
     OutputDefinition,
@@ -11,12 +12,9 @@ from dagster.core.definitions import (
     PipelineDefinition,
     SolidDefinition,
 )
-from dagster.serdes import whitelist_for_serdes
+from dagster.serdes import register_serdes_tuple_fallbacks, whitelist_for_serdes
 
-from .dep_snapshot import (
-    DependencyStructureSnapshot,
-    build_dep_structure_snapshot_from_icontains_solids,
-)
+from .dep_snapshot import DependencyStructureSnapshot, build_dep_structure_snapshot_from_graph
 
 
 @whitelist_for_serdes
@@ -180,9 +178,9 @@ def _check_solid_def_header_args(
 
 
 @whitelist_for_serdes
-class CompositeSolidDefSnap(
+class GraphDefSnap(
     NamedTuple(
-        "_CompositeSolidDefSnap",
+        "_GraphDefSnap",
         [
             ("name", str),
             ("input_def_snaps", List[InputDefSnap]),
@@ -208,7 +206,7 @@ class CompositeSolidDefSnap(
         input_mapping_snaps: List[InputMappingSnap],
         output_mapping_snaps: List[OutputMappingSnap],
     ):
-        return super(CompositeSolidDefSnap, cls).__new__(
+        return super(GraphDefSnap, cls).__new__(
             cls,
             dep_structure_snapshot=check.inst_param(
                 dep_structure_snapshot, "dep_structure_snapshot", DependencyStructureSnapshot
@@ -248,6 +246,14 @@ class CompositeSolidDefSnap(
 
     def get_output_snap(self, name: str) -> OutputDefSnap:
         return _get_output_snap(self, name)
+
+
+register_serdes_tuple_fallbacks(
+    {
+        # Composite Solids / Pipeline consolidated in to Graph
+        "CompositeSolidDefSnap": GraphDefSnap,
+    }
+)
 
 
 @whitelist_for_serdes
@@ -303,26 +309,35 @@ class SolidDefinitionsSnapshot(
         "_SolidDefinitionsSnapshot",
         [
             ("solid_def_snaps", List[SolidDefSnap]),
-            ("composite_solid_def_snaps", List[CompositeSolidDefSnap]),
+            ("graph_def_snaps", List[GraphDefSnap]),
         ],
     )
 ):
     def __new__(
         cls,
         solid_def_snaps: List[SolidDefSnap],
-        composite_solid_def_snaps: List[CompositeSolidDefSnap],
+        #  composite_solid_def_snaps -> graph_def_snaps
+        graph_def_snaps: Optional[List[GraphDefSnap]] = None,
+        composite_solid_def_snaps: Optional[List[GraphDefSnap]] = None,
     ):
+        if composite_solid_def_snaps is not None:
+            check.invariant(
+                graph_def_snaps is None,
+                "Unexpected graph_def_snaps and composite_solid_def_snaps set",
+            )
+            graph_def_snaps = composite_solid_def_snaps
+
         return super(SolidDefinitionsSnapshot, cls).__new__(
             cls,
             solid_def_snaps=sorted(
                 check.list_param(solid_def_snaps, "solid_def_snaps", of_type=SolidDefSnap),
                 key=lambda solid_def: solid_def.name,
             ),
-            composite_solid_def_snaps=sorted(
+            graph_def_snaps=sorted(
                 check.list_param(
-                    composite_solid_def_snaps,
-                    "composite_solid_def_snaps",
-                    of_type=CompositeSolidDefSnap,
+                    graph_def_snaps,
+                    "graph_def_snaps",
+                    of_type=GraphDefSnap,
                 ),
                 key=lambda comp_def: comp_def.name,
             ),
@@ -331,48 +346,43 @@ class SolidDefinitionsSnapshot(
 
 def build_solid_definitions_snapshot(pipeline_def: PipelineDefinition) -> SolidDefinitionsSnapshot:
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+    solid_snaps = []
+    graph_snaps = []
+
+    for node_def in pipeline_def.all_node_defs:  # all_solid_defs needs to be renamed
+        if isinstance(node_def, SolidDefinition):
+            solid_snaps.append(build_core_solid_def_snap(node_def))
+        elif isinstance(node_def, GraphDefinition):
+            graph_snaps.append(build_graph_def_snap(node_def))
+        else:
+            check.failed("Unexpected node {node_def}")
+
+    graph_snaps.append(build_graph_def_snap(pipeline_def.graph))
+
     return SolidDefinitionsSnapshot(
-        solid_def_snaps=[
-            build_core_solid_def_snap(solid_def)
-            for solid_def in pipeline_def.all_solid_defs
-            if isinstance(solid_def, SolidDefinition)
-        ],
-        composite_solid_def_snaps=[
-            build_composite_solid_def_snap(solid_def)
-            for solid_def in pipeline_def.all_solid_defs
-            if isinstance(solid_def, CompositeSolidDefinition)
-        ],
+        solid_def_snaps=solid_snaps,
+        graph_def_snaps=graph_snaps,
     )
 
 
-def build_i_solid_def_snap(
-    i_solid_def: Union[SolidDefinition, CompositeSolidDefinition]
-) -> Union[CompositeSolidDefSnap, SolidDefSnap]:
-    return (
-        build_composite_solid_def_snap(i_solid_def)
-        if isinstance(i_solid_def, CompositeSolidDefinition)
-        else build_core_solid_def_snap(i_solid_def)
-    )
-
-
-def build_composite_solid_def_snap(comp_solid_def):
-    check.inst_param(comp_solid_def, "comp_solid_def", CompositeSolidDefinition)
-    return CompositeSolidDefSnap(
-        name=comp_solid_def.name,
-        input_def_snaps=list(map(build_input_def_snap, comp_solid_def.input_defs)),
-        output_def_snaps=list(map(build_output_def_snap, comp_solid_def.output_defs)),
-        description=comp_solid_def.description,
-        tags=comp_solid_def.tags,
+def build_graph_def_snap(graph_def: GraphDefinition):
+    check.inst_param(graph_def, "graph_def", GraphDefinition)
+    return GraphDefSnap(
+        name=graph_def.name,
+        input_def_snaps=list(map(build_input_def_snap, graph_def.input_defs)),
+        output_def_snaps=list(map(build_output_def_snap, graph_def.output_defs)),
+        description=graph_def.description,
+        tags=graph_def.tags,
         config_field_snap=snap_from_field(
-            "config", comp_solid_def.config_mapping.config_schema.as_field()
+            "config", graph_def.config_mapping.config_schema.as_field()
         )
-        if comp_solid_def.config_mapping
-        and comp_solid_def.config_mapping.config_schema
-        and comp_solid_def.config_mapping.config_schema.as_field()
+        if graph_def.config_mapping
+        and graph_def.config_mapping.config_schema
+        and graph_def.config_mapping.config_schema.as_field()
         else None,
-        dep_structure_snapshot=build_dep_structure_snapshot_from_icontains_solids(comp_solid_def),
-        input_mapping_snaps=list(map(build_input_mapping_snap, comp_solid_def.input_mappings)),
-        output_mapping_snaps=list(map(build_output_mapping_snap, comp_solid_def.output_mappings)),
+        dep_structure_snapshot=build_dep_structure_snapshot_from_graph(graph_def),
+        input_mapping_snaps=list(map(build_input_mapping_snap, graph_def.input_mappings)),
+        output_mapping_snaps=list(map(build_output_mapping_snap, graph_def.output_mappings)),
     )
 
 
@@ -391,10 +401,8 @@ def build_core_solid_def_snap(solid_def):
     )
 
 
-# shared impl for CompositeSolidDefSnap and SolidDefSnap
-def _get_input_snap(
-    solid_def: Union[CompositeSolidDefSnap, SolidDefSnap], name: str
-) -> InputDefSnap:
+# shared impl for GraphDefSnap and SolidDefSnap
+def _get_input_snap(solid_def: Union[GraphDefSnap, SolidDefSnap], name: str) -> InputDefSnap:
     check.str_param(name, "name")
     for inp in solid_def.input_def_snaps:
         if inp.name == name:
@@ -407,10 +415,8 @@ def _get_input_snap(
     )
 
 
-# shared impl for CompositeSolidDefSnap and SolidDefSnap
-def _get_output_snap(
-    solid_def: Union[CompositeSolidDefSnap, SolidDefSnap], name: str
-) -> OutputDefSnap:
+# shared impl for GraphDefSnap and SolidDefSnap
+def _get_output_snap(solid_def: Union[GraphDefSnap, SolidDefSnap], name: str) -> OutputDefSnap:
     check.str_param(name, "name")
     for out in solid_def.output_def_snaps:
         if out.name == name:

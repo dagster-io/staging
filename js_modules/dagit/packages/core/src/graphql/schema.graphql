@@ -58,18 +58,16 @@ type RepositoryLocation {
   serverId: String
 }
 
-type Pipeline implements SolidContainer & IPipelineSnapshot {
-  solids: [Solid!]!
+type Pipeline implements IPipelineSnapshot {
   name: String!
   description: String
   pipelineSnapshotId: String!
   dagsterTypes: [DagsterType!]!
   dagsterTypeOrError(dagsterTypeName: String!): DagsterTypeOrError!
   modes: [Mode!]!
-  solidHandles(parentHandleID: String): [SolidHandle!]!
-  solidHandle(handleID: String!): SolidHandle
   tags: [PipelineTag!]!
   id: ID!
+  graph: [GraphDefinition!]!
   runs(cursor: String, limit: Int): [PipelineRun!]!
   schedules: [Schedule!]!
   sensors: [Sensor!]!
@@ -77,54 +75,14 @@ type Pipeline implements SolidContainer & IPipelineSnapshot {
   presets: [PipelinePreset!]!
 }
 
-interface SolidContainer {
-  solids: [Solid!]!
-}
-
-type Solid {
-  name: String!
-  definition: ISolidDefinition!
-  inputs: [Input!]!
-  outputs: [Output!]!
-  isDynamicMapped: Boolean!
-}
-
-interface ISolidDefinition {
+interface IPipelineSnapshot {
   name: String!
   description: String
-  metadata: [MetadataItemDefinition!]!
-  inputDefinitions: [InputDefinition!]!
-  outputDefinitions: [OutputDefinition!]!
-}
-
-type MetadataItemDefinition {
-  key: String!
-  value: String!
-}
-
-type InputDefinition {
-  solidDefinition: SolidDefinition!
-  name: String!
-  description: String
-  type: DagsterType!
-}
-
-type SolidDefinition implements ISolidDefinition {
-  name: String!
-  description: String
-  metadata: [MetadataItemDefinition!]!
-  inputDefinitions: [InputDefinition!]!
-  outputDefinitions: [OutputDefinition!]!
-  configField: ConfigTypeField
-  requiredResources: [ResourceRequirement!]!
-}
-
-type OutputDefinition {
-  solidDefinition: SolidDefinition!
-  name: String!
-  description: String
-  isDynamic: Boolean
-  type: DagsterType!
+  pipelineSnapshotId: String!
+  dagsterTypes: [DagsterType!]!
+  dagsterTypeOrError(dagsterTypeName: String!): DagsterTypeOrError!
+  modes: [Mode!]!
+  tags: [PipelineTag!]!
 }
 
 interface DagsterType {
@@ -147,44 +105,6 @@ interface ConfigType {
   recursiveConfigTypes: [ConfigType!]!
   typeParamKeys: [String!]!
   isSelector: Boolean!
-}
-
-type ConfigTypeField {
-  name: String!
-  description: String
-  configType: ConfigType!
-  configTypeKey: String!
-  isRequired: Boolean!
-}
-
-type ResourceRequirement {
-  resourceKey: String!
-}
-
-type Input {
-  solid: Solid!
-  definition: InputDefinition!
-  dependsOn: [Output!]!
-  isDynamicCollect: Boolean!
-}
-
-type Output {
-  solid: Solid!
-  definition: OutputDefinition!
-  dependedBy: [Input!]!
-}
-
-interface IPipelineSnapshot {
-  name: String!
-  description: String
-  pipelineSnapshotId: String!
-  dagsterTypes: [DagsterType!]!
-  dagsterTypeOrError(dagsterTypeName: String!): DagsterTypeOrError!
-  solids: [Solid!]!
-  modes: [Mode!]!
-  solidHandles(parentHandleID: String): [SolidHandle!]!
-  solidHandle(handleID: String!): SolidHandle
-  tags: [PipelineTag!]!
 }
 
 union DagsterTypeOrError = RegularDagsterType | PipelineNotFoundError | DagsterTypeNotFoundError | PythonError
@@ -240,21 +160,107 @@ type Resource {
   configField: ConfigTypeField
 }
 
+type ConfigTypeField {
+  name: String!
+  description: String
+  configType: ConfigType!
+  configTypeKey: String!
+  isRequired: Boolean!
+}
+
 type Logger {
   name: String!
   description: String
   configField: ConfigTypeField
 }
 
-type SolidHandle {
-  handleID: String!
-  solid: Solid!
-  parent: SolidHandle
-}
-
 type PipelineTag {
   key: String!
   value: String!
+}
+
+type GraphDefinition implements ISolidDefinition {
+  name: String!
+  description: String
+  metadata: [MetadataItemDefinition!]!
+  inputDefinitions: [InputDefinition!]!
+  outputDefinitions: [OutputDefinition!]!
+  solids: [Solid!]!
+  inputMappings: [InputMapping!]!
+  outputMappings: [OutputMapping!]!
+}
+
+interface ISolidDefinition {
+  name: String!
+  description: String
+  metadata: [MetadataItemDefinition!]!
+  inputDefinitions: [InputDefinition!]!
+  outputDefinitions: [OutputDefinition!]!
+}
+
+type MetadataItemDefinition {
+  key: String!
+  value: String!
+}
+
+type InputDefinition {
+  solidDefinition: SolidDefinition!
+  name: String!
+  description: String
+  type: DagsterType!
+}
+
+type SolidDefinition implements ISolidDefinition {
+  name: String!
+  description: String
+  metadata: [MetadataItemDefinition!]!
+  inputDefinitions: [InputDefinition!]!
+  outputDefinitions: [OutputDefinition!]!
+  configField: ConfigTypeField
+  requiredResources: [ResourceRequirement!]!
+}
+
+type OutputDefinition {
+  solidDefinition: SolidDefinition!
+  name: String!
+  description: String
+  isDynamic: Boolean
+  type: DagsterType!
+}
+
+type ResourceRequirement {
+  resourceKey: String!
+}
+
+type Solid {
+  name: String!
+  definition: ISolidDefinition!
+  inputs: [Input!]!
+  outputs: [Output!]!
+  isDynamicMapped: Boolean!
+}
+
+type Input {
+  solid: Solid!
+  definition: InputDefinition!
+  dependsOn: [Output!]!
+  isDynamicCollect: Boolean!
+}
+
+type Output {
+  solid: Solid!
+  definition: OutputDefinition!
+  dependedBy: [Input!]!
+}
+
+type InputMapping {
+  mappedInput: Input!
+  definition: InputDefinition!
+}
+
+type OutputMapping {
+  mappedOutput: Output!
+  definition: OutputDefinition!
 }
 
 type PipelineRun {
@@ -1069,6 +1075,12 @@ type SolidInvocationSite {
   solidHandle: SolidHandle!
 }
 
+type SolidHandle {
+  handleID: String!
+  solid: Solid!
+  parent: SolidHandle
+}
+
 union RepositoryOrError = PythonError | Repository | RepositoryNotFoundError
 
 type RepositoryNotFoundError implements Error {
@@ -1126,13 +1138,11 @@ type PipelineSnapshot implements IPipelineSnapshot & PipelineReference {
   pipelineSnapshotId: String!
   dagsterTypes: [DagsterType!]!
   dagsterTypeOrError(dagsterTypeName: String!): DagsterTypeOrError!
-  solids: [Solid!]!
   modes: [Mode!]!
-  solidHandles(parentHandleID: String): [SolidHandle!]!
-  solidHandle(handleID: String!): SolidHandle
   tags: [PipelineTag!]!
   solidSelection: [String!]
   id: ID!
+  graph: [GraphDefinition!]!
   runs(cursor: String, limit: Int): [PipelineRun!]!
   schedules: [Schedule!]!
   sensors: [Sensor!]!
@@ -1917,25 +1927,4 @@ type RunGroups {
 
 type StopSensorMutation {
   Output: StopSensorMutationResultOrError!
-}
-
-type CompositeSolidDefinition implements ISolidDefinition & SolidContainer {
-  name: String!
-  description: String
-  metadata: [MetadataItemDefinition!]!
-  inputDefinitions: [InputDefinition!]!
-  outputDefinitions: [OutputDefinition!]!
-  solids: [Solid!]!
-  inputMappings: [InputMapping!]!
-  outputMappings: [OutputMapping!]!
-}
-
-type InputMapping {
-  mappedInput: Input!
-  definition: InputDefinition!
-}
-
-type OutputMapping {
-  mappedOutput: Output!
-  definition: OutputDefinition!
 }
