@@ -147,13 +147,19 @@ def my_directory_sensor_with_skip_reasons():
 # end_skip_sensors_marker
 
 # start_asset_sensors_marker
-from dagster import AssetKey
+from dagster import AssetKey, EventRecordsFilter, DagsterEventType
 
 
 @sensor(pipeline_name="my_pipeline")
 def my_asset_sensor(context):
-    event_records = context.instance.event_records_for_asset_key(
-        AssetKey("my_table"), after_cursor=context.cursor, ascending=False, limit=1
+    event_records = context.instance.get_event_records(
+        EventRecordsFilter(
+            event_type=DagsterEventType.ASSET_MATERIALIZATION,
+            asset_key=AssetKey("my_table"),
+            after_cursor=context.cursor,
+        ),
+        ascending=False,
+        limit=1,
     )
     if not event_records:
         return
