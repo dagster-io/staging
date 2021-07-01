@@ -38,6 +38,8 @@ class SensorEvaluationContext:
         last_completion_time (float): DEPRECATED The last time that the sensor was evaluated (UTC).
         last_run_key (str): DEPRECATED The run key of the RunRequest most recently created by this
             sensor. Use the preferred `cursor` attribute instead.
+        repository_origin_id (Optional[str]): The origin id of the repository that the sensor
+            belongs to.
     """
 
     def __init__(
@@ -46,6 +48,7 @@ class SensorEvaluationContext:
         last_completion_time: Optional[float],
         last_run_key: Optional[str],
         cursor: Optional[str],
+        repository_origin_id: Optional[str],
     ):
         self._exit_stack = ExitStack()
         self._instance = None
@@ -56,6 +59,9 @@ class SensorEvaluationContext:
         )
         self._last_run_key = check.opt_str_param(last_run_key, "last_run_key")
         self._cursor = check.opt_str_param(cursor, "cursor")
+        self._repository_origin_id = check.opt_str_param(
+            repository_origin_id, "repository_origin_id"
+        )
 
         self._instance = None
 
@@ -103,6 +109,10 @@ class SensorEvaluationContext:
             cursor (Optional[str]):
         """
         self._cursor = check.opt_str_param(cursor, "cursor")
+
+    @property
+    def repository_origin_id(self) -> Optional[str]:
+        return self._repository_origin_id
 
 
 # Preserve SensorExecutionContext for backcompat so type annotations don't break.
@@ -344,7 +354,9 @@ def wrap_sensor_evaluation(
 
 
 def build_sensor_context(
-    instance: Optional[DagsterInstance] = None, cursor: Optional[str] = None
+    instance: Optional[DagsterInstance] = None,
+    cursor: Optional[str] = None,
+    repository_origin_id: Optional[str] = None,
 ) -> SensorEvaluationContext:
     """Builds sensor execution context using the provided parameters.
 
@@ -369,9 +381,11 @@ def build_sensor_context(
 
     check.opt_inst_param(instance, "instance", DagsterInstance)
     check.opt_str_param(cursor, "cursor")
+    check.opt_str_param(repository_origin_id, "repository_origin_id")
     return SensorEvaluationContext(
         instance_ref=instance.get_ref() if instance else None,
         last_completion_time=None,
         last_run_key=None,
         cursor=cursor,
+        repository_origin_id=repository_origin_id,
     )

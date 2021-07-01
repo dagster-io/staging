@@ -401,7 +401,13 @@ class InProcessRepositoryLocation(RepositoryLocation):
         cursor: Optional[str],
     ) -> Union["SensorExecutionData", "ExternalSensorExecutionErrorData"]:
         return get_external_sensor_execution(
-            self._recon_repo, instance.get_ref(), name, last_completion_time, last_run_key, cursor
+            self._recon_repo,
+            instance.get_ref(),
+            repository_handle.get_external_origin(),
+            name,
+            last_completion_time,
+            last_run_key,
+            cursor,
         )
 
     def get_external_partition_set_execution_param_data(

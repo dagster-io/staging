@@ -34,6 +34,7 @@ from dagster.core.host_representation.external_data import (
     ExternalScheduleExecutionErrorData,
     ExternalSensorExecutionErrorData,
 )
+from dagster.core.host_representation.origin import ExternalRepositoryOrigin
 from dagster.core.instance import DagsterInstance
 from dagster.core.snap.execution_plan_snapshot import (
     ExecutionPlanSnapshotErrorData,
@@ -240,13 +241,20 @@ def get_external_schedule_execution(
 
 
 def get_external_sensor_execution(
-    recon_repo, instance_ref, sensor_name, last_completion_timestamp, last_run_key, cursor
+    recon_repo,
+    instance_ref,
+    repository_origin,
+    sensor_name,
+    last_completion_timestamp,
+    last_run_key,
+    cursor,
 ):
     check.inst_param(
         recon_repo,
         "recon_repo",
         ReconstructableRepository,
     )
+    check.inst_param(repository_origin, "repository_origin", ExternalRepositoryOrigin)
 
     definition = recon_repo.get_definition()
     sensor_def = definition.get_sensor_def(sensor_name)
@@ -256,6 +264,7 @@ def get_external_sensor_execution(
         last_completion_time=last_completion_timestamp,
         last_run_key=last_run_key,
         cursor=cursor,
+        repository_origin_id=repository_origin.get_id(),
     ) as sensor_context:
         try:
             with user_code_error_boundary(

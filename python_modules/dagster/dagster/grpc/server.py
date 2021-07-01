@@ -545,6 +545,7 @@ class DagsterApiServer(DagsterApiServicer):
             get_external_sensor_execution(
                 recon_repo,
                 args.instance_ref,
+                args.repository_origin,
                 args.sensor_name,
                 args.last_completion_time,
                 args.last_run_key,
