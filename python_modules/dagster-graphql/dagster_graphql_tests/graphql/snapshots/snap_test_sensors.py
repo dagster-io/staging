@@ -8,7 +8,7 @@ snapshots = Snapshot()
 
 snapshots['TestSensors.test_get_sensor[non_launchable_in_memory_instance_lazy_repository] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': 'e84957f1e0556df2285ee572729546bf3a934403',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -27,7 +27,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_in_memory_instance_lazy_re
 
 snapshots['TestSensors.test_get_sensor[non_launchable_in_memory_instance_managed_grpc_env] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': '753303b211ae5c75b2fc529cf540f4ab92a9e19d',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -46,7 +46,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_in_memory_instance_managed
 
 snapshots['TestSensors.test_get_sensor[non_launchable_in_memory_instance_multi_location] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': 'f2b74eda633922d19934885594b7d2d8a4ce4e46',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -65,7 +65,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_in_memory_instance_multi_l
 
 snapshots['TestSensors.test_get_sensor[non_launchable_postgres_instance_lazy_repository] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': 'e84957f1e0556df2285ee572729546bf3a934403',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -84,7 +84,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_postgres_instance_lazy_rep
 
 snapshots['TestSensors.test_get_sensor[non_launchable_postgres_instance_managed_grpc_env] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': '753303b211ae5c75b2fc529cf540f4ab92a9e19d',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -103,7 +103,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_postgres_instance_managed_
 
 snapshots['TestSensors.test_get_sensor[non_launchable_postgres_instance_multi_location] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': 'f2b74eda633922d19934885594b7d2d8a4ce4e46',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -122,7 +122,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_postgres_instance_multi_lo
 
 snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_deployed_grpc_env] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': '6bb8673c137cdd15487fe0b983715ef1a0dd0bf6',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -141,7 +141,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_deployed_g
 
 snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_lazy_repository] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': 'e84957f1e0556df2285ee572729546bf3a934403',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -160,7 +160,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_lazy_repos
 
 snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_managed_grpc_env] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': '753303b211ae5c75b2fc529cf540f4ab92a9e19d',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -179,7 +179,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_managed_gr
 
 snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_multi_location] 1'] = {
     '__typename': 'Sensor',
-    'id': 'always_no_config_sensor:no_config_pipeline',
+    'id': 'f2b74eda633922d19934885594b7d2d8a4ce4e46',
     'minIntervalSeconds': 30,
     'mode': 'default',
     'name': 'always_no_config_sensor',
@@ -199,7 +199,7 @@ snapshots['TestSensors.test_get_sensor[non_launchable_sqlite_instance_multi_loca
 snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_lazy_repository] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': 'e84957f1e0556df2285ee572729546bf3a934403',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -216,7 +216,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_lazy_r
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': '83b950828cec2bc92990e0282f6213db034a5f15',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -233,7 +233,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_lazy_r
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': 'ccb4f6908b6aea5648ef75e5d9ab59d9640c2d0b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -250,7 +250,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_lazy_r
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '0df270908d902cdafc2969c4f15b32e1f675fbc1',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -267,7 +267,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_lazy_r
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': '2b61865b7f42046879403978b303371b52f22e07',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -287,7 +287,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_lazy_r
 snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_managed_grpc_env] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': '753303b211ae5c75b2fc529cf540f4ab92a9e19d',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -304,7 +304,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_manage
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': 'bcbd03b4cbbf428b2f2ba4ba7f45d91910fce85d',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -321,7 +321,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_manage
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': '818ab3ac0338b4f69a1baa06c044a7230140b39b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -338,7 +338,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_manage
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '4ed050872c93fe0a282f772896f927d3dd38943b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -355,7 +355,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_manage
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': '1edaa8f6b7364d3edf6055eea25bcb39ae49f6bc',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -375,7 +375,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_manage
 snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_multi_location] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': 'f2b74eda633922d19934885594b7d2d8a4ce4e46',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -392,7 +392,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_multi_
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': 'd6ee1b528b79c305313c93486e0e34824578a5ff',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -409,7 +409,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_multi_
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': 'e7dbf8b1c4d6f7d53cf6d6c293d04c7adbc8497a',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -426,7 +426,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_multi_
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '025c0a176482f75678d22ef37a373ffe7b653454',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -443,7 +443,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_multi_
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': 'f33e36c7f65c6886336274244d2a3a47d25aeda4',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -463,7 +463,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_in_memory_instance_multi_
 snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_lazy_repository] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': 'e84957f1e0556df2285ee572729546bf3a934403',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -480,7 +480,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_lazy_re
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': '83b950828cec2bc92990e0282f6213db034a5f15',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -497,7 +497,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_lazy_re
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': 'ccb4f6908b6aea5648ef75e5d9ab59d9640c2d0b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -514,7 +514,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_lazy_re
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '0df270908d902cdafc2969c4f15b32e1f675fbc1',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -531,7 +531,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_lazy_re
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': '2b61865b7f42046879403978b303371b52f22e07',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -551,7 +551,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_lazy_re
 snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_managed_grpc_env] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': '753303b211ae5c75b2fc529cf540f4ab92a9e19d',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -568,7 +568,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_managed
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': 'bcbd03b4cbbf428b2f2ba4ba7f45d91910fce85d',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -585,7 +585,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_managed
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': '818ab3ac0338b4f69a1baa06c044a7230140b39b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -602,7 +602,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_managed
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '4ed050872c93fe0a282f772896f927d3dd38943b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -619,7 +619,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_managed
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': '1edaa8f6b7364d3edf6055eea25bcb39ae49f6bc',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -639,7 +639,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_managed
 snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_multi_location] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': 'f2b74eda633922d19934885594b7d2d8a4ce4e46',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -656,7 +656,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_multi_l
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': 'd6ee1b528b79c305313c93486e0e34824578a5ff',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -673,7 +673,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_multi_l
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': 'e7dbf8b1c4d6f7d53cf6d6c293d04c7adbc8497a',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -690,7 +690,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_multi_l
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '025c0a176482f75678d22ef37a373ffe7b653454',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -707,7 +707,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_multi_l
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': 'f33e36c7f65c6886336274244d2a3a47d25aeda4',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -727,7 +727,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_postgres_instance_multi_l
 snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_deployed_grpc_env] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': '910939f7f8e3fabc2ffbe0ab941dd53595db7267',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -744,7 +744,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_deployed_
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': '297f9422debe6a19321116b6941750bf28bb77d1',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -761,7 +761,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_deployed_
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': '132468b43e2d5065722745ca5d9529b2912e4b74',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -778,7 +778,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_deployed_
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '89183ea84e2fc6b6301c37636f59b62c00fc7e26',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -795,7 +795,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_deployed_
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': '3872d4528406c65c04727d554ae76ed71c562283',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -815,7 +815,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_deployed_
 snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_lazy_repository] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': 'e84957f1e0556df2285ee572729546bf3a934403',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -832,7 +832,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_lazy_repo
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': '83b950828cec2bc92990e0282f6213db034a5f15',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -849,7 +849,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_lazy_repo
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': 'ccb4f6908b6aea5648ef75e5d9ab59d9640c2d0b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -866,7 +866,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_lazy_repo
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '0df270908d902cdafc2969c4f15b32e1f675fbc1',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -883,7 +883,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_lazy_repo
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': '2b61865b7f42046879403978b303371b52f22e07',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -903,7 +903,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_lazy_repo
 snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_managed_grpc_env] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': '753303b211ae5c75b2fc529cf540f4ab92a9e19d',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -920,7 +920,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_managed_g
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': 'bcbd03b4cbbf428b2f2ba4ba7f45d91910fce85d',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -937,7 +937,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_managed_g
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': '818ab3ac0338b4f69a1baa06c044a7230140b39b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -954,7 +954,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_managed_g
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '4ed050872c93fe0a282f772896f927d3dd38943b',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -971,7 +971,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_managed_g
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': '1edaa8f6b7364d3edf6055eea25bcb39ae49f6bc',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
@@ -991,7 +991,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_managed_g
 snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_multi_location] 1'] = [
     {
         'description': None,
-        'id': 'always_no_config_sensor:no_config_pipeline',
+        'id': 'f2b74eda633922d19934885594b7d2d8a4ce4e46',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'always_no_config_sensor',
@@ -1008,7 +1008,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_multi_loc
     },
     {
         'description': None,
-        'id': 'custom_interval_sensor:no_config_pipeline',
+        'id': 'd6ee1b528b79c305313c93486e0e34824578a5ff',
         'minIntervalSeconds': 60,
         'mode': 'default',
         'name': 'custom_interval_sensor',
@@ -1025,7 +1025,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_multi_loc
     },
     {
         'description': None,
-        'id': 'multi_no_config_sensor:no_config_pipeline',
+        'id': 'e7dbf8b1c4d6f7d53cf6d6c293d04c7adbc8497a',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'multi_no_config_sensor',
@@ -1042,7 +1042,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_multi_loc
     },
     {
         'description': None,
-        'id': 'never_no_config_sensor:no_config_pipeline',
+        'id': '025c0a176482f75678d22ef37a373ffe7b653454',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'never_no_config_sensor',
@@ -1059,7 +1059,7 @@ snapshots['TestSensors.test_get_sensors[non_launchable_sqlite_instance_multi_loc
     },
     {
         'description': None,
-        'id': 'once_no_config_sensor:no_config_pipeline',
+        'id': 'f33e36c7f65c6886336274244d2a3a47d25aeda4',
         'minIntervalSeconds': 30,
         'mode': 'default',
         'name': 'once_no_config_sensor',
