@@ -1,9 +1,12 @@
 import {gql} from '@apollo/client';
-import {Button, Classes, Colors, Dialog} from '@blueprintjs/core';
+import {Button, Classes, Colors, Dialog, Menu, MenuItem} from '@blueprintjs/core';
+import {Popover2 as Popover} from '@blueprintjs/popover2';
 import * as React from 'react';
 
+import {AppContext} from '../app/AppContext';
 import {TimestampDisplay} from '../schedules/TimestampDisplay';
 import {PipelineRunStatus} from '../types/globalTypes';
+import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
 import {HighlightedCodeBlock} from '../ui/HighlightedCodeBlock';
 import {MetadataTable} from '../ui/MetadataTable';
@@ -110,9 +113,28 @@ export const RunDetails: React.FC<{
 
 export const RunConfigDialog: React.FC<{run: RunFragment}> = ({run}) => {
   const [showDialog, setShowDialog] = React.useState(false);
+  const {rootServerURI} = React.useContext(AppContext);
   return (
     <div>
-      <Button onClick={() => setShowDialog(true)}>View tags and configuration</Button>
+      <Popover
+        content={
+          <Menu>
+            <MenuItem
+              text="View tags and configuration"
+              icon="tag"
+              onClick={() => setShowDialog(true)}
+            />
+            <MenuItem
+              text="Download debug file"
+              icon="download"
+              href={`${rootServerURI}/download_debug/${run.runId}`}
+            />
+          </Menu>
+        }
+        position="bottom-right"
+      >
+        <ButtonLink>View run metadata</ButtonLink>
+      </Popover>
       <Dialog
         isOpen={showDialog}
         onClose={() => setShowDialog(false)}
