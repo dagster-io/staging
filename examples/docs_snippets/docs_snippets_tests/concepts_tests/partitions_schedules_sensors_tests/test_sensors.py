@@ -1,6 +1,12 @@
 from contextlib import suppress
 
-from dagster import build_sensor_context, execute_pipeline, pipeline, reconstructable, solid
+from dagster import (
+    build_sensor_context,
+    execute_pipeline,
+    pipeline,
+    reconstructable,
+    solid,
+)
 from dagster.core.definitions.run_request import RunRequest
 from dagster.core.test_utils import instance_for_test
 from docs_snippets.concepts.partitions_schedules_sensors.sensors.sensor_alert import (
@@ -36,7 +42,10 @@ def test_failure_alert_pipeline():
 
 def test_log_file_pipeline():
     result = execute_pipeline(
-        log_file_pipeline, run_config={"solids": {"process_file": {"config": {"filename": "test"}}}}
+        log_file_pipeline,
+        run_config={
+            "solids": {"process_file": {"config": {"filename": "test"}}}
+        },
     )
     assert result.success
 

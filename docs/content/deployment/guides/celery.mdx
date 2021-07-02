@@ -20,7 +20,13 @@ The dagster-celery executor compiles a pipeline definition and its associated co
 Let's construct a very parallel toy pipeline and then execute it using the Celery executor.
 
 ```python file=/deploying/celery_pipeline.py
-from dagster import ModeDefinition, default_executors, fs_io_manager, pipeline, solid
+from dagster import (
+    ModeDefinition,
+    default_executors,
+    fs_io_manager,
+    pipeline,
+    solid,
+)
 from dagster_celery import celery_executor
 
 celery_mode_defs = [

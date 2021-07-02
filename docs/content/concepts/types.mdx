@@ -172,7 +172,11 @@ def double_even(even_num: EvenType) -> EvenType:
 #### Mapping existing classes
 
 ```python file=/concepts/types/make_usable.py
-from dagster import PythonObjectDagsterType, make_python_type_usable_as_dagster_type, solid
+from dagster import (
+    PythonObjectDagsterType,
+    make_python_type_usable_as_dagster_type,
+    solid,
+)
 
 
 class EvenType:

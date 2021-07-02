@@ -1,6 +1,15 @@
-from dagster import ModeDefinition, ResourceDefinition, pipeline, sensor, solid
+from dagster import (
+    ModeDefinition,
+    ResourceDefinition,
+    pipeline,
+    sensor,
+    solid,
+)
 from dagster.core.definitions.run_request import RunRequest
-from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
+from dagster.core.storage.pipeline_run import (
+    PipelineRunStatus,
+    PipelineRunsFilter,
+)
 from dagster_slack import slack_resource
 
 
@@ -13,7 +22,10 @@ def slack_message_on_failure_solid(context):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(name="test", resource_defs={"slack": ResourceDefinition.mock_resource()}),
+        ModeDefinition(
+            name="test",
+            resource_defs={"slack": ResourceDefinition.mock_resource()},
+        ),
         ModeDefinition(name="prod", resource_defs={"slack": slack_resource}),
     ]
 )

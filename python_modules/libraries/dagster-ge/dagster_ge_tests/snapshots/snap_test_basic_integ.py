@@ -6,7 +6,9 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
-snapshots['test_yielded_results_config_pandas 1'] = '''
+snapshots[
+    "test_yielded_results_config_pandas 1"
+] = """
 # Validation Results
 
 
@@ -124,4 +126,4 @@ Q3  | 117.62
 
 
 
-'''
+"""

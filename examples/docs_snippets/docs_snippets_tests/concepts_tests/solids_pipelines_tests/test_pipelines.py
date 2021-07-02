@@ -1,11 +1,19 @@
 from dagster import execute_pipeline
-from docs_snippets.concepts.solids_pipelines.branching_pipeline import branching_pipeline
+from docs_snippets.concepts.solids_pipelines.branching_pipeline import (
+    branching_pipeline,
+)
 from docs_snippets.concepts.solids_pipelines.dynamic_pipeline.dynamic_pipeline import (
     process_directory,
 )
-from docs_snippets.concepts.solids_pipelines.fan_in_pipeline import fan_in_pipeline
-from docs_snippets.concepts.solids_pipelines.linear_pipeline import linear_pipeline
-from docs_snippets.concepts.solids_pipelines.multiple_io_pipeline import inputs_and_outputs_pipeline
+from docs_snippets.concepts.solids_pipelines.fan_in_pipeline import (
+    fan_in_pipeline,
+)
+from docs_snippets.concepts.solids_pipelines.linear_pipeline import (
+    linear_pipeline,
+)
+from docs_snippets.concepts.solids_pipelines.multiple_io_pipeline import (
+    inputs_and_outputs_pipeline,
+)
 from docs_snippets.concepts.solids_pipelines.order_based_dependency_pipeline import (
     nothing_dependency_pipeline,
 )

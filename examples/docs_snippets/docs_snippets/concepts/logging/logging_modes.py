@@ -11,8 +11,12 @@ def hello_logs(context):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(name="local", logger_defs={"console": colored_console_logger}),
-        ModeDefinition(name="prod", logger_defs={"cloudwatch": cloudwatch_logger}),
+        ModeDefinition(
+            name="local", logger_defs={"console": colored_console_logger}
+        ),
+        ModeDefinition(
+            name="prod", logger_defs={"cloudwatch": cloudwatch_logger}
+        ),
     ]
 )
 def hello_modes():

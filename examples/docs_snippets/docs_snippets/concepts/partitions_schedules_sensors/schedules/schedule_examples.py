@@ -99,7 +99,9 @@ from dagster import build_schedule_context, validate_run_config
 
 
 def test_my_cron_schedule_with_context():
-    context = build_schedule_context(scheduled_execution_time=datetime.datetime(2020, 1, 1))
+    context = build_schedule_context(
+        scheduled_execution_time=datetime.datetime(2020, 1, 1)
+    )
     run_config = my_schedule_uses_context(context)
     assert validate_run_config(pipeline_for_test, run_config)
 
@@ -116,7 +118,13 @@ def test_my_cron_schedule_with_context():
     execution_timezone="US/Central",
 )
 def my_hourly_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d %H")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d %H")}
+            }
+        }
+    }
 
 
 # end_hourly_schedule
@@ -131,7 +139,13 @@ def my_hourly_schedule(date):
     execution_timezone="US/Central",
 )
 def my_daily_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d")}
+            }
+        }
+    }
 
 
 # end_daily_schedule
@@ -147,7 +161,13 @@ def my_daily_schedule(date):
     execution_timezone="US/Central",
 )
 def my_weekly_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d")}
+            }
+        }
+    }
 
 
 # end_weekly_schedule
@@ -164,7 +184,13 @@ def my_weekly_schedule(date):
     execution_time=datetime.time(hour=9, minute=0),
 )
 def my_monthly_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m")}
+            }
+        }
+    }
 
 
 # end_monthly_schedule
@@ -172,7 +198,9 @@ def my_monthly_schedule(date):
 preset = PresetDefinition(
     "test_preset",
     mode="basic",
-    run_config={"solids": {"process_data_for_date": {"config": {"date": ""}}}},
+    run_config={
+        "solids": {"process_data_for_date": {"config": {"date": ""}}}
+    },
 )
 
 # start_preset
@@ -206,9 +234,9 @@ import copy
 )
 def my_modified_preset_schedule(date):
     modified_run_config = copy.deepcopy(preset.run_config)
-    modified_run_config["solids"]["process_data_for_date"]["config"]["date"] = date.strftime(
-        "%Y-%m-%d"
-    )
+    modified_run_config["solids"]["process_data_for_date"]["config"][
+        "date"
+    ] = date.strftime("%Y-%m-%d")
     return modified_run_config
 
 

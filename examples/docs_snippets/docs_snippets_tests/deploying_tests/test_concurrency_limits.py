@@ -20,5 +20,6 @@ def test_instance_yaml(docs_snippets_folder):
         "concurrency_limits",
     )
     assert isinstance(
-        InstanceRef.from_dir(intance_yaml_folder).run_coordinator, QueuedRunCoordinator
+        InstanceRef.from_dir(intance_yaml_folder).run_coordinator,
+        QueuedRunCoordinator,
     )

@@ -1,4 +1,10 @@
-from dagster import ModeDefinition, default_executors, fs_io_manager, pipeline, solid
+from dagster import (
+    ModeDefinition,
+    default_executors,
+    fs_io_manager,
+    pipeline,
+    solid,
+)
 from dagster_dask import dask_executor
 
 

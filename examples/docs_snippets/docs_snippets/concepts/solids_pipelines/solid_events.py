@@ -83,7 +83,9 @@ def my_metadata_output(context):
         df,
         metadata={
             "text_metadata": "Text-based metadata for this event",
-            "dashboard_url": EventMetadata.url("http://mycoolsite.com/url_for_my_data"),
+            "dashboard_url": EventMetadata.url(
+                "http://mycoolsite.com/url_for_my_data"
+            ),
             "raw_count": len(df),
             "size (bytes)": calculate_bytes(df),
         },
@@ -103,7 +105,9 @@ def my_metadata_expectation_solid(context, df):
         description="ensure dataframe has rows",
         metadata={
             "text_metadata": "Text-based metadata for this event",
-            "dashboard_url": EventMetadata.url("http://mycoolsite.com/url_for_my_data"),
+            "dashboard_url": EventMetadata.url(
+                "http://mycoolsite.com/url_for_my_data"
+            ),
             "raw_count": len(df),
             "size (bytes)": calculate_bytes(df),
         },
@@ -125,7 +129,9 @@ def my_failure_solid():
             description="No files to process",
             metadata={
                 "filepath": EventMetadata.path(path),
-                "dashboard_url": EventMetadata.url("http://mycoolsite.com/failures"),
+                "dashboard_url": EventMetadata.url(
+                    "http://mycoolsite.com/failures"
+                ),
             },
         )
     return some_calculation(my_files)
@@ -145,7 +151,9 @@ def my_failure_metadata_solid():
             description="No files to process",
             metadata={
                 "filepath": EventMetadata.path(path),
-                "dashboard_url": EventMetadata.url("http://mycoolsite.com/failures"),
+                "dashboard_url": EventMetadata.url(
+                    "http://mycoolsite.com/failures"
+                ),
             },
         )
     return some_calculation(my_files)

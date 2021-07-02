@@ -87,7 +87,10 @@ def test_my_resource_with_context():
     init_context = build_init_resource_context(
         resources={"foo": "foo_str"}, config={"bar": "bar_str"}
     )
-    assert my_resource_requires_context(init_context) == ("foo_str", "bar_str")
+    assert my_resource_requires_context(init_context) == (
+        "foo_str",
+        "bar_str",
+    )
 ```
 
 If your resource is a context manager, then you can open it as one using python's `with` syntax.

@@ -6,7 +6,9 @@ def reexecution():
     instance = DagsterInstance.ephemeral()
 
     # Initial execution
-    pipeline_result_full = execute_pipeline(unreliable_pipeline, instance=instance)
+    pipeline_result_full = execute_pipeline(
+        unreliable_pipeline, instance=instance
+    )
 
     if not pipeline_result_full.success:
         # Re-execution: Entire pipeline
@@ -20,7 +22,9 @@ def reexecution():
 # end_initial_execution_marker
 
 instance = DagsterInstance.ephemeral()
-pipeline_result_full = execute_pipeline(unreliable_pipeline, instance=instance)
+pipeline_result_full = execute_pipeline(
+    unreliable_pipeline, instance=instance
+)
 
 # start_partial_execution_marker
 

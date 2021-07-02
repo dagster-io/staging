@@ -20,7 +20,9 @@ def generate_stub_input_values(solid):
 
     input_defs = solid.input_defs
     for input_def in input_defs:
-        input_values[input_def.name] = default_values[str(input_def.dagster_type.display_name)]
+        input_values[input_def.name] = default_values[
+            str(input_def.dagster_type.display_name)
+        ]
 
     return input_values
 

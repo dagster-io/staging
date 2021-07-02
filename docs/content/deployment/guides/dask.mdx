@@ -26,7 +26,13 @@ First, run `pip install dagster-dask`.
 Then, you'll need to add the dask executor to a **`ModeDefinition`** on your pipeline:
 
 ```python file=/deploying/dask_hello_world.py
-from dagster import ModeDefinition, default_executors, fs_io_manager, pipeline, solid
+from dagster import (
+    ModeDefinition,
+    default_executors,
+    fs_io_manager,
+    pipeline,
+    solid,
+)
 from dagster_dask import dask_executor
 
 
