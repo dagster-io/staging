@@ -20,11 +20,15 @@ TripDataFrame = create_dagster_pandas_dataframe_type(
     name="TripDataFrame",
     columns=[
         PandasColumn.integer_column("bike_id", min_value=0),
-        PandasColumn.categorical_column("color", categories={"red", "green", "blue"}),
+        PandasColumn.categorical_column(
+            "color", categories={"red", "green", "blue"}
+        ),
         PandasColumn.datetime_column(
             "start_time", min_datetime=datetime(year=2020, month=2, day=10)
         ),
-        PandasColumn.datetime_column("end_time", min_datetime=datetime(year=2020, month=2, day=10)),
+        PandasColumn.datetime_column(
+            "end_time", min_datetime=datetime(year=2020, month=2, day=10)
+        ),
         PandasColumn.string_column("station"),
         PandasColumn.exists("amount_paid"),
         PandasColumn.boolean_column("was_member"),
@@ -35,7 +39,11 @@ TripDataFrame = create_dagster_pandas_dataframe_type(
 Once our custom data type is defined, we can use it as the type declaration for the inputs / outputs of our solid:
 
 ```python file=/legacy/dagster_pandas_guide/core_trip_pipeline.py startafter=start_core_trip_pipeline_marker_1 endbefore=end_core_trip_pipeline_marker_1
-@solid(output_defs=[OutputDefinition(name="trip_dataframe", dagster_type=TripDataFrame)])
+@solid(
+    output_defs=[
+        OutputDefinition(name="trip_dataframe", dagster_type=TripDataFrame)
+    ]
+)
 def load_trip_dataframe() -> DataFrame:
     return read_csv(
         script_relative_path("./ebike_trips.csv"),
@@ -63,7 +71,8 @@ This looks like:
 
 ```python file=/legacy/dagster_pandas_guide/shape_constrained_pipeline.py startafter=start_create_type endbefore=end_create_type
 ShapeConstrainedTripDataFrame = create_dagster_pandas_dataframe_type(
-    name="ShapeConstrainedTripDataFrame", dataframe_constraints=[RowCountConstraint(4)]
+    name="ShapeConstrainedTripDataFrame",
+    dataframe_constraints=[RowCountConstraint(4)],
 )
 ```
 
@@ -85,7 +94,8 @@ def compute_trip_dataframe_summary_statistics(dataframe):
 
 
 SummaryStatsTripDataFrame = create_dagster_pandas_dataframe_type(
-    name="SummaryStatsTripDataFrame", event_metadata_fn=compute_trip_dataframe_summary_statistics
+    name="SummaryStatsTripDataFrame",
+    event_metadata_fn=compute_trip_dataframe_summary_statistics,
 )
 ```
 
@@ -113,7 +123,9 @@ class DivisibleByFiveConstraint(ColumnConstraint):
         )
 
     def validate(self, dataframe, column_name):
-        rows_with_unexpected_buckets = dataframe[dataframe[column_name].apply(lambda x: x % 5 != 0)]
+        rows_with_unexpected_buckets = dataframe[
+            dataframe[column_name].apply(lambda x: x % 5 != 0)
+        ]
         if not rows_with_unexpected_buckets.empty:
             raise ColumnConstraintViolationException(
                 constraint_name=self.name,
@@ -128,7 +140,10 @@ CustomTripDataFrame = create_dagster_pandas_dataframe_type(
     columns=[
         PandasColumn(
             "amount_paid",
-            constraints=[ColumnDTypeInSetConstraint({"int64"}), DivisibleByFiveConstraint()],
+            constraints=[
+                ColumnDTypeInSetConstraint({"int64"}),
+                DivisibleByFiveConstraint(),
+            ],
         )
     ],
 )

@@ -40,7 +40,12 @@ We can simply turn a notebook into a solid using <PyObject module="dagstermill" 
 
 ```python file=/legacy/data_science/iris_pipeline.py
 import dagstermill as dm
-from dagster import ModeDefinition, fs_io_manager, local_file_manager, pipeline
+from dagster import (
+    ModeDefinition,
+    fs_io_manager,
+    local_file_manager,
+    pipeline,
+)
 from dagster.utils import script_relative_path
 
 k_means_iris = dm.define_dagstermill_solid(
@@ -51,7 +56,10 @@ k_means_iris = dm.define_dagstermill_solid(
 @pipeline(
     mode_defs=[
         ModeDefinition(
-            resource_defs={"io_manager": fs_io_manager, "file_manager": local_file_manager}
+            resource_defs={
+                "io_manager": fs_io_manager,
+                "file_manager": local_file_manager,
+            }
         )
     ]
 )
@@ -103,11 +111,17 @@ from docs_snippets.legacy.data_science.download_file import download_file
 k_means_iris = dm.define_dagstermill_solid(
     "k_means_iris",
     script_relative_path("iris-kmeans_2.ipynb"),
-    input_defs=[InputDefinition("path", str, description="Local path to the Iris dataset")],
+    input_defs=[
+        InputDefinition(
+            "path", str, description="Local path to the Iris dataset"
+        )
+    ],
 )
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})]
+)
 def iris_pipeline():
     k_means_iris(download_file())
 ```
@@ -124,12 +138,18 @@ from dagster.utils import script_relative_path
 @solid(
     name="download_file",
     config_schema={
-        "url": Field(String, description="The URL from which to download the file"),
-        "path": Field(String, description="The path to which to download the file"),
+        "url": Field(
+            String, description="The URL from which to download the file"
+        ),
+        "path": Field(
+            String, description="The path to which to download the file"
+        ),
     },
     output_defs=[
         OutputDefinition(
-            String, name="path", description="The path to which the file was downloaded"
+            String,
+            name="path",
+            description="The path to which the file was downloaded",
         )
     ],
     description=(
@@ -218,21 +238,37 @@ For instance, suppose we want to make the number of clusters (the \_k\_ in k-mea
 
 ```python literalinclude showLines emphasize-lines=10-12 caption=iris_pipeline_3.py file=/legacy/data_science/iris_pipeline_3.py
 import dagstermill as dm
-from dagster import Field, InputDefinition, Int, ModeDefinition, fs_io_manager, pipeline
+from dagster import (
+    Field,
+    InputDefinition,
+    Int,
+    ModeDefinition,
+    fs_io_manager,
+    pipeline,
+)
 from dagster.utils import script_relative_path
 from docs_snippets.legacy.data_science.download_file import download_file
 
 k_means_iris = dm.define_dagstermill_solid(
     "k_means_iris",
     script_relative_path("iris-kmeans_2.ipynb"),
-    input_defs=[InputDefinition("path", str, description="Local path to the Iris dataset")],
+    input_defs=[
+        InputDefinition(
+            "path", str, description="Local path to the Iris dataset"
+        )
+    ],
     config_schema=Field(
-        Int, default_value=3, is_required=False, description="The number of clusters to find"
+        Int,
+        default_value=3,
+        is_required=False,
+        description="The number of clusters to find",
     ),
 )
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})]
+)
 def iris_pipeline():
     k_means_iris(download_file())
 ```

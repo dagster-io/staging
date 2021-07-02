@@ -18,7 +18,8 @@ def compute_trip_dataframe_summary_statistics(dataframe):
 
 
 SummaryStatsTripDataFrame = create_dagster_pandas_dataframe_type(
-    name="SummaryStatsTripDataFrame", event_metadata_fn=compute_trip_dataframe_summary_statistics
+    name="SummaryStatsTripDataFrame",
+    event_metadata_fn=compute_trip_dataframe_summary_statistics,
 )
 # end_summary
 
@@ -26,7 +27,8 @@ SummaryStatsTripDataFrame = create_dagster_pandas_dataframe_type(
 @solid(
     output_defs=[
         OutputDefinition(
-            name="summary_stats_trip_dataframe", dagster_type=SummaryStatsTripDataFrame
+            name="summary_stats_trip_dataframe",
+            dagster_type=SummaryStatsTripDataFrame,
         )
     ]
 )

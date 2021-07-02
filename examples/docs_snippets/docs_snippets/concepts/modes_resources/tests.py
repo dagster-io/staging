@@ -36,7 +36,10 @@ def do_something(context, data):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(name="unit_test", resource_defs={"api": ResourceDefinition.mock_resource()}),
+        ModeDefinition(
+            name="unit_test",
+            resource_defs={"api": ResourceDefinition.mock_resource()},
+        ),
         ModeDefinition(name="prod", resource_defs={"api": api_client}),
     ]
 )

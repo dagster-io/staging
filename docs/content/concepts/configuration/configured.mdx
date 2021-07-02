@@ -95,7 +95,10 @@ from dagster import Field, configured, solid
 
 
 @solid(
-    config_schema={"iterations": int, "word": Field(str, is_required=False, default_value="hello")}
+    config_schema={
+        "iterations": int,
+        "word": Field(str, is_required=False, default_value="hello"),
+    }
 )
 def example_solid(context):
     for _ in range(context.solid_config["iterations"]):
@@ -137,8 +140,12 @@ def get_dataset(context, xs):
 
 # If we want to use the same solid configured in multiple ways in the same pipeline,
 # we have to specify unique names when configuring them:
-sample_dataset = configured(get_dataset, name="sample_dataset")({"is_sample": True})
-full_dataset = configured(get_dataset, name="full_dataset")({"is_sample": False})
+sample_dataset = configured(get_dataset, name="sample_dataset")(
+    {"is_sample": True}
+)
+full_dataset = configured(get_dataset, name="full_dataset")(
+    {"is_sample": False}
+)
 
 
 @pipeline

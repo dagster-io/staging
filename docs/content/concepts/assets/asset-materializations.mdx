@@ -52,7 +52,9 @@ into something like this:
 def my_materialization_solid(context):
     df = read_df()
     remote_storage_path = persist_to_storage(df)
-    yield AssetMaterialization(asset_key="my_dataset", description="Persisted result to storage")
+    yield AssetMaterialization(
+        asset_key="my_dataset", description="Persisted result to storage"
+    )
     yield Output(remote_storage_path)
 ```
 
@@ -78,16 +80,21 @@ To record that an <PyObject object ="IOManager"/> has mutated or created an asse
 ```python file=/concepts/assets/materialization_io_managers.py startafter=start_marker_0 endbefore=end_marker_0
 class PandasCsvIOManager(IOManager):
     def load_input(self, context):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
         return read_csv(file_path)
 
     def handle_output(self, context, obj):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
 
         obj.to_csv(file_path)
 
         yield AssetMaterialization(
-            asset_key=AssetKey(file_path), description="Persisted result to storage."
+            asset_key=AssetKey(file_path),
+            description="Persisted result to storage.",
         )
 ```
 
@@ -108,7 +115,9 @@ def my_metadata_materialization_solid(context):
         metadata={
             "text_metadata": "Text-based metadata for this event",
             "path": EventMetadata.path(remote_storage_path),
-            "dashboard_url": EventMetadata.url("http://mycoolsite.com/url_for_my_data"),
+            "dashboard_url": EventMetadata.url(
+                "http://mycoolsite.com/url_for_my_data"
+            ),
             "size (bytes)": calculate_bytes(df),
         },
     )
@@ -120,11 +129,15 @@ def my_metadata_materialization_solid(context):
 ```python file=concepts/assets/materialization_io_managers.py startafter=start_marker_1 endbefore=end_marker_1
 class PandasCsvIOManagerWithAsset(IOManager):
     def load_input(self, context):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
         return read_csv(file_path)
 
     def handle_output(self, context, obj):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
 
         obj.to_csv(file_path)
 
@@ -150,7 +163,9 @@ def my_partitioned_asset_solid(context):
     partition_date = context.solid_config["date"]
     df = read_df_for_date(partition_date)
     remote_storage_path = persist_to_storage(df)
-    yield AssetMaterialization(asset_key="my_dataset", partition=partition_date)
+    yield AssetMaterialization(
+        asset_key="my_dataset", partition=partition_date
+    )
     yield Output(remote_storage_path)
 ```
 
@@ -211,19 +226,27 @@ Similar to the above interface, this function takes an <PyObject object="OutputC
 ```python file=/concepts/assets/materialization_io_managers.py startafter=start_asset_def endbefore=end_asset_def
 class PandasCsvIOManagerWithOutputAsset(IOManager):
     def load_input(self, context):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
         return read_csv(file_path)
 
     def handle_output(self, context, obj):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
 
         obj.to_csv(file_path)
 
         yield EventMetadataEntry.int(obj.shape[0], label="number of rows")
-        yield EventMetadataEntry.float(obj["some_column"].mean(), "some_column mean")
+        yield EventMetadataEntry.float(
+            obj["some_column"].mean(), "some_column mean"
+        )
 
     def get_output_asset_key(self, context):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
         return AssetKey(file_path)
 ```
 
@@ -240,19 +263,27 @@ Then, you can calculate the asset partitions that a particular output will corre
 ```python file=/concepts/assets/materialization_io_managers.py startafter=start_partitioned_asset_def endbefore=end_partitioned_asset_def
 class PandasCsvIOManagerWithOutputAssetPartitions(IOManager):
     def load_input(self, context):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
         return read_csv(file_path)
 
     def handle_output(self, context, obj):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
 
         obj.to_csv(file_path)
 
         yield EventMetadataEntry.int(obj.shape[0], label="number of rows")
-        yield EventMetadataEntry.float(obj["some_column"].mean(), "some_column mean")
+        yield EventMetadataEntry.float(
+            obj["some_column"].mean(), "some_column mean"
+        )
 
     def get_output_asset_key(self, context):
-        file_path = os.path.join("my_base_dir", context.step_key, context.name)
+        file_path = os.path.join(
+            "my_base_dir", context.step_key, context.name
+        )
         return AssetKey(file_path)
 
     def get_output_asset_partitions(self, context):
@@ -276,7 +307,11 @@ def scrape_users():
     return users_df
 
 
-@solid(output_defs=[OutputDefinition(asset_key=AssetKey("ml_models.user_prediction"))])
+@solid(
+    output_defs=[
+        OutputDefinition(asset_key=AssetKey("ml_models.user_prediction"))
+    ]
+)
 def get_prediction_model(users_df):
     my_ml_model = train_prediction_model(users_df)
     persist_to_model_store(my_ml_model)

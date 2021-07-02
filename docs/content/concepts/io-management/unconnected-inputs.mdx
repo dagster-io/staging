@@ -46,7 +46,11 @@ The <PyObject module="dagster" object="String" /> dagster type has a dagster typ
 ```python file=/concepts/io_management/load_from_config.py startafter=execute_start_marker endbefore=execute_end_marker
 execute_pipeline(
         my_pipeline,
-        run_config={"solids": {"my_solid": {"inputs": {"input_string": {"value": "marmot"}}}}},
+        run_config={
+            "solids": {
+                "my_solid": {"inputs": {"input_string": {"value": "marmot"}}}
+            }
+        },
     )
 ```
 
@@ -55,10 +59,14 @@ execute_pipeline(
 When you have a solid at the beginning of your pipeline that operates on a dagster type that you've defined, you can write your own <PyObject module="dagster" object="DagsterTypeLoader" /> to define how to load that input via run config.
 
 ```python file=/concepts/io_management/load_custom_type_from_config.py startafter=def_start_marker endbefore=def_end_marker
-@dagster_type_loader(config_schema={"diameter": float, "juiciness": float, "cultivar": str})
+@dagster_type_loader(
+    config_schema={"diameter": float, "juiciness": float, "cultivar": str}
+)
 def apple_loader(_context, config):
     return Apple(
-        diameter=config["diameter"], juiciness=config["juiciness"], cultivar=config["cultivar"]
+        diameter=config["diameter"],
+        juiciness=config["juiciness"],
+        cultivar=config["cultivar"],
     )
 
 
@@ -89,7 +97,11 @@ execute_pipeline(
             "solids": {
                 "my_solid": {
                     "inputs": {
-                        "input_apple": {"diameter": 2.4, "juiciness": 6.0, "cultivar": "honeycrisp"}
+                        "input_apple": {
+                            "diameter": 2.4,
+                            "juiciness": 6.0,
+                            "cultivar": "honeycrisp",
+                        }
                     }
                 }
             }
@@ -104,7 +116,11 @@ When you have a solid at the beginning of a pipeline that operates on data from 
 To accomplish this, you can define an <PyObject module="dagster" object="RootInputManager" />.
 
 ```python file=/concepts/io_management/root_input_manager.py startafter=start_marker endbefore=end_marker
-@solid(input_defs=[InputDefinition("dataframe", root_manager_key="my_root_manager")])
+@solid(
+    input_defs=[
+        InputDefinition("dataframe", root_manager_key="my_root_manager")
+    ]
+)
 def my_solid(dataframe):
     """Do some stuff"""
 
@@ -114,7 +130,11 @@ def table1_loader(_):
     return read_dataframe_from_table(name="table1")
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"my_root_manager": table1_loader})])
+@pipeline(
+    mode_defs=[
+        ModeDefinition(resource_defs={"my_root_manager": table1_loader})
+    ]
+)
 def my_pipeline():
     my_solid()
 ```
@@ -138,13 +158,23 @@ def table_loader(context):
 Then, when executing a pipeline, you can pass in this per-input config.
 
 ```python file=/concepts/io_management/config_input_manager.py startafter=execute_start_marker endbefore=execute_end_marker
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"my_root_manager": table_loader})])
+@pipeline(
+        mode_defs=[
+            ModeDefinition(resource_defs={"my_root_manager": table_loader})
+        ]
+    )
     def my_pipeline():
         my_solid()
 
     execute_pipeline(
         my_pipeline,
-        run_config={"solids": {"my_solid": {"inputs": {"dataframe": {"table_name": "table1"}}}}},
+        run_config={
+            "solids": {
+                "my_solid": {
+                    "inputs": {"dataframe": {"table_name": "table1"}}
+                }
+            }
+        },
     )
 ```
 
@@ -181,7 +211,11 @@ def solid1():
     """Do stuff"""
 
 
-@solid(input_defs=[InputDefinition("dataframe", root_manager_key="my_root_input_manager")])
+@solid(
+    input_defs=[
+        InputDefinition("dataframe", root_manager_key="my_root_input_manager")
+    ]
+)
 def solid2(dataframe):
     """Do stuff"""
 
@@ -206,6 +240,10 @@ When running the full pipeline, `solid2`'s input will be loaded using the IO man
 execute_pipeline(
         my_pipeline,
         solid_selection=["solid2"],
-        run_config={"solids": {"solid2": {"inputs": {"dataframe": {"table_name": "tableX"}}}}},
+        run_config={
+            "solids": {
+                "solid2": {"inputs": {"dataframe": {"table_name": "tableX"}}}
+            }
+        },
     )
 ```

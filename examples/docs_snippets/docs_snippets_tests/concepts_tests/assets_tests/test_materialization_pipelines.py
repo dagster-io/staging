@@ -1,5 +1,7 @@
 from dagster import execute_pipeline
-from docs_snippets.concepts.assets.materialization_pipelines import my_user_model_pipeline
+from docs_snippets.concepts.assets.materialization_pipelines import (
+    my_user_model_pipeline,
+)
 
 
 def test_pipelines_compile_and_execute():
