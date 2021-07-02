@@ -26,7 +26,8 @@ def test_basic_even_type():
     # start_test_basic_even_type
     EvenDagsterType = DagsterType(
         name="EvenDagsterType",
-        type_check_fn=lambda _, value: isinstance(value, int) and value % 2 is 0,
+        type_check_fn=lambda _, value: isinstance(value, int)
+        and value % 2 is 0,
     )
     # end_test_basic_even_type
 
@@ -44,13 +45,16 @@ def test_basic_even_type():
     with pytest.raises(DagsterTypeCheckDidNotPass):
         execute_solid(double_even, input_values={"num": 3})
 
-    assert not execute_solid(double_even, input_values={"num": 3}, raise_on_error=False).success
+    assert not execute_solid(
+        double_even, input_values={"num": 3}, raise_on_error=False
+    ).success
 
 
 def test_basic_even_type_no_annotations():
     EvenDagsterType = DagsterType(
         name="EvenDagsterType",
-        type_check_fn=lambda _, value: isinstance(value, int) and value % 2 is 0,
+        type_check_fn=lambda _, value: isinstance(value, int)
+        and value % 2 is 0,
     )
 
     # start_test_basic_even_type_no_annotations
@@ -68,7 +72,9 @@ def test_basic_even_type_no_annotations():
     with pytest.raises(DagsterTypeCheckDidNotPass):
         execute_solid(double_even, input_values={"num": 3})
 
-    assert not execute_solid(double_even, input_values={"num": 3}, raise_on_error=False).success
+    assert not execute_solid(
+        double_even, input_values={"num": 3}, raise_on_error=False
+    ).success
 
 
 def test_python_object_dagster_type():
@@ -78,7 +84,9 @@ def test_python_object_dagster_type():
             assert num % 2 is 0
             self.num = num
 
-    EvenDagsterType = PythonObjectDagsterType(EvenType, name="EvenDagsterType")
+    EvenDagsterType = PythonObjectDagsterType(
+        EvenType, name="EvenDagsterType"
+    )
     # end_object_type
 
     # start_use_object_type
@@ -90,7 +98,9 @@ def test_python_object_dagster_type():
 
     # end_use_object_type
 
-    assert execute_solid(double_even, input_values={"even_num": EvenType(2)}).success
+    assert execute_solid(
+        double_even, input_values={"even_num": EvenType(2)}
+    ).success
     with pytest.raises(AssertionError):
         execute_solid(double_even, input_values={"even_num": EvenType(3)})
 
@@ -121,16 +131,22 @@ def test_even_type_loader():
                 even_num: 2
     """
     # end_via_config
-    assert execute_solid(double_even, run_config=yaml.safe_load(yaml_doc)).success
+    assert execute_solid(
+        double_even, run_config=yaml.safe_load(yaml_doc)
+    ).success
 
     assert execute_solid(
-        double_even, run_config={"solids": {"double_even": {"inputs": {"even_num": 2}}}}
+        double_even,
+        run_config={"solids": {"double_even": {"inputs": {"even_num": 2}}}},
     ).success
 
     # Same same as above w/r/t chatting to prha
     with pytest.raises(AssertionError):
         execute_solid(
-            double_even, run_config={"solids": {"double_even": {"inputs": {"even_num": 3}}}}
+            double_even,
+            run_config={
+                "solids": {"double_even": {"inputs": {"even_num": 3}}}
+            },
         )
 
 
@@ -145,10 +161,14 @@ def test_even_type_materialization_config():
         with open(cfg["path"], "w") as ff:
             ff.write(str(value))
             return AssetMaterialization(
-                "path", "Wrote out value to {path}".format(path=path), metadata={"path": path}
+                "path",
+                "Wrote out value to {path}".format(path=path),
+                metadata={"path": path},
             )
 
-    EvenDagsterType = PythonObjectDagsterType(EvenType, materializer=save_to_file_materialization)
+    EvenDagsterType = PythonObjectDagsterType(
+        EvenType, materializer=save_to_file_materialization
+    )
 
     @solid
     def double_even(even_num: EvenDagsterType) -> EvenDagsterType:
@@ -187,7 +207,9 @@ def test_mypy_compliance():
         return EvenType(even_num.num * 2)
 
     # end_mypy
-    assert execute_solid(double_even, input_values={"even_num": EvenType(2)}).success
+    assert execute_solid(
+        double_even, input_values={"even_num": EvenType(2)}
+    ).success
 
 
 def test_nothing_type():
@@ -235,8 +257,12 @@ def test_nothing_fanin_actually_test():
         first_section_done = start_first_pipeline_section()
         start_next_pipeline_section(
             on_cleanup_tasks_done=[
-                perform_clean_up.alias("cleanup_task_one")(first_section_done),
-                perform_clean_up.alias("cleanup_task_two")(first_section_done),
+                perform_clean_up.alias("cleanup_task_one")(
+                    first_section_done
+                ),
+                perform_clean_up.alias("cleanup_task_two")(
+                    first_section_done
+                ),
             ]
         )
 
@@ -268,8 +294,12 @@ def test_nothing_fanin_empty_body_for_guide():
         first_section_done = start_first_pipeline_section()
         start_next_pipeline_section(
             on_cleanup_tasks_done=[
-                perform_clean_up.alias("cleanup_task_one")(first_section_done),
-                perform_clean_up.alias("cleanup_task_two")(first_section_done),
+                perform_clean_up.alias("cleanup_task_one")(
+                    first_section_done
+                ),
+                perform_clean_up.alias("cleanup_task_two")(
+                    first_section_done
+                ),
             ]
         )
 
@@ -290,7 +320,9 @@ def test_usable_as_dagster_type():
     def double_even(even_num: EvenType) -> EvenType:
         return EvenType(even_num.num * 2)
 
-    assert execute_solid(double_even, input_values={"even_num": EvenType(2)}).success
+    assert execute_solid(
+        double_even, input_values={"even_num": EvenType(2)}
+    ).success
 
 
 def test_make_usable_as_dagster_type():
@@ -312,4 +344,6 @@ def test_make_usable_as_dagster_type():
         return EvenType(even_num.num * 2)
 
     # end_make_usable
-    assert execute_solid(double_even, input_values={"even_num": EvenType(2)}).success
+    assert execute_solid(
+        double_even, input_values={"even_num": EvenType(2)}
+    ).success

@@ -580,8 +580,7 @@ def dagster_steps():
         .on_integration_image(SupportedPython.V3_7)
         .build(),
         StepBuilder(":python-black:")
-        # See: https://github.com/dagster-io/dagster/issues/1999
-        .run("pip install -e python_modules/dagster[test]", "make check_black")
+        .run("pip install pre-commit", "pre-commit run black --all-files")
         .on_integration_image(SupportedPython.V3_7)
         .build(),
     ]

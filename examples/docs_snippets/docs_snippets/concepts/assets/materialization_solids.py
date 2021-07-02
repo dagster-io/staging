@@ -43,7 +43,9 @@ def my_simple_solid():
 def my_materialization_solid(context):
     df = read_df()
     remote_storage_path = persist_to_storage(df)
-    yield AssetMaterialization(asset_key="my_dataset", description="Persisted result to storage")
+    yield AssetMaterialization(
+        asset_key="my_dataset", description="Persisted result to storage"
+    )
     yield Output(remote_storage_path)
 
 
@@ -99,7 +101,9 @@ def my_partitioned_asset_solid(context):
     partition_date = context.solid_config["date"]
     df = read_df_for_date(partition_date)
     remote_storage_path = persist_to_storage(df)
-    yield AssetMaterialization(asset_key="my_dataset", partition=partition_date)
+    yield AssetMaterialization(
+        asset_key="my_dataset", partition=partition_date
+    )
     yield Output(remote_storage_path)
 
 
@@ -117,7 +121,9 @@ def my_metadata_materialization_solid(context):
         metadata={
             "text_metadata": "Text-based metadata for this event",
             "path": EventMetadata.path(remote_storage_path),
-            "dashboard_url": EventMetadata.url("http://mycoolsite.com/url_for_my_data"),
+            "dashboard_url": EventMetadata.url(
+                "http://mycoolsite.com/url_for_my_data"
+            ),
             "size (bytes)": calculate_bytes(df),
         },
     )
@@ -136,7 +142,9 @@ def my_asset_key_materialization_solid(context):
         asset_key=AssetKey(["dashboard", "my_cool_site"]),
         description="Persisted result to storage",
         metadata={
-            "dashboard_url": EventMetadata.url("http://mycoolsite.com/dashboard"),
+            "dashboard_url": EventMetadata.url(
+                "http://mycoolsite.com/dashboard"
+            ),
             "size (bytes)": calculate_bytes(df),
         },
     )

@@ -14,6 +14,8 @@ def test_instance_yaml(docs_snippets_folder, snapshot):
         "dagster_instance",
     )
 
-    config, _custom_instance_class = dagster_instance_config(instance_yaml_folder)
+    config, _custom_instance_class = dagster_instance_config(
+        instance_yaml_folder
+    )
     keys = sorted(list(config.keys()))
     snapshot.assert_match(keys)

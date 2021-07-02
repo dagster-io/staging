@@ -2,7 +2,10 @@ from dagster import Field, configured, solid
 
 
 @solid(
-    config_schema={"iterations": int, "word": Field(str, is_required=False, default_value="hello")}
+    config_schema={
+        "iterations": int,
+        "word": Field(str, is_required=False, default_value="hello"),
+    }
 )
 def example_solid(context):
     for _ in range(context.solid_config["iterations"]):

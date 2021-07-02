@@ -1,4 +1,11 @@
-from dagster import IOManager, ModeDefinition, OutputDefinition, io_manager, pipeline, solid
+from dagster import (
+    IOManager,
+    ModeDefinition,
+    OutputDefinition,
+    io_manager,
+    pipeline,
+    solid,
+)
 
 
 def connect():
@@ -14,12 +21,24 @@ def read_dataframe_from_table(**_kwargs):
 
 
 # solids_start_marker
-@solid(output_defs=[OutputDefinition(metadata={"schema": "some_schema", "table": "some_table"})])
+@solid(
+    output_defs=[
+        OutputDefinition(
+            metadata={"schema": "some_schema", "table": "some_table"}
+        )
+    ]
+)
 def solid1():
     """Return a Pandas DataFrame"""
 
 
-@solid(output_defs=[OutputDefinition(metadata={"schema": "other_schema", "table": "other_table"})])
+@solid(
+    output_defs=[
+        OutputDefinition(
+            metadata={"schema": "other_schema", "table": "other_table"}
+        )
+    ]
+)
 def solid2(_input_dataframe):
     """Return a Pandas DataFrame"""
 
@@ -31,7 +50,9 @@ class MyIOManager(IOManager):
     def handle_output(self, context, obj):
         table_name = context.metadata["table"]
         schema = context.metadata["schema"]
-        write_dataframe_to_table(name=table_name, schema=schema, dataframe=obj)
+        write_dataframe_to_table(
+            name=table_name, schema=schema, dataframe=obj
+        )
 
     def load_input(self, context):
         table_name = context.upstream_output.metadata["table"]
@@ -47,6 +68,8 @@ def my_io_manager(_):
 # io_manager_end_marker
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": my_io_manager})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": my_io_manager})]
+)
 def my_pipeline():
     solid2(solid1())

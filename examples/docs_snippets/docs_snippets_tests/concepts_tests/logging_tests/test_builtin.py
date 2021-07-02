@@ -2,7 +2,10 @@ import pytest
 import yaml
 from dagster import execute_pipeline
 from dagster.utils import file_relative_path
-from docs_snippets.concepts.logging.builtin_logger import demo_pipeline, demo_pipeline_error
+from docs_snippets.concepts.logging.builtin_logger import (
+    demo_pipeline,
+    demo_pipeline_error,
+)
 from docs_snippets.concepts.logging.logging_modes import hello_modes
 
 
@@ -12,7 +15,10 @@ def test_demo_pipeline():
 
 def test_demo_pipeline_config():
     with open(
-        file_relative_path(__file__, "../../../docs_snippets/concepts/logging/config.yaml"), "r"
+        file_relative_path(
+            __file__, "../../../docs_snippets/concepts/logging/config.yaml"
+        ),
+        "r",
     ) as fd:
         run_config = yaml.safe_load(fd.read())
     assert execute_pipeline(demo_pipeline, run_config=run_config).success

@@ -20,6 +20,8 @@ def unreliable_end(_, num):
     return
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})]
+)
 def unreliable_pipeline():
     unreliable_end(unreliable(unreliable_start()))

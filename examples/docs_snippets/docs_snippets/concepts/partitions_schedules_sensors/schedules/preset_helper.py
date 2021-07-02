@@ -3,7 +3,9 @@ from dagster import daily_schedule
 # start_preset_helper
 
 
-def daily_schedule_definition_from_pipeline_preset(pipeline, preset_name, start_date):
+def daily_schedule_definition_from_pipeline_preset(
+    pipeline, preset_name, start_date
+):
     preset = pipeline.get_preset(preset_name)
     if not preset:
         raise Exception(
