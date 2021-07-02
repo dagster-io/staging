@@ -39,6 +39,7 @@ from dagster import (
     dagster_type_loader,
     dagster_type_materializer,
     daily_schedule,
+    graph,
     hourly_schedule,
     lambda_solid,
     logger,
@@ -1209,6 +1210,11 @@ def backcompat_materialization_pipeline():
     backcompat_materialize()
 
 
+@graph
+def simple_graph():
+    noop_solid()
+
+
 @repository
 def empty_repo():
     return []
@@ -1254,6 +1260,8 @@ def define_pipelines():
         asset_lineage_pipeline,
         partitioned_asset_lineage_pipeline,
         backcompat_materialization_pipeline,
+        simple_graph.to_job("simple_job_a"),
+        simple_graph.to_job("simple_job_b"),
     ]
 
 
