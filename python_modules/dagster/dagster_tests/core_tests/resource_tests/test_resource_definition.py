@@ -624,11 +624,9 @@ def test_incorrect_resource_init_error():
     def _correct_resource(_):
         pass
 
-    with pytest.raises(DagsterInvalidDefinitionError, match="expects a single positional argument"):
-
-        @resource
-        def _incorrect_resource():
-            pass
+    @resource
+    def _correct_resource_no_context():
+        pass
 
     with pytest.raises(
         DagsterInvalidDefinitionError,
