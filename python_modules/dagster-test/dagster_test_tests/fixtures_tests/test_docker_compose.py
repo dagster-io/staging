@@ -41,7 +41,7 @@ def test_docker_compose_cm_with_yml(other_docker_compose_yml, docker_compose_cm,
         assert retrying_requests.get(f"http://{docker_compose['other_server']}:8000").ok
 
 
-def test_docker_compose_cm_custom_network(request, docker_compose_cm, retrying_requests):
+def test_docker_compose_cm_with_network(request, docker_compose_cm, retrying_requests):
     with docker_compose_cm(
         docker_compose_yml=os.path.join(
             os.path.dirname(request.fspath), "networked-docker-compose.yml"
@@ -49,4 +49,11 @@ def test_docker_compose_cm_custom_network(request, docker_compose_cm, retrying_r
         network_name="network",
     ) as docker_compose:
         assert "network" in subprocess.check_output(["docker", "network", "ls"]).decode()
+        assert retrying_requests.get(f"http://{docker_compose['server']}:8000").ok
+
+
+def test_docker_compose_cm_with_context(docker_context_cm, docker_compose_cm, retrying_requests):
+    with docker_context_cm(name="custom_context") as context, docker_compose_cm(
+        docker_context=context
+    ) as docker_compose:
         assert retrying_requests.get(f"http://{docker_compose['server']}:8000").ok
