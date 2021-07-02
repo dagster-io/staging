@@ -1,6 +1,13 @@
 """isort:skip_file"""
 # pylint: disable=unused-argument
-from dagster import ModeDefinition, ResourceDefinition, execute_pipeline, pipeline, resource, solid
+from dagster import (
+    ModeDefinition,
+    ResourceDefinition,
+    execute_pipeline,
+    pipeline,
+    resource,
+    solid,
+)
 
 
 # start_resource_example
@@ -53,7 +60,10 @@ def test_my_resource_with_context():
     init_context = build_init_resource_context(
         resources={"foo": "foo_str"}, config={"bar": "bar_str"}
     )
-    assert my_resource_requires_context(init_context) == ("foo_str", "bar_str")
+    assert my_resource_requires_context(init_context) == (
+        "foo_str",
+        "bar_str",
+    )
 
 
 # end_resource_testing_with_context

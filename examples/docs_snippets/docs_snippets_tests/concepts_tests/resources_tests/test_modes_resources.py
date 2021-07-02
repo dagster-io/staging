@@ -1,4 +1,8 @@
-from dagster import build_init_resource_context, build_solid_context, execute_pipeline
+from dagster import (
+    build_init_resource_context,
+    build_solid_context,
+    execute_pipeline,
+)
 from docs_snippets.concepts.modes_resources.modes_resources import (
     cereal_fetcher,
     db_resource,
@@ -21,7 +25,9 @@ def test_database_resource():
         def execute_query(self, query):
             pass
 
-    solid_requires_resources(build_solid_context(resources={"database": BasicDatabase()}))
+    solid_requires_resources(
+        build_solid_context(resources={"database": BasicDatabase()})
+    )
 
 
 def test_resource_testing_examples():
@@ -39,9 +45,14 @@ def test_pipeline_with_mode_example():
 
 
 def test_resource_dependencies_example():
-    assert emit_foo(build_init_resource_context(resources={"foo": foo_resource})) == "foo"
+    assert (
+        emit_foo(build_init_resource_context(resources={"foo": foo_resource}))
+        == "foo"
+    )
 
 
 def test_resource_config_example():
-    dbconn = db_resource(build_init_resource_context(config={"connection": "foo"}))
+    dbconn = db_resource(
+        build_init_resource_context(config={"connection": "foo"})
+    )
     assert dbconn.connection == "foo"

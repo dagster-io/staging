@@ -2,7 +2,9 @@ from dagster import repository
 from docs_snippets.concepts.partitions_schedules_sensors.partition_definition import (
     date_partition_set,
 )
-from docs_snippets.concepts.partitions_schedules_sensors.pipeline import my_data_pipeline
+from docs_snippets.concepts.partitions_schedules_sensors.pipeline import (
+    my_data_pipeline,
+)
 
 
 # start_repo_marker_0

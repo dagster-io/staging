@@ -1,7 +1,13 @@
 import re
 
 import pytest
-from dagster import InputContext, OutputContext, build_input_context, build_output_context, resource
+from dagster import (
+    InputContext,
+    OutputContext,
+    build_input_context,
+    build_output_context,
+    resource,
+)
 from dagster.core.errors import DagsterInvariantViolationError
 
 
@@ -15,7 +21,9 @@ def test_build_input_context_with_resources():
     def foo_def(_):
         return "bar_def"
 
-    context = build_input_context(resources={"foo": "bar", "foo_def": foo_def})
+    context = build_input_context(
+        resources={"foo": "bar", "foo_def": foo_def}
+    )
     assert context.resources.foo == "bar"
     assert context.resources.foo_def == "bar_def"
 
@@ -45,7 +53,9 @@ def test_build_input_context_with_cm_resource():
 
     assert entered == ["yes"]
 
-    with build_input_context(resources={"cm_resource": cm_resource}) as context:
+    with build_input_context(
+        resources={"cm_resource": cm_resource}
+    ) as context:
         assert context.resources.cm_resource == "foo"
 
     assert entered == ["yes", "yes"]

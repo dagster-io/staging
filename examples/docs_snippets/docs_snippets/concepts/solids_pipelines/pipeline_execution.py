@@ -50,7 +50,9 @@ def total(in_1: int, in_2: int, in_3: int, in_4: int):
 from dagster import ModeDefinition, fs_io_manager
 
 # start_parallel_pipeline_marker
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})]
+)
 def parallel_pipeline():
     total(return_one(), return_one(), return_one(), return_one())
 

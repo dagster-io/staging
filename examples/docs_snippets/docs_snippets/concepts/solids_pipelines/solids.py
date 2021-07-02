@@ -1,7 +1,14 @@
 # pylint: disable=unused-argument
 
 import requests
-from dagster import DagsterType, InputDefinition, Nothing, Output, OutputDefinition, solid
+from dagster import (
+    DagsterType,
+    InputDefinition,
+    Nothing,
+    Output,
+    OutputDefinition,
+    solid,
+)
 
 
 class MockResponse:
@@ -50,7 +57,9 @@ def my_input_solid(abc, xyz):
 
 # start_typed_input_solid_marker
 
-MyDagsterType = DagsterType(type_check_fn=lambda _, value: value % 2 == 0, name="MyDagsterType")
+MyDagsterType = DagsterType(
+    type_check_fn=lambda _, value: value % 2 == 0, name="MyDagsterType"
+)
 
 
 @solid(input_defs=[InputDefinition(name="abc", dagster_type=MyDagsterType)])
@@ -113,7 +122,11 @@ def x_solid(
         function: The new solid.
     """
 
-    @solid(name=name, input_defs=input_defs or [InputDefinition("start", Nothing)], **kwargs)
+    @solid(
+        name=name,
+        input_defs=input_defs or [InputDefinition("start", Nothing)],
+        **kwargs,
+    )
     def _x_solid(context):
         # Solid logic here
         pass

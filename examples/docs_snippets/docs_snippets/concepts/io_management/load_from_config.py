@@ -19,6 +19,10 @@ def execute_with_config():
     # execute_start_marker
     execute_pipeline(
         my_pipeline,
-        run_config={"solids": {"my_solid": {"inputs": {"input_string": {"value": "marmot"}}}}},
+        run_config={
+            "solids": {
+                "my_solid": {"inputs": {"input_string": {"value": "marmot"}}}
+            }
+        },
     )
     # execute_end_marker

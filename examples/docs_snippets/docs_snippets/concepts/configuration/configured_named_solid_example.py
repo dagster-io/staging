@@ -1,4 +1,12 @@
-from dagster import Field, InputDefinition, Int, List, configured, pipeline, solid
+from dagster import (
+    Field,
+    InputDefinition,
+    Int,
+    List,
+    configured,
+    pipeline,
+    solid,
+)
 
 
 # start_configured_named
@@ -17,8 +25,12 @@ def get_dataset(context, xs):
 
 # If we want to use the same solid configured in multiple ways in the same pipeline,
 # we have to specify unique names when configuring them:
-sample_dataset = configured(get_dataset, name="sample_dataset")({"is_sample": True})
-full_dataset = configured(get_dataset, name="full_dataset")({"is_sample": False})
+sample_dataset = configured(get_dataset, name="sample_dataset")(
+    {"is_sample": True}
+)
+full_dataset = configured(get_dataset, name="full_dataset")(
+    {"is_sample": False}
+)
 
 
 @pipeline
