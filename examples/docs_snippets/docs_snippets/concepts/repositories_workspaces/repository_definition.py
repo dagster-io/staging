@@ -2,7 +2,15 @@
 
 import datetime
 
-from dagster import InputDefinition, RunRequest, daily_schedule, pipeline, repository, sensor, solid
+from dagster import (
+    InputDefinition,
+    RunRequest,
+    daily_schedule,
+    pipeline,
+    repository,
+    sensor,
+    solid,
+)
 
 
 @solid

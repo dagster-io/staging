@@ -9,7 +9,8 @@ def test_make_values_resource_any():
     )
 
     assert execute_pipeline(
-        my_pipeline, run_config={"resources": {"value": {"config": "some_value"}}}
+        my_pipeline,
+        run_config={"resources": {"value": {"config": "some_value"}}},
     )
 
 

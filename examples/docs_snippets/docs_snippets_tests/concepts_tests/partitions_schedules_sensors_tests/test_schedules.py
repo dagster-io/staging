@@ -1,7 +1,13 @@
 from datetime import datetime
 
 import pytest
-from dagster import ModeDefinition, build_schedule_context, pipeline, solid, validate_run_config
+from dagster import (
+    ModeDefinition,
+    build_schedule_context,
+    pipeline,
+    solid,
+    validate_run_config,
+)
 from docs_snippets.concepts.partitions_schedules_sensors.schedules.schedule_examples import (
     my_daily_schedule,
     my_hourly_schedule,

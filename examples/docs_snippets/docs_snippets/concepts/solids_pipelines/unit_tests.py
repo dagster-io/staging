@@ -16,14 +16,18 @@ from dagster import (
 
 
 @solid(
-    input_defs=[InputDefinition(name="num", dagster_type=int, default_value=1)],
+    input_defs=[
+        InputDefinition(name="num", dagster_type=int, default_value=1)
+    ],
 )
 def add_one(num: int) -> int:
     return num + 1
 
 
 @solid(
-    input_defs=[InputDefinition(name="num", dagster_type=int, default_value=1)],
+    input_defs=[
+        InputDefinition(name="num", dagster_type=int, default_value=1)
+    ],
 )
 def add_two(num: int) -> int:
     return num + 2
@@ -46,10 +50,13 @@ def do_math():
 def emit_events_solid(input_num):
     a_num = input_num + 1
     yield ExpectationResult(
-        success=a_num > 0, label="positive", description="A num must be positive"
+        success=a_num > 0,
+        label="positive",
+        description="A num must be positive",
     )
     yield AssetMaterialization(
-        asset_key="persisted_string", description="Let us pretend we persisted the string somewhere"
+        asset_key="persisted_string",
+        description="Let us pretend we persisted the string somewhere",
     )
     yield Output(value=a_num, output_name="a_num")
 
@@ -146,7 +153,9 @@ def my_foo_resource(context):
 
 
 def test_solid_resource_def():
-    context = build_solid_context(resources={"foo": my_foo_resource.configured({"my_str": "bar"})})
+    context = build_solid_context(
+        resources={"foo": my_foo_resource.configured({"my_str": "bar"})}
+    )
     assert solid_requires_foo(context) == "found bar"
 
 
@@ -157,7 +166,10 @@ def test_pipeline_with_config():
     result = execute_pipeline(
         do_math,
         run_config={
-            "solids": {"add_one": {"inputs": {"num": 2}}, "add_two": {"inputs": {"num": 3}}}
+            "solids": {
+                "add_one": {"inputs": {"num": 2}},
+                "add_two": {"inputs": {"num": 3}},
+            }
         },
     )
 
@@ -185,7 +197,9 @@ def test_subset_execution():
 
     # solid_result_list returns List[SolidExecutionResult]
     # this checks to see that only two were executed
-    assert {solid_result.solid.name for solid_result in result.solid_result_list} == {
+    assert {
+        solid_result.solid.name for solid_result in result.solid_result_list
+    } == {
         "add_one",
         "add_two",
     }
@@ -197,7 +211,8 @@ def test_subset_execution():
 # start_test_event_stream
 def test_event_stream():
     pipeline_result = execute_pipeline(
-        emit_events_pipeline, {"solids": {"emit_events_solid": {"inputs": {"input_num": 1}}}}
+        emit_events_pipeline,
+        {"solids": {"emit_events_solid": {"inputs": {"input_num": 1}}}},
     )
     assert pipeline_result.success
 
@@ -230,12 +245,16 @@ def test_event_stream():
     ) = solid_result.step_events
 
     # apologies for verboseness here! we can do better.
-    expectation_result = expectation_event.event_specific_data.expectation_result
+    expectation_result = (
+        expectation_event.event_specific_data.expectation_result
+    )
     assert isinstance(expectation_result, ExpectationResult)
     assert expectation_result.success
     assert expectation_result.label == "positive"
 
-    materialization = materialization_event.event_specific_data.materialization
+    materialization = (
+        materialization_event.event_specific_data.materialization
+    )
     assert isinstance(materialization, AssetMaterialization)
     assert materialization.label == "persisted_string"
 

@@ -1,4 +1,8 @@
-from dagster import PythonObjectDagsterType, make_python_type_usable_as_dagster_type, solid
+from dagster import (
+    PythonObjectDagsterType,
+    make_python_type_usable_as_dagster_type,
+    solid,
+)
 
 
 class EvenType:

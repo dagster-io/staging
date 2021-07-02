@@ -5,11 +5,6 @@
       "pylint.config": ".pylintrc",
       "include": "(\\.py$)"
     },
-    "isort": {
-      "type": "isort",
-      "include": "(\\.py$)",
-      "exclude": "(examples/docs_snippets/docs_snippets/intro_tutorial/)"
-    },
     "eslint": {
       "type": "eslint",
       "include": "(js_modules/dagit/.*\\.(ts|tsx)$)",
