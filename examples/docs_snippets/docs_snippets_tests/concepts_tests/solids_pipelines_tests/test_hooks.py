@@ -1,6 +1,12 @@
 from unittest import mock
 
-from dagster import DagsterEventType, ModeDefinition, ResourceDefinition, execute_pipeline, pipeline
+from dagster import (
+    DagsterEventType,
+    ModeDefinition,
+    ResourceDefinition,
+    execute_pipeline,
+    pipeline,
+)
 from dagster.core.definitions import solid
 from docs_snippets.concepts.solids_pipelines.solid_hooks import (
     a,
@@ -10,7 +16,9 @@ from docs_snippets.concepts.solids_pipelines.solid_hooks import (
     slack_message_on_success,
     test_my_success_hook,
 )
-from docs_snippets.concepts.solids_pipelines.solid_hooks_context import my_failure_hook
+from docs_snippets.concepts.solids_pipelines.solid_hooks_context import (
+    my_failure_hook,
+)
 
 
 def test_notif_all_pipeline():
@@ -27,7 +35,9 @@ def test_notif_all_pipeline():
 
 
 def test_selective_notif_pipeline():
-    result = execute_pipeline(selective_notif, mode="dev", raise_on_error=False)
+    result = execute_pipeline(
+        selective_notif, mode="dev", raise_on_error=False
+    )
     assert not result.success
 
     for event in result.event_list:
@@ -45,7 +55,9 @@ def test_hook_resource():
         mode_defs=[
             ModeDefinition(
                 "unittest",
-                resource_defs={"slack": ResourceDefinition.hardcoded_resource(slack_mock)},
+                resource_defs={
+                    "slack": ResourceDefinition.hardcoded_resource(slack_mock)
+                },
             ),
         ]
     )

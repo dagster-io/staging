@@ -34,7 +34,11 @@ def my_directory_sensor():
         if os.path.isfile(filepath):
             yield RunRequest(
                 run_key=filename,
-                run_config={"solids": {"process_file": {"config": {"filename": filename}}}},
+                run_config={
+                    "solids": {
+                        "process_file": {"config": {"filename": filename}}
+                    }
+                },
             )
 
 
@@ -49,7 +53,9 @@ from dagster import validate_run_config
 def sensor_to_test():
     yield RunRequest(
         run_key="foo",
-        run_config={"solids": {"process_file": {"config": {"filename": "foo"}}}},
+        run_config={
+            "solids": {"process_file": {"config": {"filename": "foo"}}}
+        },
     )
 
 
@@ -68,7 +74,9 @@ def isolated_run_request():
 
     yield RunRequest(
         run_key=filename,
-        run_config={"solids": {"process_file": {"config": {"filename": filename}}}},
+        run_config={
+            "solids": {"process_file": {"config": {"filename": filename}}}
+        },
     )
 
     # end_run_request_marker
@@ -106,7 +114,9 @@ def my_directory_sensor_cursor(context):
 
             # the run key should include mtime if we want to kick off new runs based on file modifications
             run_key = f"{filename}:{str(file_mtime)}"
-            run_config = {"solids": {"process_file": {"config": {"filename": filename}}}}
+            run_config = {
+                "solids": {"process_file": {"config": {"filename": filename}}}
+            }
             yield RunRequest(run_key=run_key, run_config=run_config)
             max_mtime = max(max_mtime, file_mtime)
 
@@ -137,7 +147,11 @@ def my_directory_sensor_with_skip_reasons():
         if os.path.isfile(filepath):
             yield RunRequest(
                 run_key=filename,
-                run_config={"solids": {"process_file": {"config": {"filename": filename}}}},
+                run_config={
+                    "solids": {
+                        "process_file": {"config": {"filename": filename}}
+                    }
+                },
             )
             has_files = True
     if not has_files:
@@ -200,4 +214,10 @@ def my_pipeline():
 
 @repository
 def my_repository():
-    return [my_pipeline, log_file_pipeline, my_directory_sensor, sensor_A, sensor_B]
+    return [
+        my_pipeline,
+        log_file_pipeline,
+        my_directory_sensor,
+        sensor_A,
+        sensor_B,
+    ]

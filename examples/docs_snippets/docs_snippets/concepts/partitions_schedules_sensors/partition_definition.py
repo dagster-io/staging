@@ -66,7 +66,11 @@ def my_repository():
 
 
 def _weekday_run_config_for_partition(partition):
-    return {"solids": {"process_data_for_date": {"config": {"date": partition.value}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {"config": {"date": partition.value}}
+        }
+    }
 
 
 # start_manual_partition_schedule
@@ -92,7 +96,11 @@ def weekday_partition_selector(
     """Maps a schedule execution time to the corresponding partition or list of partitions that
     should be executed at that time"""
     partitions = partition_set.get_partitions(ctx.scheduled_execution_time)
-    weekday = ctx.scheduled_execution_time.weekday() if ctx.scheduled_execution_time else 0
+    weekday = (
+        ctx.scheduled_execution_time.weekday()
+        if ctx.scheduled_execution_time
+        else 0
+    )
     return partitions[weekday]
 
 

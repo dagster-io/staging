@@ -45,7 +45,11 @@ def solid1():
     """Do stuff"""
 
 
-@solid(input_defs=[InputDefinition("dataframe", root_manager_key="my_root_input_manager")])
+@solid(
+    input_defs=[
+        InputDefinition("dataframe", root_manager_key="my_root_input_manager")
+    ]
+)
 def solid2(dataframe):
     """Do stuff"""
 
@@ -76,7 +80,11 @@ def execute_subselection():
     execute_pipeline(
         my_pipeline,
         solid_selection=["solid2"],
-        run_config={"solids": {"solid2": {"inputs": {"dataframe": {"table_name": "tableX"}}}}},
+        run_config={
+            "solids": {
+                "solid2": {"inputs": {"dataframe": {"table_name": "tableX"}}}
+            }
+        },
     )
 
     # end_execute_subselection

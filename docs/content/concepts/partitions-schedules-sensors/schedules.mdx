@@ -58,7 +58,13 @@ For example, if we wanted to create a schedule that runs at 11:00 AM every day, 
     execution_timezone="US/Central",
 )
 def my_daily_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d")}
+            }
+        }
+    }
 ```
 
 The decorated schedule function should accept a `datetime` and return the run config for the pipeline run associated with that partition. The scheduler will ensure that the schedule function is evaluated exactly once for every partition to generate run config, which is then used to create and launch a pipeline run.
@@ -74,20 +80,35 @@ When you want to run a schedule on a fixed interval and don't need partitions, y
 For example, this schedule runs at 1:00 AM in US/Central time every day:
 
 ```python file=concepts/partitions_schedules_sensors/schedules/schedules.py startafter=start_non_partition_based_schedule endbefore=end_non_partition_based_schedule
-@schedule(cron_schedule="0 1 * * *", pipeline_name="my_pipeline", execution_timezone="US/Central")
+@schedule(
+    cron_schedule="0 1 * * *",
+    pipeline_name="my_pipeline",
+    execution_timezone="US/Central",
+)
 def my_schedule(_context):
-    return {"solids": {"process_data": {"config": {"dataset_name": "my_dataset"}}}}
+    return {
+        "solids": {"process_data": {"config": {"dataset_name": "my_dataset"}}}
+    }
 ```
 
 You can also access the execution time fron the passed-in context:
 
 ```python file=concepts/partitions_schedules_sensors/schedules/schedules.py startafter=start_execution_time endbefore=end_execution_time
-@schedule(cron_schedule="0 1 * * *", pipeline_name="my_pipeline", execution_timezone="US/Central")
+@schedule(
+    cron_schedule="0 1 * * *",
+    pipeline_name="my_pipeline",
+    execution_timezone="US/Central",
+)
 def my_execution_time_schedule(context):
     date = context.scheduled_execution_time.strftime("%Y-%m-%d")
     return {
         "solids": {
-            "process_data": {"config": {"dataset_name": "my_dataset", "execution_date": date}}
+            "process_data": {
+                "config": {
+                    "dataset_name": "my_dataset",
+                    "execution_date": date,
+                }
+            }
         }
     }
 ```
@@ -108,7 +129,9 @@ For example, the following schedule executes daily at 9AM in US/Pacific time:
 def my_timezone_schedule(date):
     return {
         "solids": {
-            "process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d %H:%M:%S")}}
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d %H:%M:%S")}
+            }
         }
     }
 ```
@@ -199,7 +222,9 @@ from dagster import build_schedule_context, validate_run_config
 
 
 def test_my_cron_schedule_with_context():
-    context = build_schedule_context(scheduled_execution_time=datetime.datetime(2020, 1, 1))
+    context = build_schedule_context(
+        scheduled_execution_time=datetime.datetime(2020, 1, 1)
+    )
     run_config = my_schedule_uses_context(context)
     assert validate_run_config(pipeline_for_test, run_config)
 ```
@@ -216,7 +241,13 @@ def test_my_cron_schedule_with_context():
     execution_timezone="US/Central",
 )
 def my_hourly_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d %H")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d %H")}
+            }
+        }
+    }
 ```
 
 ### Daily partition-based schedule
@@ -229,7 +260,13 @@ def my_hourly_schedule(date):
     execution_timezone="US/Central",
 )
 def my_daily_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d")}
+            }
+        }
+    }
 ```
 
 ### Weekly partition-based schedule
@@ -242,7 +279,13 @@ def my_daily_schedule(date):
     execution_timezone="US/Central",
 )
 def my_weekly_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m-%d")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m-%d")}
+            }
+        }
+    }
 ```
 
 ### Monthly partition-based schedule
@@ -256,7 +299,13 @@ def my_weekly_schedule(date):
     execution_time=datetime.time(hour=9, minute=0),
 )
 def my_monthly_schedule(date):
-    return {"solids": {"process_data_for_date": {"config": {"date": date.strftime("%Y-%m")}}}}
+    return {
+        "solids": {
+            "process_data_for_date": {
+                "config": {"date": date.strftime("%Y-%m")}
+            }
+        }
+    }
 ```
 
 ## Patterns
@@ -294,16 +343,18 @@ import copy
 )
 def my_modified_preset_schedule(date):
     modified_run_config = copy.deepcopy(preset.run_config)
-    modified_run_config["solids"]["process_data_for_date"]["config"]["date"] = date.strftime(
-        "%Y-%m-%d"
-    )
+    modified_run_config["solids"]["process_data_for_date"]["config"][
+        "date"
+    ] = date.strftime("%Y-%m-%d")
     return modified_run_config
 ```
 
 If you find yourself using presets to generate schedule definitions frequently, you can use a helper function similar to this one to take a preset and return a schedule.
 
 ```python file=concepts/partitions_schedules_sensors/schedules/preset_helper.py startafter=start_preset_helper endbefore=end_preset_helper
-def daily_schedule_definition_from_pipeline_preset(pipeline, preset_name, start_date):
+def daily_schedule_definition_from_pipeline_preset(
+    pipeline, preset_name, start_date
+):
     preset = pipeline.get_preset(preset_name)
     if not preset:
         raise Exception(

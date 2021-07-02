@@ -81,7 +81,9 @@ A solid only starts to execute once all of its inputs have been resolved. Inputs
 You can use a [Dagster Type](/concepts/types) to provide a function that validates a solid's input every time the solid runs. In this case, you use <PyObject object="InputDefinition" pluralize /> corresponding to the decorated function arguments.
 
 ```python file=/concepts/solids_pipelines/solids.py startafter=start_typed_input_solid_marker endbefore=end_typed_input_solid_marker
-MyDagsterType = DagsterType(type_check_fn=lambda _, value: value % 2 == 0, name="MyDagsterType")
+MyDagsterType = DagsterType(
+    type_check_fn=lambda _, value: value % 2 == 0, name="MyDagsterType"
+)
 
 
 @solid(input_defs=[InputDefinition(name="abc", dagster_type=MyDagsterType)])
@@ -177,7 +179,11 @@ def x_solid(
         function: The new solid.
     """
 
-    @solid(name=name, input_defs=input_defs or [InputDefinition("start", Nothing)], **kwargs)
+    @solid(
+        name=name,
+        input_defs=input_defs or [InputDefinition("start", Nothing)],
+        **kwargs,
+    )
     def _x_solid(context):
         # Solid logic here
         pass

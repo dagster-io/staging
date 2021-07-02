@@ -165,7 +165,9 @@ execution:
 Note that because solids will be executed in separate processes, the values passed between solids also need to be stored in a way that they can be accessed across processes. For example, you can configure a <PyObject object="fs_io_manager" /> to be the pipeline-wide IO manager so the intermediate values can be persisted in the filesystem:
 
 ```python file=/concepts/solids_pipelines/pipeline_execution.py startafter=start_parallel_pipeline_marker endbefore=end_parallel_pipeline_marker
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})]
+)
 def parallel_pipeline():
     total(return_one(), return_one(), return_one(), return_one())
 ```

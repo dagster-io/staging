@@ -6,7 +6,9 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
-snapshots['test_all_snapshot_ids 1'] = '''{
+snapshots[
+    "test_all_snapshot_ids 1"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -1267,11 +1269,13 @@ snapshots['test_all_snapshot_ids 1'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 10'] = '5155ee4f5835d45428014c6043487d7e13b22382'
+snapshots["test_all_snapshot_ids 10"] = "5155ee4f5835d45428014c6043487d7e13b22382"
 
-snapshots['test_all_snapshot_ids 11'] = '''{
+snapshots[
+    "test_all_snapshot_ids 11"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -2560,11 +2564,13 @@ snapshots['test_all_snapshot_ids 11'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 12'] = '3a3695c5daaad73d1b568a24a99cb051c74ba52b'
+snapshots["test_all_snapshot_ids 12"] = "3a3695c5daaad73d1b568a24a99cb051c74ba52b"
 
-snapshots['test_all_snapshot_ids 13'] = '''{
+snapshots[
+    "test_all_snapshot_ids 13"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -3853,11 +3859,13 @@ snapshots['test_all_snapshot_ids 13'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 14'] = 'd5edf636599143ffaa4cb7a08e8204e69c04dcd6'
+snapshots["test_all_snapshot_ids 14"] = "d5edf636599143ffaa4cb7a08e8204e69c04dcd6"
 
-snapshots['test_all_snapshot_ids 15'] = '''{
+snapshots[
+    "test_all_snapshot_ids 15"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -5050,11 +5058,13 @@ snapshots['test_all_snapshot_ids 15'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 16'] = '4cc3299825d446fb22444dd626909f1d75635c84'
+snapshots["test_all_snapshot_ids 16"] = "4cc3299825d446fb22444dd626909f1d75635c84"
 
-snapshots['test_all_snapshot_ids 17'] = '''{
+snapshots[
+    "test_all_snapshot_ids 17"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -6407,11 +6417,13 @@ snapshots['test_all_snapshot_ids 17'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 18'] = '78e6b08b1fe999f5a78323d9ed501b32231f7751'
+snapshots["test_all_snapshot_ids 18"] = "78e6b08b1fe999f5a78323d9ed501b32231f7751"
 
-snapshots['test_all_snapshot_ids 19'] = '''{
+snapshots[
+    "test_all_snapshot_ids 19"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -7904,13 +7916,15 @@ snapshots['test_all_snapshot_ids 19'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 2'] = 'd0f6d232a4d52d89896198e90a78e5c976904c81'
+snapshots["test_all_snapshot_ids 2"] = "d0f6d232a4d52d89896198e90a78e5c976904c81"
 
-snapshots['test_all_snapshot_ids 20'] = '9a33f1afc02eec4c0833aee3bf254b09166afe7f'
+snapshots["test_all_snapshot_ids 20"] = "9a33f1afc02eec4c0833aee3bf254b09166afe7f"
 
-snapshots['test_all_snapshot_ids 21'] = '''{
+snapshots[
+    "test_all_snapshot_ids 21"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -9302,11 +9316,13 @@ snapshots['test_all_snapshot_ids 21'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 22'] = 'db6c5d12b5883ee72578fbd3658ecf6a5bba7e26'
+snapshots["test_all_snapshot_ids 22"] = "db6c5d12b5883ee72578fbd3658ecf6a5bba7e26"
 
-snapshots['test_all_snapshot_ids 23'] = '''{
+snapshots[
+    "test_all_snapshot_ids 23"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -10558,11 +10574,13 @@ snapshots['test_all_snapshot_ids 23'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 24'] = '29f3b01635d180b060e9b4175cab9e9fc6431dea'
+snapshots["test_all_snapshot_ids 24"] = "29f3b01635d180b060e9b4175cab9e9fc6431dea"
 
-snapshots['test_all_snapshot_ids 25'] = '''{
+snapshots[
+    "test_all_snapshot_ids 25"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -11697,11 +11715,13 @@ snapshots['test_all_snapshot_ids 25'] = '''{
   "tags": {
     "tag_key": "tag_value"
   }
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 26'] = 'b256556576b55075df833a1831e15f79389df8a1'
+snapshots["test_all_snapshot_ids 26"] = "b256556576b55075df833a1831e15f79389df8a1"
 
-snapshots['test_all_snapshot_ids 27'] = '''{
+snapshots[
+    "test_all_snapshot_ids 27"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -12857,11 +12877,13 @@ snapshots['test_all_snapshot_ids 27'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 28'] = '483d318b62b79c7c3a5ad47d4d69328ad5213f74'
+snapshots["test_all_snapshot_ids 28"] = "483d318b62b79c7c3a5ad47d4d69328ad5213f74"
 
-snapshots['test_all_snapshot_ids 29'] = '''{
+snapshots[
+    "test_all_snapshot_ids 29"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -13994,9 +14016,11 @@ snapshots['test_all_snapshot_ids 29'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 3'] = '''{
+snapshots[
+    "test_all_snapshot_ids 3"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -15129,11 +15153,13 @@ snapshots['test_all_snapshot_ids 3'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 30'] = 'c3b078d7c9d21a70dcbcf5286ba92c29f671a26e'
+snapshots["test_all_snapshot_ids 30"] = "c3b078d7c9d21a70dcbcf5286ba92c29f671a26e"
 
-snapshots['test_all_snapshot_ids 31'] = '''{
+snapshots[
+    "test_all_snapshot_ids 31"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -16383,11 +16409,13 @@ snapshots['test_all_snapshot_ids 31'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 32'] = '9bcb8d4ea17b5ccc6dd108647179f5823d471f21'
+snapshots["test_all_snapshot_ids 32"] = "9bcb8d4ea17b5ccc6dd108647179f5823d471f21"
 
-snapshots['test_all_snapshot_ids 33'] = '''{
+snapshots[
+    "test_all_snapshot_ids 33"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -17594,11 +17622,13 @@ snapshots['test_all_snapshot_ids 33'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 34'] = 'cca3696661d9a9eb4a8e063030ec17b788dcaffb'
+snapshots["test_all_snapshot_ids 34"] = "cca3696661d9a9eb4a8e063030ec17b788dcaffb"
 
-snapshots['test_all_snapshot_ids 35'] = '''{
+snapshots[
+    "test_all_snapshot_ids 35"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -18795,11 +18825,13 @@ snapshots['test_all_snapshot_ids 35'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 36'] = '023a4bdf0a8c397f58c0b1fd98b02a71a88d044f'
+snapshots["test_all_snapshot_ids 36"] = "023a4bdf0a8c397f58c0b1fd98b02a71a88d044f"
 
-snapshots['test_all_snapshot_ids 37'] = '''{
+snapshots[
+    "test_all_snapshot_ids 37"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -20236,11 +20268,13 @@ snapshots['test_all_snapshot_ids 37'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 38'] = '4b92b9b7ef9c122db4c8bfac12c429723224461f'
+snapshots["test_all_snapshot_ids 38"] = "4b92b9b7ef9c122db4c8bfac12c429723224461f"
 
-snapshots['test_all_snapshot_ids 39'] = '''{
+snapshots[
+    "test_all_snapshot_ids 39"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -21680,13 +21714,15 @@ snapshots['test_all_snapshot_ids 39'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 4'] = 'b7271773dacfb3e8d78d632906511568bf48f598'
+snapshots["test_all_snapshot_ids 4"] = "b7271773dacfb3e8d78d632906511568bf48f598"
 
-snapshots['test_all_snapshot_ids 40'] = 'c26d9a06128fed6e408fc7bf70805578796732de'
+snapshots["test_all_snapshot_ids 40"] = "c26d9a06128fed6e408fc7bf70805578796732de"
 
-snapshots['test_all_snapshot_ids 41'] = '''{
+snapshots[
+    "test_all_snapshot_ids 41"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -22819,11 +22855,13 @@ snapshots['test_all_snapshot_ids 41'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 42'] = 'b617f4d8d63985884313c4bc7e08798c5396304e'
+snapshots["test_all_snapshot_ids 42"] = "b617f4d8d63985884313c4bc7e08798c5396304e"
 
-snapshots['test_all_snapshot_ids 43'] = '''{
+snapshots[
+    "test_all_snapshot_ids 43"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -24020,11 +24058,13 @@ snapshots['test_all_snapshot_ids 43'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 44'] = '27d6477459b61c8a1baecb953eebb77a2584a556'
+snapshots["test_all_snapshot_ids 44"] = "27d6477459b61c8a1baecb953eebb77a2584a556"
 
-snapshots['test_all_snapshot_ids 45'] = '''{
+snapshots[
+    "test_all_snapshot_ids 45"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -25157,11 +25197,13 @@ snapshots['test_all_snapshot_ids 45'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 46'] = '2707fc0a9523af171dfafaaf8c2ca790a4acec4f'
+snapshots["test_all_snapshot_ids 46"] = "2707fc0a9523af171dfafaaf8c2ca790a4acec4f"
 
-snapshots['test_all_snapshot_ids 47'] = '''{
+snapshots[
+    "test_all_snapshot_ids 47"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -26294,11 +26336,13 @@ snapshots['test_all_snapshot_ids 47'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 48'] = '966a50e2092e6915a4434006c6edf4aafd2aea0a'
+snapshots["test_all_snapshot_ids 48"] = "966a50e2092e6915a4434006c6edf4aafd2aea0a"
 
-snapshots['test_all_snapshot_ids 49'] = '''{
+snapshots[
+    "test_all_snapshot_ids 49"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -27559,9 +27603,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 5'] = '''{
+snapshots[
+    "test_all_snapshot_ids 5"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -28694,11 +28740,13 @@ snapshots['test_all_snapshot_ids 5'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 50'] = '4066e7f845371e3f1ee4837ce1396d0c248ea4d4'
+snapshots["test_all_snapshot_ids 50"] = "4066e7f845371e3f1ee4837ce1396d0c248ea4d4"
 
-snapshots['test_all_snapshot_ids 51'] = '''{
+snapshots[
+    "test_all_snapshot_ids 51"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -29831,11 +29879,13 @@ snapshots['test_all_snapshot_ids 51'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 52'] = 'cac47038bf23cbc742b658afbe6d66ad798b4569'
+snapshots["test_all_snapshot_ids 52"] = "cac47038bf23cbc742b658afbe6d66ad798b4569"
 
-snapshots['test_all_snapshot_ids 53'] = '''{
+snapshots[
+    "test_all_snapshot_ids 53"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -30997,11 +31047,13 @@ snapshots['test_all_snapshot_ids 53'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 54'] = 'b8bebd7282b36598315607352e2ad7949f6d4ebc'
+snapshots["test_all_snapshot_ids 54"] = "b8bebd7282b36598315607352e2ad7949f6d4ebc"
 
-snapshots['test_all_snapshot_ids 55'] = '''{
+snapshots[
+    "test_all_snapshot_ids 55"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -32125,11 +32177,13 @@ snapshots['test_all_snapshot_ids 55'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 56'] = 'e865af7a0ab8a9f3ea6fb7e4379192dff1947a0a'
+snapshots["test_all_snapshot_ids 56"] = "e865af7a0ab8a9f3ea6fb7e4379192dff1947a0a"
 
-snapshots['test_all_snapshot_ids 57'] = '''{
+snapshots[
+    "test_all_snapshot_ids 57"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -33340,11 +33394,13 @@ snapshots['test_all_snapshot_ids 57'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 58'] = '9504fc69eccc52713a1085a09fba06e6515882c8'
+snapshots["test_all_snapshot_ids 58"] = "9504fc69eccc52713a1085a09fba06e6515882c8"
 
-snapshots['test_all_snapshot_ids 59'] = '''{
+snapshots[
+    "test_all_snapshot_ids 59"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -34436,13 +34492,15 @@ snapshots['test_all_snapshot_ids 59'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 6'] = '4b89d2911be8ebed65abf2406894210bb1b4b96f'
+snapshots["test_all_snapshot_ids 6"] = "4b89d2911be8ebed65abf2406894210bb1b4b96f"
 
-snapshots['test_all_snapshot_ids 60'] = '7741bef9699f90354037bfa7754885f0d715a51c'
+snapshots["test_all_snapshot_ids 60"] = "7741bef9699f90354037bfa7754885f0d715a51c"
 
-snapshots['test_all_snapshot_ids 61'] = '''{
+snapshots[
+    "test_all_snapshot_ids 61"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -35623,11 +35681,13 @@ snapshots['test_all_snapshot_ids 61'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 62'] = 'd8f8b0eca69a8fddf8f360ca81f2a386d9717021'
+snapshots["test_all_snapshot_ids 62"] = "d8f8b0eca69a8fddf8f360ca81f2a386d9717021"
 
-snapshots['test_all_snapshot_ids 63'] = '''{
+snapshots[
+    "test_all_snapshot_ids 63"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -37025,11 +37085,13 @@ snapshots['test_all_snapshot_ids 63'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 64'] = '4c417b7653fb13bb434133ad2db4cd976a150a4f'
+snapshots["test_all_snapshot_ids 64"] = "4c417b7653fb13bb434133ad2db4cd976a150a4f"
 
-snapshots['test_all_snapshot_ids 65'] = '''{
+snapshots[
+    "test_all_snapshot_ids 65"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -38602,11 +38664,13 @@ snapshots['test_all_snapshot_ids 65'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 66'] = 'd39f17236a7f6924b7f3e82309617658e8b55d81'
+snapshots["test_all_snapshot_ids 66"] = "d39f17236a7f6924b7f3e82309617658e8b55d81"
 
-snapshots['test_all_snapshot_ids 67'] = '''{
+snapshots[
+    "test_all_snapshot_ids 67"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -39853,11 +39917,13 @@ snapshots['test_all_snapshot_ids 67'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 68'] = 'b75f68b1e7b09711963142e66d16e81246426146'
+snapshots["test_all_snapshot_ids 68"] = "b75f68b1e7b09711963142e66d16e81246426146"
 
-snapshots['test_all_snapshot_ids 69'] = '''{
+snapshots[
+    "test_all_snapshot_ids 69"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -41122,9 +41188,11 @@ snapshots['test_all_snapshot_ids 69'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 7'] = '''{
+snapshots[
+    "test_all_snapshot_ids 7"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -42385,11 +42453,13 @@ snapshots['test_all_snapshot_ids 7'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 70'] = '6586e38c9bdb6b34801d46b82dbd276744371ce0'
+snapshots["test_all_snapshot_ids 70"] = "6586e38c9bdb6b34801d46b82dbd276744371ce0"
 
-snapshots['test_all_snapshot_ids 71'] = '''{
+snapshots[
+    "test_all_snapshot_ids 71"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -43522,11 +43592,13 @@ snapshots['test_all_snapshot_ids 71'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 72'] = 'a4f9dd0b0523141a4f80c22391c19b866a8b8f40'
+snapshots["test_all_snapshot_ids 72"] = "a4f9dd0b0523141a4f80c22391c19b866a8b8f40"
 
-snapshots['test_all_snapshot_ids 73'] = '''{
+snapshots[
+    "test_all_snapshot_ids 73"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -44659,11 +44731,13 @@ snapshots['test_all_snapshot_ids 73'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 74'] = '0109b77c533ded6eb275d9920471d59ae68a792d'
+snapshots["test_all_snapshot_ids 74"] = "0109b77c533ded6eb275d9920471d59ae68a792d"
 
-snapshots['test_all_snapshot_ids 75'] = '''{
+snapshots[
+    "test_all_snapshot_ids 75"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -45798,13 +45872,15 @@ snapshots['test_all_snapshot_ids 75'] = '''{
   "tags": {
     "foo": "bar"
   }
-}'''
+}"""
 
-snapshots['test_all_snapshot_ids 76'] = '9caaf68627f51ec571013c15898a65c61be90cf8'
+snapshots["test_all_snapshot_ids 76"] = "9caaf68627f51ec571013c15898a65c61be90cf8"
 
-snapshots['test_all_snapshot_ids 8'] = '57de2023baa55ac8aba8d129e93bb8435130d314'
+snapshots["test_all_snapshot_ids 8"] = "57de2023baa55ac8aba8d129e93bb8435130d314"
 
-snapshots['test_all_snapshot_ids 9'] = '''{
+snapshots[
+    "test_all_snapshot_ids 9"
+] = """{
   "__class__": "PipelineSnapshot",
   "config_schema_snapshot": {
     "__class__": "ConfigSchemaSnapshot",
@@ -47486,4 +47562,4 @@ snapshots['test_all_snapshot_ids 9'] = '''{
     ]
   },
   "tags": {}
-}'''
+}"""
