@@ -1,5 +1,7 @@
 from dagster import execute_pipeline
-from docs_snippets.concepts.configuration.configured_named_solid_example import dataset_pipeline
+from docs_snippets.concepts.configuration.configured_named_solid_example import (
+    dataset_pipeline,
+)
 
 
 def test_pipeline():
@@ -10,7 +12,9 @@ def test_pipeline():
             "solids": {
                 "sample_dataset": {"inputs": {"xs": [4, 8, 15, 16, 23, 42]}},
                 "full_dataset": {
-                    "inputs": {"xs": [33, 30, 27, 29, 32, 30, 27, 28, 30, 30, 30, 31]}
+                    "inputs": {
+                        "xs": [33, 30, 27, 29, 32, 30, 27, 28, 30, 30, 30, 31]
+                    }
                 },
             }
         },

@@ -100,26 +100,6 @@ def protoc():
                 for line in generated.readlines():
                     rewritten.write(line)
 
-    # We need to run black
-    _res = subprocess.check_output(
-        [
-            sys.executable,
-            "-m",
-            "black",
-            "-l",
-            "100",
-            "-t",
-            "py35",
-            "-t",
-            "py36",
-            "-t",
-            "py37",
-            "-t",
-            "py38",
-            GENERATED_DIR,
-        ]
-    )
-
     # And, finally, we need to run isort
     _res = subprocess.check_output(
         [

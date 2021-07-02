@@ -49,7 +49,9 @@ from dagster import pipeline
 from dagster_dbt import dbt_cli_run
 
 config = {"project-dir": "path/to/dbt/project", "models": ["tag:staging"]}
-run_staging_models = dbt_cli_run.configured(config, name="run_staging_models")
+run_staging_models = dbt_cli_run.configured(
+    config, name="run_staging_models"
+)
 
 @pipeline
 def my_dbt_pipeline():
@@ -65,7 +67,9 @@ from dagster import pipeline, solid
 from dagster_dbt import dbt_cli_run
 
 config = {"project-dir": "path/to/dbt/project", "models": ["tag:staging"]}
-run_staging_models = dbt_cli_run.configured(config, name="run_staging_models")
+run_staging_models = dbt_cli_run.configured(
+    config, name="run_staging_models"
+)
 
 @solid
 def do_something(context):
@@ -92,7 +96,9 @@ Your dbt RPC server can be running locally or remotely. To use the dbt RPC solid
 ```python file=/integrations/dbt.py startafter=start_marker_dbt_rpc_resource endbefore=end_marker_dbt_rpc_resource dedent=4
 from dagster_dbt import dbt_rpc_resource
 
-my_remote_rpc = dbt_rpc_resource.configured({"host": "80.80.80.80", "port": 8080})
+my_remote_rpc = dbt_rpc_resource.configured(
+    {"host": "80.80.80.80", "port": 8080}
+)
 ```
 
 For convenience during local development, you may also use `dagster_dbt.local_dbt_rpc_resource`, which is preconfigured for a dbt RPC server that is running on `http://localhost:8580`.
@@ -105,7 +111,9 @@ Here are some examples of how to send dbt commands to a dbt RPC server with a so
 from dagster import ModeDefinition, pipeline
 from dagster_dbt import dbt_rpc_run
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})]
+)
 def my_dbt_pipeline():
     dbt_rpc_run()
 ```
@@ -123,7 +131,9 @@ run_staging_models = dbt_rpc_run.configured(
     name="run_staging_models",
 )
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})]
+)
 def my_dbt_pipeline():
     run_staging_models()
 ```
@@ -136,7 +146,9 @@ Note that the solid above will NOT wait until the dbt RPC server has finished ex
 from dagster import ModeDefinition, pipeline
 from dagster_dbt import dbt_rpc_run_and_wait
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})]
+)
 def my_dbt_pipeline():
     dbt_rpc_run_and_wait()
 ```
@@ -220,7 +232,9 @@ custom_solid = dbt_cli_run.configured(config, name="custom_solid")
 ```python file=/integrations/dbt.py startafter=start_marker_dbt_rpc_resource_example endbefore=end_marker_dbt_rpc_resource_example dedent=4
 from dagster_dbt import dbt_rpc_resource
 
-custom_resource = dbt_rpc_resource.configured({"host": HOST, "post": PORT})
+custom_resource = dbt_rpc_resource.configured(
+    {"host": HOST, "post": PORT}
+)
 ```
 
 **dbt RPC: Select specific models to run**

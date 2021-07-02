@@ -79,7 +79,9 @@ def solid2(a):
     return a + 1
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+@pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})]
+)
 def my_pipeline():
     solid2(solid1())
 ```
@@ -91,7 +93,14 @@ Not all the outputs in a pipeline should necessarily be stored the same way. May
 To select the IOManager for a particular output, you can set an `io_manager_key` on the <PyObject module="dagster" object="OutputDefinition" />, and then refer to that `io_manager_key` when setting IO managers in your <PyObject module="dagster" object="ModeDefinition" />. In this example, the output of solid1 will go to `fs_io_manager` and the output of solid2 will go to `mem_io_manager`.
 
 ```python file=/concepts/io_management/io_manager_per_output.py startafter=start_marker endbefore=end_marker
-from dagster import ModeDefinition, OutputDefinition, fs_io_manager, mem_io_manager, pipeline, solid
+from dagster import (
+    ModeDefinition,
+    OutputDefinition,
+    fs_io_manager,
+    mem_io_manager,
+    pipeline,
+    solid,
+)
 
 
 @solid(output_defs=[OutputDefinition(io_manager_key="fs")])
@@ -104,7 +113,13 @@ def solid2(a):
     return a + 1
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"fs": fs_io_manager, "mem": mem_io_manager})])
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            resource_defs={"fs": fs_io_manager, "mem": mem_io_manager}
+        )
+    ]
+)
 def my_pipeline():
     solid2(solid1())
 ```
@@ -159,7 +174,11 @@ def df_table_io_manager(_):
     return DataframeTableIOManager()
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": df_table_io_manager})])
+@pipeline(
+    mode_defs=[
+        ModeDefinition(resource_defs={"io_manager": df_table_io_manager})
+    ]
+)
 def my_pipeline():
     solid2(solid1())
 ```
@@ -191,7 +210,11 @@ def my_io_manager(_):
 Then, when executing a pipeline, you can pass in this per-output config.
 
 ```python file=/concepts/io_management/output_config.py startafter=execute_start_marker endbefore=execute_end_marker
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": my_io_manager})])
+@pipeline(
+        mode_defs=[
+            ModeDefinition(resource_defs={"io_manager": my_io_manager})
+        ]
+    )
     def my_pipeline():
         solid2(solid1())
 
@@ -213,12 +236,24 @@ You might want to provide static metadata that controls how particular outputs a
 For example, if your pipeline produces DataFrames to populate tables in a data warehouse, you might want to specify that each output always goes to a particular table. To accomplish this, you can define `metadata` on each <PyObject module="dagster" object="OutputDefinition" />:
 
 ```python file=/concepts/io_management/metadata.py startafter=solids_start_marker endbefore=solids_end_marker
-@solid(output_defs=[OutputDefinition(metadata={"schema": "some_schema", "table": "some_table"})])
+@solid(
+    output_defs=[
+        OutputDefinition(
+            metadata={"schema": "some_schema", "table": "some_table"}
+        )
+    ]
+)
 def solid1():
     """Return a Pandas DataFrame"""
 
 
-@solid(output_defs=[OutputDefinition(metadata={"schema": "other_schema", "table": "other_table"})])
+@solid(
+    output_defs=[
+        OutputDefinition(
+            metadata={"schema": "other_schema", "table": "other_table"}
+        )
+    ]
+)
 def solid2(_input_dataframe):
     """Return a Pandas DataFrame"""
 ```
@@ -232,7 +267,9 @@ class MyIOManager(IOManager):
     def handle_output(self, context, obj):
         table_name = context.metadata["table"]
         schema = context.metadata["schema"]
-        write_dataframe_to_table(name=table_name, schema=schema, dataframe=obj)
+        write_dataframe_to_table(
+            name=table_name, schema=schema, dataframe=obj
+        )
 
     def load_input(self, context):
         table_name = context.upstream_output.metadata["table"]
@@ -252,7 +289,12 @@ The easiest way to test an IO manager is to construct an <PyObject module="dagst
 Here's an example for a simple IO manager that stores outputs in an in-memory dictionary that's keyed on the step and name of the output.
 
 ```python file=/concepts/io_management/test_io_manager.py
-from dagster import IOManager, build_input_context, build_output_context, io_manager
+from dagster import (
+    IOManager,
+    build_input_context,
+    build_output_context,
+    io_manager,
+)
 
 
 class MyIOManager(IOManager):
@@ -263,7 +305,9 @@ class MyIOManager(IOManager):
         self.storage_dict[(context.step_key, context.name)] = obj
 
     def load_input(self, context):
-        return self.storage_dict[(context.upstream_output.step_key, context.upstream_output.name)]
+        return self.storage_dict[
+            (context.upstream_output.step_key, context.upstream_output.name)
+        ]
 
 
 @io_manager
@@ -282,7 +326,9 @@ def test_my_io_manager_load_input():
     manager = my_io_manager(None)
     manager.storage_dict[("123", "abc")] = 5
 
-    context = build_input_context(upstream_output=build_output_context(name="abc", step_key="123"))
+    context = build_input_context(
+        upstream_output=build_output_context(name="abc", step_key="123")
+    )
     assert manager.load_input(context) == 5
 ```
 

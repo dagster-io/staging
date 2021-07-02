@@ -94,7 +94,10 @@ def do_something(context, data):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(name="unit_test", resource_defs={"api": ResourceDefinition.mock_resource()}),
+        ModeDefinition(
+            name="unit_test",
+            resource_defs={"api": ResourceDefinition.mock_resource()},
+        ),
         ModeDefinition(name="prod", resource_defs={"api": api_client}),
     ]
 )
@@ -199,7 +202,9 @@ def my_foo_resource(context):
 
 
 def test_solid_resource_def():
-    context = build_solid_context(resources={"foo": my_foo_resource.configured({"my_str": "bar"})})
+    context = build_solid_context(
+        resources={"foo": my_foo_resource.configured({"my_str": "bar"})}
+    )
     assert solid_requires_foo(context) == "found bar"
 ```
 
@@ -212,7 +217,10 @@ def test_pipeline_with_config():
     result = execute_pipeline(
         do_math,
         run_config={
-            "solids": {"add_one": {"inputs": {"num": 2}}, "add_two": {"inputs": {"num": 3}}}
+            "solids": {
+                "add_one": {"inputs": {"num": 2}},
+                "add_two": {"inputs": {"num": 3}},
+            }
         },
     )
 
@@ -240,7 +248,9 @@ def test_subset_execution():
 
     # solid_result_list returns List[SolidExecutionResult]
     # this checks to see that only two were executed
-    assert {solid_result.solid.name for solid_result in result.solid_result_list} == {
+    assert {
+        solid_result.solid.name for solid_result in result.solid_result_list
+    } == {
         "add_one",
         "add_two",
     }
@@ -253,7 +263,8 @@ The event stream is the most generic way that a solid communicates what happened
 ```python file=/concepts/solids_pipelines/unit_tests.py startafter=start_test_event_stream endbefore=end_test_event_stream
 def test_event_stream():
     pipeline_result = execute_pipeline(
-        emit_events_pipeline, {"solids": {"emit_events_solid": {"inputs": {"input_num": 1}}}}
+        emit_events_pipeline,
+        {"solids": {"emit_events_solid": {"inputs": {"input_num": 1}}}},
     )
     assert pipeline_result.success
 
@@ -286,12 +297,16 @@ def test_event_stream():
     ) = solid_result.step_events
 
     # apologies for verboseness here! we can do better.
-    expectation_result = expectation_event.event_specific_data.expectation_result
+    expectation_result = (
+        expectation_event.event_specific_data.expectation_result
+    )
     assert isinstance(expectation_result, ExpectationResult)
     assert expectation_result.success
     assert expectation_result.label == "positive"
 
-    materialization = materialization_event.event_specific_data.materialization
+    materialization = (
+        materialization_event.event_specific_data.materialization
+    )
     assert isinstance(materialization, AssetMaterialization)
     assert materialization.label == "persisted_string"
 ```
