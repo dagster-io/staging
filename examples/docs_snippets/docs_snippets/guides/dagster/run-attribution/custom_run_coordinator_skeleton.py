@@ -22,6 +22,8 @@ CUSTOM_HEADER_NAME = "X-SOME-HEADER"
 
 from flask import has_request_context, request
 
-desired_header = request.headers.get(CUSTOM_HEADER_NAME) if has_request_context() else None
+desired_header = (
+    request.headers.get(CUSTOM_HEADER_NAME) if has_request_context() else None
+)
 
 # end_flask_header_marker

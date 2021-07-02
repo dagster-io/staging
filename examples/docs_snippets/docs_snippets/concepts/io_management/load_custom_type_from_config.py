@@ -9,10 +9,14 @@ from dagster import (
 
 
 # def_start_marker
-@dagster_type_loader(config_schema={"diameter": float, "juiciness": float, "cultivar": str})
+@dagster_type_loader(
+    config_schema={"diameter": float, "juiciness": float, "cultivar": str}
+)
 def apple_loader(_context, config):
     return Apple(
-        diameter=config["diameter"], juiciness=config["juiciness"], cultivar=config["cultivar"]
+        diameter=config["diameter"],
+        juiciness=config["juiciness"],
+        cultivar=config["cultivar"],
     )
 
 
@@ -45,7 +49,11 @@ def execute_with_config():
             "solids": {
                 "my_solid": {
                     "inputs": {
-                        "input_apple": {"diameter": 2.4, "juiciness": 6.0, "cultivar": "honeycrisp"}
+                        "input_apple": {
+                            "diameter": 2.4,
+                            "juiciness": 6.0,
+                            "cultivar": "honeycrisp",
+                        }
                     }
                 }
             }

@@ -41,7 +41,11 @@ def df_table_io_manager(_):
     return DataframeTableIOManager()
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": df_table_io_manager})])
+@pipeline(
+    mode_defs=[
+        ModeDefinition(resource_defs={"io_manager": df_table_io_manager})
+    ]
+)
 def my_pipeline():
     solid2(solid1())
 
@@ -72,7 +76,11 @@ def df_table_io_manager_with_metadata(_):
 
 
 @pipeline(
-    mode_defs=[ModeDefinition(resource_defs={"io_manager": df_table_io_manager_with_metadata})]
+    mode_defs=[
+        ModeDefinition(
+            resource_defs={"io_manager": df_table_io_manager_with_metadata}
+        )
+    ]
 )
 def my_pipeline_with_metadata():
     solid2(solid1())

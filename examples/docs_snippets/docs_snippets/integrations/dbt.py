@@ -22,7 +22,9 @@ def scope_dbt_cli_run_specific_models():
     from dagster_dbt import dbt_cli_run
 
     config = {"project-dir": "path/to/dbt/project", "models": ["tag:staging"]}
-    run_staging_models = dbt_cli_run.configured(config, name="run_staging_models")
+    run_staging_models = dbt_cli_run.configured(
+        config, name="run_staging_models"
+    )
 
     @pipeline
     def my_dbt_pipeline():
@@ -37,7 +39,9 @@ def scope_dbt_cli_run_after_another_solid():
     from dagster_dbt import dbt_cli_run
 
     config = {"project-dir": "path/to/dbt/project", "models": ["tag:staging"]}
-    run_staging_models = dbt_cli_run.configured(config, name="run_staging_models")
+    run_staging_models = dbt_cli_run.configured(
+        config, name="run_staging_models"
+    )
 
     @solid
     def do_something(context):
@@ -55,20 +59,26 @@ def scope_dbt_rpc_resource():
     # start_marker_dbt_rpc_resource
     from dagster_dbt import dbt_rpc_resource
 
-    my_remote_rpc = dbt_rpc_resource.configured({"host": "80.80.80.80", "port": 8080})
+    my_remote_rpc = dbt_rpc_resource.configured(
+        {"host": "80.80.80.80", "port": 8080}
+    )
     # end_marker_dbt_rpc_resource
 
 
 def scope_dbt_rpc_run():
     from dagster_dbt import dbt_rpc_resource
 
-    my_remote_rpc = dbt_rpc_resource.configured({"host": "80.80.80.80", "port": 8080})
+    my_remote_rpc = dbt_rpc_resource.configured(
+        {"host": "80.80.80.80", "port": 8080}
+    )
 
     # start_marker_dbt_rpc_run
     from dagster import ModeDefinition, pipeline
     from dagster_dbt import dbt_rpc_run
 
-    @pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})])
+    @pipeline(
+        mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})]
+    )
     def my_dbt_pipeline():
         dbt_rpc_run()
 
@@ -78,7 +88,9 @@ def scope_dbt_rpc_run():
 def scope_dbt_rpc_run_specific_models():
     from dagster_dbt import dbt_rpc_resource
 
-    my_remote_rpc = dbt_rpc_resource.configured({"host": "80.80.80.80", "port": 8080})
+    my_remote_rpc = dbt_rpc_resource.configured(
+        {"host": "80.80.80.80", "port": 8080}
+    )
     # start_marker_dbt_rpc_run_specific_models
     from dagster import ModeDefinition, pipeline
     from dagster_dbt import dbt_rpc_run
@@ -88,7 +100,9 @@ def scope_dbt_rpc_run_specific_models():
         name="run_staging_models",
     )
 
-    @pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})])
+    @pipeline(
+        mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})]
+    )
     def my_dbt_pipeline():
         run_staging_models()
 
@@ -98,12 +112,16 @@ def scope_dbt_rpc_run_specific_models():
 def scope_dbt_rpc_run_and_wait():
     from dagster_dbt import dbt_rpc_resource
 
-    my_remote_rpc = dbt_rpc_resource.configured({"host": "80.80.80.80", "port": 8080})
+    my_remote_rpc = dbt_rpc_resource.configured(
+        {"host": "80.80.80.80", "port": 8080}
+    )
     # start_marker_dbt_rpc_run_and_wait
     from dagster import ModeDefinition, pipeline
     from dagster_dbt import dbt_rpc_run_and_wait
 
-    @pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})])
+    @pipeline(
+        mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": my_remote_rpc})]
+    )
     def my_dbt_pipeline():
         dbt_rpc_run_and_wait()
 
@@ -177,7 +195,9 @@ def scope_dbt_rpc_resource_example():
     # start_marker_dbt_rpc_resource_example
     from dagster_dbt import dbt_rpc_resource
 
-    custom_resource = dbt_rpc_resource.configured({"host": HOST, "post": PORT})
+    custom_resource = dbt_rpc_resource.configured(
+        {"host": HOST, "post": PORT}
+    )
     # end_marker_dbt_rpc_resource_example
 
 

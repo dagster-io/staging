@@ -29,7 +29,11 @@ def scrape_users():
     return users_df
 
 
-@solid(output_defs=[OutputDefinition(asset_key=AssetKey("ml_models.user_prediction"))])
+@solid(
+    output_defs=[
+        OutputDefinition(asset_key=AssetKey("ml_models.user_prediction"))
+    ]
+)
 def get_prediction_model(users_df):
     my_ml_model = train_prediction_model(users_df)
     persist_to_model_store(my_ml_model)

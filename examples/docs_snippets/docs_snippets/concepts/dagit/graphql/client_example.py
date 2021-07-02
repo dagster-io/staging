@@ -100,7 +100,9 @@ from dagster_graphql import (
     ReloadRepositoryLocationStatus,
 )
 
-reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(REPO_NAME)
+reload_info: ReloadRepositoryLocationInfo = client.reload_repository_location(
+    REPO_NAME
+)
 if reload_info.status == ReloadRepositoryLocationStatus.SUCCESS:
     do_something_on_success()
 else:
@@ -116,9 +118,13 @@ from dagster_graphql import (
     ShutdownRepositoryLocationStatus,
 )
 
-shutdown_info: ShutdownRepositoryLocationInfo = client.shutdown_repository_location(REPO_NAME)
+shutdown_info: ShutdownRepositoryLocationInfo = (
+    client.shutdown_repository_location(REPO_NAME)
+)
 if shutdown_info.status == ShutdownRepositoryLocationStatus.SUCCESS:
     do_something_on_success()
 else:
-    raise Exception(f"Repository location shutdown failed: {shutdown_info.message}")
+    raise Exception(
+        f"Repository location shutdown failed: {shutdown_info.message}"
+    )
 # end_shutdown_repo_location_marker

@@ -7,12 +7,18 @@ from dagster.utils import script_relative_path
 @solid(
     name="download_file",
     config_schema={
-        "url": Field(String, description="The URL from which to download the file"),
-        "path": Field(String, description="The path to which to download the file"),
+        "url": Field(
+            String, description="The URL from which to download the file"
+        ),
+        "path": Field(
+            String, description="The path to which to download the file"
+        ),
     },
     output_defs=[
         OutputDefinition(
-            String, name="path", description="The path to which the file was downloaded"
+            String,
+            name="path",
+            description="The path to which the file was downloaded",
         )
     ],
     description=(

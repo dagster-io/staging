@@ -22,7 +22,8 @@ def test_solid_selection():
 def test_multiprocess_yaml():
     with open(
         file_relative_path(
-            __file__, "../../../docs_snippets/concepts/solids_pipelines/multiprocessing.yaml"
+            __file__,
+            "../../../docs_snippets/concepts/solids_pipelines/multiprocessing.yaml",
         ),
         "r",
     ) as fd:
@@ -30,7 +31,9 @@ def test_multiprocess_yaml():
 
     with instance_for_test() as instance:
         assert execute_pipeline(
-            reconstructable(parallel_pipeline), run_config=run_config, instance=instance
+            reconstructable(parallel_pipeline),
+            run_config=run_config,
+            instance=instance,
         ).success
 
 

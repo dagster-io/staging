@@ -1,6 +1,12 @@
 # pylint: disable=unused-argument
 
-from dagster import InputDefinition, composite_solid, pipeline, repository, solid
+from dagster import (
+    InputDefinition,
+    composite_solid,
+    pipeline,
+    repository,
+    solid,
+)
 
 
 @solid
@@ -56,7 +62,10 @@ def add_n_times_m_solid(number):
 
 def config_mapping_fn(config):
     x = config["x"]
-    return {"add_n": {"config": {"n": x}}, "multiply_by_m": {"config": {"m": x}}}
+    return {
+        "add_n": {"config": {"n": x}},
+        "multiply_by_m": {"config": {"m": x}},
+    }
 
 
 @composite_solid(

@@ -2,7 +2,15 @@
 
 import datetime
 
-from dagster import InputDefinition, RunRequest, daily_schedule, pipeline, repository, sensor, solid
+from dagster import (
+    InputDefinition,
+    RunRequest,
+    daily_schedule,
+    pipeline,
+    repository,
+    sensor,
+    solid,
+)
 
 
 @solid
@@ -73,7 +81,9 @@ def my_lazy_repository():
             "addition_pipeline": load_addition_pipeline,
             "subtraction_pipeline": load_subtraction_pipeline,
         },
-        "schedules": {"daily_addition_schedule": load_daily_addition_schedule},
+        "schedules": {
+            "daily_addition_schedule": load_daily_addition_schedule
+        },
         "sensors": {"addition_sensor": load_addition_sensor},
     }
 

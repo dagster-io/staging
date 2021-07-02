@@ -44,7 +44,9 @@ def test_solids_compile_and_execute():
 def test_context_solid():
     result = execute_solid(
         context_solid,
-        run_config={"solids": {"context_solid": {"config": {"name": "my_name"}}}},
+        run_config={
+            "solids": {"context_solid": {"config": {"name": "my_name"}}}
+        },
     )
     assert result
     assert result.success
@@ -55,7 +57,9 @@ def test_my_configurable_solid():
         my_configurable_solid,
         run_config={
             "solids": {
-                "my_configurable_solid": {"config": {"api_endpoint": "https://localhost:3000"}}
+                "my_configurable_solid": {
+                    "config": {"api_endpoint": "https://localhost:3000"}
+                }
             }
         },
     )
