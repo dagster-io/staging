@@ -1,6 +1,17 @@
 from collections import namedtuple
 from functools import update_wrapper
-from typing import TYPE_CHECKING, AbstractSet, Any, Callable, Dict, Optional, Union, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Union,
+    cast,
+    overload,
+)
 
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
@@ -10,6 +21,7 @@ from dagster.core.errors import (
     DagsterInvalidInvocationError,
     DagsterUnknownResourceError,
 )
+from dagster.seven import funcsigs
 from dagster.utils.backcompat import experimental_arg_warning
 
 from ..decorator_utils import (
@@ -26,6 +38,10 @@ from .resource_invocation import resource_invocation_result
 
 if TYPE_CHECKING:
     from dagster.core.execution.resources_init import InitResourceContext
+
+
+def is_context_provided(params: List[funcsigs.Parameter]) -> bool:
+    return len(params) == 1
 
 
 class ResourceDefinition(AnonymousConfigurableDefinition):
@@ -206,7 +222,11 @@ class _ResourceDecoratorCallable:
     def __call__(self, resource_fn: Callable[["InitResourceContext"], Any]):
         check.callable_param(resource_fn, "resource_fn")
 
-        any_name = ["*"]
+        any_name = (
+            ["*"]
+            if self._is_context_required() or is_context_provided(get_function_params(resource_fn))
+            else []
+        )
 
         params = get_function_params(resource_fn)
 
@@ -237,6 +257,9 @@ class _ResourceDecoratorCallable:
         update_wrapper(resource_def, wrapped=resource_fn)
 
         return resource_def
+
+    def _is_context_required(self):
+        return self.config_schema and self.required_resource_keys
 
 
 @overload
