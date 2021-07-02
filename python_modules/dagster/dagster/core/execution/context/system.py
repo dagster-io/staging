@@ -8,6 +8,7 @@ from abc import ABC, abstractproperty
 from typing import TYPE_CHECKING, Any, Dict, Iterable, NamedTuple, Optional, Set, cast
 
 from dagster import check
+from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.core.definitions.hook import HookDefinition
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
@@ -136,6 +137,7 @@ class ExecutionData(NamedTuple):
     resolved_run_config: ResolvedRunConfig
     pipeline_def: PipelineDefinition
     mode_def: ModeDefinition
+    executor_def: ExecutorDefinition
 
 
 class IStepContext(IPlanContext):
@@ -380,6 +382,10 @@ class StepExecutionContext(PlanExecutionContext, IStepContext):
     @property
     def mode_def(self) -> ModeDefinition:
         return self._execution_data.mode_def
+
+    @property
+    def executor_def(self) -> ExecutorDefinition:
+        return self._execution_data.executor_def
 
     @property
     def solid(self) -> "Solid":

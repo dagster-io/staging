@@ -42,7 +42,6 @@ def test_diamond_multi_execution():
         result = execute_pipeline(
             pipe,
             run_config={
-                "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
             },
             instance=instance,

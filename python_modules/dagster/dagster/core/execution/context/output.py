@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 from dagster import check
+from dagster.core.definitions.executor import ExecutionBoundaryType
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.plan.utils import build_resources_for_manager
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
@@ -42,6 +43,8 @@ class OutputContext:
             initializes the RootInputManager.
         resources (Optional[Resources]): The resources required by the output manager, specified by the
             `required_resource_keys` parameter.
+        execution_boundary_type (Optional[ExecutionBoundaryType]): What will be shared between the
+            process storing the output and the process loading the input.
     """
 
     def __init__(
@@ -60,6 +63,7 @@ class OutputContext:
         resource_config: Optional[Dict[str, Any]] = None,
         resources: Optional[Union["Resources", Dict[str, Any]]] = None,
         step_context: Optional["StepExecutionContext"] = None,
+        execution_boundary_type: Optional[ExecutionBoundaryType] = None,
     ):
         from dagster.core.definitions.resource import Resources, IContainsGenerator
         from dagster.core.execution.build_resources import build_resources
@@ -77,6 +81,7 @@ class OutputContext:
         self._version = version
         self._resource_config = resource_config
         self._step_context = step_context
+        self._execution_boundary_type = execution_boundary_type
 
         if isinstance(resources, Resources):
             self._resources_cm = None
@@ -163,6 +168,10 @@ class OutputContext:
     @property
     def step_context(self) -> Optional["StepExecutionContext"]:
         return self._step_context
+
+    @property
+    def execution_boundary_type(self) -> Optional[ExecutionBoundaryType]:
+        return self._execution_boundary_type
 
     def get_run_scoped_output_identifier(self) -> List[str]:
         """Utility method to get a collection of identifiers that as a whole represent a unique
@@ -265,6 +274,7 @@ def get_output_context(
         step_context=step_context,
         resource_config=resource_config,
         resources=resources,
+        execution_boundary_type=step_context.executor_def.execution_boundary_type,
     )
 
 
@@ -297,6 +307,7 @@ def build_output_context(
     version: Optional[str] = None,
     resource_config: Optional[Dict[str, Any]] = None,
     resources: Optional[Dict[str, Any]] = None,
+    execution_boundary_type: Optional[ExecutionBoundaryType] = None,
 ) -> "OutputContext":
     """Builds output context from provided parameters.
 
@@ -319,6 +330,8 @@ def build_output_context(
         resources (Optional[Resources]): The resources to make available from the context.
             For a given key, you can provide either an actual instance of an object, or a resource
             definition.
+        execution_boundary_type (Optional[ExecutionBoundaryType]): What will be shared between the
+            process storing the output and the process loading the input.
 
     Examples:
 
@@ -344,6 +357,9 @@ def build_output_context(
     version = check.opt_str_param(version, "version")
     resource_config = check.opt_dict_param(resource_config, "resource_config", key_type=str)
     resources = check.opt_dict_param(resources, "resources", key_type=str)
+    execution_boundary_type = check.opt_inst_param(
+        execution_boundary_type, "execution_boundary_type", ExecutionBoundaryType
+    )
 
     return OutputContext(
         step_key=step_key,
@@ -360,4 +376,5 @@ def build_output_context(
         resource_config=resource_config,
         resources=resources,
         step_context=None,
+        execution_boundary_type=execution_boundary_type,
     )

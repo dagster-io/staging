@@ -183,6 +183,7 @@ def create_execution_data(
         scoped_resources_builder=scoped_resources_builder,
         intermediate_storage=intermediate_storage,
         intermediate_storage_def=context_creation_data.intermediate_storage_def,
+        executor_def=context_creation_data.executor_def,
         resolved_run_config=context_creation_data.resolved_run_config,
         pipeline_def=context_creation_data.pipeline_def,
         mode_def=context_creation_data.pipeline_def.get_mode_definition(

@@ -77,10 +77,10 @@ class ModeDefinition(
         if resource_defs and "io_manager" in resource_defs:
             resource_defs_with_defaults = resource_defs
         else:
-            from dagster.core.storage.mem_io_manager import mem_io_manager
+            from dagster.core.storage.default_io_manager import default_io_manager
 
             resource_defs_with_defaults = merge_dicts(
-                {"io_manager": mem_io_manager}, resource_defs or {}
+                {"io_manager": default_io_manager}, resource_defs or {}
             )
 
         if _config_mapping:

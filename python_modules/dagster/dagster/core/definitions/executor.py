@@ -40,6 +40,12 @@ def multiple_process_executor_requirements():
     ]
 
 
+class ExecutionBoundaryType(Enum):
+    SHARED_PROCESS = 1
+    SHARED_LOCAL_FILESYSTEM = 2
+    SHARED_NOTHING = 3
+
+
 class ExecutorDefinition(NamedConfigurableDefinition):
     """
     Args:
@@ -53,6 +59,8 @@ class ExecutorDefinition(NamedConfigurableDefinition):
             and return an instance of :py:class:`Executor`
         required_resource_keys (Optional[Set[str]]): Keys for the resources required by the
             executor.
+        execution_boundary_type (Optional[ExecutorBoundaryType]): What will be shared between the
+            differents steps within the same execution.
     """
 
     def __init__(
@@ -62,6 +70,7 @@ class ExecutorDefinition(NamedConfigurableDefinition):
         requirements=None,
         executor_creation_fn=None,
         description=None,
+        execution_boundary_type=None,
     ):
         self._name = check.str_param(name, "name")
         self._requirements = check.opt_list_param(
@@ -72,6 +81,9 @@ class ExecutorDefinition(NamedConfigurableDefinition):
             executor_creation_fn, "executor_creation_fn"
         )
         self._description = check.opt_str_param(description, "description")
+        self._execution_boundary_type = check.opt_inst_param(
+            execution_boundary_type, "execution_boundary_type", ExecutionBoundaryType
+        )
 
     @property
     def name(self):
@@ -92,6 +104,10 @@ class ExecutorDefinition(NamedConfigurableDefinition):
     @property
     def executor_creation_fn(self):
         return self._executor_creation_fn
+
+    @property
+    def execution_boundary_type(self):
+        return self._execution_boundary_type
 
     def copy_for_configured(self, name, description, config_schema, _):
         return ExecutorDefinition(
@@ -148,6 +164,7 @@ def executor(
     name=None,
     config_schema=None,
     requirements=None,
+    execution_boundary_type=None,
 ):
     """Define an executor.
 
@@ -160,6 +177,8 @@ def executor(
             `init_context.executor_config`. If not set, Dagster will accept any config provided for.
         requirements (Optional[List[ExecutorRequirement]]): Any requirements that must
             be met in order for the executor to be usable for a particular pipeline execution.
+        execution_boundary_type (Optional[ExecutorBoundaryType]): What will be shared between the
+            differents steps within the same execution.
     """
     if callable(name):
         check.invariant(config_schema is None)
@@ -167,15 +186,21 @@ def executor(
         return _ExecutorDecoratorCallable()(name)
 
     return _ExecutorDecoratorCallable(
-        name=name, config_schema=config_schema, requirements=requirements
+        name=name,
+        config_schema=config_schema,
+        requirements=requirements,
+        execution_boundary_type=execution_boundary_type,
     )
 
 
 class _ExecutorDecoratorCallable:
-    def __init__(self, name=None, config_schema=None, requirements=None):
+    def __init__(
+        self, name=None, config_schema=None, requirements=None, execution_boundary_type=None
+    ):
         self.name = check.opt_str_param(name, "name")
         self.config_schema = config_schema  # type check in definition
         self.requirements = requirements
+        self.execution_boundary_type = execution_boundary_type
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
@@ -188,6 +213,7 @@ class _ExecutorDecoratorCallable:
             config_schema=self.config_schema,
             executor_creation_fn=fn,
             requirements=self.requirements,
+            execution_boundary_type=self.execution_boundary_type,
         )
 
         update_wrapper(executor_def, wrapped=fn)
@@ -237,6 +263,7 @@ def in_process_executor(init_context):
         "retries": get_retries_config(),
     },
     requirements=multiple_process_executor_requirements(),
+    execution_boundary_type=ExecutionBoundaryType.SHARED_LOCAL_FILESYSTEM,
 )
 def multiprocess_executor(init_context):
     """The default multiprocess executor.
