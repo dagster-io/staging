@@ -13,7 +13,7 @@ from dagster.core.definitions import (
     SolidDefinition,
 )
 from dagster.core.definitions.decorators.solid import solid
-from dagster.core.definitions.dependency import IDependencyDefinition, SolidHandle, SolidInvocation
+from dagster.core.definitions.dependency import IDependencyDefinition, NodeHandle, SolidInvocation
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.instance import DagsterInstance
@@ -112,7 +112,7 @@ def execute_in_process(
         )
         event_list = list(_execute_run_iterable)
 
-    top_level_node_handle = SolidHandle.from_string(node.name)
+    top_level_node_handle = NodeHandle.from_string(node.name)
 
     event_list_for_top_lvl_node = [
         event
@@ -122,9 +122,9 @@ def execute_in_process(
 
     if isinstance(node, SolidDefinition):
         return InProcessSolidResult(
-            node, SolidHandle(node.name, None), event_list_for_top_lvl_node, recorder
+            node, NodeHandle(node.name, None), event_list_for_top_lvl_node, recorder
         )
     else:
         return InProcessGraphResult(
-            node, SolidHandle(node.name, None), event_list_for_top_lvl_node, recorder
+            node, NodeHandle(node.name, None), event_list_for_top_lvl_node, recorder
         )
