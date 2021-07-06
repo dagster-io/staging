@@ -93,6 +93,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                 runs_insert = RunsTable.insert().values(  # pylint: disable=no-value-for-parameter
                     run_id=pipeline_run.run_id,
                     pipeline_name=pipeline_run.pipeline_name,
+                    mode=pipeline_run.mode,
                     status=pipeline_run.status.value,
                     run_body=serialize_dagster_namedtuple(pipeline_run),
                     snapshot_id=pipeline_run.pipeline_snapshot_id,
@@ -179,6 +180,9 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
         if filters.pipeline_name:
             query = query.where(RunsTable.c.pipeline_name == filters.pipeline_name)
+
+        if filters.mode:
+            query = query.where(RunsTable.c.mode == filters.mode)
 
         if filters.statuses:
             query = query.where(
@@ -351,6 +355,21 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                     RunTagsTable.insert(),  # pylint: disable=no-value-for-parameter
                     [dict(run_id=run_id, key=tag, value=new_tags[tag]) for tag in added_tags],
                 )
+
+    def add_mode(self, run_id):
+        check.str_param(run_id, "run_id")
+
+        run = self.get_run_by_id(run_id)
+
+        with self.connect() as conn:
+            conn.execute(
+                RunsTable.update()  # pylint: disable=no-value-for-parameter
+                .where(RunsTable.c.run_id == run_id)
+                .values(
+                    mode=run.mode,
+                    update_timestamp=pendulum.now("UTC"),
+                )
+            )
 
     def get_run_group(self, run_id):
         check.str_param(run_id, "run_id")
