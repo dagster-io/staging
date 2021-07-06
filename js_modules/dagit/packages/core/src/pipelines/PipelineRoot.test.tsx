@@ -104,7 +104,7 @@ describe('PipelineRoot', () => {
 
       await waitFor(() => {
         const selected = screen.getByRole('tab', {selected: true});
-        console.log(selected.textContent);
+
         // Redirect to Definition, which has been highlighted in the tabs.
         expect(selected.textContent).toMatch(/overview/i);
 

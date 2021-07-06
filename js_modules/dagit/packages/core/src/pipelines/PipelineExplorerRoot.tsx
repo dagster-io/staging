@@ -2,7 +2,7 @@ import {gql, useQuery} from '@apollo/client';
 import * as React from 'react';
 import {RouteComponentProps, useHistory} from 'react-router-dom';
 
-import {featureEnabled, FeatureFlag} from '../app/Flags';
+import {useFeatureFlags} from '../app/Flags';
 import {useDocumentTitle} from '../hooks/useDocumentTitle';
 import {Loading} from '../ui/Loading';
 import {usePipelineSelector} from '../workspace/WorkspaceContext';
@@ -31,14 +31,8 @@ export const PipelineExplorerRegexRoot: React.FC<
   RouteComponentProps & {repoAddress: RepoAddress}
 > = (props) => {
   const explorerPath = explorerPathFromString(props.match.params['0']);
+  const {flagPipelineModeTuples} = useFeatureFlags();
   const history = useHistory();
-
-  const buildPath = (path: string) => {
-    const tab = featureEnabled(FeatureFlag.flagPipelineModeTuples) ? 'graphs' : 'pipelines';
-    return props.repoAddress
-      ? workspacePathFromAddress(props.repoAddress, `/${tab}/${path}`)
-      : `/workspace/${tab}/${path}`;
-  };
 
   useDocumentTitle(`Pipeline: ${explorerPath.pipelineName}`);
 
@@ -47,7 +41,16 @@ export const PipelineExplorerRegexRoot: React.FC<
       explorerPath={explorerPath}
       repoAddress={props.repoAddress}
       onChangeExplorerPath={(path, mode) => {
-        history[mode](buildPath(explorerPathToString(path)));
+        const tab = flagPipelineModeTuples ? 'graphs' : 'pipelines';
+        const fullPath = props.repoAddress
+          ? workspacePathFromAddress(props.repoAddress, `/${tab}/${explorerPathToString(path)}`)
+          : `/workspace/${tab}/${explorerPathToString(path)}`;
+
+        if (mode === 'push') {
+          history.push(fullPath);
+        } else {
+          history.replace(fullPath);
+        }
       }}
     />
   );
