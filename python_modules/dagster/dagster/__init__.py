@@ -8,6 +8,8 @@ from dagster.core.definitions import (
     CompositeSolidDefinition,
     ConfigMapping,
     DependencyDefinition,
+    DynamicOutput,
+    DynamicOutputDefinition,
     EventMetadata,
     EventMetadataEntry,
     ExecutorDefinition,
@@ -233,6 +235,8 @@ __all__ = [
     "RetryPolicy",
     "Backoff",
     "Jitter",
+    "DynamicOutput",
+    "DynamicOutputDefinition",
     # Decorators
     "asset_sensor",
     "composite_solid",
