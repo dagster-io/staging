@@ -1,7 +1,7 @@
 from typing import Any, Dict, List, Optional
 
-from dagster import Field, Permissive, check, resource
-from dagster.utils.merger import deep_merge_dicts
+from dagster import Permissive, check, resource
+from dagster.utils.merger import merge_dicts
 
 from ..dbt_resource import DbtResource
 from .constants import CLI_COMMON_FLAGS_CONFIG_SCHEMA, CLI_COMMON_OPTIONS_CONFIG_SCHEMA
@@ -15,6 +15,9 @@ class DbtCliResource(DbtResource):
     the specific parameters available to you for each command, check out the dbt docs:
 
     https://docs.getdbt.com/reference/commands/run
+
+    To use this as a dagster resource, we recommend using
+    :func:`dbt_cli_resource <dagster_dbt.dbt_cli_resource>`.
     """
 
     def __init__(
@@ -35,14 +38,7 @@ class DbtCliResource(DbtResource):
 
     @property
     def default_flags(self) -> Dict[str, Any]:
-        # return a non-frozendict copy of self._default_flags
-
-        def unfreeze(d):
-            if isinstance(d, dict):
-                return {k: unfreeze(v) for k, v in d.items()}
-            return d
-
-        return unfreeze(self._default_flags)
+        return self._format_params(self._default_flags, replace_underscores=True)
 
     def cli(self, command: str, **kwargs) -> DbtCliOutput:
         """
@@ -59,7 +55,9 @@ class DbtCliResource(DbtResource):
         """
         command = check.str_param(command, "command")
         extra_flags = {} if kwargs is None else kwargs
-        flags = self._format_params(deep_merge_dicts(self.default_flags, extra_flags))
+        flags = merge_dicts(
+            self.default_flags, self._format_params(extra_flags, replace_underscores=True)
+        )
 
         return execute_cli(
             executable=self._executable,
@@ -71,33 +69,49 @@ class DbtCliResource(DbtResource):
             target_path=self._target_path,
         )
 
-    def compile(self, models: List[str] = None, exclude: List[str] = None, **kwargs):
+    def compile(
+        self, models: List[str] = None, exclude: List[str] = None, **kwargs
+    ) -> DbtCliOutput:
         """
         Run the ``compile`` command on a dbt project. kwargs are passed in as additional parameters.
 
         Args:
             models (List[str], optional): the models to include in compilation.
             exclude (List[str]), optional): the models to exclude from compilation.
+
+        Returns:
+            DbtCliOutput: An instance of :class:`DbtCliOutput<dagster_dbt.DbtCliOutput>` containing
+                parsed log output as well as the contents of run_results.json (if applicable).
         """
         return self.cli("compile", models=models, exclude=exclude, **kwargs)
 
-    def run(self, models: List[str] = None, exclude: List[str] = None, **kwargs):
+    def run(self, models: List[str] = None, exclude: List[str] = None, **kwargs) -> DbtCliOutput:
         """
         Run the ``run`` command on a dbt project. kwargs are passed in as additional parameters.
 
         Args:
             models (List[str], optional): the models to include in compilation.
             exclude (List[str]), optional): the models to exclude from compilation.
+
+        Returns:
+            DbtCliOutput: An instance of :class:`DbtCliOutput<dagster_dbt.DbtCliOutput>` containing
+                parsed log output as well as the contents of run_results.json (if applicable).
         """
         return self.cli("run", models=models, exclude=exclude, **kwargs)
 
-    def snapshot(self, select: List[str] = None, exclude: List[str] = None, **kwargs):
+    def snapshot(
+        self, select: List[str] = None, exclude: List[str] = None, **kwargs
+    ) -> DbtCliOutput:
         """
         Run the ``snapshot`` command on a dbt project. kwargs are passed in as additional parameters.
 
         Args:
             select (List[str], optional): the snapshots to include in the run.
             exclude (List[str], optional): the snapshots to exclude from the run.
+
+        Returns:
+            DbtCliOutput: An instance of :class:`DbtCliOutput<dagster_dbt.DbtCliOutput>` containing
+                parsed log output as well as the contents of run_results.json (if applicable).
         """
         return self.cli("snapshot", select=select, exclude=exclude, **kwargs)
 
@@ -108,7 +122,7 @@ class DbtCliResource(DbtResource):
         data: bool = True,
         schema: bool = True,
         **kwargs,
-    ):
+    ) -> DbtCliOutput:
         """
         Run the ``test`` command on a dbt project. kwargs are passed in as additional parameters.
 
@@ -118,10 +132,13 @@ class DbtCliResource(DbtResource):
             data (bool, optional): If ``True`` (default), then run data tests.
             schema (bool, optional): If ``True`` (default), then run schema tests.
 
+        Returns:
+            DbtCliOutput: An instance of :class:`DbtCliOutput<dagster_dbt.DbtCliOutput>` containing
+                parsed log output as well as the contents of run_results.json (if applicable).
         """
         return self.cli("test", models=models, exclude=exclude, data=data, schema=schema, **kwargs)
 
-    def seed(self, show: bool = False, **kwargs):
+    def seed(self, show: bool = False, **kwargs) -> DbtCliOutput:
         """
         Run the ``seed`` command on a dbt project. kwargs are passed in as additional parameters.
 
@@ -129,10 +146,15 @@ class DbtCliResource(DbtResource):
             show (bool, optional): If ``True``, then show a sample of the seeded data in the
                 response. Defaults to ``False``.
 
+        Returns:
+            DbtCliOutput: An instance of :class:`DbtCliOutput<dagster_dbt.DbtCliOutput>` containing
+                parsed log output as well as the contents of run_results.json (if applicable).
         """
         return self.cli("seed", show=show, **kwargs)
 
-    def generate_docs(self, models: List[str] = None, exclude: List[str] = None, **kwargs):
+    def generate_docs(
+        self, models: List[str] = None, exclude: List[str] = None, **kwargs
+    ) -> DbtCliOutput:
         """
         Run the ``docs generate`` command on a dbt project. kwargs are passed in as additional parameters.
 
@@ -140,10 +162,15 @@ class DbtCliResource(DbtResource):
             models (List[str], optional): the models to include in docs generation.
             exclude (List[str], optional): the models to exclude from docs generation.
 
+        Returns:
+            DbtCliOutput: An instance of :class:`DbtCliOutput<dagster_dbt.DbtCliOutput>` containing
+                parsed log output as well as the contents of run_results.json (if applicable).
         """
         return self.cli("docs generate", models=models, exclude=exclude, **kwargs)
 
-    def run_operation(self, macro: str, args: Optional[Dict[str, Any]] = None, **kwargs):
+    def run_operation(
+        self, macro: str, args: Optional[Dict[str, Any]] = None, **kwargs
+    ) -> DbtCliOutput:
         """
         Run the ``run-operation`` command on a dbt project. kwargs are passed in as additional parameters.
 
@@ -152,29 +179,50 @@ class DbtCliResource(DbtResource):
             args (Dict[str, Any], optional): the keyword arguments to be supplied to the macro.
 
         Returns:
-            Response: the HTTP response from the dbt RPC server.
+            DbtCliOutput: An instance of :class:`DbtCliOutput<dagster_dbt.DbtCliOutput>` containing
+                parsed log output as well as the contents of run_results.json (if applicable).
         """
 
         return self.cli(f"run-operation {macro}", args=args, **kwargs)
 
 
 @resource(
-    config_schema={
-        "default_flags": Field(
-            config=Permissive(CLI_COMMON_FLAGS_CONFIG_SCHEMA),
-            is_required=False,
-            description="The default set of flags that will be passed in to every CLI invocation.",
-        ),
-        **CLI_COMMON_OPTIONS_CONFIG_SCHEMA,
-    },
+    config_schema=Permissive(
+        {
+            k.replace("-", "_"): v
+            for k, v in dict(
+                **CLI_COMMON_FLAGS_CONFIG_SCHEMA, **CLI_COMMON_OPTIONS_CONFIG_SCHEMA
+            ).items()
+        }
+    ),
     description="A resource that can run dbt CLI commands.",
 )
-def dbt_cli_resource(context):
+def dbt_cli_resource(context) -> DbtCliResource:
+    """This resource defines a dbt CLI interface.
+
+    To configure this resource, we recommend using the `configured
+    <https://docs.dagster.io/overview/configuration#configured>`_ method.
+
+    Examples:
+
+    .. code-block:: python
+
+        custom_dbt_cli_resource = dbt_rpc_resource.configured({"project-dir": "path/to/my/dbt_project"})
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt": custom_dbt_cli_resource})])
+        def dbt_cli_pipeline():
+            # Run solids with `required_resource_keys={"dbt", ...}`.
+
+    """
+    # set of options in the config schema that are not flags
+    non_flag_options = {k.replace("-", "_") for k in CLI_COMMON_OPTIONS_CONFIG_SCHEMA}
+    # all config options that are intended to be used as flags for dbt commands
+    default_flags = {k: v for k, v in context.resource_config.items() if k not in non_flag_options}
     return DbtCliResource(
         executable=context.resource_config["dbt_executable"],
-        default_flags=context.resource_config["default_flags"],
-        warn_error=context.resource_config["warn-error"],
+        default_flags=default_flags,
+        warn_error=context.resource_config["warn_error"],
         ignore_handled_error=context.resource_config["ignore_handled_error"],
-        target_path=context.resource_config["target-path"],
+        target_path=context.resource_config["target_path"],
         logger=context.log,
     )

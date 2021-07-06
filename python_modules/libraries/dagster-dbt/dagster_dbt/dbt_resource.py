@@ -19,14 +19,19 @@ class DbtResource:
         """
         self._logger = logger
 
-    def _format_params(self, flags: Dict[str, Any]) -> Dict[str, Any]:
+    def _format_params(
+        self, flags: Dict[str, Any], replace_underscores: bool = False
+    ) -> Dict[str, Any]:
         """
         Reformats arguments that are easier to express as a list into the format that dbt expects,
         and deletes and keys with no value.
         """
 
         # remove any keys with a value of None
-        flags = {k: v for k, v in flags.items() if v is not None}
+        if replace_underscores:
+            flags = {k.replace("_", "-"): v for k, v in flags.items() if v is not None}
+        else:
+            flags = {k: v for k, v in flags.items() if v is not None}
 
         for param in ["select", "exclude", "models"]:
             if param in flags:
@@ -49,6 +54,9 @@ class DbtResource:
         Args:
             models (List[str], optional): the models to include in compilation.
             exclude (List[str]), optional): the models to exclude from compilation.
+
+        Returns:
+            DbtOutput: object containing parsed output from dbt
         """
 
     @abstractmethod
@@ -59,6 +67,9 @@ class DbtResource:
         Args:
             models (List[str], optional): the models to include in the run.
             exclude (List[str]), optional): the models to exclude from the run.
+
+        Returns:
+            DbtOutput: object containing parsed output from dbt
         """
 
     @abstractmethod
@@ -69,6 +80,9 @@ class DbtResource:
         Args:
             select (List[str], optional): the snapshots to include in the run.
             exclude (List[str], optional): the snapshots to exclude from the run.
+
+        Returns:
+            DbtOutput: object containing parsed output from dbt
         """
 
     @abstractmethod
@@ -89,6 +103,8 @@ class DbtResource:
             data (bool, optional): If ``True`` (default), then run data tests.
             schema (bool, optional): If ``True`` (default), then run schema tests.
 
+        Returns:
+            DbtOutput: object containing parsed output from dbt
         """
 
     @abstractmethod
@@ -100,6 +116,8 @@ class DbtResource:
             show (bool, optional): If ``True``, then show a sample of the seeded data in the
                 response. Defaults to ``False``.
 
+        Returns:
+            DbtOutput: object containing parsed output from dbt
         """
 
     @abstractmethod
@@ -113,6 +131,8 @@ class DbtResource:
             models (List[str], optional): the models to include in docs generation.
             exclude (List[str], optional): the models to exclude from docs generation.
 
+        Returns:
+            DbtOutput: object containing parsed output from dbt
         """
 
     @abstractmethod
@@ -127,5 +147,5 @@ class DbtResource:
             args (Dict[str, Any], optional): the keyword arguments to be supplied to the macro.
 
         Returns:
-            Response: the HTTP response from the dbt RPC server.
+            DbtOutput: object containing parsed output from dbt
         """
