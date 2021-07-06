@@ -102,92 +102,54 @@ class InstanceRef(
         )
 
     @staticmethod
+    def config_defaults(base_dir):
+        return {
+            "local_artifact_storage": ConfigurableClassData(
+                "dagster.core.storage.root",
+                "LocalArtifactStorage",
+                yaml.dump({"base_dir": base_dir}, default_flow_style=False),
+            ),
+            "run_storage": ConfigurableClassData(
+                "dagster.core.storage.runs",
+                "SqliteRunStorage",
+                yaml.dump({"base_dir": _runs_directory(base_dir)}, default_flow_style=False),
+            ),
+            "event_log_storage": ConfigurableClassData(
+                "dagster.core.storage.event_log",
+                "SqliteEventLogStorage",
+                yaml.dump({"base_dir": _event_logs_directory(base_dir)}, default_flow_style=False),
+            ),
+            "compute_logs": ConfigurableClassData(
+                "dagster.core.storage.local_compute_log_manager",
+                "LocalComputeLogManager",
+                yaml.dump({"base_dir": compute_logs_directory(base_dir)}, default_flow_style=False),
+            ),
+            "schedule_storage": ConfigurableClassData(
+                "dagster.core.storage.schedules",
+                "SqliteScheduleStorage",
+                yaml.dump({"base_dir": _schedule_directory(base_dir)}, default_flow_style=False),
+            ),
+            "scheduler": ConfigurableClassData(
+                "dagster.core.scheduler",
+                "DagsterDaemonScheduler",
+                yaml.dump({}),
+            ),
+            "run_coordinator": ConfigurableClassData(
+                "dagster.core.run_coordinator", "DefaultRunCoordinator", yaml.dump({})
+            ),
+            "run_launcher": ConfigurableClassData(
+                "dagster",
+                "DefaultRunLauncher",
+                yaml.dump({}),
+            ),
+        }
+
+    @staticmethod
     def from_dir(base_dir, config_filename=DAGSTER_CONFIG_YAML_FILENAME, overrides=None):
         overrides = check.opt_dict_param(overrides, "overrides")
         config_value, custom_instance_class = dagster_instance_config(
             base_dir, config_filename=config_filename, overrides=overrides
         )
-
-        local_artifact_storage_data = configurable_class_data_or_default(
-            config_value,
-            "local_artifact_storage",
-            ConfigurableClassData(
-                "dagster.core.storage.root",
-                "LocalArtifactStorage",
-                yaml.dump({"base_dir": base_dir}, default_flow_style=False),
-            ),
-        )
-
-        run_storage_data = configurable_class_data_or_default(
-            config_value,
-            "run_storage",
-            ConfigurableClassData(
-                "dagster.core.storage.runs",
-                "SqliteRunStorage",
-                yaml.dump({"base_dir": _runs_directory(base_dir)}, default_flow_style=False),
-            ),
-        )
-
-        event_storage_data = configurable_class_data_or_default(
-            config_value,
-            "event_log_storage",
-            ConfigurableClassData(
-                "dagster.core.storage.event_log",
-                "SqliteEventLogStorage",
-                yaml.dump({"base_dir": _event_logs_directory(base_dir)}, default_flow_style=False),
-            ),
-        )
-
-        compute_logs_data = configurable_class_data_or_default(
-            config_value,
-            "compute_logs",
-            ConfigurableClassData(
-                "dagster.core.storage.local_compute_log_manager",
-                "LocalComputeLogManager",
-                yaml.dump({"base_dir": compute_logs_directory(base_dir)}, default_flow_style=False),
-            ),
-        )
-
-        schedule_storage_data = configurable_class_data_or_default(
-            config_value,
-            "schedule_storage",
-            ConfigurableClassData(
-                "dagster.core.storage.schedules",
-                "SqliteScheduleStorage",
-                yaml.dump({"base_dir": _schedule_directory(base_dir)}, default_flow_style=False),
-            ),
-        )
-
-        scheduler_data = configurable_class_data_or_default(
-            config_value,
-            "scheduler",
-            ConfigurableClassData(
-                "dagster.core.scheduler",
-                "DagsterDaemonScheduler",
-                yaml.dump({}),
-            ),
-        )
-
-        run_coordinator_data = configurable_class_data_or_default(
-            config_value,
-            "run_coordinator",
-            ConfigurableClassData(
-                "dagster.core.run_coordinator", "DefaultRunCoordinator", yaml.dump({})
-            ),
-        )
-
-        run_launcher_data = configurable_class_data_or_default(
-            config_value,
-            "run_launcher",
-            ConfigurableClassData(
-                "dagster",
-                "DefaultRunLauncher",
-                yaml.dump({}),
-            ),
-        )
-
-        settings_keys = {"telemetry"}
-        settings = {key: config_value.get(key) for key in settings_keys}
 
         if custom_instance_class:
             config_keys = set(custom_instance_class.config_schema().keys())
@@ -199,8 +161,51 @@ class InstanceRef(
                 config_value["custom_instance_class"]["class"],
                 yaml.dump(custom_instance_class_config, default_flow_style=False),
             )
+            defaults = custom_instance_class.config_defaults(base_dir)
         else:
             custom_instance_class_data = None
+            defaults = InstanceRef.config_defaults(base_dir)
+
+        local_artifact_storage_data = configurable_class_data_or_default(
+            config_value, "local_artifact_storage", defaults["local_artifact_storage"]
+        )
+
+        run_storage_data = configurable_class_data_or_default(
+            config_value, "run_storage", defaults["run_storage"]
+        )
+
+        event_storage_data = configurable_class_data_or_default(
+            config_value, "event_log_storage", defaults["event_log_storage"]
+        )
+
+        compute_logs_data = configurable_class_data_or_default(
+            config_value,
+            "compute_logs",
+            defaults["compute_logs"],
+        )
+
+        schedule_storage_data = configurable_class_data_or_default(
+            config_value, "schedule_storage", defaults["schedule_storage"]
+        )
+
+        scheduler_data = configurable_class_data_or_default(
+            config_value, "scheduler", defaults["scheduler"]
+        )
+
+        run_coordinator_data = configurable_class_data_or_default(
+            config_value,
+            "run_coordinator",
+            defaults["run_coordinator"],
+        )
+
+        run_launcher_data = configurable_class_data_or_default(
+            config_value,
+            "run_launcher",
+            defaults["run_launcher"],
+        )
+
+        settings_keys = {"telemetry"}
+        settings = {key: config_value.get(key) for key in settings_keys}
 
         return InstanceRef(
             local_artifact_storage_data=local_artifact_storage_data,
