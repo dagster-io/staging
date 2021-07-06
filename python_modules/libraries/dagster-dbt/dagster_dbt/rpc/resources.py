@@ -16,7 +16,7 @@ from .utils import is_fatal_code
 class DbtRpcClient(DbtResource):
     """A client for a dbt RPC server.
 
-    If you are need a dbt RPC server as a Dagster resource, we recommend that you use
+    To use this as a dagster resource, we recommend using
     :func:`dbt_rpc_resource <dagster_dbt.dbt_rpc_resource>`.
     """
 
