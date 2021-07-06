@@ -8,10 +8,10 @@ description: A pipeline is a set of solids with explicit data dependencies on ea
 A pipeline is a set of solids with explicit data dependencies on each other, creating a directed acyclic graph, or DAG.
 
 <Image
-alt="Pipeline Diagram"
-src="/images/pipelines.png"
-width={3200}
-height={1040}
+  alt="Pipeline Diagram"
+  src="/images/pipelines.png"
+  width={3200}
+  height={1040}
 />
 
 ## Relevant APIs
@@ -130,10 +130,10 @@ def my_presets_pipeline():
 In Dagit, You can choose and load a preset in the Playground:
 
 <Image
-alt="Pipeline Presets"
-src="/images/concepts/pipelines/presets.png"
-width={3808}
-height={2414}
+  alt="Pipeline Presets"
+  src="/images/concepts/pipelines/presets.png"
+  width={3808}
+  height={2414}
 />
 
 To run a pipeline in a script or in a test, You can specify a preset name via `preset` argument to the Python API <PyObject object="execute_pipeline" />:
@@ -170,10 +170,10 @@ There are many DAG structures can be represented using pipelines. This section c
 The simplest pipeline structure is the linear pipeline. We return one output from the root solid, and pass along data through single inputs and outputs.
 
 <Image
-alt="Linear Pipeline"
-src="/images/concepts/pipelines/linear.png"
-width={1000}
-height={250}
+  alt="Linear Pipeline"
+  src="/images/concepts/pipelines/linear.png"
+  width={1000}
+  height={250}
 />
 
 ```python file=/concepts/solids_pipelines/linear_pipeline.py startafter=start_marker endbefore=end_marker
@@ -198,10 +198,10 @@ def linear_pipeline():
 ### Multiple Inputs
 
 <Image
-alt="Multiple Inputs"
-src="/images/concepts/pipelines/multi-inputs.png"
-width={1000}
-height={250}
+  alt="Multiple Inputs"
+  src="/images/concepts/pipelines/multi-inputs.png"
+  width={1000}
+  height={250}
 />
 
 A single output can be passed to multiple inputs on downstream solids. In this example, the output from the first solid is passed to two different solids. The outputs of those solids are combined and passed to the final solid.
@@ -236,10 +236,10 @@ def inputs_and_outputs_pipeline():
 ### Conditional Branching
 
 <Image
-alt="Conditional Branch"
-src="/images/concepts/pipelines/conditional.png"
-width={1000}
-height={250}
+  alt="Conditional Branch"
+  src="/images/concepts/pipelines/conditional.png"
+  width={1000}
+  height={250}
 />
 
 A solid only starts to execute once all of its inputs have been resolved. We can use this behavior to model conditional execution of solids.
@@ -286,10 +286,10 @@ def branching_pipeline():
 ### Fixed Fan-in Pipeline
 
 <Image
-alt="Fixed Fan-in"
-src="/images/concepts/pipelines/fixed-fan-in.png"
-width={1000}
-height={250}
+  alt="Fixed Fan-in"
+  src="/images/concepts/pipelines/fixed-fan-in.png"
+  width={1000}
+  height={250}
 />
 
 If you have a fixed set of solids that all return the same output type, you can collect all the outputs into a list and pass them into a single downstream solid.
@@ -322,9 +322,9 @@ def fan_in_pipeline():
 
 In this example, we have 10 solids that all output the number `1`. The `sum_fan_in` solid takes all of these outputs as a list and sums them.
 
-### Dynamic Mapping & Collect <Experimental/>
+### Dynamic Mapping & Collect
 
-In most cases, the structure of a pipeline is pre-determined before execution. Dagster now has experimental support for creating pipelines where the final structure is not determined until run-time. This is useful for pipeline structures where you want to execute a separate instance of a solid for each entry in a certain output.
+In most cases, the structure of a pipeline is pre-determined before execution. Dagster also has support for creating pipelines where the final structure is not determined until run-time. This is useful for pipeline structures where you want to execute a separate instance of a solid for each entry in a certain output.
 
 In this example we have a solid `files_in_directory` that defines a <PyObject object="DynamicOutputDefinition" module="dagster.experimental"/>. We `map` over the dynamic output which will cause the downstream dependencies to be cloned for each <PyObject object="DynamicOutput"  module="dagster.experimental"/> that is yielded. The downstream copies can be identified by the `mapping_key` supplied to <PyObject object="DynamicOutput"  module="dagster.experimental"/>. Once that's all complete, we `collect` the over results of `process_file` and pass that in to `summarize_directory`.
 
