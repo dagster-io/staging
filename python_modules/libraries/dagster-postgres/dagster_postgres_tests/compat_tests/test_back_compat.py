@@ -221,6 +221,30 @@ def test_0_11_0_add_asset_details(hostname, conn_string):
             storage.all_asset_keys()
 
 
+def test_0_12_0_add_asset_details(hostname, conn_string):
+    _reconstruct_from_file(
+        hostname,
+        conn_string,
+        file_relative_path(__file__, "snapshot_0_12_0_pre_asset_index_cols/postgres/pg_dump.txt"),
+    )
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        with open(file_relative_path(__file__, "dagster.yaml"), "r") as template_fd:
+            with open(os.path.join(tempdir, "dagster.yaml"), "w") as target_fd:
+                template = template_fd.read().format(hostname=hostname)
+                target_fd.write(template)
+
+        with DagsterInstance.from_config(tempdir) as instance:
+            storage = instance._event_storage
+            old_tags = storage.get_asset_tags(AssetKey(["a"]))
+            old_keys = storage.all_asset_keys()
+            instance.upgrade()
+            new_tags = storage.get_asset_tags(AssetKey(["a"]))
+            new_keys = storage.all_asset_keys()
+            assert old_tags == new_tags
+            assert old_keys == new_keys
+
+
 def _reconstruct_from_file(hostname, conn_string, path, username="test", password="test"):
     engine = create_engine(conn_string)
     engine.execute("drop schema public cascade;")

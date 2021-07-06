@@ -1,5 +1,5 @@
 import sqlalchemy as db
-from dagster import check
+from dagster import check, seven
 from dagster.core.events.log import EventLogEntry
 from dagster.core.storage.event_log import (
     AssetKeyTable,
@@ -10,6 +10,7 @@ from dagster.core.storage.event_log import (
 from dagster.core.storage.sql import stamp_alembic_rev  # pylint: disable=unused-import
 from dagster.core.storage.sql import create_engine, run_alembic_upgrade
 from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
+from dagster.utils import utc_datetime_from_timestamp
 from dagster.utils.backcompat import experimental_class_warning
 
 from ..utils import (
@@ -66,7 +67,8 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         if "event_logs" not in table_names:
             retry_mysql_creation_fn(self._init_db)
             # mark all secondary indexes to be used
-            self.reindex()
+            self.reindex_events()
+            self.reindex_assets()
 
         super().__init__()
 
@@ -124,11 +126,15 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
                 .values(
                     asset_key=event.dagster_event.asset_key.to_string(),
                     last_materialization=serialize_dagster_namedtuple(materialization),
+                    last_materialization_timestamp=utc_datetime_from_timestamp(event.timestamp),
                     last_run_id=event.run_id,
+                    tags=seven.json.dumps(materialization.tags) if materialization.tags else None,
                 )
                 .on_duplicate_key_update(
                     last_materialization=serialize_dagster_namedtuple(materialization),
+                    last_materialization_timestamp=utc_datetime_from_timestamp(event.timestamp),
                     last_run_id=event.run_id,
+                    tags=seven.json.dumps(materialization.tags) if materialization.tags else None,
                 )
             )
 
