@@ -15,12 +15,12 @@ import {SidebarPipelineInfo, SIDEBAR_PIPELINE_INFO_FRAGMENT} from './SidebarPipe
 import {SidebarSolidContainer} from './SidebarSolidContainer';
 import {SidebarTabbedContainerPipelineFragment} from './types/SidebarTabbedContainerPipelineFragment';
 
-type TabKey = 'types' | 'graph' | 'job';
+type TabKey = 'types' | 'info';
 
 interface TabDefinition {
   name: string;
   icon: IconName;
-  key: string;
+  key: TabKey;
   content: () => React.ReactNode;
 }
 
@@ -53,14 +53,13 @@ export const SidebarTabbedContainer: React.FC<ISidebarTabbedContainerProps> = (p
 
   const jobContext = React.useContext(PipelineExplorerJobContext);
 
-  const activeTab =
-    tab || (solidHandleID || parentSolidHandleID ? 'graph' : jobContext ? 'job' : 'graph');
+  const activeTab = tab || 'info';
 
   const TabDefinitions: Array<TabDefinition> = [
     {
-      name: 'Graph',
+      name: 'Info',
       icon: 'data-lineage',
-      key: 'graph',
+      key: 'info',
       content: () =>
         solidHandleID ? (
           <SidebarSolidContainer
@@ -84,12 +83,10 @@ export const SidebarTabbedContainer: React.FC<ISidebarTabbedContainerProps> = (p
             onClickSolid={onClickSolid}
             repoAddress={repoAddress}
           />
+        ) : jobContext ? (
+          jobContext.sidebarTab
         ) : (
-          <SidebarPipelineInfo
-            pipeline={pipeline}
-            mode={explorerPath.pipelineMode}
-            key={pipeline.name}
-          />
+          <SidebarPipelineInfo pipeline={pipeline} key={pipeline.name} />
         ),
     },
     {
@@ -109,14 +106,6 @@ export const SidebarTabbedContainer: React.FC<ISidebarTabbedContainerProps> = (p
     },
   ];
 
-  if (jobContext) {
-    TabDefinitions.unshift({
-      name: 'Job',
-      icon: 'send-to-graph',
-      key: 'job',
-      content: () => jobContext.sidebarTab,
-    });
-  }
   return (
     <>
       <TabContainer>

@@ -26,6 +26,12 @@ describe('PipelineRoot', () => {
       id: () => PIPELINE_NAME,
       modes: () => new MockList(1),
     }),
+    PipelineSnapshot: () => ({
+      runs: () => new MockList(0),
+      schedules: () => new MockList(0),
+      sensors: () => new MockList(0),
+      solidHandle: null,
+    }),
     RepositoryLocation: () => ({
       id: REPO_LOCATION,
       name: REPO_LOCATION,
@@ -98,9 +104,9 @@ describe('PipelineRoot', () => {
 
       await waitFor(() => {
         const selected = screen.getByRole('tab', {selected: true});
-
+        console.log(selected.textContent);
         // Redirect to Definition, which has been highlighted in the tabs.
-        expect(selected.textContent).toMatch(/definition/i);
+        expect(selected.textContent).toMatch(/overview/i);
 
         // Render a disabled "Playground" tab.
         expect(screen.queryByRole('tab', {name: /playground/i})).toHaveAttribute(
