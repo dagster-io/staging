@@ -1,6 +1,6 @@
 import graphene
 from dagster import check
-from dagster.core.definitions import SolidHandle
+from dagster.core.definitions import NodeHandle
 from dagster.core.host_representation import RepresentedPipeline
 from dagster.core.snap import CompositeSolidDefSnap, DependencyStructureIndex, SolidDefSnap
 
@@ -296,13 +296,13 @@ def build_solids(represented_pipeline, current_dep_index):
 
 def build_solid_handles(represented_pipeline, current_dep_index, parent=None):
     check.inst_param(represented_pipeline, "represented_pipeline", RepresentedPipeline)
-    check.opt_inst_param(parent, "parent", GrapheneSolidHandle)
+    check.opt_inst_param(parent, "parent", GrapheneNodeHandle)
     all_handle = []
     for solid_invocation in current_dep_index.solid_invocations:
         solid_name, solid_def_name = solid_invocation.solid_name, solid_invocation.solid_def_name
-        handle = GrapheneSolidHandle(
+        handle = GrapheneNodeHandle(
             solid=GrapheneSolid(represented_pipeline, solid_name, current_dep_index),
-            handle=SolidHandle(solid_name, parent.handleID if parent else None),
+            handle=NodeHandle(solid_name, parent.handleID if parent else None),
             parent=parent if parent else None,
         )
         solid_def_snap = represented_pipeline.get_solid_def_snap(solid_def_name)
@@ -508,20 +508,20 @@ class GrapheneCompositeSolidDefinition(graphene.ObjectType, ISolidDefinitionMixi
         ]
 
 
-class GrapheneSolidHandle(graphene.ObjectType):
+class GrapheneNodeHandle(graphene.ObjectType):
     handleID = graphene.NonNull(graphene.String)
     solid = graphene.NonNull(GrapheneSolid)
-    parent = graphene.Field(lambda: GrapheneSolidHandle)
+    parent = graphene.Field(lambda: GrapheneNodeHandle)
 
     class Meta:
-        name = "SolidHandle"
+        name = "NodeHandle"
 
     def __init__(self, handle, solid, parent):
         super().__init__()
         # FIXME this really seems wrong
-        self.handleID = check.inst_param(handle, "handle", SolidHandle)
+        self.handleID = check.inst_param(handle, "handle", NodeHandle)
         self.solid = check.inst_param(solid, "solid", GrapheneSolid)
-        self.parent = check.opt_inst_param(parent, "parent", GrapheneSolidHandle)
+        self.parent = check.opt_inst_param(parent, "parent", GrapheneNodeHandle)
 
 
 def build_solid_definition(represented_pipeline, solid_def_name):
@@ -552,5 +552,5 @@ types = [
     GrapheneSolid,
     GrapheneSolidContainer,
     GrapheneSolidDefinition,
-    GrapheneSolidHandle,
+    GrapheneNodeHandle,
 ]

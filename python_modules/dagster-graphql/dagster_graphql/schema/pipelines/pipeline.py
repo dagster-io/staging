@@ -37,9 +37,9 @@ from ..repository_origin import GrapheneRepositoryOrigin
 from ..schedules.schedules import GrapheneSchedule
 from ..sensors import GrapheneSensor
 from ..solids import (
+    GrapheneNodeHandle,
     GrapheneSolid,
     GrapheneSolidContainer,
-    GrapheneSolidHandle,
     build_solid_handles,
     build_solids,
 )
@@ -301,10 +301,10 @@ class GrapheneIPipelineSnapshotMixin:
     solids = non_null_list(GrapheneSolid)
     modes = non_null_list(GrapheneMode)
     solid_handles = graphene.Field(
-        non_null_list(GrapheneSolidHandle), parentHandleID=graphene.String()
+        non_null_list(GrapheneNodeHandle), parentHandleID=graphene.String()
     )
     solid_handle = graphene.Field(
-        GrapheneSolidHandle,
+        GrapheneNodeHandle,
         handleID=graphene.Argument(graphene.NonNull(graphene.String)),
     )
     tags = non_null_list(GraphenePipelineTag)
@@ -457,10 +457,10 @@ class GrapheneIPipelineSnapshot(graphene.Interface):
     solids = non_null_list(GrapheneSolid)
     modes = non_null_list(GrapheneMode)
     solid_handles = graphene.Field(
-        non_null_list(GrapheneSolidHandle), parentHandleID=graphene.String()
+        non_null_list(GrapheneNodeHandle), parentHandleID=graphene.String()
     )
     solid_handle = graphene.Field(
-        GrapheneSolidHandle,
+        GrapheneNodeHandle,
         handleID=graphene.Argument(graphene.NonNull(graphene.String)),
     )
     tags = non_null_list(GraphenePipelineTag)

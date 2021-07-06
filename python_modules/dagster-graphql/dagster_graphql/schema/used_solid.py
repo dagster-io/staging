@@ -1,7 +1,7 @@
 import graphene
 
 from .pipelines.pipeline import GraphenePipeline
-from .solids import GrapheneISolidDefinition, GrapheneSolidHandle
+from .solids import GrapheneISolidDefinition, GrapheneNodeHandle
 from .util import non_null_list
 
 
@@ -11,7 +11,7 @@ class GrapheneSolidInvocationSite(graphene.ObjectType):
         name = "SolidInvocationSite"
 
     pipeline = graphene.NonNull(GraphenePipeline)
-    solidHandle = graphene.NonNull(GrapheneSolidHandle)
+    solidHandle = graphene.NonNull(GrapheneNodeHandle)
 
 
 class GrapheneUsedSolid(graphene.ObjectType):
