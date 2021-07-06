@@ -112,7 +112,7 @@ message ExternalRepositoryReply {
 
 message StreamingExternalRepositoryEvent {
   int32 sequence_number = 1;
-  string serialized_external_repository_chunk = 2;
+  bytes serialized_external_repository_chunk = 2;
 }
 
 message ExternalScheduleExecutionRequest {

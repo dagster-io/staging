@@ -6,6 +6,7 @@ import tempfile
 import threading
 import time
 import uuid
+import zlib
 from collections import namedtuple
 from concurrent.futures import ThreadPoolExecutor
 from threading import Event as ThreadingEventType
@@ -475,7 +476,10 @@ class DagsterApiServer(DagsterApiServicer):
         )
 
     def StreamingExternalRepository(self, request, _context):
-        serialized_external_repository_data = self._get_serialized_external_repository_data(request)
+
+        serialized_external_repository_data = zlib.compress(
+            self._get_serialized_external_repository_data(request).encode("utf-8")
+        )
 
         num_chunks = int(
             math.ceil(float(len(serialized_external_repository_data)) / STREAMING_CHUNK_SIZE)

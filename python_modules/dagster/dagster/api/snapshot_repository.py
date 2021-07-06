@@ -1,3 +1,5 @@
+import zlib
+
 from dagster import check
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
 
@@ -21,14 +23,16 @@ def sync_get_streaming_external_repositories_data_grpc(api_client, repository_lo
             )
         )
 
-        external_repository_data = deserialize_json_to_dagster_namedtuple(
-            "".join(
+        serialized_repo_data = zlib.decompress(
+            b"".join(
                 [
                     chunk["serialized_external_repository_chunk"]
                     for chunk in external_repository_chunks
                 ]
             )
-        )
+        ).decode("utf-8")
+
+        external_repository_data = deserialize_json_to_dagster_namedtuple(serialized_repo_data)
 
         repo_datas[repository_name] = external_repository_data
     return repo_datas
