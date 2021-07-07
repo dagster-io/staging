@@ -145,19 +145,19 @@ class K8sStepHandler(StepHandler):
             user_defined_k8s_config=user_defined_k8s_config,
         )
 
-        events.append(
-            DagsterEvent(
-                event_type_value=DagsterEventType.ENGINE_EVENT.value,
-                pipeline_name=step_handler_context.execute_step_args.pipeline_origin.pipeline_name,
-                message=f"Executing step {step_key} in Kubernetes job {job_name}",
-                event_specific_data=EngineEventData(
-                    [
-                        EventMetadataEntry.text(step_key, "Step key"),
-                        EventMetadataEntry.text(job_name, "Kubernetes Job name"),
-                    ],
-                ),
-            )
+        e = DagsterEvent(
+            event_type_value=DagsterEventType.ENGINE_EVENT.value,
+            pipeline_name=step_handler_context.execute_step_args.pipeline_origin.pipeline_name,
+            message=f"Executing step {step_key} in Kubernetes job {job_name}",
+            event_specific_data=EngineEventData(
+                [
+                    EventMetadataEntry.text(step_key, "Step key"),
+                    EventMetadataEntry.text(job_name, "Kubernetes Job name"),
+                ],
+            ),
         )
+        step_handler_context.instance.handle_new_event(e)
+        events.append(e)
         kubernetes.config.load_incluster_config()
         kubernetes.client.BatchV1Api().create_namespaced_job(
             body=job, namespace=self._job_namespace
@@ -189,7 +189,7 @@ class K8sStepHandler(StepHandler):
                     user_failure_data=None,
                 ),
             )
-
+            step_handler_context.instance.handle_new_event(step_failure_event)
             return [step_failure_event]
         return []
 
