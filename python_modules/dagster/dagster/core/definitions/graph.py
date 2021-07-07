@@ -1,5 +1,17 @@
 from collections import OrderedDict
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Iterator, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+)
 
 from dagster import check
 from dagster.config import Field, Shape
@@ -26,6 +38,7 @@ from .dependency import (
     SolidInputHandle,
     SolidInvocation,
 )
+from .hook import HookDefinition
 from .i_solid_definition import NodeDefinition
 from .input import FanInInputPointer, InputDefinition, InputMapping, InputPointer
 from .logger import LoggerDefinition
@@ -374,6 +387,7 @@ class GraphDefinition(NodeDefinition):
         tags: Optional[Dict[str, str]] = None,
         logger_defs: Optional[Dict[str, LoggerDefinition]] = None,
         executor_def: Optional["ExecutorDefinition"] = None,
+        hooks: Optional[AbstractSet[HookDefinition]] = None,
     ):
         """
         For experimenting with "job" flows
@@ -413,6 +427,7 @@ class GraphDefinition(NodeDefinition):
                 {"io_manager": default_job_io_manager}, resource_defs or {}
             )
 
+        hooks = check.opt_set_param(hooks, "hooks", of_type=HookDefinition)
         presets = []
         config_mapping = None
         partitioned_config = None
@@ -450,7 +465,7 @@ class GraphDefinition(NodeDefinition):
             ],
             preset_defs=presets,
             tags=tags,
-        )
+        ).with_hooks(hooks)
 
     def _get_config_schema(
         self,
