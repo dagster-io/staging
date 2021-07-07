@@ -5,15 +5,13 @@ from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from dagster.utils import utc_datetime_from_timestamp
 from tqdm import tqdm
 
-SECONDARY_INDEX_ASSET_KEY = "asset_key_table"
-SECONDARY_INDEX_ASSET_KEY_INDEX_COLS = "asset_key_index_columns"
+SECONDARY_INDEX_ASSET_KEY = "asset_key_table"  # builds the asset key table from the event log
+ASSET_KEY_INDEX_COLS = "asset_key_index_columns"  # extracts index columns from the asset_keys table
 
-REINDEX_DATA_MIGRATIONS = {
+EVENT_LOG_DATA_MIGRATIONS = {
     SECONDARY_INDEX_ASSET_KEY: lambda: migrate_asset_key_data,
 }
-SCHEMA_DATA_MIGRATIONS = {
-    SECONDARY_INDEX_ASSET_KEY_INDEX_COLS: lambda: migrate_asset_keys_index_columns
-}
+ASSET_DATA_MIGRATIONS = {ASSET_KEY_INDEX_COLS: lambda: migrate_asset_keys_index_columns}
 
 
 def migrate_event_log_data(instance=None):

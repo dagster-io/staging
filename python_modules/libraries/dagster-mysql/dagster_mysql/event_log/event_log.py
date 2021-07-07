@@ -66,7 +66,8 @@ class MySQLEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         if "event_logs" not in table_names:
             retry_mysql_creation_fn(self._init_db)
             # mark all secondary indexes to be used
-            self.reindex()
+            self.reindex_events()
+            self.reindex_assets()
 
         super().__init__()
 

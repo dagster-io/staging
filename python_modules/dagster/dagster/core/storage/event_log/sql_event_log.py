@@ -25,7 +25,7 @@ from .base import (
     RunShardedEventsCursor,
     extract_asset_events_cursor,
 )
-from .migration import REINDEX_DATA_MIGRATIONS, SCHEMA_DATA_MIGRATIONS
+from .migration import ASSET_DATA_MIGRATIONS, EVENT_LOG_DATA_MIGRATIONS
 from .schema import AssetKeyTable, SecondaryIndexMigrationTable, SqlEventLogStorageTable
 
 
@@ -404,14 +404,15 @@ class SqlEventLogStorage(EventLogStorage):
         if print_fn:
             print_fn("Finished reindexing: {}".format(migration_name))
 
-    def reindex(self, print_fn=None, force=False, for_schema=False):
-        """Call this method to run any data migrations, reindexing to build summary tables."""
-        if for_schema:
-            for migration_name, migration_fn in SCHEMA_DATA_MIGRATIONS.items():
-                self._apply_migration(migration_name, migration_fn, print_fn, force)
-        else:
-            for migration_name, migration_fn in REINDEX_DATA_MIGRATIONS.items():
-                self._apply_migration(migration_name, migration_fn, print_fn, force)
+    def reindex_events(self, print_fn=None, force=False):
+        """Call this method to run any data migrations across the event_log table"""
+        for migration_name, migration_fn in EVENT_LOG_DATA_MIGRATIONS.items():
+            self._apply_migration(migration_name, migration_fn, print_fn, force)
+
+    def reindex_assets(self, print_fn=None, force=False):
+        """Call this method to run any data migrations across the event_log table"""
+        for migration_name, migration_fn in ASSET_DATA_MIGRATIONS.items():
+            self._apply_migration(migration_name, migration_fn, print_fn, force)
 
     def wipe(self):
         """Clears the event log storage."""

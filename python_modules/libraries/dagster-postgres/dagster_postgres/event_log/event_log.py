@@ -77,7 +77,8 @@ class PostgresEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         # revision because alembic config may be shared with other storage classes)
         if self.should_autocreate_tables and "event_logs" not in table_names:
             retry_pg_creation_fn(self._init_db)
-            self.reindex()
+            self.reindex_events()
+            self.reindex_assets()
 
         super().__init__()
 
