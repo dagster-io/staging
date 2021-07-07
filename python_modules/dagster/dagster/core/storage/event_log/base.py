@@ -164,7 +164,9 @@ class EventLogStorage(ABC, MayHaveInstanceWeakref):
         """
 
     @abstractmethod
-    def reindex(self, print_fn: Callable = lambda _: None, force: bool = False):
+    def reindex(
+        self, print_fn: Callable = lambda _: None, force: bool = False, for_schema: bool = False
+    ):
         """Call this method to run any data migrations, reindexing to build summary tables."""
 
     @abstractmethod

@@ -545,6 +545,7 @@ class DagsterInstance:
             if print_fn:
                 print_fn("Updating event storage...")
             self._event_storage.upgrade()
+            self._event_storage.reindex(print_fn=print_fn, for_schema=True)
 
             if print_fn:
                 print_fn("Updating schedule storage...")

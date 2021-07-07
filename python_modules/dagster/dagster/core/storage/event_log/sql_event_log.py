@@ -25,7 +25,7 @@ from .base import (
     RunShardedEventsCursor,
     extract_asset_events_cursor,
 )
-from .migration import REINDEX_DATA_MIGRATIONS
+from .migration import REINDEX_DATA_MIGRATIONS, SCHEMA_DATA_MIGRATIONS
 from .schema import AssetKeyTable, SecondaryIndexMigrationTable, SqlEventLogStorageTable
 
 
@@ -391,22 +391,27 @@ class SqlEventLogStorage(EventLogStorage):
             for step_key, value in by_step_key.items()
         ]
 
-    def reindex(self, print_fn=None, force=False):
+    def _apply_migration(self, migration_name, migration_fn, print_fn, force):
+        if self.has_secondary_index(migration_name):
+            if not force:
+                if print_fn:
+                    print_fn("Skipping already reindexed summary: {}".format(migration_name))
+                continue
+        if print_fn:
+            print_fn("Starting reindex: {}".format(migration_name))
+        migration_fn()(self, print_fn)
+        self.enable_secondary_index(migration_name)
+        if print_fn:
+            print_fn("Finished reindexing: {}".format(migration_name))
+
+    def reindex(self, print_fn=None, force=False, for_schema=False):
         """Call this method to run any data migrations, reindexing to build summary tables."""
-        # Should be overridden by SqliteEventLogStorage and other storages that shard based on
-        # run_id
-        for migration_name, migration_fn in REINDEX_DATA_MIGRATIONS.items():
-            if self.has_secondary_index(migration_name):
-                if not force:
-                    if print_fn:
-                        print_fn("Skipping already reindexed summary: {}".format(migration_name))
-                    continue
-            if print_fn:
-                print_fn("Starting reindex: {}".format(migration_name))
-            migration_fn()(self, print_fn)
-            self.enable_secondary_index(migration_name)
-            if print_fn:
-                print_fn("Finished reindexing: {}".format(migration_name))
+        if for_schema:
+            for migration_name, migration_fn in SCHEMA_DATA_MIGRATIONS.items():
+                self._apply_migration(migration_name, migration_fn, print_fn, force)
+        else:
+            for migration_name, migration_fn in REINDEX_DATA_MIGRATIONS.items():
+                self._apply_migration(migration_name, migration_fn, print_fn, force)
 
     def wipe(self):
         """Clears the event log storage."""

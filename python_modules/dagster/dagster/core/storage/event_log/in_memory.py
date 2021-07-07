@@ -87,7 +87,7 @@ class InMemoryEventLogStorage(EventLogStorage, ConfigurableClass):
     def upgrade(self):
         pass
 
-    def reindex(self, print_fn=lambda _: None, force=False):
+    def reindex(self, print_fn=None, force=False, for_schema=False):
         pass
 
     def wipe(self):
