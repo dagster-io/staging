@@ -33,6 +33,7 @@ from dagster.grpc.server_watcher import create_grpc_watch_thread
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
 
 from .load_target import WorkspaceLoadTarget
+from .permissions import get_user_permissions
 from .workspace import IWorkspace, WorkspaceLocationEntry, WorkspaceLocationLoadStatus
 
 if TYPE_CHECKING:
@@ -74,8 +75,7 @@ class BaseWorkspaceRequestContext(IWorkspace):
     def version(self) -> Optional[str]:
         pass
 
-    @abstractproperty
-    def read_only(self) -> bool:
+    def has_permission(self, permission: str) -> bool:
         pass
 
     def get_location(self, origin):
@@ -263,6 +263,9 @@ class WorkspaceRequestContext(BaseWorkspaceRequestContext):
     def read_only(self) -> bool:
         return self.process_context.read_only
 
+    def has_permission(self, permission: str) -> bool:
+        return self.process_context.has_permission(permission)
+
 
 class IWorkspaceProcessContext(ABC):
     """
@@ -342,6 +345,7 @@ class WorkspaceProcessContext(IWorkspaceProcessContext):
         )
 
         self._read_only = read_only
+
         self._version = version
 
         # Guards changes to _location_dict, _location_error_dict, and _location_origin_dict
@@ -425,6 +429,10 @@ class WorkspaceProcessContext(IWorkspaceProcessContext):
     @property
     def read_only(self):
         return self._read_only
+
+    def has_permission(self, permission: str) -> bool:
+        permissions = get_user_permissions(self)
+        return permissions.get(permission, False)
 
     @property
     def version(self):
