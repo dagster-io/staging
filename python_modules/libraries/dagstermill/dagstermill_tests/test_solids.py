@@ -223,6 +223,14 @@ def test_add_pipeline():
         assert result.success
         assert result.result_for_solid("add_two_numbers").output_value() == 3
 
+@pytest.mark.notebook_test
+def test_double_add_pipeline():
+    with exec_for_test(
+        "double_add_pipeline", {"loggers": {"console": {"config": {"log_level": "ERROR"}}}}
+    ) as result:
+        assert result.success
+        assert result.result_for_solid("add_two_numbers_1").output_value() == 3
+        assert result.result_for_solid("add_two_numbers_2").output_value() == 7
 
 @pytest.mark.notebook_test
 def test_notebook_dag():
