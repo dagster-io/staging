@@ -7,21 +7,6 @@ from dagster.grpc.types import ExecuteStepArgs
 from dagster.serdes.serdes import whitelist_for_serdes
 
 
-@whitelist_for_serdes
-class PersistedStepHandlerContext(
-    NamedTuple(
-        "_PersistedStepHandlerContext",
-        [
-            ("execute_step_args", ExecuteStepArgs),
-        ],
-    )
-):
-    def __new__(cls, execute_step_args: ExecuteStepArgs):
-        return super(PersistedStepHandlerContext, cls).__new__(
-            cls, check.inst_param(execute_step_args, "execute_step_args", ExecuteStepArgs)
-        )
-
-
 class StepHandlerContext:
     def __init__(
         self,
@@ -49,13 +34,6 @@ class StepHandlerContext:
     @property
     def instance(self) -> DagsterInstance:
         return self._instance
-
-    def serialize(self) -> PersistedStepHandlerContext:
-        return PersistedStepHandlerContext(execute_step_args=self._execute_step_args)
-
-    @classmethod
-    def deserialize(cls, instance: DagsterInstance, ctx_tuple: PersistedStepHandlerContext):
-        return cls(instance=instance, execute_step_args=ctx_tuple.execute_step_args)
 
 
 class StepHandler(abc.ABC):  # pylint: disable=no-init
