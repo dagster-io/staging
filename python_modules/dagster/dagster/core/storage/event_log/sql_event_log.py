@@ -882,6 +882,6 @@ class SqlEventLogStorage(EventLogStorage):
                     asset_details=serialize_dagster_namedtuple(
                         AssetDetails(last_wipe_timestamp=wipe_timestamp)
                     ),
-                    wipe_timestamp=wipe_timestamp,
+                    wipe_timestamp=utc_datetime_from_timestamp(wipe_timestamp),
                 )
             )
