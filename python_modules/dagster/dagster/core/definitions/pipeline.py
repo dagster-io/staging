@@ -502,6 +502,7 @@ class PipelineDefinition:
         hook_defs = check.set_param(hook_defs, "hook_defs", of_type=HookDefinition)
 
         pipeline_def = PipelineDefinition(
+            name=self.name,
             graph_def=self._graph_def,
             mode_defs=self.mode_definitions,
             preset_defs=self.preset_defs,
