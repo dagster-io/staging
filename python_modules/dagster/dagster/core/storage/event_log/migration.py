@@ -12,7 +12,7 @@ REINDEX_DATA_MIGRATIONS = {
     SECONDARY_INDEX_ASSET_KEY: lambda: migrate_asset_key_data,
 }
 SCHEMA_DATA_MIGRATIONS = {
-    SECONDARY_INDEX_ASSET_KEY_INDEX_COLS = lambda: migrate_asset_keys_index_columns
+    SECONDARY_INDEX_ASSET_KEY_INDEX_COLS: lambda: migrate_asset_keys_index_columns
 }
 
 
@@ -71,6 +71,7 @@ def migrate_asset_key_data(event_log_storage, print_fn=None):
                 # asset key already present
                 pass
 
+
 def migrate_asset_keys_index_columns(event_log_storage, print_fn=None):
     from dagster.core.storage.event_log.sql_event_log import SqlEventLogStorage
     from dagster.serdes import serialize_dagster_namedtuple
@@ -79,18 +80,18 @@ def migrate_asset_keys_index_columns(event_log_storage, print_fn=None):
     if not isinstance(event_log_storage, SqlEventLogStorage):
         return
 
-    row_query = db.select(
-        [
-            AssetKeyTable.c.asset_key,
-            AssetKeyTable.c.asset_details,
-            AssetKeyTable.c.last_materialization,
-        ]
-    )
-
     with event_log_storage.index_connection() as conn:
         if print_fn:
             print_fn("Querying asset keys.")
-        results = conn.execute(row_query).fetchall()
+        results = conn.execute(
+            db.select(
+                [
+                    AssetKeyTable.c.asset_key,
+                    AssetKeyTable.c.asset_details,
+                    AssetKeyTable.c.last_materialization,
+                ]
+            )
+        ).fetchall()
 
         if print_fn:
             print_fn(f"Found {len(results)} assets to reindex.")
@@ -129,16 +130,21 @@ def migrate_asset_keys_index_columns(event_log_storage, print_fn=None):
                 )
                 row = conn.execute(materialization_query).fetchone()
                 if row:
-                    event = row[0]
+                    event = deserialize_json_to_dagster_namedtuple(row[0])
 
             tags = event.dagster_event.step_materialization_data.materialization.tags
             conn.execute(
-                AssetKeyTable.update().values(  # pylint: disable=no-value-for-parameter
-                    asset_key=event.dagster_event.asset_key.to_string(),
+                AssetKeyTable.update()
+                .values(  # pylint: disable=no-value-for-parameter
                     last_materialization=serialize_dagster_namedtuple(event),
                     last_materialization_timestamp=utc_datetime_from_timestamp(event.timestamp),
-                    wipe_timestamp=utc_datetime_from_timestamp(wipe_timestamp),
+                    wipe_timestamp=utc_datetime_from_timestamp(wipe_timestamp)
+                    if wipe_timestamp
+                    else None,
                     tags=seven.json.dumps(tags) if tags else None,
+                )
+                .where(
+                    AssetKeyTable.c.asset_key == event.dagster_event.asset_key.to_string(),
                 )
             )
 

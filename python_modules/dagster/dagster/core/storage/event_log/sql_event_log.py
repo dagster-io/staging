@@ -396,7 +396,7 @@ class SqlEventLogStorage(EventLogStorage):
             if not force:
                 if print_fn:
                     print_fn("Skipping already reindexed summary: {}".format(migration_name))
-                continue
+                return
         if print_fn:
             print_fn("Starting reindex: {}".format(migration_name))
         migration_fn()(self, print_fn)
