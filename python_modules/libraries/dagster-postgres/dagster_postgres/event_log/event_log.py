@@ -3,7 +3,7 @@ from collections import defaultdict
 from typing import Callable, List, MutableMapping, Optional
 
 import sqlalchemy as db
-from dagster import check
+from dagster import check, seven
 from dagster.core.events.log import EventLogEntry
 from dagster.core.storage.event_log import (
     AssetKeyTable,
@@ -19,6 +19,7 @@ from dagster.serdes import (
     deserialize_json_to_dagster_namedtuple,
     serialize_dagster_namedtuple,
 )
+from dagster.utils import utc_datetime_from_timestamp
 
 from ..pynotify import await_pg_notifications
 from ..utils import (
@@ -165,13 +166,19 @@ class PostgresEventLogStorage(SqlEventLogStorage, ConfigurableClass):
                 .values(
                     asset_key=event.dagster_event.asset_key.to_string(),
                     last_materialization=serialize_dagster_namedtuple(materialization),
+                    last_materialization_timestamp=utc_datetime_from_timestamp(event.timestamp),
                     last_run_id=event.run_id,
+                    tags=seven.json.dumps(materialization.tags) if materialization.tags else None,
                 )
                 .on_conflict_do_update(
                     index_elements=[AssetKeyTable.c.asset_key],
                     set_=dict(
                         last_materialization=serialize_dagster_namedtuple(materialization),
+                        last_materialization_timestamp=utc_datetime_from_timestamp(event.timestamp),
                         last_run_id=event.run_id,
+                        tags=seven.json.dumps(materialization.tags)
+                        if materialization.tags
+                        else None,
                     ),
                 )
             )
