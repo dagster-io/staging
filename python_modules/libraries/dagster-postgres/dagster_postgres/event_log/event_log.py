@@ -11,6 +11,7 @@ from dagster.core.storage.event_log import (
     SqlEventLogStorageMetadata,
     SqlEventLogStorageTable,
 )
+from dagster.core.storage.event_log.migration import ASSET_KEY_INDEX_COLS
 from dagster.core.storage.event_log.polling_event_watcher import CallbackAfterCursor
 from dagster.core.storage.sql import create_engine, run_alembic_upgrade, stamp_alembic_rev
 from dagster.serdes import (
@@ -160,28 +161,51 @@ class PostgresEventLogStorage(SqlEventLogStorage, ConfigurableClass):
             return
 
         materialization = event.dagster_event.step_materialization_data.materialization
-        with self.index_connection() as conn:
-            conn.execute(
-                db.dialects.postgresql.insert(AssetKeyTable)
-                .values(
-                    asset_key=event.dagster_event.asset_key.to_string(),
-                    last_materialization=serialize_dagster_namedtuple(materialization),
-                    last_materialization_timestamp=utc_datetime_from_timestamp(event.timestamp),
-                    last_run_id=event.run_id,
-                    tags=seven.json.dumps(materialization.tags) if materialization.tags else None,
-                )
-                .on_conflict_do_update(
-                    index_elements=[AssetKeyTable.c.asset_key],
-                    set_=dict(
+        if self.has_secondary_index(ASSET_KEY_INDEX_COLS):
+            with self.index_connection() as conn:
+                conn.execute(
+                    db.dialects.postgresql.insert(AssetKeyTable)
+                    .values(
+                        asset_key=event.dagster_event.asset_key.to_string(),
                         last_materialization=serialize_dagster_namedtuple(materialization),
                         last_materialization_timestamp=utc_datetime_from_timestamp(event.timestamp),
                         last_run_id=event.run_id,
                         tags=seven.json.dumps(materialization.tags)
                         if materialization.tags
                         else None,
-                    ),
+                    )
+                    .on_conflict_do_update(
+                        index_elements=[AssetKeyTable.c.asset_key],
+                        set_=dict(
+                            last_materialization=serialize_dagster_namedtuple(materialization),
+                            last_materialization_timestamp=utc_datetime_from_timestamp(
+                                event.timestamp
+                            ),
+                            last_run_id=event.run_id,
+                            tags=seven.json.dumps(materialization.tags)
+                            if materialization.tags
+                            else None,
+                        ),
+                    )
                 )
-            )
+
+        else:
+            with self.index_connection() as conn:
+                conn.execute(
+                    db.dialects.postgresql.insert(AssetKeyTable)
+                    .values(
+                        asset_key=event.dagster_event.asset_key.to_string(),
+                        last_materialization=serialize_dagster_namedtuple(materialization),
+                        last_run_id=event.run_id,
+                    )
+                    .on_conflict_do_update(
+                        index_elements=[AssetKeyTable.c.asset_key],
+                        set_=dict(
+                            last_materialization=serialize_dagster_namedtuple(materialization),
+                            last_run_id=event.run_id,
+                        ),
+                    )
+                )
 
     def _connect(self):
         return create_pg_connection(self._engine, __file__, "event log")
