@@ -18,6 +18,7 @@
    sections/api/apidocs/repositories
    sections/api/apidocs/schedules-sensors
    sections/api/apidocs/solids
+   sections/api/apidocs/crag
    sections/api/apidocs/dynamic
    sections/api/apidocs/types
    sections/api/apidocs/utilities

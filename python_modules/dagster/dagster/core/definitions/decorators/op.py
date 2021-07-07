@@ -128,7 +128,88 @@ def op(
     ins: Optional[Dict[str, In]] = None,
     out: Optional[Union[Out, Dict[str, Out]]] = None,
 ) -> Union[_Op, SolidDefinition]:
-    """Op is an experimental replacement for solid, intended to decrease verbosity of core API."""
+    """Op is an experimental replacement for solid, intended to decrease verbosity of core API.
+
+    Args:
+        name (Optional[str]): Name of the op. Must be unique within any
+            :py:class:`GraphDefinition` using the op.
+        description (Optional[str]): Human-readable description of this op. If not provided, and
+            the decorated function has a docstring, that docstring will be used as the description.
+        ins (Optional[Dict[str, In]]):
+            Information about the inputs to the op. Information provided here will be combined
+            with what can be inferred from the function signature, with these explicit ins
+            taking precedence.
+        outs (Optional[Union[Out, Dict[str, Out]]]):
+            Information about the output of the op. Information provided here will be combined with
+            what can be inferred from the return type signature if there is only one OutputDefinition
+            and the function does not use yield.
+        input_defs (Optional[List[InputDefinition]]):
+            Backcompat with solid decorator.
+        output_defs (Optional[List[OutputDefinition]]):
+            Backcompat with solid decorator.
+        config_schema (Optional[ConfigSchema): The schema for the config. If set, Dagster will check
+            that config provided for the op matches this schema and fail if it does not. If not
+            set, Dagster will accept any config provided for the op.
+        required_resource_keys (Optional[Set[str]]): Set of resource handles required by this op.
+        tags (Optional[Dict[str, Any]]): Arbitrary metadata for the op. Frameworks may
+            expect and require certain metadata to be attached to an op. Users should generally
+            not set metadata directly. Values that are not strings will be json encoded and must meet
+            the criteria that `json.loads(json.dumps(value)) == value`.
+        version (Optional[str]): (Experimental) The version of the op's compute_fn. Two ops should have
+            the same version if and only if they deterministically produce the same outputs when
+            provided the same inputs.
+        retry_policy (Optional[RetryPolicy]): The retry policy for this op.
+
+    Examples:
+
+        .. code-block:: python
+
+            @op
+            def hello_world():
+                print('hello')
+
+            @op
+            def hello_world():
+                return {'foo': 'bar'}
+
+            @op
+            def hello_world():
+                return Output(value={'foo': 'bar'})
+
+            @op
+            def hello_world():
+                yield Output(value={'foo': 'bar'})
+
+            @op
+            def hello_world(foo):
+                return foo
+
+            @solid(
+                ins={"foo": In(dagster_type=str)},
+                out=Out(str)
+            )
+            def hello_world(foo: str) -> str:
+                # explicitly type and name inputs and outputs
+                return foo
+
+            @solid
+            def hello_world(foo: str) -> str:
+                # same as above inferred from signature
+                return foo
+
+            @solid
+            def hello_world(context, foo):
+                context.log.info('log something')
+                return foo
+
+            @solid(
+                config_schema={'str_value' : Field(str)}
+            )
+            def hello_world(context, foo):
+                # context.solid_config is a dictionary with 'str_value' key
+                return foo + context.solid_config['str_value']
+
+    """
     # This case is for when decorator is used bare, without arguments. e.g. @op versus @op()
     if callable(name):
         check.invariant(input_defs is None)
