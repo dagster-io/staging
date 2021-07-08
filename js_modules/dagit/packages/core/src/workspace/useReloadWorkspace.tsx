@@ -27,7 +27,7 @@ export const useReloadWorkspace = () => {
     if (
       !data ||
       data?.reloadWorkspace.__typename === 'PythonError' ||
-      data?.reloadWorkspace.__typename === 'ReadOnlyError'
+      data?.reloadWorkspace.__typename === 'UnauthorizedError'
     ) {
       SharedToaster.show({
         message: 'Could not reload workspace.',
@@ -88,7 +88,7 @@ const RELOAD_WORKSPACE_MUTATION = gql`
           }
         }
       }
-      ...ReadOnlyErrorFragment
+      ...UnauthorizedErrorFragment
       ...PythonErrorFragment
     }
   }
