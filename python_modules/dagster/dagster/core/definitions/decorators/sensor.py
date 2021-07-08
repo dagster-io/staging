@@ -69,7 +69,9 @@ def sensor(
     check.opt_str_param(name, "name")
 
     def inner(
-        fn: Callable[["SensorEvaluationContext"], Union[SkipReason, RunRequest]]
+        fn: Callable[
+            ["SensorEvaluationContext"], Generator[Union[SkipReason, RunRequest], None, None]
+        ]
     ) -> SensorDefinition:
         check.callable_param(fn, "fn")
         sensor_name = name or fn.__name__
@@ -167,7 +169,7 @@ def asset_sensor(
                 "SensorEvaluationContext",
                 "EventLogEntry",
             ],
-            Union[SkipReason, RunRequest],
+            Generator[Union[SkipReason, RunRequest], None, None],
         ]
     ) -> AssetSensorDefinition:
         check.callable_param(fn, "fn")
