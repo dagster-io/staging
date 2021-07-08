@@ -35,7 +35,7 @@ export const allPaths = () => {
     .map((page: string[]) => {
       return {
         params: {
-          page: page,
+          page: ["master", ...page],
         },
       };
     });
