@@ -2,6 +2,7 @@ import os
 import sys
 import tempfile
 
+import pytest
 from dagster import DagsterEventType, execute_pipeline, pipeline, solid
 from dagster.core.instance import DagsterInstance, InstanceType
 from dagster.core.launcher import DefaultRunLauncher
@@ -11,6 +12,7 @@ from dagster.core.storage.event_log import SqliteEventLogStorage
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
 from dagster_gcp.gcs import GCSComputeLogManager
+from dagster_tests.core_tests.storage_tests.utils.captured_log_manager import TestCapturedLogManager
 from google.cloud import storage
 
 HELLO_WORLD = "Hello World"
@@ -113,3 +115,14 @@ compute_logs:
         instance = DagsterInstance.from_config(tempdir)
 
     assert isinstance(instance.compute_log_manager, GCSComputeLogManager)
+
+
+class TestGCSCapturedLogManager(TestCapturedLogManager):
+    __test__ = True
+
+    @pytest.fixture(name="captured_log_manager")
+    def captured_log_manager(self, gcs_bucket):  # pylint: disable=arguments-differ
+        with tempfile.TemporaryDirectory() as tmpdir_path:
+            return GCSComputeLogManager(
+                bucket=gcs_bucket, prefix="my_prefix", local_dir=tmpdir_path
+            )
