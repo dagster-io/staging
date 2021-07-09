@@ -1633,6 +1633,7 @@
             "title": "RunCoordinatorType",
             "description": "An enumeration.",
             "enum": [
+                "DefaultRunCoordinator",
                 "QueuedRunCoordinator",
                 "CustomRunCoordinator"
             ],
@@ -1749,10 +1750,6 @@
             "title": "RunCoordinator",
             "type": "object",
             "properties": {
-                "enabled": {
-                    "title": "Enabled",
-                    "type": "boolean"
-                },
                 "type": {
                     "$ref": "#/definitions/RunCoordinatorType"
                 },
@@ -1761,11 +1758,9 @@
                 }
             },
             "required": [
-                "enabled",
                 "type",
                 "config"
             ],
-            "additionalProperties": false,
             "allOf": [
                 {
                     "if": {

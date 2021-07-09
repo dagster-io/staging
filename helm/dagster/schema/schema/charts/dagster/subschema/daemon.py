@@ -9,6 +9,7 @@ from .config import IntSource
 
 
 class RunCoordinatorType(str, Enum):
+    DEFAULT = "DefaultRunCoordinator"
     QUEUED = "QueuedRunCoordinator"
     CUSTOM = "CustomRunCoordinator"
 
@@ -37,12 +38,10 @@ class RunCoordinatorConfig(BaseModel):
 
 
 class RunCoordinator(BaseModel):
-    enabled: bool
     type: RunCoordinatorType
     config: RunCoordinatorConfig
 
     class Config:
-        extra = Extra.forbid
         schema_extra = {
             "allOf": create_json_schema_conditionals(
                 {

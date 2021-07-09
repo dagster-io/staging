@@ -748,19 +748,18 @@ dagsterDaemon:
   heartbeatTolerance: 300
 
   runCoordinator:
-    enabled: false
-
     # Type can be one of [
+    #   DefaultRunCoordinator,
     #   QueuedRunCoordinator,
     #   CustomRunCoordinator,
     #  ]
-    type: QueuedRunCoordinator
-    config:
-      queuedRunCoordinator:
-        maxConcurrentRuns: ~
-        tagConcurrencyLimits: []
-        dequeueIntervalSeconds: ~
-
+    type: DefaultRunCoordinator
+    config: {}
+    ##  Uncomment this configuration if the AzureBlobComputeLogManager is selected
+    #   queuedRunCoordinator:
+    #     maxConcurrentRuns: ~
+    #     tagConcurrencyLimits: []
+    #     dequeueIntervalSeconds: ~
     ##  Uncomment this configuration if the CustomRunCoordinator is selected.
     ##  Using this setting requires a custom Daemon image that defines the user specified
     ##  run coordinator in an installed python module.
