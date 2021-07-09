@@ -1,3 +1,4 @@
+from dagit.starlette import ROOT_ADDRESS_STATIC_RESOURCES
 from starlette.testclient import TestClient
 
 
@@ -35,3 +36,18 @@ def test_graphql_post(empty_app):
     )
     assert response.status_code == 200, response.text
     assert response.json() == {"data": {"__typename": "Query"}}
+
+
+def test_static_resources(empty_app):
+    client = TestClient(empty_app)
+
+    # make sure we did not fallback to the index html
+    # for static resources at /
+    for address in ROOT_ADDRESS_STATIC_RESOURCES:
+        response = client.get(address)
+        assert response.status_code == 200, response.text
+        assert response.headers["content-type"] != "text/html"
+
+    response = client.get("/vendor/graphql-playground/middleware.js")
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"] != "application/js"

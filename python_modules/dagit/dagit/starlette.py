@@ -1,5 +1,6 @@
 from functools import partial
-from typing import Dict, Union
+from os import path
+from typing import Dict, List, Union
 
 from dagit.templates.playground import TEMPLATE
 from dagster import DagsterInstance
@@ -15,10 +16,22 @@ from starlette.applications import Starlette
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import QueryParams
 from starlette.requests import Request
-from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from starlette.routing import Route
+from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
+from starlette.routing import Mount, Route
+from starlette.staticfiles import StaticFiles
 
 from .version import __version__
+
+ROOT_ADDRESS_STATIC_RESOURCES = [
+    "/manifest.json",
+    "/favicon.ico",
+    "/favicon.png",
+    "/asset-manifest.json",
+    "/robots.txt",
+    "/favicon_failed.ico",
+    "/favicon_pending.ico",
+    "/favicon_success.ico",
+]
 
 
 async def dagit_info_endpoint(_request):
@@ -34,6 +47,7 @@ async def dagit_info_endpoint(_request):
 async def graphql_http_endpoint(
     schema: Schema,
     process_context: WorkspaceProcessContext,
+    app_path_prefix: str,
     request: Request,
 ):
     """
@@ -45,8 +59,7 @@ async def graphql_http_endpoint(
     if request.method == "GET":
         # render graphiql
         if "text/html" in request.headers.get("Accept", ""):
-            # need to handle app_path_prefix here
-            text = TEMPLATE.replace("{{ app_path_prefix }}", "")
+            text = TEMPLATE.replace("{{ app_path_prefix }}", app_path_prefix)
             return HTMLResponse(text)
 
         data: Union[Dict[str, str], QueryParams] = request.query_params
@@ -103,19 +116,77 @@ async def graphql_http_endpoint(
     return JSONResponse(response_data, status_code=status_code)
 
 
-def create_app(process_context: WorkspaceProcessContext, debug: bool):
+def index_endpoint(
+    base_dir: str,
+    app_path_prefix: str,
+    _request: Request,
+):
+    """
+    Serves root html
+    """
+    index_path = path.join(base_dir, "./webapp/build/index.html")
+
+    try:
+        with open(index_path) as f:
+            rendered_template = f.read()
+            return HTMLResponse(
+                rendered_template.replace('href="/', f'href="{app_path_prefix}/')
+                .replace('src="/', f'src="{app_path_prefix}/')
+                .replace("__PATH_PREFIX__", app_path_prefix)
+            )
+    except FileNotFoundError:
+        raise Exception(
+            """Can't find webapp files. Probably webapp isn't built. If you are using
+            dagit, then probably it's a corrupted installation or a bug. However, if you are
+            developing dagit locally, your problem can be fixed as follows:
+
+            cd ./python_modules/
+            make rebuild_dagit"""
+        )
+
+
+def create_root_static_endpoints(base_dir: str) -> List[Route]:
+    def _static_file(file_path):
+        return Route(
+            file_path,
+            lambda _: FileResponse(path=path.join(base_dir, f"./webapp/build{file_path}")),
+        )
+
+    return [_static_file(f) for f in ROOT_ADDRESS_STATIC_RESOURCES]
+
+
+def create_app(process_context: WorkspaceProcessContext, app_path_prefix: str, debug: bool):
+    base_dir = path.dirname(__file__)
     graphql_schema = create_schema()
+
+    bound_index_endpoint = partial(index_endpoint, base_dir, app_path_prefix)
 
     return Starlette(
         debug=debug,
         routes=[
             Route(
                 "/graphql",
-                partial(graphql_http_endpoint, graphql_schema, process_context),
+                partial(graphql_http_endpoint, graphql_schema, process_context, app_path_prefix),
                 name="graphql-http",
                 methods=["GET", "POST"],
             ),
             Route("/dagit_info", dagit_info_endpoint),
+            # static resources addressed at /static/
+            Mount(
+                "/static",
+                StaticFiles(directory=path.join(base_dir, "./webapp/build/static")),
+                name="static",
+            ),
+            # static resources addressed at /vendor/
+            Mount(
+                "/vendor",
+                StaticFiles(directory=path.join(base_dir, "./webapp/build/vendor")),
+                name="vendor",
+            ),
+            # specific static resources addressed at /
+            *create_root_static_endpoints(base_dir),
+            Route("/{path:path}", bound_index_endpoint),
+            Route("/", bound_index_endpoint),
         ],
     )
 
@@ -127,4 +198,4 @@ def default_app():
         version=__version__,
         kwargs={},
     )
-    return create_app(process_context, debug=False)
+    return create_app(process_context, app_path_prefix="", debug=False)

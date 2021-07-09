@@ -15,4 +15,5 @@ def empty_app():
     return create_app(
         process_context,
         debug=True,
+        app_path_prefix="",
     )
