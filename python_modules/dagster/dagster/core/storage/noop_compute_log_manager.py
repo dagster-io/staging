@@ -1,10 +1,14 @@
+from contextlib import contextmanager
+from typing import Optional
+
 from dagster import check
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
+from .captured_log_manager import CapturedLogData, CapturedLogManager, CapturedLogMetadata
 from .compute_log_manager import MAX_BYTES_FILE_READ, ComputeLogFileData, ComputeLogManager
 
 
-class NoOpComputeLogManager(ComputeLogManager, ConfigurableClass):
+class NoOpComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableClass):
     def __init__(self, inst_data=None):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
@@ -19,6 +23,47 @@ class NoOpComputeLogManager(ComputeLogManager, ConfigurableClass):
     @staticmethod
     def from_config_value(inst_data, config_value):
         return NoOpComputeLogManager(inst_data=inst_data, **config_value)
+
+    @contextmanager
+    def capture_logs(self, log_key: str, namespace: Optional[str] = None):
+        pass
+
+    def is_capture_complete(self, log_key: str, namespace: Optional[str] = None):
+        return True
+
+    def read_stdout(
+        self,
+        log_key: str,
+        namespace: Optional[str] = None,
+        cursor: str = None,
+        max_bytes: int = None,
+    ) -> CapturedLogData:
+        return CapturedLogData()
+
+    def read_stderr(
+        self,
+        log_key: str,
+        namespace: Optional[str] = None,
+        cursor: str = None,
+        max_bytes: int = None,
+    ) -> CapturedLogData:
+        return CapturedLogData()
+
+    def get_stdout_metadata(
+        self, log_key: str, namespace: Optional[str] = None
+    ) -> CapturedLogMetadata:
+        return CapturedLogMetadata()
+
+    def get_stderr_metadata(
+        self, log_key: str, namespace: Optional[str] = None
+    ) -> CapturedLogMetadata:
+        return CapturedLogMetadata()
+
+    def should_capture_run_by_step(self) -> bool:
+        return False
+
+    def is_enabled(self, _log_key: str, _namespace: Optional[str] = None):
+        return False
 
     def enabled(self, _pipeline_run, _step_key):
         return False
