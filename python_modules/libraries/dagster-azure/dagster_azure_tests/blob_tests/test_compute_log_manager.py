@@ -1,8 +1,10 @@
 import os
 import sys
 import tempfile
+from contextlib import ExitStack
 from unittest import mock
 
+import pytest
 from dagster import DagsterEventType, execute_pipeline, pipeline, solid
 from dagster.core.instance import DagsterInstance, InstanceType
 from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
@@ -12,6 +14,7 @@ from dagster.core.storage.event_log import SqliteEventLogStorage
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
 from dagster_azure.blob import AzureBlobComputeLogManager, FakeBlobServiceClient
+from dagster_tests.core_tests.storage_tests.utils.captured_log_manager import TestCapturedLogManager
 
 HELLO_WORLD = "Hello World"
 SEPARATOR = os.linesep if (os.name == "nt" and sys.version_info < (3,)) else "\n"
@@ -128,3 +131,33 @@ compute_logs:
     )
     assert instance.compute_log_manager._container == container  # pylint: disable=protected-access
     assert instance.compute_log_manager._blob_prefix == prefix  # pylint: disable=protected-access
+
+
+class TestAzureCapturedLogManager(TestCapturedLogManager):
+    __test__ = True
+
+    @pytest.fixture(name="captured_log_manager")
+    def captured_log_manager(
+        self,
+        storage_account,
+        container,
+        credential,
+    ):  # pylint: disable=arguments-differ
+        with ExitStack() as stack:
+            mock_generate_blob_sas = stack.enter_context(
+                mock.patch("dagster_azure.blob.compute_log_manager.generate_blob_sas")
+            )
+            mock_generate_blob_sas.return_value = "fake-url"
+            mock_create_blob_client = stack.enter_context(
+                mock.patch("dagster_azure.blob.compute_log_manager.create_blob_client")
+            )
+            mock_create_blob_client.return_value = FakeBlobServiceClient(storage_account)
+
+            with tempfile.TemporaryDirectory() as tmpdir_path:
+                return AzureBlobComputeLogManager(
+                    storage_account=storage_account,
+                    container=container,
+                    prefix="my_prefix",
+                    local_dir=tmpdir_path,
+                    secret_key=credential,
+                )
