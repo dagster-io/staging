@@ -819,7 +819,10 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
             "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "heartbeatTolerance": 180,
-            "runCoordinator": {"enabled": True},
+            "runCoordinator": {
+                "type": "QueuedRunCoordinator",
+                "config": {"queuedRunCoordinator": {}},
+            },
             "env": ({"BUILDKITE": os.getenv("BUILDKITE")} if os.getenv("BUILDKITE") else {}),
             "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
             "envSecrets": [{"name": TEST_SECRET_NAME}],

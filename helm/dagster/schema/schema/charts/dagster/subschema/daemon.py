@@ -9,6 +9,7 @@ from .config import IntSource
 
 
 class RunCoordinatorType(str, Enum):
+    DEFAULT = "DefaultRunCoordinator"
     QUEUED = "QueuedRunCoordinator"
     CUSTOM = "CustomRunCoordinator"
 
@@ -37,7 +38,6 @@ class RunCoordinatorConfig(BaseModel):
 
 
 class RunCoordinator(BaseModel):
-    enabled: bool
     type: RunCoordinatorType
     config: RunCoordinatorConfig
 

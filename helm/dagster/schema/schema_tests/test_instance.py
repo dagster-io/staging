@@ -82,15 +82,29 @@ def test_storage_postgres_db_config(template: HelmTemplate, storage: str):
     assert postgres_db["params"] == postgresql_params
 
 
-@pytest.mark.parametrize("enabled", [True, False])
-def test_queued_run_coordinator_config(template: HelmTemplate, enabled: bool):
+def test_default_run_coordinator(template: HelmTemplate):
+    helm_values = DagsterHelmValues.construct(
+        dagsterDaemon=Daemon.construct(
+            runCoordinator=RunCoordinator.construct(type=RunCoordinatorType.DEFAULT)
+        )
+    )
+
+    configmaps = template.render(helm_values)
+
+    assert len(configmaps) == 1
+
+    instance = yaml.full_load(configmaps[0].data["dagster.yaml"])
+
+    assert "run_coordinator" not in instance
+
+
+def test_queued_run_coordinator_config(template: HelmTemplate):
     max_concurrent_runs = 50
     tag_concurrency_limits = [TagConcurrencyLimit(key="key", value="value", limit=10)]
     dequeue_interval_seconds = 50
     helm_values = DagsterHelmValues.construct(
         dagsterDaemon=Daemon.construct(
             runCoordinator=RunCoordinator.construct(
-                enabled=enabled,
                 type=RunCoordinatorType.QUEUED,
                 config=RunCoordinatorConfig.construct(
                     queuedRunCoordinator=QueuedRunCoordinatorConfig.construct(
@@ -107,21 +121,20 @@ def test_queued_run_coordinator_config(template: HelmTemplate, enabled: bool):
 
     instance = yaml.full_load(configmaps[0].data["dagster.yaml"])
 
-    assert ("run_coordinator" in instance) == enabled
-    if enabled:
-        assert instance["run_coordinator"]["module"] == "dagster.core.run_coordinator"
-        assert instance["run_coordinator"]["class"] == "QueuedRunCoordinator"
-        assert instance["run_coordinator"]["config"]
+    assert instance["run_coordinator"]
+    assert instance["run_coordinator"]["module"] == "dagster.core.run_coordinator"
+    assert instance["run_coordinator"]["class"] == "QueuedRunCoordinator"
+    assert instance["run_coordinator"]["config"]
 
-        run_coordinator_config = instance["run_coordinator"]["config"]
+    run_coordinator_config = instance["run_coordinator"]["config"]
 
-        assert run_coordinator_config["max_concurrent_runs"] == max_concurrent_runs
-        assert run_coordinator_config["dequeue_interval_seconds"] == dequeue_interval_seconds
+    assert run_coordinator_config["max_concurrent_runs"] == max_concurrent_runs
+    assert run_coordinator_config["dequeue_interval_seconds"] == dequeue_interval_seconds
 
-        assert len(run_coordinator_config["tag_concurrency_limits"]) == len(tag_concurrency_limits)
-        assert run_coordinator_config["tag_concurrency_limits"] == [
-            tag_concurrency_limit.dict() for tag_concurrency_limit in tag_concurrency_limits
-        ]
+    assert len(run_coordinator_config["tag_concurrency_limits"]) == len(tag_concurrency_limits)
+    assert run_coordinator_config["tag_concurrency_limits"] == [
+        tag_concurrency_limit.dict() for tag_concurrency_limit in tag_concurrency_limits
+    ]
 
 
 def test_custom_run_coordinator_config(template: HelmTemplate):
@@ -133,7 +146,6 @@ def test_custom_run_coordinator_config(template: HelmTemplate):
     helm_values = DagsterHelmValues.construct(
         dagsterDaemon=Daemon.construct(
             runCoordinator=RunCoordinator.construct(
-                enabled=True,
                 type=RunCoordinatorType.CUSTOM,
                 config=RunCoordinatorConfig.construct(
                     customRunCoordinator=ConfigurableClass.construct(
