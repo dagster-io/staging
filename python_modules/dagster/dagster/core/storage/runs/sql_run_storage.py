@@ -291,10 +291,17 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         )
         limit = check.opt_int_param(limit, "limit")
 
+        # filter columns if missing
+        all_schema_cols = RunsTable.columns.keys()  # pylint: disable=no-member
+        if self.has_built_index(MODE_MIGRATION):
+            cols = all_schema_cols
+        else:
+            cols = [col for col in all_schema_cols if col != "mode"]
+
         query = self._runs_query(
             filters=filters,
             limit=limit,
-            columns=RunsTable.columns.keys(),  # pylint: disable=no-member
+            columns=cols,
             order_by=order_by,
             ascending=ascending,
         )
