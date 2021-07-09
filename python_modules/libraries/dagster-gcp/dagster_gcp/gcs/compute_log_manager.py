@@ -1,7 +1,13 @@
 import os
 from contextlib import contextmanager
+from typing import Optional
 
 from dagster import Field, StringSource, check, seven
+from dagster.core.storage.captured_log_manager import (
+    CapturedLogData,
+    CapturedLogManager,
+    CapturedLogMetadata,
+)
 from dagster.core.storage.compute_log_manager import (
     MAX_BYTES_FILE_READ,
     ComputeIOType,
@@ -14,7 +20,7 @@ from dagster.utils import ensure_dir, ensure_file
 from google.cloud import storage
 
 
-class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
+class GCSComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableClass):
     """Logs solid compute function stdout and stderr to GCS.
 
     Users should not instantiate this class directly. Instead, use a YAML block in ``dagster.yaml``
@@ -58,14 +64,6 @@ class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
         self.local_manager = LocalComputeLogManager(local_dir)
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
-    @contextmanager
-    def _watch_logs(self, pipeline_run, step_key=None):
-        # proxy watching to the local compute log manager, interacting with the filesystem
-        with self.local_manager._watch_logs(  # pylint: disable=protected-access
-            pipeline_run, step_key
-        ):
-            yield
-
     @property
     def inst_data(self):
         return self._inst_data
@@ -81,6 +79,69 @@ class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
     @staticmethod
     def from_config_value(inst_data, config_value):
         return GCSComputeLogManager(inst_data=inst_data, **config_value)
+
+    @contextmanager
+    def capture_logs(self, log_key: str, namespace: Optional[str] = None):
+        with self.local_manager.capture_logs(log_key, namespace):
+            yield
+        self._upload_from_local(namespace, log_key, ComputeIOType.STDOUT)
+        self._upload_from_local(namespace, log_key, ComputeIOType.STDERR)
+
+    def is_capture_complete(self, log_key: str, namespace: Optional[str] = None):
+        return self.local_manager.is_capture_complete(log_key, namespace)
+
+    def read_stdout(
+        self,
+        log_key: str,
+        namespace: Optional[str] = None,
+        cursor: str = None,
+        max_bytes: int = None,
+    ) -> CapturedLogData:
+        if self._should_download(namespace, log_key, ComputeIOType.STDOUT):
+            self._download_to_local(namespace, log_key, ComputeIOType.STDOUT)
+        return self.local_manager.read_stdout(log_key, namespace, cursor, max_bytes)
+
+    def read_stderr(
+        self,
+        log_key: str,
+        namespace: Optional[str] = None,
+        cursor: str = None,
+        max_bytes: int = None,
+    ) -> CapturedLogData:
+        if self._should_download(namespace, log_key, ComputeIOType.STDERR):
+            self._download_to_local(namespace, log_key, ComputeIOType.STDERR)
+        return self.local_manager.read_stderr(log_key, namespace, cursor, max_bytes)
+
+    def get_stdout_metadata(
+        self, log_key: str, namespace: Optional[str] = None
+    ) -> CapturedLogMetadata:
+        if self.is_capture_complete(log_key, namespace):
+            return CapturedLogMetadata(
+                location=self._gcs_path_location(namespace, log_key, ComputeIOType.STDOUT),
+                download_url=self.download_url(namespace, log_key, ComputeIOType.STDOUT),
+            )
+        return self.local_manager.get_stdout_metadata(log_key, namespace)
+
+    def get_stderr_metadata(
+        self, log_key: str, namespace: Optional[str] = None
+    ) -> CapturedLogMetadata:
+        if self.is_capture_complete(log_key, namespace):
+            return CapturedLogMetadata(
+                location=self._gcs_path_location(namespace, log_key, ComputeIOType.STDERR),
+                download_url=self.download_url(namespace, log_key, ComputeIOType.STDERR),
+            )
+        return self.local_manager.get_stdout_metadata(log_key, namespace)
+
+    def should_capture_run_by_step(self) -> bool:
+        return False
+
+    @contextmanager
+    def _watch_logs(self, pipeline_run, step_key=None):
+        # proxy watching to the local compute log manager, interacting with the filesystem
+        with self.local_manager._watch_logs(  # pylint: disable=protected-access
+            pipeline_run, step_key
+        ):
+            yield
 
     def get_local_path(self, run_id, key, io_type):
         return self.local_manager.get_local_path(run_id, key, io_type)
@@ -125,6 +186,10 @@ class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
             return False
         return self._bucket.blob(self._bucket_key(run_id, key, io_type)).exists()
 
+    def _gcs_path_location(self, namespace, log_key, io_type):
+        bucket_key = self._bucket_key(namespace, log_key, io_type)
+        return f"gs://{self._bucket_name}/{bucket_key}"
+
     def _from_local_file_data(self, run_id, key, io_type, local_file_data):
         is_complete = self.is_watch_completed(run_id, key)
         path = (
@@ -164,7 +229,7 @@ class GCSComputeLogManager(ComputeLogManager, ConfigurableClass):
             "{}.{}".format(key, extension),
         ]
 
-        return "/".join(paths)  # path delimiter
+        return "/".join(filter(lambda x: x, paths))  # path delimiter
 
     def dispose(self):
         self.local_manager.dispose()
