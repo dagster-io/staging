@@ -1,6 +1,7 @@
+from asyncio import Queue, get_event_loop
 from functools import partial
 from os import path
-from typing import Dict, List, Union
+from typing import Any, AsyncGenerator, Dict, List, Union
 
 from dagit.templates.playground import TEMPLATE
 from dagster import DagsterInstance
@@ -10,15 +11,20 @@ from dagster.core.workspace.context import WorkspaceProcessContext
 from dagster_graphql import __version__ as dagster_graphql_version
 from dagster_graphql.schema import create_schema
 from graphene import Schema
+from graphql.error import GraphQLError
 from graphql.error import format_error as format_graphql_error
+from graphql.execution import ExecutionResult
+from rx import Observable
 from starlette import status
 from starlette.applications import Starlette
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import QueryParams
 from starlette.requests import Request
 from starlette.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
-from starlette.routing import Mount, Route
+from starlette.routing import Mount, Route, WebSocketRoute
 from starlette.staticfiles import StaticFiles
+from starlette.types import Receive, Scope, Send
+from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
 
 from .version import __version__
 
@@ -32,6 +38,18 @@ ROOT_ADDRESS_STATIC_RESOURCES = [
     "/favicon_pending.ico",
     "/favicon_success.ico",
 ]
+GRAPHQL_WS = "graphql-ws"
+# https://github.com/apollographql/subscriptions-transport-ws/blob/master/PROTOCOL.md
+GQL_CONNECTION_INIT = "connection_init"
+GQL_CONNECTION_ACK = "connection_ack"
+GQL_CONNECTION_ERROR = "connection_error"
+GQL_CONNECTION_TERMINATE = "connection_terminate"
+GQL_CONNECTION_KEEP_ALIVE = "ka"
+GQL_START = "start"
+GQL_DATA = "data"
+GQL_ERROR = "error"
+GQL_COMPLETE = "complete"
+GQL_STOP = "stop"
 
 
 async def dagit_info_endpoint(_request):
@@ -116,6 +134,155 @@ async def graphql_http_endpoint(
     return JSONResponse(response_data, status_code=status_code)
 
 
+async def graphql_ws_endpoint(
+    schema: Schema,
+    process_context: WorkspaceProcessContext,
+    scope: Scope,
+    receive: Receive,
+    send: Send,
+):
+    """
+    Implementation of websocket ASGI endpoint for GraphQL.
+    Once we are free of confcliting deps, we should be able to use an impl from
+    strawberr-graphql or the like.
+    """
+
+    websocket = WebSocket(scope=scope, receive=receive, send=send)
+
+    subscriptions = {}
+    tasks = {}
+
+    await websocket.accept(subprotocol=GRAPHQL_WS)
+
+    try:
+        while (
+            websocket.client_state != WebSocketState.DISCONNECTED
+            and websocket.application_state != WebSocketState.DISCONNECTED
+        ):
+            message = await websocket.receive_json()
+            operation_id = message.get("id")
+            message_type = message.get("type")
+
+            if message_type == GQL_CONNECTION_INIT:
+                await websocket.send_json({"type": GQL_CONNECTION_ACK})
+
+            elif message_type == GQL_CONNECTION_TERMINATE:
+                await websocket.close()
+            elif message_type == GQL_START:
+                try:
+                    data = message["payload"]
+                    query = data["query"]
+                    variables = data.get("variables")
+                    operation_name = data.get("operation_name")
+
+                    # correct scoping?
+                    request_context = process_context.create_request_context()
+                    async_result = schema.execute(
+                        query,
+                        variables=variables,
+                        operation_name=operation_name,
+                        context=request_context,
+                        allow_subscriptions=True,
+                    )
+                except GraphQLError as error:
+                    payload = format_graphql_error(error)
+                    await _send_message(websocket, GQL_ERROR, payload, operation_id)
+                    continue
+
+                if isinstance(async_result, ExecutionResult):
+                    assert async_result.errors is not None
+                    payload = format_graphql_error(async_result.errors[0])
+                    await _send_message(websocket, GQL_ERROR, payload, operation_id)
+                    continue
+
+                async_result = _obs_to_agen(async_result)
+
+                subscriptions[operation_id] = async_result
+                tasks[operation_id] = get_event_loop().create_task(
+                    handle_async_results(async_result, operation_id, websocket)
+                )
+            elif message_type == GQL_STOP:
+                if operation_id not in subscriptions:
+                    return
+
+                try:
+                    await subscriptions[operation_id].aclose()
+                except RuntimeError:
+                    pass  # aclose can fail if generator still running
+                del subscriptions[operation_id]
+
+                tasks[operation_id].cancel()
+                del tasks[operation_id]
+
+    except WebSocketDisconnect:
+        pass
+    finally:
+        for operation_id in subscriptions:
+            try:
+                await subscriptions[operation_id].aclose()
+            except RuntimeError:
+                pass  # aclose can fail if generator still running
+
+            tasks[operation_id].cancel()
+
+
+async def handle_async_results(results: AsyncGenerator, operation_id: str, websocket: WebSocket):
+    try:
+        async for result in results:
+            payload = {"data": result.data}
+
+            if result.errors:
+                payload["errors"] = [format_graphql_error(err) for err in result.errors]
+
+            await _send_message(websocket, GQL_DATA, payload, operation_id)
+    except Exception as error:  # pylint: disable=broad-except
+        if not isinstance(error, GraphQLError):
+            # original_error in later versions of graphql?
+            # error = GraphQLError(str(error), original_error=error)
+            error = GraphQLError(str(error))
+
+        await _send_message(
+            websocket,
+            GQL_DATA,
+            {"data": None, "errors": [format_graphql_error(error)]},
+            operation_id,
+        )
+
+    if (
+        websocket.client_state != WebSocketState.DISCONNECTED
+        and websocket.application_state != WebSocketState.DISCONNECTED
+    ):
+        await _send_message(websocket, GQL_COMPLETE, None, operation_id)
+
+
+async def _send_message(
+    websocket: WebSocket,
+    type_: str,
+    payload: Any,
+    operation_id: str,
+) -> None:
+    data = {"type": type_, "id": operation_id}
+
+    if payload is not None:
+        data["payload"] = payload
+
+    return await websocket.send_json(data)
+
+
+async def _obs_to_agen(obs: Observable):
+    """
+    Convert Observable to async generator for back compat.
+
+    Should be removed and subscriptions rewritten.
+    """
+    queue: Queue = Queue()
+
+    obs.subscribe(on_next=queue.put_nowait)
+    while True:
+        i = await queue.get()
+        yield i
+
+
 def index_endpoint(
     base_dir: str,
     app_path_prefix: str,
@@ -174,6 +341,11 @@ def create_app(
                 partial(graphql_http_endpoint, graphql_schema, process_context, app_path_prefix),
                 name="graphql-http",
                 methods=["GET", "POST"],
+            ),
+            WebSocketRoute(
+                "/graphql",
+                partial(graphql_ws_endpoint, graphql_schema, process_context),
+                name="graphql-ws",
             ),
             # static resources addressed at /static/
             Mount(
