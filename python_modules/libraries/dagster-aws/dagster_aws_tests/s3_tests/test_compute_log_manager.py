@@ -13,6 +13,7 @@ from dagster.core.storage.event_log import SqliteEventLogStorage
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
 from dagster_aws.s3 import S3ComputeLogManager
+from dagster_tests.core_tests.storage_tests.utils.captured_log_manager import TestCapturedLogManager
 
 HELLO_WORLD = "Hello World"
 SEPARATOR = os.linesep if (os.name == "nt" and sys.version_info < (3,)) else "\n"
@@ -152,3 +153,14 @@ def test_compute_log_manager_skip_empty_upload(mock_s3_bucket):
             mock_s3_bucket.Object(
                 key=f"{PREFIX}/storage/{result.run_id}/compute_logs/easy.out"
             ).get()
+
+
+class TestS3CapturedLogManager(TestCapturedLogManager):
+    __test__ = True
+
+    @pytest.fixture(name="captured_log_manager")
+    def captured_log_manager(self, mock_s3_bucket):  # pylint: disable=arguments-differ
+        with tempfile.TemporaryDirectory() as tmpdir_path:
+            return S3ComputeLogManager(
+                bucket=mock_s3_bucket.name, prefix="my_prefix", local_dir=tmpdir_path
+            )
