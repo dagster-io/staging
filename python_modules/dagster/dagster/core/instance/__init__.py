@@ -244,8 +244,14 @@ class DagsterInstance:
         self._run_storage.register_instance(self)
 
         self._compute_log_manager = check.inst_param(
-            compute_log_manager, "compute_log_manager", ComputeLogManager
+            compute_log_manager, "compute_log_manager", (CapturedLogManager, ComputeLogManager)
         )
+        if not isinstance(self._compute_log_manager, CapturedLogManager):
+            warnings.warn(
+                "The ComputeLogManager interface is deprecated.  Please implement the abstract "
+                "interface for the `dagster.core.storage.captured_log_manager.CapturedLogManager`."
+            )
+
         self._compute_log_manager.register_instance(self)
         self._scheduler = check.opt_inst_param(scheduler, "scheduler", Scheduler)
 
@@ -257,6 +263,7 @@ class DagsterInstance:
 
         self._run_coordinator = check.inst_param(run_coordinator, "run_coordinator", RunCoordinator)
         self._run_coordinator.register_instance(self)
+
         if hasattr(self._run_coordinator, "initialize") and inspect.ismethod(
             getattr(self._run_coordinator, "initialize")
         ):
@@ -1210,9 +1217,6 @@ records = instance.get_event_records(
             step_key=dagster_event.step_key,
             dagster_event=dagster_event,
         )
-
-        if isinstance(self.compute_log_manager, CapturedLogManager):
-            self.compute_log_manager.log_event(dagster_event)
 
         self.handle_new_event(event_record)
         return dagster_event
