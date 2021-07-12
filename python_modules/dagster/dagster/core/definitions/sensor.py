@@ -163,10 +163,6 @@ class SensorDefinition:
         self._name = check_valid_name(name)
 
         if pipeline_name is None and job is None:
-            warnings.warn(
-                f'Neither pipeline_name or job is provided. Sensor "{name}" will not target a pipeline.',
-                ExperimentalWarning,
-            )
             self._target: Optional[Union[DirectTarget, RepoRelativeTarget]] = None
         elif job is not None:
             experimental_arg_warning("target", "SensorDefinition.__init__")
