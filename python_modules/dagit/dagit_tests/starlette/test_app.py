@@ -117,3 +117,16 @@ def test_graphql_ws_success(instance, empty_app):
         response = ws.receive_json()
         assert response["id"] == "1"
         assert response["type"] == GQL_DATA
+
+
+def test_download_debug_file(instance, empty_app):
+    @pipeline
+    def _test():
+        pass
+
+    result = execute_pipeline(_test, instance=instance)
+    run_id = result.run_id
+
+    response = TestClient(empty_app).get(f"/download_debug/{run_id}")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/gzip"
