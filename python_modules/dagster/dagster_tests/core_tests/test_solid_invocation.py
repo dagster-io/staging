@@ -679,3 +679,14 @@ def test_pipeline_invocation():
         r"\(e.g. `execute_pipeline`\).",
     ):
         basic_pipeline()
+
+
+@solid
+async def foo_async() -> str:
+    return "bar"
+
+
+@pytest.mark.asyncio
+async def test_coroutine_await():
+    result = await foo_async()
+    assert result == "bar"
