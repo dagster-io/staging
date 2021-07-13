@@ -321,6 +321,7 @@ class PendingNodeInvocation:
                 )
 
             input_name = self.node_def.resolve_input_name_at_position(idx)
+
             if input_name is None:
                 raise DagsterInvalidDefinitionError(
                     "In {source} {name}, could not resolve input based on position at "

@@ -6,18 +6,22 @@ from dagster import (
     DagsterInvalidDefinitionError,
     DagsterTypeCheckDidNotPass,
     DependencyDefinition,
+    In,
     InputDefinition,
     Int,
     List,
     MultiDependencyDefinition,
     Nothing,
     Optional,
+    Out,
     Output,
     OutputDefinition,
     PipelineDefinition,
     SolidInvocation,
     execute_pipeline,
+    graph,
     lambda_solid,
+    op,
     solid,
 )
 from dagster.core.execution.api import create_execution_plan
@@ -330,3 +334,30 @@ def test_nothing_infer():
         @solid
         def _bad(_, _previous_steps_complete: Nothing):
             pass
+
+
+def test_nothing_positional():
+    @op(
+        ins={
+            "n": In(Nothing),
+            "n2": In(Nothing),
+        }
+    )
+    def boop(_a, _b):
+        pass
+
+    @op
+    def emit():
+        return 1
+
+    @op(out=Out(Nothing))
+    def empty():
+        pass
+
+    @graph
+    def nothing_pos():
+        one = emit()
+        n = empty()
+        boop(one, one, n, n)
+
+    result = nothing_pos.execute_in_process()
