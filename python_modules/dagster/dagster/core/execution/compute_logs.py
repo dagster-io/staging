@@ -8,6 +8,8 @@ import time
 import uuid
 import warnings
 from contextlib import contextmanager
+from typing import List
+from dagster.core.execution.plan.plan import ExecutionStep
 
 from dagster.core.execution import poll_compute_logs, watch_orphans
 from dagster.serdes.ipc import interrupt_ipc_subprocess, open_ipc_subprocess
@@ -167,7 +169,10 @@ def _fileno(stream):
     return None
 
 
-def compute_log_key_for_steps(steps):
+def compute_log_key_for_steps(steps: List[ExecutionStep]) -> str:
+    # Construct a log_key for a list of execution steps (from an ExecutionPlan).  Used to construct
+    # the log_key for a set of steps (e.g. when capturing the compute logs for all the steps
+    # executed from within a process)
     if len(steps) == 1:
         return steps[0].key
     return hashlib.md5(json.dumps([step.key for step in steps]).encode("utf-8")).hexdigest()
