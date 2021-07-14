@@ -31,8 +31,8 @@ class CapturedLogMetadata(
 
 
 class CapturedLogManager(ABC, MayHaveInstanceWeakref):
-    """Abstract base class for storing unstructured compute logs (stdout/stderr) from the compute
-    steps of pipeline solids."""
+    """Abstract base class for capturing the unstructured compute logs (stdout/stderr) in the
+    current process, stored / retrieved with a provided log_key and namespace."""
 
     @abstractmethod
     @contextmanager
