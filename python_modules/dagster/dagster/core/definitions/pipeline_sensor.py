@@ -9,8 +9,8 @@ from dagster.core.definitions.sensor import (
     SkipReason,
 )
 from dagster.core.errors import PipelineSensorExecutionError, user_code_error_boundary
-from dagster.core.events import DagsterEvent, DagsterEventType
-from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunsFilter
+from dagster.core.events import PIPELINE_RUN_STATUS_TO_EVENT_TYPE, DagsterEvent
+from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.serdes import (
     deserialize_json_to_dagster_namedtuple,
     serialize_dagster_namedtuple,
@@ -19,6 +19,37 @@ from dagster.serdes import (
 from dagster.serdes.errors import DeserializationError
 from dagster.seven import JSONDecodeError
 from dagster.utils.error import serializable_error_info_from_exc_info
+
+
+@whitelist_for_serdes
+class PipelineSensorCursor(
+    NamedTuple(
+        "_PipelineSensorCursor",
+        [("record_id", int), ("update_timestamp", str)],
+    )
+):
+    def __new__(cls, record_id, update_timestamp):
+
+        return super(PipelineSensorCursor, cls).__new__(
+            cls,
+            record_id=check.int_param(record_id, "record_id"),
+            update_timestamp=check.str_param(update_timestamp, "update_timestamp"),
+        )
+
+    @staticmethod
+    def is_valid(json_str: str) -> bool:
+        try:
+            obj = deserialize_json_to_dagster_namedtuple(json_str)
+            return isinstance(obj, PipelineSensorCursor)
+        except (JSONDecodeError, DeserializationError):
+            return False
+
+    def to_json(self) -> str:
+        return serialize_dagster_namedtuple(cast(NamedTuple, self))
+
+    @staticmethod
+    def from_json(json_str: str) -> tuple:
+        return deserialize_json_to_dagster_namedtuple(json_str)
 
 
 class PipelineFailureSensorContext(
@@ -45,35 +76,28 @@ class PipelineFailureSensorContext(
         )
 
 
-@whitelist_for_serdes
-class PipelineFailureSensorCursor(
+class PipelineSensorContext(
     NamedTuple(
-        "_PipelineFailureSensorCursor",
-        [("record_id", int), ("update_timestamp", str)],
+        "_PipelineSensorContext",
+        [("sensor_name", str), ("pipeline_run", PipelineRun), ("dagster_event", DagsterEvent)],
     )
 ):
-    def __new__(cls, record_id, update_timestamp):
+    """The ``context`` object available to a decorated function of ``pipeline_sensor``.
 
-        return super(PipelineFailureSensorCursor, cls).__new__(
+    Attributes:
+        sensor_name (str): the name of the sensor.
+        pipeline_run (PipelineRun): the pipeline run.
+        dagster_event (DagsterEvent): the event associated with the pipeline run status.
+    """
+
+    def __new__(cls, sensor_name, pipeline_run, dagster_event):
+
+        return super(PipelineSensorContext, cls).__new__(
             cls,
-            record_id=check.int_param(record_id, "record_id"),
-            update_timestamp=check.str_param(update_timestamp, "update_timestamp"),
+            sensor_name=check.str_param(sensor_name, "sensor_name"),
+            pipeline_run=check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
+            dagster_event=check.inst_param(dagster_event, "dagster_event", DagsterEvent),
         )
-
-    @staticmethod
-    def is_valid(json_str: str) -> bool:
-        try:
-            obj = deserialize_json_to_dagster_namedtuple(json_str)
-            return isinstance(obj, PipelineFailureSensorCursor)
-        except (JSONDecodeError, DeserializationError):
-            return False
-
-    def to_json(self) -> str:
-        return serialize_dagster_namedtuple(cast(NamedTuple, self))
-
-    @staticmethod
-    def from_json(json_str: str) -> tuple:
-        return deserialize_json_to_dagster_namedtuple(json_str)
 
 
 def pipeline_failure_sensor(
@@ -102,10 +126,6 @@ def pipeline_failure_sensor(
             pipeline in the repository fails.
     """
 
-    from dagster.core.storage.event_log.base import RunShardedEventsCursor, EventRecordsFilter
-
-    dagster_event_type = DagsterEventType.PIPELINE_FAILURE
-
     def inner(
         fn: Callable[["PipelineFailureSensorContext"], Union[SkipReason, PipelineRunReaction]]
     ) -> SensorDefinition:
@@ -115,11 +135,72 @@ def pipeline_failure_sensor(
         else:
             sensor_name = name
 
+        @pipeline_sensor(
+            pipeline_run_status=PipelineRunStatus.FAILURE,
+            pipeline_selection=pipeline_selection,
+            name=sensor_name,
+            minimum_interval_seconds=minimum_interval_seconds,
+            description=description,
+        )
+        def _pipeline_failure_sensor(context: PipelineSensorContext):
+            fn(
+                PipelineFailureSensorContext(
+                    sensor_name=context.sensor_name,
+                    pipeline_run=context.pipeline_run,
+                    failure_event=context.dagster_event,
+                )
+            )
+
+        return _pipeline_failure_sensor
+
+    # This case is for when decorator is used bare, without arguments, i.e. @pipeline_failure_sensor
+    if callable(name):
+        return inner(name)
+
+    return inner
+
+
+class PipelineSensorDefinition(SensorDefinition):
+    """
+    Define a sensor that reacts to a given status of pipeline execution, where the decorated
+    function will be run when a pipeline is at the given status.
+
+    Args:
+        name (str): The name of the sensor. Defaults to the name of the decorated function.
+        pipeline_run_status (PipelineRunStatus): The status of pipeline execution which will be
+            monitored by the sensor.
+        pipeline_sensor_fn (Callable[[PipelineSensorContext], Union[SkipReason, PipelineRunReaction]]): The core
+            evaluation function for the sensor. Takes a :py:class:`~dagster.PipelineSensorContext`.
+        pipeline_selection (Optional[List[str]]): Names of the pipelines that will be monitored by
+            this sensor. Defaults to None, which means the alert will be sent when any pipeline in
+            the repository fails.
+        minimum_interval_seconds (Optional[int]): The minimum number of seconds that will elapse
+            between sensor evaluations.
+        description (Optional[str]): A human-readable description of the sensor.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        pipeline_run_status: PipelineRunStatus,
+        pipeline_sensor_fn: Callable[
+            ["PipelineSensorContext"], Union[SkipReason, PipelineRunReaction]
+        ],
+        pipeline_selection: Optional[List[str]] = None,
+        minimum_interval_seconds: Optional[int] = None,
+        description: Optional[str] = None,
+    ):
+
+        from dagster.core.storage.event_log.base import RunShardedEventsCursor, EventRecordsFilter
+
+        check.inst_param(pipeline_run_status, "pipeline_run_status", PipelineRunStatus)
+        check.opt_list_param(pipeline_selection, "pipeline_selection", str)
+
         def _wrapped_fn(context: SensorEvaluationContext):
             # initiate the cursor to (most recent event id, current timestamp) when:
             # * it's the first time starting the sensor
             # * or, the cursor isn't in valid format (backcompt)
-            if context.cursor is None or not PipelineFailureSensorCursor.is_valid(context.cursor):
+            if context.cursor is None or not PipelineSensorCursor.is_valid(context.cursor):
                 most_recent_event_records = list(
                     context.instance.get_event_records(ascending=False, limit=1)
                 )
@@ -129,17 +210,17 @@ def pipeline_failure_sensor(
                     else -1
                 )
 
-                new_cursor = PipelineFailureSensorCursor(
+                new_cursor = PipelineSensorCursor(
                     update_timestamp=pendulum.now("UTC").isoformat(),
                     record_id=most_recent_event_id,
                 )
                 context.update_cursor(new_cursor.to_json())
-                yield SkipReason(f"Initiating {sensor_name}. Set cursor to {new_cursor}")
+                yield SkipReason(f"Initiating {name}. Set cursor to {new_cursor}")
                 return
 
-            record_id, update_timestamp = PipelineFailureSensorCursor.from_json(context.cursor)
+            record_id, update_timestamp = PipelineSensorCursor.from_json(context.cursor)
 
-            # Fetch failure events after the cursor id
+            # Fetch events after the cursor id
             # * we move the cursor forward to the latest visited event's id to avoid revisits
             # * when the daemon is down, bc we persist the cursor info, we can go back to where we
             #   left and backfill alerts for the qualified events (up to 5 at a time) during the downtime
@@ -149,7 +230,7 @@ def pipeline_failure_sensor(
                     after_cursor=RunShardedEventsCursor(
                         id=record_id, run_updated_after=pendulum.parse(update_timestamp)
                     ),
-                    event_type=dagster_event_type,
+                    event_type=PIPELINE_RUN_STATUS_TO_EVENT_TYPE[pipeline_run_status],
                 ),
                 ascending=True,
                 limit=5,
@@ -169,10 +250,10 @@ def pipeline_failure_sensor(
 
                 # skip if any of of the followings happens:
                 if (
-                    # the failed pipeline does not have a repository (manually executed)
+                    # the pipeline does not have a repository (manually executed)
                     not pipeline_run.external_pipeline_origin
                     or
-                    # the failed pipeline does not belong to the current repository
+                    # the pipeline does not belong to the current repository
                     pipeline_run.external_pipeline_origin.external_repository_origin.repository_name
                     != context.repository_name
                     or
@@ -180,7 +261,7 @@ def pipeline_failure_sensor(
                     (pipeline_selection and pipeline_run.pipeline_name not in pipeline_selection)
                 ):
                     context.update_cursor(
-                        PipelineFailureSensorCursor(
+                        PipelineSensorCursor(
                             record_id=storage_id, update_timestamp=update_timestamp.isoformat()
                         ).to_json()
                     )
@@ -191,14 +272,14 @@ def pipeline_failure_sensor(
                 try:
                     with user_code_error_boundary(
                         PipelineSensorExecutionError,
-                        lambda: f'Error occurred during the execution sensor "{sensor_name}".',
+                        lambda: f'Error occurred during the execution sensor "{name}".',
                     ):
                         # one user code invocation maps to one failure event
-                        fn(
-                            PipelineFailureSensorContext(
-                                sensor_name=sensor_name,
+                        pipeline_sensor_fn(
+                            PipelineSensorContext(
+                                sensor_name=name,
                                 pipeline_run=pipeline_run,
-                                failure_event=event_log_entry.dagster_event,
+                                dagster_event=event_log_entry.dagster_event,
                             )
                         )
                 except PipelineSensorExecutionError as pipeline_sensor_execution_error:
@@ -208,7 +289,7 @@ def pipeline_failure_sensor(
                     )
 
                 context.update_cursor(
-                    PipelineFailureSensorCursor(
+                    PipelineSensorCursor(
                         record_id=storage_id, update_timestamp=update_timestamp.isoformat()
                     ).to_json()
                 )
@@ -222,15 +303,59 @@ def pipeline_failure_sensor(
                     error=serializable_error,
                 )
 
-        return SensorDefinition(
-            name=sensor_name,
+        super(PipelineSensorDefinition, self).__init__(
+            name=name,
             evaluation_fn=_wrapped_fn,
             minimum_interval_seconds=minimum_interval_seconds,
             description=description,
         )
 
-    # This case is for when decorator is used bare, without arguments, i.e. @pipeline_failure_sensor
-    if callable(name):
-        return inner(name)
+
+def pipeline_sensor(
+    pipeline_run_status: PipelineRunStatus,
+    pipeline_selection: Optional[List[str]] = None,
+    name: Optional[str] = None,
+    minimum_interval_seconds: Optional[int] = None,
+    description: Optional[str] = None,
+) -> Callable[
+    [Callable[[PipelineSensorContext], Union[SkipReason, PipelineRunReaction]]],
+    PipelineSensorDefinition,
+]:
+    """
+    Creates a sensor that reacts to a given status of pipeline execution, where the decorated
+    function will be run when a pipeline is at the given status.
+
+    Takes a :py:class:`~dagster.PipelineSensorContext`.
+
+    Args:
+        pipeline_run_status (PipelineRunStatus): The status of pipeline execution which will be
+            monitored by the sensor.
+        pipeline_selection (Optional[List[str]]): Names of the pipelines that will be monitored by
+            this sensor. Defaults to None, which means the alert will be sent when any pipeline in
+            the repository fails.
+        name (Optional[str]): The name of the sensor. Defaults to the name of the decorated function.
+        minimum_interval_seconds (Optional[int]): The minimum number of seconds that will elapse
+            between sensor evaluations.
+        description (Optional[str]): A human-readable description of the sensor.
+    """
+
+    def inner(
+        fn: Callable[["PipelineSensorContext"], Union[SkipReason, PipelineRunReaction]]
+    ) -> PipelineSensorDefinition:
+
+        check.callable_param(fn, "fn")
+        sensor_name = name or fn.__name__
+
+        def _wrapped_fn(context: SensorEvaluationContext):
+            fn(context)
+
+        return PipelineSensorDefinition(
+            name=sensor_name,
+            pipeline_run_status=pipeline_run_status,
+            pipeline_sensor_fn=_wrapped_fn,
+            pipeline_selection=pipeline_selection,
+            minimum_interval_seconds=minimum_interval_seconds,
+            description=description,
+        )
 
     return inner
