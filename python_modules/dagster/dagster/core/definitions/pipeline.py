@@ -904,11 +904,12 @@ def _checked_input_resource_reqs_for_mode(
 
     for solid in solid_dict.values():
         if solid.is_composite:
+            graph = solid.definition.ensure_graph_def()
             # check inner solids
             resource_reqs.update(
                 _checked_input_resource_reqs_for_mode(
-                    dependency_structure=solid.definition.dependency_structure,
-                    solid_dict=solid.definition.solid_dict,
+                    dependency_structure=graph.dependency_structure,
+                    solid_dict=graph.solid_dict,
                     mode_def=mode_def,
                     outer_dependency_structure=dependency_structure,
                     outer_solid=solid,
