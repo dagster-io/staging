@@ -29,8 +29,6 @@ from .backfill import (
 )
 from .launch_execution import launch_pipeline_execution, launch_pipeline_reexecution
 
-MAX_BYTES_CHUNK_READ = 4194304  # 4 MB
-
 
 def _force_mark_as_canceled(graphene_info, run_id):
     from ...schema.pipelines.pipeline import GraphenePipelineRun
@@ -162,7 +160,11 @@ def get_pipeline_run_observable(graphene_info, run_id, after=None):
 
 
 def get_compute_log_observable(graphene_info, run_id, step_key, io_type, cursor=None):
-    from ...schema.logs.compute_logs import from_compute_log_file
+    from ...schema.logs.compute_logs import (
+        from_compute_log_file,
+        captured_log_callback,
+        captured_log_update_to_graphene,
+    )
 
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.str_param(run_id, "run_id")
@@ -173,52 +175,20 @@ def get_compute_log_observable(graphene_info, run_id, step_key, io_type, cursor=
     compute_log_manager = graphene_info.context.instance.compute_log_manager
 
     if isinstance(compute_log_manager, CapturedLogManager):
-        log_key = step_key
-        namespace = run_id
-
-        def _callback(observer):
-            should_fetch = True
-            current_cursor = cursor
-            metadata = None
-            while should_fetch:
-                if io_type == ComputeIOType.STDERR:
-                    log_data = compute_log_manager.read_stderr(
-                        log_key, namespace, current_cursor, max_bytes=MAX_BYTES_CHUNK_READ
-                    )
-                    if not metadata:
-                        metadata = compute_log_manager.get_stderr_metadata(log_key, namespace)
-                else:
-                    log_data = compute_log_manager.read_stdout(
-                        log_key, namespace, current_cursor, max_bytes=MAX_BYTES_CHUNK_READ
-                    )
-                    if not metadata:
-                        metadata = compute_log_manager.get_stdout_metadata(log_key, namespace)
-
-                observer.on_next((log_data, metadata))
-                should_fetch = log_data.data and len(log_data.data) >= MAX_BYTES_CHUNK_READ
-                current_cursor = log_data.cursor
-
-            if compute_log_manager.is_capture_complete(log_key, namespace):
-                observer.on_completed()
-
-        def _to_graphene(update: Tuple[CapturedLogData, CapturedLogMetadata]):
-            from ...schema.logs.compute_logs import GrapheneComputeLogFile
-
-            log_data, metadata = update
-            return GrapheneComputeLogFile(
-                path=metadata.location,
-                data=log_data.data.decode("utf-8"),
-                cursor=log_data.cursor,
-                size=len(log_data.data),
-                download_url=metadata.download_url,
-            )
-
-        observable = Observable.create(_callback)  # pylint: disable=E1101
-        return observable.map(_to_graphene)
+        # The captured_log_callback sets up a loop that pushes compute log updates to the created
+        # observable, using the captured log manager API. The captured_log_update_to_graphene
+        # converts the captured log updates to the appropriate Graphene response objects.
+        on_captured_log_update = captured_log_callback(
+            compute_log_manager, step_key, run_id, io_type, cursor
+        )
+        observable = Observable.create(on_captured_log_update)  # pylint: disable=E1101
+        return observable.map(captured_log_update_to_graphene)
     else:
-        return graphene_info.context.instance.compute_log_manager.observable(
-            run_id, step_key, io_type, cursor
-        ).map(lambda update: from_compute_log_file(graphene_info, update))
+        # The legacy compute log manager implemented an `observable` method, which was convenient
+        # but strongly coupled the GraphQL response payload with the core compute log behavior.
+        return compute_log_manager.observable(run_id, step_key, io_type, cursor).map(
+            lambda update: from_compute_log_file(graphene_info, update)
+        )
 
 
 @capture_error
