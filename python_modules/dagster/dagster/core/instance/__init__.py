@@ -49,7 +49,7 @@ IS_AIRFLOW_INGEST_PIPELINE_STR = "is_airflow_ingest_pipeline"
 
 
 if TYPE_CHECKING:
-    from dagster.core.events import DagsterEvent, DagsterEventType
+    from dagster.core.events import DagsterEvent, DagsterEventType, EngineEventData
     from dagster.core.host_representation import HistoricalPipeline
     from dagster.core.snap import PipelineSnapshot, ExecutionPlanSnapshot
     from dagster.core.storage.event_log.base import EventRecordsFilter, EventLogRecord
@@ -1164,11 +1164,11 @@ records = instance.get_event_records(
 
     def report_engine_event(
         self,
-        message,
-        pipeline_run,
-        engine_event_data=None,
-        cls=None,
-        step_key=None,
+        message: str,
+        pipeline_run: PipelineRun,
+        engine_event_data: Optional["EngineEventData"] = None,
+        cls: Optional[Type] = None,
+        step_key: Optional[str] = None,
     ):
         """
         Report a EngineEvent that occurred outside of a pipeline execution context.
@@ -1202,12 +1202,16 @@ records = instance.get_event_records(
         self.report_dagster_event(dagster_event, pipeline_run, log_level)
         return dagster_event
 
-    def report_dagster_event(self, dagster_event, pipeline_run, log_level=logging.INFO):
-        from dagster.core.events import DagsterEvent
+    def report_dagster_event(
+        self,
+        dagster_event: "DagsterEvent",
+        pipeline_run: PipelineRun,
+        log_level: Union[str, int] = logging.INFO,
+    ):
+        """
+        Takes a DagsterEvent and stores it in persistent storage for the corresponding PipelineRun
+        """
         from dagster.core.events.log import EventLogEntry
-
-        check.inst_param(dagster_event, "dagster_event", DagsterEvent)
-        check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
 
         event_record = EventLogEntry(
             message=dagster_event.message or "",
@@ -1365,25 +1369,13 @@ records = instance.get_event_records(
         run = self.get_run_by_id(run_id)
 
         from dagster.core.events import EngineEventData, DagsterEvent, DagsterEventType
-        from dagster.core.events.log import EventLogEntry
 
         launch_started_event = DagsterEvent(
             event_type_value=DagsterEventType.PIPELINE_STARTING.value,
             pipeline_name=run.pipeline_name,
         )
 
-        event_record = EventLogEntry(
-            message="",
-            user_message="",
-            level=logging.INFO,
-            pipeline_name=run.pipeline_name,
-            run_id=run.run_id,
-            error_info=None,
-            timestamp=time.time(),
-            dagster_event=launch_started_event,
-        )
-
-        self.handle_new_event(event_record)
+        self.report_dagster_event(launch_started_event, run)
 
         run = self.get_run_by_id(run_id)
 
