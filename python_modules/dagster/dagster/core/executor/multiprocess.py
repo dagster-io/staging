@@ -90,7 +90,14 @@ class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
                 )
                 # need to manually provide a pipeline run since we are generating this event outside
                 # of a pipeline context
-                capture_event = DagsterEvent.capture_logs(None, log_key, steps, self.pipeline_run)
+                capture_event = DagsterEvent.capture_logs(
+                    pipeline_context=None,
+                    log_key=log_key,
+                    steps=steps,
+                    pipeline_run=self.pipeline_run,
+                )
+                # without a pipeline context and corresponding log manager, we need to manually
+                # report this event on the instance
                 instance.report_dagster_event(capture_event)
                 yield capture_event
 
