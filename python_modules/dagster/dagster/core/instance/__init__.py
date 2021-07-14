@@ -8,7 +8,19 @@ import warnings
 import weakref
 from collections import defaultdict
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 
 import yaml
 from dagster import check
@@ -225,12 +237,12 @@ class DagsterInstance:
         run_storage: "RunStorage",
         event_storage: "EventLogStorage",
         compute_log_manager: "ComputeLogManager",
-        schedule_storage: Optional["ScheduleStorage"] = None,
-        scheduler: Optional["Scheduler"] = None,
-        run_coordinator: Optional["RunCoordinator"] = None,
-        run_launcher: Optional["RunLauncher"] = None,
-        settings: Optional[Dict[str, Any]] = None,
-        ref: Optional[InstanceRef] = None,
+        schedule_storage: Optional["ScheduleStorage"],
+        scheduler: Optional["Scheduler"],
+        run_coordinator: "RunCoordinator",
+        run_launcher: "RunLauncher",
+        settings: Optional[Dict[str, Any]],
+        ref: Optional[InstanceRef],
     ):
         from dagster.core.storage.compute_log_manager import ComputeLogManager
         from dagster.core.storage.event_log import EventLogStorage
@@ -316,13 +328,17 @@ class DagsterInstance:
             tempdir = DagsterInstance.temp_storage()
 
         return DagsterInstance(
-            InstanceType.EPHEMERAL,
+            instance_type=InstanceType.EPHEMERAL,
             local_artifact_storage=LocalArtifactStorage(tempdir),
             run_storage=InMemoryRunStorage(preload=preload),
             event_storage=InMemoryEventLogStorage(preload=preload),
             compute_log_manager=NoOpComputeLogManager(),
             run_coordinator=DefaultRunCoordinator(),
             run_launcher=SyncInMemoryRunLauncher(),
+            schedule_storage=None,
+            scheduler=None,
+            settings=None,
+            ref=None,
         )
 
     @staticmethod
@@ -489,11 +505,11 @@ class DagsterInstance:
     # schedule storage
 
     @property
-    def schedule_storage(self) -> "ScheduleStorage":
+    def schedule_storage(self) -> Optional["ScheduleStorage"]:
         return self._schedule_storage
 
     @property
-    def scheduler(self) -> "Scheduler":
+    def scheduler(self) -> Optional["Scheduler"]:
         return self._scheduler
 
     @property
@@ -582,7 +598,7 @@ class DagsterInstance:
 
     # run storage
 
-    def get_run_by_id(self, run_id: str) -> PipelineRun:
+    def get_run_by_id(self, run_id: str) -> Optional[PipelineRun]:
         return self._run_storage.get_run_by_id(run_id)
 
     def get_pipeline_snapshot(self, snapshot_id: str) -> "PipelineSnapshot":
@@ -616,10 +632,10 @@ class DagsterInstance:
     def get_run_step_stats(self, run_id, step_keys=None) -> List["RunStepKeyStatsSnapshot"]:
         return self._event_storage.get_step_stats_for_run(run_id, step_keys)
 
-    def get_run_tags(self) -> Dict[str, Any]:
+    def get_run_tags(self) -> List[Tuple[str, Set[str]]]:
         return self._run_storage.get_run_tags()
 
-    def get_run_group(self, run_id: str) -> Tuple[str, List[PipelineRun]]:
+    def get_run_group(self, run_id: str) -> Optional[Tuple[str, Iterable[PipelineRun]]]:
         return self._run_storage.get_run_group(run_id)
 
     def create_run_for_pipeline(
@@ -1345,6 +1361,11 @@ records = instance.get_event_records(
         from dagster.core.run_coordinator import SubmitRunContext
 
         run = self.get_run_by_id(run_id)
+        if run is None:
+            raise DagsterInvariantViolationError(
+                f"Could not load run {run_id} that was passed to submit_run"
+            )
+
         check.inst(
             run.external_pipeline_origin,
             ExternalPipelineOrigin,
@@ -1390,11 +1411,14 @@ records = instance.get_event_records(
             run_id (str): The id of the run the launch.
         """
         from dagster.core.launcher import LaunchRunContext
-
-        run = self.get_run_by_id(run_id)
-
         from dagster.core.events import EngineEventData, DagsterEvent, DagsterEventType
         from dagster.core.events.log import EventLogEntry
+
+        run = self.get_run_by_id(run_id)
+        if run is None:
+            raise DagsterInvariantViolationError(
+                f"Could not load run {run_id} that was passed to launch_run"
+            )
 
         launch_started_event = DagsterEvent(
             event_type_value=DagsterEventType.PIPELINE_STARTING.value,
@@ -1415,6 +1439,8 @@ records = instance.get_event_records(
         self.handle_new_event(event_record)
 
         run = self.get_run_by_id(run_id)
+        if run is None:
+            check.failed(f"Failed to reload run {run_id}")
 
         try:
             self._run_launcher.launch_run(LaunchRunContext(pipeline_run=run, workspace=workspace))
