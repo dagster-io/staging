@@ -232,6 +232,7 @@ class DagsterInstance:
         settings: Optional[Dict[str, Any]] = None,
         ref: Optional[InstanceRef] = None,
     ):
+        from dagster.core.storage.captured_log_manager import CapturedLogManager
         from dagster.core.storage.compute_log_manager import ComputeLogManager
         from dagster.core.storage.event_log import EventLogStorage
         from dagster.core.storage.root import LocalArtifactStorage
@@ -252,8 +253,14 @@ class DagsterInstance:
         self._run_storage.register_instance(self)
 
         self._compute_log_manager = check.inst_param(
-            compute_log_manager, "compute_log_manager", ComputeLogManager
+            compute_log_manager, "compute_log_manager", (CapturedLogManager, ComputeLogManager)
         )
+        if not isinstance(self._compute_log_manager, CapturedLogManager):
+            warnings.warn(
+                "The ComputeLogManager interface is deprecated.  Please implement the abstract "
+                "interface for the `dagster.core.storage.captured_log_manager.CapturedLogManager`."
+            )
+
         self._compute_log_manager.register_instance(self)
         self._scheduler = check.opt_inst_param(scheduler, "scheduler", Scheduler)
 
@@ -265,6 +272,7 @@ class DagsterInstance:
 
         self._run_coordinator = check.inst_param(run_coordinator, "run_coordinator", RunCoordinator)
         self._run_coordinator.register_instance(self)
+
         if hasattr(self._run_coordinator, "initialize") and inspect.ismethod(
             getattr(self._run_coordinator, "initialize")
         ):
