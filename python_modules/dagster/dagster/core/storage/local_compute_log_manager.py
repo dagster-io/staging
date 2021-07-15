@@ -73,7 +73,7 @@ class LocalComputeLogManager(ComputeLogManager, CapturedLogManager, Configurable
                 data = f.read(max_bytes)
             new_offset = f.tell()
 
-        return CapturedLogData(data=data, cursor=new_offset)
+        return CapturedLogData(chunk=data, cursor=new_offset)
 
     def get_stdout(
         self,
