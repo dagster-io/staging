@@ -44,7 +44,7 @@ class CapturedLogManager(ABC, MayHaveInstanceWeakref):
         pass
 
     @abstractmethod
-    def read_stdout(
+    def get_stdout(
         self,
         log_key: str,
         namespace: Optional[str] = None,
@@ -54,7 +54,7 @@ class CapturedLogManager(ABC, MayHaveInstanceWeakref):
         pass
 
     @abstractmethod
-    def read_stderr(
+    def get_stderr(
         self,
         log_key: str,
         namespace: Optional[str] = None,
