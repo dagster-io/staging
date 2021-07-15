@@ -46,7 +46,7 @@ class TestCapturedLogManager:
 
         assert captured_log_manager.is_capture_complete(log_key)
 
-        out_data = captured_log_manager.read_stdout(log_key)
+        out_data = captured_log_manager.get_stdout(log_key)
         assert out_data.data == b"HELLO WORLD\n"
         assert out_data.cursor == 12
 
@@ -54,7 +54,7 @@ class TestCapturedLogManager:
         assert out_metadata.location
         assert out_metadata.download_url
 
-        err_data = captured_log_manager.read_stderr(log_key)
+        err_data = captured_log_manager.get_stderr(log_key)
         assert err_data.data == b"HELLO ERROR\n"
         assert err_data.cursor == 12
 
@@ -78,7 +78,7 @@ class TestCapturedLogManager:
 
         assert captured_log_manager.is_capture_complete(log_key)
 
-        out_data = captured_log_manager.read_stdout(log_key)
+        out_data = captured_log_manager.get_stdout(log_key)
         assert out_data.data == b"HELLO WORLD\n"
         assert out_data.cursor == 12
 
@@ -86,7 +86,7 @@ class TestCapturedLogManager:
         assert out_metadata.location
         assert out_metadata.download_url
 
-        err_data = captured_log_manager.read_stderr(log_key)
+        err_data = captured_log_manager.get_stderr(log_key)
         assert err_data.data == b"HELLO ERROR\n"
         assert err_data.cursor == 12
 
