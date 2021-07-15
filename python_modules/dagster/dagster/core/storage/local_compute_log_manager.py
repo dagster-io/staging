@@ -144,9 +144,9 @@ class LocalComputeLogManager(ComputeLogManager, CapturedLogManager, Configurable
     def from_config_value(inst_data, config_value):
         return LocalComputeLogManager(inst_data=inst_data, **config_value)
 
-    def _run_directory(self, run_id):
-        if run_id:
-            return os.path.join(self._base_dir, run_id, "compute_logs")
+    def _capture_directory(self, namespace: Optional[str]) -> str:
+        if namespace:
+            return os.path.join(self._base_dir, namespace, "compute_logs")
         else:
             return os.path.join(self._base_dir, "compute_logs")
 
@@ -157,11 +157,11 @@ class LocalComputeLogManager(ComputeLogManager, CapturedLogManager, Configurable
     def complete_artifact_path(self, run_id, key):
         return self._get_local_path(run_id, key, "complete")
 
-    def _get_local_path(self, run_id, key, extension):
+    def _get_local_path(self, namespace: Optional[str], key: str, extension: str):
         filename = "{}.{}".format(key, extension)
         if len(filename) > MAX_FILENAME_LENGTH:
             filename = "{}.{}".format(hashlib.md5(key.encode("utf-8")).hexdigest(), extension)
-        return os.path.join(self._run_directory(run_id), filename)
+        return os.path.join(self._capture_directory(namespace), filename)
 
     def read_logs_file(self, run_id, key, io_type, cursor=0, max_bytes=MAX_BYTES_FILE_READ):
         path = self.get_local_path(run_id, key, io_type)
