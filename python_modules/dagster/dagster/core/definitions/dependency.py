@@ -108,7 +108,7 @@ class Solid:
         self,
         name: str,
         definition: "NodeDefinition",
-        graph_definition: "GraphDefinition",
+        graph_definition: Optional["GraphDefinition"] = None,
         tags: Dict[str, str] = None,
         hook_defs: Optional[AbstractSet[HookDefinition]] = None,
         retry_policy: Optional[RetryPolicy] = None,
@@ -118,7 +118,7 @@ class Solid:
 
         self.name = check.str_param(name, "name")
         self.definition = check.inst_param(definition, "definition", NodeDefinition)
-        self.graph_definition = check.inst_param(
+        self.graph_definition = check.opt_inst_param(
             graph_definition,
             "graph_definition",
             GraphDefinition,
@@ -184,15 +184,24 @@ class Solid:
         return self.definition.tags.updated_with(self._additional_tags)
 
     def container_maps_input(self, input_name: str) -> bool:
+        check.invariant(
+            self.graph_definition is not None, "This property cannot be accessed from invocation."
+        )
         return (
             self.graph_definition.input_mapping_for_pointer(InputPointer(self.name, input_name))
             is not None
         )
 
     def container_mapped_input(self, input_name: str) -> InputMapping:
+        check.invariant(
+            self.graph_definition is not None, "This property cannot be accessed from invocation."
+        )
         return self.graph_definition.input_mapping_for_pointer(InputPointer(self.name, input_name))
 
     def container_maps_fan_in_input(self, input_name: str, fan_in_index: int) -> bool:
+        check.invariant(
+            self.graph_definition is not None, "This property cannot be accessed from invocation."
+        )
         return (
             self.graph_definition.input_mapping_for_pointer(
                 FanInInputPointer(self.name, input_name, fan_in_index)

@@ -1,12 +1,14 @@
 import warnings
-from typing import Any, Dict, Optional, Set, Union
+from typing import Any, Dict, Optional, Set, Union, cast
 
 from dagster import check
 
+from ...definitions.composition import PendingNodeInvocation
 from ...definitions.dependency import Solid
 from ...definitions.hook import HookDefinition
 from ...definitions.mode import ModeDefinition
 from ...definitions.resource import IContainsGenerator, Resources
+from ...definitions.solid import SolidDefinition
 from ...errors import DagsterInvalidPropertyError, DagsterInvariantViolationError
 from ...log_manager import DagsterLogManager
 from ..plan.step import ExecutionStep
@@ -138,12 +140,27 @@ class HookContext:
 
 class UnboundHookContext(HookContext):
     def __init__(
-        self, resources: Dict[str, Any], mode_def: Optional[ModeDefinition]
+        self,
+        resources: Dict[str, Any],
+        mode_def: Optional[ModeDefinition],
+        solid: Optional[Union[SolidDefinition, PendingNodeInvocation]],
     ):  # pylint: disable=super-init-not-called
         from ..context_creation_pipeline import initialize_console_manager
         from ..build_resources import build_resources
 
         self._mode_def = mode_def
+        self._solid = (
+            Solid(
+                name=solid.name
+                if isinstance(solid, SolidDefinition)
+                else (solid.given_alias or solid.node_def.name),
+                definition=solid if isinstance(solid, SolidDefinition) else solid.node_def,
+                graph_definition=None,
+                tags=solid.tags if isinstance(solid, PendingNodeInvocation) else None,
+            )
+            if solid is not None
+            else None
+        )
 
         # Open resource context manager
         self._resources_cm = build_resources(resources)
@@ -179,7 +196,11 @@ class UnboundHookContext(HookContext):
 
     @property
     def solid(self) -> Solid:
-        raise DagsterInvalidPropertyError(_property_msg("solid", "property"))
+        check.invariant(
+            self._solid is not None,
+            "solid property was not provided when constructing the context.",
+        )
+        return cast(Solid, self._solid)
 
     @property
     def step(self) -> ExecutionStep:
@@ -241,11 +262,13 @@ class BoundHookContext(HookContext):
         self,
         hook_def: HookDefinition,
         resources: Resources,
+        solid: Optional[Solid],
         mode_def: Optional[ModeDefinition],
         log_manager: DagsterLogManager,
     ):  # pylint: disable=super-init-not-called
         self._hook_def = hook_def
         self._resources = resources
+        self._solid = solid
         self._mode_def = mode_def
         self._log_manager = log_manager
 
@@ -263,7 +286,11 @@ class BoundHookContext(HookContext):
 
     @property
     def solid(self) -> Solid:
-        raise DagsterInvalidPropertyError(_property_msg("solid", "property"))
+        check.invariant(
+            self._solid is not None,
+            "solid property was not provided when constructing the context.",
+        )
+        return cast(Solid, self._solid)
 
     @property
     def step(self) -> ExecutionStep:
@@ -315,7 +342,9 @@ class BoundHookContext(HookContext):
 
 
 def build_hook_context(
-    resources: Optional[Dict[str, Any]] = None, mode_def: Optional[ModeDefinition] = None
+    resources: Optional[Dict[str, Any]] = None,
+    mode_def: Optional[ModeDefinition] = None,
+    solid: Optional[Union[SolidDefinition, PendingNodeInvocation]] = None,
 ) -> UnboundHookContext:
     """Builds hook context from provided parameters.
 
@@ -328,6 +357,8 @@ def build_hook_context(
         resources (Optional[Dict[str, Any]]): The resources to provide to the context. These can
             either be values or resource definitions.
         mode_def (Optional[ModeDefinition]): The mode definition used with the context.
+        solid (Optional[SolidDefinition, PendingNodeInvocation]): The solid definition which the
+            hook may be associated with.
 
     Examples:
         .. code-block:: python
@@ -341,4 +372,5 @@ def build_hook_context(
     return UnboundHookContext(
         resources=check.opt_dict_param(resources, "resources", key_type=str),
         mode_def=check.opt_inst_param(mode_def, "mode_def", ModeDefinition),
+        solid=check.opt_inst_param(solid, "solid", (SolidDefinition, PendingNodeInvocation)),
     )
