@@ -75,8 +75,5 @@ class CapturedLogManager(ABC, MayHaveInstanceWeakref):
     ) -> CapturedLogMetadata:
         pass
 
-    def is_enabled(self, _log_key: str, _namespace: Optional[str] = None):
-        return True
-
     def should_capture_run_by_step(self) -> bool:
         return False
