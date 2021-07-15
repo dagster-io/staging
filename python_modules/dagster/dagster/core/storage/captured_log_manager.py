@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import NamedTuple, Optional
 
-from dagster import check
 from dagster.core.instance import MayHaveInstanceWeakref
 
 
