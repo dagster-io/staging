@@ -9,9 +9,9 @@ import uuid
 import warnings
 from contextlib import contextmanager
 from typing import List
-from dagster.core.execution.plan.plan import ExecutionStep
 
 from dagster.core.execution import poll_compute_logs, watch_orphans
+from dagster.core.execution.plan.plan import ExecutionStep
 from dagster.serdes.ipc import interrupt_ipc_subprocess, open_ipc_subprocess
 from dagster.seven import IS_WINDOWS, json, wait_for_process
 from dagster.utils import ensure_file

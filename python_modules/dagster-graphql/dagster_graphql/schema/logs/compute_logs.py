@@ -1,12 +1,13 @@
+from typing import Optional, Tuple
+
 import graphene
 from dagster import check
-from dagster.core.storage.compute_log_manager import ComputeIOType, ComputeLogFileData
 from dagster.core.storage.captured_log_manager import (
     CapturedLogData,
     CapturedLogManager,
     CapturedLogMetadata,
 )
-from typing import Optional, Tuple
+from dagster.core.storage.compute_log_manager import ComputeIOType, ComputeLogFileData
 
 MAX_BYTES_CHUNK_READ = 4194304  # 4 MB
 
