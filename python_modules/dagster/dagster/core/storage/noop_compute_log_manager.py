@@ -31,7 +31,7 @@ class NoOpComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableC
     def is_capture_complete(self, log_key: str, namespace: Optional[str] = None):
         return True
 
-    def read_stdout(
+    def get_stdout(
         self,
         log_key: str,
         namespace: Optional[str] = None,
@@ -40,7 +40,7 @@ class NoOpComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableC
     ) -> CapturedLogData:
         return CapturedLogData()
 
-    def read_stderr(
+    def get_stderr(
         self,
         log_key: str,
         namespace: Optional[str] = None,
