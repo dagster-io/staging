@@ -90,7 +90,7 @@ class GCSComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableCl
     def is_capture_complete(self, log_key: str, namespace: Optional[str] = None):
         return self.local_manager.is_capture_complete(log_key, namespace)
 
-    def read_stdout(
+    def get_stdout(
         self,
         log_key: str,
         namespace: Optional[str] = None,
@@ -99,9 +99,9 @@ class GCSComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableCl
     ) -> CapturedLogData:
         if self._should_download(namespace, log_key, ComputeIOType.STDOUT):
             self._download_to_local(namespace, log_key, ComputeIOType.STDOUT)
-        return self.local_manager.read_stdout(log_key, namespace, cursor, max_bytes)
+        return self.local_manager.get_stdout(log_key, namespace, cursor, max_bytes)
 
-    def read_stderr(
+    def get_stderr(
         self,
         log_key: str,
         namespace: Optional[str] = None,
@@ -110,7 +110,7 @@ class GCSComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableCl
     ) -> CapturedLogData:
         if self._should_download(namespace, log_key, ComputeIOType.STDERR):
             self._download_to_local(namespace, log_key, ComputeIOType.STDERR)
-        return self.local_manager.read_stderr(log_key, namespace, cursor, max_bytes)
+        return self.local_manager.get_stderr(log_key, namespace, cursor, max_bytes)
 
     def get_stdout_metadata(
         self, log_key: str, namespace: Optional[str] = None
