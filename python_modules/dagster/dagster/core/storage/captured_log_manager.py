@@ -9,13 +9,16 @@ from dagster.core.instance import MayHaveInstanceWeakref
 class CapturedLogData(
     NamedTuple(
         "_CapturedLogData",
-        [("data", Optional[bytes]), ("cursor", Optional[int])],
+        [("chunk", Optional[bytes]), ("cursor", Optional[int])],
     )
 ):
-    def __new__(cls, data=None, cursor=None):
-        check.opt_bytes_param(data, "data")
-        check.opt_int_param(cursor, "cursor")
-        return super(CapturedLogData, cls).__new__(cls, data, cursor)
+    """
+    Object representing captured log data, either a partial chunk of the log data or the full
+    capture.  Contains the raw bytes and optionally the cursor offset for the partial chunk.
+    """
+
+    def __new__(cls, chunk: Optional[bytes] = None, cursor: Optional[int] = None):
+        return super(CapturedLogData, cls).__new__(cls, chunk, cursor)
 
 
 class CapturedLogMetadata(
@@ -24,9 +27,12 @@ class CapturedLogMetadata(
         [("location", Optional[str]), ("download_url", Optional[str])],
     )
 ):
-    def __new__(cls, location=None, download_url=None):
-        check.opt_str_param(location, "location")
-        check.opt_str_param(download_url, "download_url")
+    """
+    Object representing metadata info for the captured log data, containing a display string for
+    the location of the log data and a URL for direct download of the captured log data.
+    """
+
+    def __new__(cls, location: Optional[str] = None, download_url: Optional[str] = None):
         return super(CapturedLogMetadata, cls).__new__(cls, location, download_url)
 
 
