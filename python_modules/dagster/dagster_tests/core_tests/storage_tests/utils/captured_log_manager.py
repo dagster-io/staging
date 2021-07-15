@@ -36,9 +36,6 @@ class TestCapturedLogManager:
     def test_capture(self, captured_log_manager):
         log_key = "foo"
 
-        if not captured_log_manager.is_enabled(log_key):
-            return
-
         with captured_log_manager.capture_logs(log_key):
             print("HELLO WORLD")  # pylint: disable=print-call
             print("HELLO ERROR", file=sys.stderr)  # pylint: disable=print-call
@@ -67,9 +64,6 @@ class TestCapturedLogManager:
     )
     def test_long_key(self, captured_log_manager):
         log_key = "".join(random.choice(string.ascii_lowercase) for x in range(300))
-
-        if not captured_log_manager.is_enabled(log_key):
-            return
 
         with captured_log_manager.capture_logs(log_key):
             print("HELLO WORLD")  # pylint: disable=print-call
