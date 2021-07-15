@@ -107,7 +107,7 @@ class Node:
         self,
         name: str,
         definition: "NodeDefinition",
-        graph_definition: "GraphDefinition",
+        graph_definition: "GraphDefinition" = None,
         tags: Dict[str, str] = None,
         hook_defs: Optional[AbstractSet[HookDefinition]] = None,
         retry_policy: Optional[RetryPolicy] = None,
