@@ -44,7 +44,7 @@ class TestCapturedLogManager:
         assert captured_log_manager.is_capture_complete(log_key)
 
         out_data = captured_log_manager.get_stdout(log_key)
-        assert out_data.data == b"HELLO WORLD\n"
+        assert out_data.chunk == b"HELLO WORLD\n"
         assert out_data.cursor == 12
 
         out_metadata = captured_log_manager.get_stdout_metadata(log_key)
@@ -52,7 +52,7 @@ class TestCapturedLogManager:
         assert out_metadata.download_url
 
         err_data = captured_log_manager.get_stderr(log_key)
-        assert err_data.data == b"HELLO ERROR\n"
+        assert err_data.chunk == b"HELLO ERROR\n"
         assert err_data.cursor == 12
 
         err_metadata = captured_log_manager.get_stderr_metadata(log_key)
