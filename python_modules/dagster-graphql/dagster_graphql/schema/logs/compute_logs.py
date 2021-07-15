@@ -60,7 +60,7 @@ def captured_log_callback(
                     metadata = captured_log_manager.get_stdout_metadata(log_key, namespace)
 
             observer.on_next((log_data, metadata))
-            should_fetch = log_data.data and len(log_data.data) >= MAX_BYTES_CHUNK_READ
+            should_fetch = log_data.chunk and len(log_data.chunk) >= MAX_BYTES_CHUNK_READ
             current_cursor = log_data.cursor
 
         if captured_log_manager.is_capture_complete(log_key, namespace):
