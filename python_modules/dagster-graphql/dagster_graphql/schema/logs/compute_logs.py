@@ -46,13 +46,13 @@ def captured_log_callback(
         metadata = None
         while should_fetch:
             if io_type == ComputeIOType.STDERR:
-                log_data = captured_log_manager.read_stderr(
+                log_data = captured_log_manager.get_stderr(
                     log_key, namespace, current_cursor, max_bytes=MAX_BYTES_CHUNK_READ
                 )
                 if not metadata:
                     metadata = captured_log_manager.get_stderr_metadata(log_key, namespace)
             else:
-                log_data = captured_log_manager.read_stdout(
+                log_data = captured_log_manager.get_stdout(
                     log_key, namespace, current_cursor, max_bytes=MAX_BYTES_CHUNK_READ
                 )
                 if not metadata:
