@@ -62,9 +62,6 @@ class NoOpComputeLogManager(ComputeLogManager, CapturedLogManager, ConfigurableC
     def should_capture_run_by_step(self) -> bool:
         return False
 
-    def is_enabled(self, _log_key: str, _namespace: Optional[str] = None):
-        return False
-
     def enabled(self, _pipeline_run, _step_key):
         return False
 
