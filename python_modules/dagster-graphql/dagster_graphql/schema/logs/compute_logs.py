@@ -74,9 +74,9 @@ def captured_log_update_to_graphene(update: Tuple[CapturedLogData, CapturedLogMe
     log_data, metadata = update
     return GrapheneComputeLogFile(
         path=metadata.location,
-        data=log_data.data.decode("utf-8"),
+        data=log_data.chunk.decode("utf-8"),
         cursor=log_data.cursor,
-        size=len(log_data.data),
+        size=len(log_data.chunk),
         download_url=metadata.download_url,
     )
 

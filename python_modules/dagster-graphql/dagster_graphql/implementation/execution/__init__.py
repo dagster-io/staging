@@ -1,11 +1,7 @@
 from typing import Optional, Tuple
 
 from dagster import check
-from dagster.core.storage.captured_log_manager import (
-    CapturedLogData,
-    CapturedLogManager,
-    CapturedLogMetadata,
-)
+from dagster.core.storage.captured_log_manager import CapturedLogManager
 from dagster.core.storage.compute_log_manager import ComputeIOType
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.serdes import serialize_dagster_namedtuple
