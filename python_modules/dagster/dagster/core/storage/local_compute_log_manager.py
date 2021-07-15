@@ -75,7 +75,7 @@ class LocalComputeLogManager(ComputeLogManager, CapturedLogManager, Configurable
 
         return CapturedLogData(data=data, cursor=new_offset)
 
-    def read_stdout(
+    def get_stdout(
         self,
         log_key: str,
         namespace: Optional[str] = None,
@@ -85,7 +85,7 @@ class LocalComputeLogManager(ComputeLogManager, CapturedLogManager, Configurable
         path = self.get_local_path(namespace, log_key, ComputeIOType.STDOUT)
         return self._read_path(path, cursor=cursor, max_bytes=max_bytes)
 
-    def read_stderr(
+    def get_stderr(
         self,
         log_key: str,
         namespace: Optional[str] = None,
