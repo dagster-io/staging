@@ -423,20 +423,6 @@ def test_resolve_step_versions_default_value():
     assert versions["versioned_solid_default_value"] == step_version
 
 
-def test_step_keys_already_provided():
-    with pytest.raises(
-        DagsterInvariantViolationError,
-        match="step_keys_to_execute parameter "
-        "cannot be used in conjunction with memoized pipeline runs.",
-    ):
-        instance = DagsterInstance.ephemeral()
-        instance.create_run_for_pipeline(
-            pipeline_def=no_version_pipeline,
-            tags={MEMOIZED_RUN_TAG: "true"},
-            step_keys_to_execute=["basic_takes_input_solid"],
-        )
-
-
 @resource(config_schema={"input_str": Field(String)}, version="5")
 def basic_resource(context):
     return context.resource_config["input_str"]

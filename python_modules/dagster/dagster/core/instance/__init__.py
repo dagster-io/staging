@@ -630,7 +630,6 @@ class DagsterInstance:
         run_config=None,
         mode=None,
         solids_to_execute=None,
-        step_keys_to_execute=None,
         status=None,
         tags=None,
         root_run_id=None,
@@ -670,16 +669,9 @@ class DagsterInstance:
                     solids_to_execute=solids_to_execute
                 )
 
-        if execution_plan:
-            final_execution_plan = execution_plan
-            check.invariant(
-                step_keys_to_execute is None,
-                "Should not pass execution_plan and step_keys_to_execute to create_run",
-            )
-            step_keys_to_execute = execution_plan.step_keys_to_execute
-        else:
+        if not execution_plan:
             resolved_run_config = ResolvedRunConfig.build(pipeline_def, run_config, mode)
-            full_execution_plan = ExecutionPlan.build(
+            execution_plan = ExecutionPlan.build(
                 InMemoryPipeline(pipeline_def),
                 resolved_run_config,
             )
@@ -687,31 +679,19 @@ class DagsterInstance:
             if is_memoized_run(tags):
                 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
 
-                if step_keys_to_execute:
-                    raise DagsterInvariantViolationError(
-                        "step_keys_to_execute parameter cannot be used in conjunction with memoized "
-                        "pipeline runs."
-                    )
-
-                final_execution_plan = resolve_memoized_execution_plan(
-                    full_execution_plan,
+                execution_plan = resolve_memoized_execution_plan(
+                    execution_plan,
                     pipeline_def,
                     run_config,
                     self,
                     resolved_run_config,
-                )  # TODO: tighter integration with existing step_keys_to_execute functionality
-                step_keys_to_execute = final_execution_plan.step_keys_to_execute
-                if not step_keys_to_execute:
+                )
+
+                if not execution_plan.step_keys_to_execute:
                     raise DagsterNoStepsToExecuteException(
                         "No steps found to execute. "
                         "This is because every step in the plan has already been memoized."
                     )
-            elif step_keys_to_execute:
-                final_execution_plan = full_execution_plan.build_subset_plan(
-                    step_keys_to_execute, pipeline_def, resolved_run_config
-                )
-            else:
-                final_execution_plan = full_execution_plan
 
         return self.create_run(
             pipeline_name=pipeline_def.name,
@@ -720,14 +700,14 @@ class DagsterInstance:
             mode=check.opt_str_param(mode, "mode", default=pipeline_def.get_default_mode_name()),
             solid_selection=solid_selection,
             solids_to_execute=solids_to_execute,
-            step_keys_to_execute=step_keys_to_execute,
+            step_keys_to_execute=execution_plan.step_keys_to_execute,
             status=status,
             tags=tags,
             root_run_id=root_run_id,
             parent_run_id=parent_run_id,
             pipeline_snapshot=pipeline_def.get_pipeline_snapshot(),
             execution_plan_snapshot=snapshot_from_execution_plan(
-                final_execution_plan,
+                execution_plan,
                 pipeline_def.get_pipeline_snapshot_id(),
             ),
             parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(),
