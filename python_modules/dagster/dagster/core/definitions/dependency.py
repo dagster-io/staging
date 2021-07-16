@@ -209,12 +209,12 @@ class Node:
 
 
 @whitelist_for_serdes
-class NodeHandle(
+class SolidHandle(
     # mypy does not yet support recursive types
     namedtuple("_NodeHandle", "name parent")
 ):
     """
-    A structured object to identify nodes in the potentially recursive graph structure.
+    Legacy artifact, see NodeHandle below
     """
 
     def __new__(cls, name: str, parent: Optional["NodeHandle"]):
@@ -360,8 +360,10 @@ class NodeHandle(
         return NodeHandle(**{k: dict_repr[k] for k in ["name", "parent"]})
 
 
-# previous name for NodeHandle was SolidHandle
-register_serdes_tuple_fallbacks({"SolidHandle": NodeHandle})
+class NodeHandle(SolidHandle):
+    """
+    A structured object to identify nodes in the potentially recursive graph structure.
+    """
 
 
 class SolidInputHandle(namedtuple("_SolidInputHandle", "solid input_def")):
