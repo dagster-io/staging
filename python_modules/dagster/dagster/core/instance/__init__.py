@@ -18,7 +18,6 @@ from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import (
     DagsterHomeNotSetError,
     DagsterInvariantViolationError,
-    DagsterNoStepsToExecuteException,
     DagsterRunAlreadyExists,
     DagsterRunConflict,
 )
@@ -687,12 +686,6 @@ class DagsterInstance:
                     resolved_run_config,
                 )
 
-                if not execution_plan.step_keys_to_execute:
-                    raise DagsterNoStepsToExecuteException(
-                        "No steps found to execute. "
-                        "This is because every step in the plan has already been memoized."
-                    )
-
         return self.create_run(
             pipeline_name=pipeline_def.name,
             run_id=run_id,
@@ -822,7 +815,7 @@ class DagsterInstance:
 
         check.inst_param(execution_plan_snapshot, "execution_plan_snapshot", ExecutionPlanSnapshot)
         check.str_param(pipeline_snapshot_id, "pipeline_snapshot_id")
-        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+        check.opt_nullable_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
 
         check.invariant(
             execution_plan_snapshot.pipeline_snapshot_id == pipeline_snapshot_id,
@@ -834,17 +827,6 @@ class DagsterInstance:
                 ep_pipeline_snapshot_id=execution_plan_snapshot.pipeline_snapshot_id,
                 pipeline_snapshot_id=pipeline_snapshot_id,
             ),
-        )
-
-        check.invariant(
-            set(step_keys_to_execute) == set(execution_plan_snapshot.step_keys_to_execute)
-            if step_keys_to_execute
-            else set(execution_plan_snapshot.step_keys_to_execute)
-            == set([step.key for step in execution_plan_snapshot.steps]),
-            "We encode step_keys_to_execute twice in our stack, unfortunately. This check "
-            "ensures that they are consistent. We check that step_keys_to_execute in the plan "
-            "matches the step_keys_to_execute params if it is set. If it is not, this indicates "
-            "a full execution plan, and so we verify that.",
         )
 
         execution_plan_snapshot_id = create_execution_plan_snapshot_id(execution_plan_snapshot)
