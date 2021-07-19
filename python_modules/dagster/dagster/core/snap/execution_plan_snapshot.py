@@ -35,7 +35,7 @@ def create_execution_plan_snapshot_id(execution_plan_snapshot):
 class ExecutionPlanSnapshot(
     namedtuple(
         "_ExecutionPlanSnapshot",
-        "steps artifacts_persisted pipeline_snapshot_id step_keys_to_execute initial_known_state snapshot_version",
+        "steps artifacts_persisted pipeline_snapshot_id step_keys_to_execute initial_known_state snapshot_version step_output_versions",
     )
 ):
     # serdes log
@@ -51,6 +51,7 @@ class ExecutionPlanSnapshot(
         step_keys_to_execute=None,
         initial_known_state=None,
         snapshot_version=None,
+        step_output_versions=None,
     ):
         return super(ExecutionPlanSnapshot, cls).__new__(
             cls,
@@ -66,6 +67,7 @@ class ExecutionPlanSnapshot(
                 KnownExecutionState,
             ),
             snapshot_version=check.opt_int_param(snapshot_version, "snapshot_version"),
+            step_output_versions=step_output_versions,
         )
 
     @property
@@ -241,6 +243,20 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
     check.str_param(pipeline_snapshot_id, "pipeline_snapshot_id")
 
+    if execution_plan.step_output_versions:
+        step_output_versions = {}
+        for step_output_handle, version in execution_plan.step_output_versions.items():
+            mapping_key = (
+                "MAPPING_KEY_NO_VAL"
+                if step_output_handle.mapping_key is None
+                else step_output_handle.mapping_key
+            )
+            step_output_versions[
+                f"{step_output_handle.step_key}-{step_output_handle.output_name}-{mapping_key}"
+            ] = version
+    else:
+        step_output_versions = None
+
     return ExecutionPlanSnapshot(
         steps=sorted(
             list(map(_snapshot_from_execution_step, execution_plan.steps)), key=lambda es: es.key
@@ -250,4 +266,5 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
         step_keys_to_execute=execution_plan.step_keys_to_execute,
         initial_known_state=execution_plan.known_state,
         snapshot_version=CURRENT_SNAPSHOT_VERSION,
+        step_output_versions=step_output_versions,
     )
