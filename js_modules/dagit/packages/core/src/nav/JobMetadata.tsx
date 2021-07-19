@@ -1,19 +1,23 @@
 import {gql, useQuery} from '@apollo/client';
 import {Button, Classes, Colors, Dialog, Icon} from '@blueprintjs/core';
+import {Tooltip2 as Tooltip} from '@blueprintjs/popover2';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
 import {useFeatureFlags} from '../app/Flags';
+import {timingStringForStatus} from '../runs/RunDetails';
 import {RunStatus} from '../runs/RunStatusDots';
 import {TimeElapsed} from '../runs/TimeElapsed';
 import {ScheduleSwitch} from '../schedules/ScheduleSwitch';
 import {SCHEDULE_FRAGMENT} from '../schedules/ScheduleUtils';
+import {TimestampDisplay} from '../schedules/TimestampDisplay';
 import {SENSOR_FRAGMENT} from '../sensors/SensorFragment';
 import {SensorSwitch} from '../sensors/SensorSwitch';
+import {Box} from '../ui/Box';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
-import {MetadataTable} from '../ui/MetadataTable';
+import {MetadataTable, StyledTable} from '../ui/MetadataTable';
 import {FontFamily} from '../ui/styles';
 import {RepoAddress} from '../workspace/types';
 import {workspacePathFromAddress} from '../workspace/workspacePath';
@@ -220,10 +224,12 @@ const MatchingSensor: React.FC<{sensor: Sensor; repoAddress: RepoAddress}> = ({
   </Group>
 );
 
+const TIME_FORMAT = {showSeconds: true, showTimezone: false};
+
 const LatestRun: React.FC<{run: Run}> = ({run}) => {
   const stats = React.useMemo(() => {
     if (run.stats.__typename === 'PipelineRunStatsSnapshot') {
-      return {start: run.stats.startTime, end: run.stats.endTime};
+      return {start: run.stats.startTime, end: run.stats.endTime, status: run.status};
     }
     return null;
   }, [run]);
@@ -234,7 +240,41 @@ const LatestRun: React.FC<{run: Run}> = ({run}) => {
       <div style={{fontFamily: FontFamily.monospace}}>
         <Link to={`/instance/runs/${run.id}`}>{run.id.slice(0, 8)}</Link>
       </div>
-      {stats ? <TimeElapsed startUnix={stats.start} endUnix={stats.end} /> : null}
+      {stats ? (
+        <Tooltip
+          placement="bottom"
+          content={
+            <StyledTable>
+              <tbody>
+                <tr>
+                  <td style={{color: Colors.GRAY4}}>
+                    <Box padding={{right: 16}}>Started</Box>
+                  </td>
+                  <td>
+                    {stats.start ? (
+                      <TimestampDisplay timestamp={stats.start} timeFormat={TIME_FORMAT} />
+                    ) : (
+                      timingStringForStatus(stats.status)
+                    )}
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{color: Colors.GRAY4}}>Ended</td>
+                  <td>
+                    {stats.end ? (
+                      <TimestampDisplay timestamp={stats.end} timeFormat={TIME_FORMAT} />
+                    ) : (
+                      timingStringForStatus(stats.status)
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </StyledTable>
+          }
+        >
+          <TimeElapsed startUnix={stats.start} endUnix={stats.end} />
+        </Tooltip>
+      ) : null}
     </Group>
   );
 };

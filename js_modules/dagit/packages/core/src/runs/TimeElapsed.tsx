@@ -49,7 +49,7 @@ export const TimeElapsed = (props: Props) => {
         color={Colors.GRAY3}
         style={{position: 'relative', top: '-1px'}}
       />
-      <span style={{fontVariantNumeric: 'tabular-nums'}}>
+      <span style={{cursor: 'default', fontVariantNumeric: 'tabular-nums'}}>
         {startTime ? formatElapsedTime((endTime || Date.now()) - startTime) : ''}
       </span>
     </Group>
