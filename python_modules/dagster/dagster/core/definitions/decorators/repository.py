@@ -7,7 +7,12 @@ from dagster.core.errors import DagsterInvalidDefinitionError
 from ..graph import GraphDefinition
 from ..partition import PartitionSetDefinition
 from ..pipeline import PipelineDefinition
-from ..repository import VALID_REPOSITORY_DATA_DICT_KEYS, RepositoryData, RepositoryDefinition
+from ..repository import (
+    VALID_REPOSITORY_DATA_DICT_KEYS,
+    IRepositoryData,
+    RepositoryData,
+    RepositoryDefinition,
+)
 from ..schedule import ScheduleDefinition
 from ..sensor import SensorDefinition
 
@@ -28,11 +33,11 @@ class _Repository:
         if not (
             isinstance(repository_definitions, list)
             or isinstance(repository_definitions, dict)
-            or isinstance(repository_definitions, RepositoryData)
+            or isinstance(repository_definitions, IRepositoryData)
         ):
             raise DagsterInvalidDefinitionError(
                 "Bad return value of type {type_} from repository construction function: must "
-                "return list, dict, or RepositoryData. See the @repository decorator docstring for "
+                "return list, dict, or IRepositoryData. See the @repository decorator docstring for "
                 "details and examples".format(type_=type(repository_definitions)),
             )
 
@@ -77,7 +82,7 @@ class _Repository:
                     )
                 )
             repository_data = RepositoryData.from_dict(repository_definitions)
-        elif isinstance(repository_definitions, RepositoryData):
+        elif isinstance(repository_definitions, IRepositoryData):
             repository_data = repository_definitions
 
         repository_def = RepositoryDefinition(
@@ -114,7 +119,7 @@ def repository(
     which can be helpful for performance when there are many definitions in a repository, or
     when constructing the definitions is costly.
 
-    3. An object of type :py:class:`RepositoryData`. Return this object if you need fine-grained
+    3. An object of type :py:class:`IRepositoryData`. Return this object if you need fine-grained
         control over the construction and indexing of definitions within the repository, e.g., to
         create definitions dynamically from .yaml files in a directory.
 
@@ -208,14 +213,17 @@ def repository(
         # of files in a bespoke YAML format
         ######################################################################
 
-        class ComplexRepositoryData(RepositoryData):
+        class ComplexRepositoryData(IRepositoryData):
             def __init__(self, yaml_directory):
                 self._yaml_directory = yaml_directory
 
-            def get_pipeline(self, pipeline_name):
-                return self._construct_pipeline_def_from_yaml_file(
-                    self._yaml_file_for_pipeline_name(pipeline_name)
-                )
+            def get_all_pipelines(self):
+                return [
+                    self._construct_pipeline_def_from_yaml_file(
+                      self._yaml_file_for_pipeline_name(file_name)
+                    )
+                    for file_name in os.listdir(self._yaml_directory)
+                ]
 
             ...
 
