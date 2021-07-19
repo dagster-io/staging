@@ -66,10 +66,6 @@ if TYPE_CHECKING:
     from dagster.core.debug import DebugRunPayload
 
 
-def is_memoized_run(tags: Dict[str, Any]) -> bool:
-    return tags is not None and MEMOIZED_RUN_TAG in tags and tags.get(MEMOIZED_RUN_TAG) == "true"
-
-
 def _check_run_equality(
     pipeline_run: PipelineRun, candidate_run: PipelineRun
 ) -> Dict[str, Tuple[Any, Any]]:
@@ -674,17 +670,6 @@ class DagsterInstance:
                 InMemoryPipeline(pipeline_def),
                 resolved_run_config,
             )
-
-            if is_memoized_run(tags):
-                from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
-
-                execution_plan = resolve_memoized_execution_plan(
-                    execution_plan,
-                    pipeline_def,
-                    run_config,
-                    self,
-                    resolved_run_config,
-                )
 
         all_step_keys = set(
             [step_handle.to_key() for step_handle in execution_plan.step_dict.keys()]
