@@ -51,6 +51,7 @@ from dagster.grpc.impl import (
     get_partition_set_execution_param_data,
     get_partition_tags,
 )
+from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from dagster.seven.compat.pendulum import PendulumDateTime
 from dagster.utils import merge_dicts
 from dagster.utils.hosted_user_process import external_repo_from_def
@@ -555,7 +556,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         return self._use_ssl
 
     def _reload_current_image(self) -> str:
-        return self.client.get_current_image().current_image
+        return deserialize_json_to_dagster_namedtuple(self.client.get_current_image()).current_image
 
     def cleanup(self) -> None:
         if self._heartbeat_shutdown_event:
