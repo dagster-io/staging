@@ -237,3 +237,17 @@ def test_job_with_hooks():
 
     assert result.success
     assert entered == ["yes"]
+
+
+def test_desc():
+    @graph(description="graph desc")
+    def empty():
+        pass
+
+    job = empty.to_job()
+    # should we inherit from the graph instead?
+    assert job.description == None
+
+    desc = "job desc"
+    job = empty.to_job(description=desc)
+    assert job.description == desc
