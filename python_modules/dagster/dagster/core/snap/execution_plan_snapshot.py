@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import NamedTuple
 
 from dagster import check
 from dagster.core.definitions import NodeHandle
@@ -35,7 +36,7 @@ def create_execution_plan_snapshot_id(execution_plan_snapshot):
 class ExecutionPlanSnapshot(
     namedtuple(
         "_ExecutionPlanSnapshot",
-        "steps artifacts_persisted pipeline_snapshot_id step_keys_to_execute initial_known_state snapshot_version",
+        "steps artifacts_persisted pipeline_snapshot_id step_keys_to_execute initial_known_state snapshot_version step_output_versions",
     )
 ):
     # serdes log
@@ -51,6 +52,7 @@ class ExecutionPlanSnapshot(
         step_keys_to_execute=None,
         initial_known_state=None,
         snapshot_version=None,
+        step_output_versions=None,
     ):
         return super(ExecutionPlanSnapshot, cls).__new__(
             cls,
@@ -66,6 +68,9 @@ class ExecutionPlanSnapshot(
                 KnownExecutionState,
             ),
             snapshot_version=check.opt_int_param(snapshot_version, "snapshot_version"),
+            step_output_versions=check.opt_list_param(
+                step_output_versions, "step_output_versions", of_type=StepOutputVersionData
+            ),
         )
 
     @property
@@ -92,6 +97,12 @@ class ExecutionPlanSnapshotErrorData(namedtuple("_ExecutionPlanSnapshotErrorData
             cls,
             error=check.opt_inst_param(error, "error", SerializableErrorInfo),
         )
+
+
+@whitelist_for_serdes
+class StepOutputVersionData(NamedTuple):
+    step_output_handle: StepOutputHandle
+    version: str
 
 
 @whitelist_for_serdes
@@ -241,6 +252,18 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
     check.str_param(pipeline_snapshot_id, "pipeline_snapshot_id")
 
+    step_output_versions = check.opt_dict_param(
+        execution_plan.step_output_versions,
+        "execution_plan.step_output_versions",
+        key_type=StepOutputHandle,
+        value_type=str,
+    )
+
+    step_output_versions_lst = [
+        StepOutputVersionData(step_output_handle=step_output_handle, version=version)
+        for step_output_handle, version in step_output_versions.items()
+    ]
+
     return ExecutionPlanSnapshot(
         steps=sorted(
             list(map(_snapshot_from_execution_step, execution_plan.steps)), key=lambda es: es.key
@@ -250,4 +273,5 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
         step_keys_to_execute=execution_plan.step_keys_to_execute,
         initial_known_state=execution_plan.known_state,
         snapshot_version=CURRENT_SNAPSHOT_VERSION,
+        step_output_versions=step_output_versions_lst,
     )
