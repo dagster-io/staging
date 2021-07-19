@@ -15,6 +15,7 @@ from dagster.core.storage.memoizable_io_manager import (
     VersionedPickledObjectFilesystemIOManager,
 )
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
+from dagster.core.test_utils import instance_for_test
 
 
 def test_versioned_pickled_object_filesystem_io_manager():
@@ -66,6 +67,7 @@ def test_versioned_io_manager_with_resources():
     def basic_pipeline():
         basic_solid()
 
-    execute_pipeline(basic_pipeline)
+    with instance_for_test() as instance:
+        execute_pipeline(basic_pipeline, instance=instance)
 
-    assert occurrence_log == ["has", "has", "handle"]
+    assert occurrence_log == ["has", "handle"]

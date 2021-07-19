@@ -1,9 +1,12 @@
 import hashlib
 
+import pytest
 from dagster import (
     Bool,
+    DagsterInvariantViolationError,
     Field,
     Float,
+    IOManagerDefinition,
     Int,
     ModeDefinition,
     Output,
@@ -11,7 +14,6 @@ from dagster import (
     String,
     composite_solid,
     dagster_type_loader,
-    io_manager,
     pipeline,
     resource,
     solid,
@@ -23,15 +25,14 @@ from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.resolve_versions import (
     join_and_hash,
     resolve_config_version,
-    resolve_memoized_execution_plan,
     resolve_resource_versions,
     resolve_step_output_versions,
     resolve_step_versions,
 )
-from dagster.core.instance import DagsterInstance
 from dagster.core.storage.memoizable_io_manager import MemoizableIOManager
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.system_config.objects import ResolvedRunConfig
+from dagster.core.test_utils import instance_for_test
 
 
 class VersionedInMemoryIOManager(MemoizableIOManager):
@@ -52,14 +53,6 @@ class VersionedInMemoryIOManager(MemoizableIOManager):
     def has_output(self, context):
         keys = self._get_keys(context)
         return keys in self.values
-
-
-def io_manager_factory(manager):
-    @io_manager
-    def _io_manager_resource(_):
-        return manager
-
-    return _io_manager_resource
 
 
 def test_join_and_hash():
@@ -100,12 +93,12 @@ def versioned_solid_takes_input(_, intput):
     return 2 * intput
 
 
-def versioned_pipeline_factory(manager=None):
+def versioned_pipeline_factory(manager=VersionedInMemoryIOManager()):
     @pipeline(
         mode_defs=[
             ModeDefinition(
                 name="main",
-                resource_defs=({"io_manager": io_manager_factory(manager)} if manager else {}),
+                resource_defs={"io_manager": IOManagerDefinition.hardcoded_io_manager(manager)},
             )
         ],
         tags={MEMOIZED_RUN_TAG: "true"},
@@ -121,12 +114,12 @@ def solid_takes_input(_, intput):
     return 2 * intput
 
 
-def partially_versioned_pipeline_factory(manager=None):
+def partially_versioned_pipeline_factory(manager=VersionedInMemoryIOManager()):
     @pipeline(
         mode_defs=[
             ModeDefinition(
                 name="main",
-                resource_defs=({"io_manager": io_manager_factory(manager)} if manager else {}),
+                resource_defs={"io_manager": IOManagerDefinition.hardcoded_io_manager(manager)},
             )
         ],
         tags={MEMOIZED_RUN_TAG: "true"},
@@ -170,39 +163,45 @@ def versioned_pipeline_expected_step2_output_version():
     return join_and_hash(step2_version + "result")
 
 
-def test_resolve_step_versions_no_external_dependencies():
-    versioned_pipeline = versioned_pipeline_factory()
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
+def test_step_versions():
+    with instance_for_test() as instance:
+        versioned_pipeline = versioned_pipeline_factory()
+        speculative_execution_plan = create_execution_plan(versioned_pipeline, instance=instance)
+        resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
 
-    versions = resolve_step_versions(
-        versioned_pipeline, speculative_execution_plan, resolved_run_config
-    )
+        versions = resolve_step_versions(
+            versioned_pipeline, speculative_execution_plan, resolved_run_config
+        )
 
-    assert versions["versioned_solid_no_input"] == versioned_pipeline_expected_step1_version()
+        assert versions["versioned_solid_no_input"] == versioned_pipeline_expected_step1_version()
 
-    assert versions["versioned_solid_takes_input"] == versioned_pipeline_expected_step2_version()
+        assert (
+            versions["versioned_solid_takes_input"] == versioned_pipeline_expected_step2_version()
+        )
 
 
-def test_resolve_step_output_versions_no_external_dependencies():
-    versioned_pipeline = versioned_pipeline_factory()
-    speculative_execution_plan = create_execution_plan(
-        versioned_pipeline, run_config={}, mode="main"
-    )
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline, run_config={}, mode="main")
+def test_step_output_versions():
+    with instance_for_test() as instance:
+        versioned_pipeline = versioned_pipeline_factory()
+        speculative_execution_plan = create_execution_plan(
+            versioned_pipeline, run_config={}, mode="main", instance=instance
+        )
+        resolved_run_config = ResolvedRunConfig.build(
+            versioned_pipeline, run_config={}, mode="main"
+        )
 
-    versions = resolve_step_output_versions(
-        versioned_pipeline, speculative_execution_plan, resolved_run_config
-    )
+        versions = resolve_step_output_versions(
+            versioned_pipeline, speculative_execution_plan, resolved_run_config
+        )
 
-    assert (
-        versions[StepOutputHandle("versioned_solid_no_input", "result")]
-        == versioned_pipeline_expected_step1_output_version()
-    )
-    assert (
-        versions[StepOutputHandle("versioned_solid_takes_input", "result")]
-        == versioned_pipeline_expected_step2_output_version()
-    )
+        assert (
+            versions[StepOutputHandle("versioned_solid_no_input", "result")]
+            == versioned_pipeline_expected_step1_output_version()
+        )
+        assert (
+            versions[StepOutputHandle("versioned_solid_takes_input", "result")]
+            == versioned_pipeline_expected_step2_output_version()
+        )
 
 
 @solid
@@ -220,94 +219,49 @@ def no_version_pipeline():
     basic_takes_input_solid(basic_solid())
 
 
-def test_resolve_memoized_execution_plan_no_stored_results():
-    versioned_pipeline = versioned_pipeline_factory(VersionedInMemoryIOManager())
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
+def test_memoized_plan_no_memoized_results():
+    with instance_for_test() as instance:
+        versioned_pipeline = versioned_pipeline_factory()
+        memoized_plan = create_execution_plan(versioned_pipeline, instance=instance)
 
-    with DagsterInstance.ephemeral() as dagster_instance:
-        memoized_execution_plan = resolve_memoized_execution_plan(
-            speculative_execution_plan,
-            versioned_pipeline,
-            {},
-            dagster_instance,
-            resolved_run_config,
-        )
-
-        assert set(memoized_execution_plan.step_keys_to_execute) == {
+        assert set(memoized_plan.step_keys_to_execute) == {
             "versioned_solid_no_input",
             "versioned_solid_takes_input",
         }
 
 
-def test_resolve_memoized_execution_plan_yes_stored_results():
-    manager = VersionedInMemoryIOManager()
-    versioned_pipeline = versioned_pipeline_factory(manager)
+def test_memoized_plan_memoized_results():
+    with instance_for_test() as instance:
+        manager = VersionedInMemoryIOManager()
 
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
+        versioned_pipeline = versioned_pipeline_factory(manager)
+        plan = create_execution_plan(versioned_pipeline, instance=instance)
+        resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
 
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline)
+        # Affix a memoized value to the output
+        step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
+        step_output_version = plan.get_version_for_step_output_handle(step_output_handle)
+        manager.values[
+            (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
+        ] = 4
 
-    step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
-    step_output_version = resolve_step_output_versions(
-        versioned_pipeline, speculative_execution_plan, resolved_run_config
-    )[step_output_handle]
-    manager.values[
-        (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
-    ] = 4
-
-    with DagsterInstance.ephemeral() as dagster_instance:
-
-        memoized_execution_plan = resolve_memoized_execution_plan(
-            speculative_execution_plan,
-            versioned_pipeline,
-            {},
-            dagster_instance,
-            resolved_run_config,
+        memoized_plan = plan.build_memoized_plan(
+            versioned_pipeline, resolved_run_config, instance=None
         )
 
-        assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input"]
-
-        expected_handle = StepOutputHandle(
-            step_key="versioned_solid_no_input", output_name="result"
-        )
-
-        assert (
-            memoized_execution_plan.get_step_by_key("versioned_solid_takes_input")
-            .step_input_dict["intput"]
-            .source.step_output_handle
-            == expected_handle
-        )
+        assert memoized_plan.step_keys_to_execute == ["versioned_solid_takes_input"]
 
 
-def test_resolve_memoized_execution_plan_partial_versioning():
-    manager = VersionedInMemoryIOManager()
+def test_memoization_no_code_version_for_solid():
+    with instance_for_test() as instance:
+        partially_versioned_pipeline = partially_versioned_pipeline_factory()
 
-    partially_versioned_pipeline = partially_versioned_pipeline_factory(manager)
-    speculative_execution_plan = create_execution_plan(partially_versioned_pipeline)
-
-    resolved_run_config = ResolvedRunConfig.build(partially_versioned_pipeline)
-
-    step_output_handle = StepOutputHandle("versioned_solid_no_input", "result")
-
-    step_output_version = resolve_step_output_versions(
-        partially_versioned_pipeline, speculative_execution_plan, resolved_run_config
-    )[step_output_handle]
-    manager.values[
-        (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
-    ] = 4
-
-    with DagsterInstance.ephemeral() as instance:
-        assert (
-            resolve_memoized_execution_plan(
-                speculative_execution_plan,
-                partially_versioned_pipeline,
-                {},
-                instance,
-                resolved_run_config,
-            ).step_keys_to_execute
-            == ["solid_takes_input"]
-        )
+        with pytest.raises(
+            DagsterInvariantViolationError,
+            match="No version argument provided for solid 'solid_takes_input' when using memoization. "
+            "Please provide a version argument to the '@solid' decorator when defining your solid.",
+        ):
+            create_execution_plan(partially_versioned_pipeline, instance=instance)
 
 
 def _get_ext_version(config_value):
@@ -349,44 +303,49 @@ def run_test_with_builtin_type(type_to_test, loader_version, type_value):
             "versioned_solid_ext_input_builtin_type": {"inputs": {"_builtin_type": type_value}}
         }
     }
-    speculative_execution_plan = create_execution_plan(
-        versioned_pipeline_ext_input_builtin_type,
-        run_config=run_config,
-    )
 
-    resolved_run_config = ResolvedRunConfig.build(
-        versioned_pipeline_ext_input_builtin_type, run_config=run_config
-    )
+    with instance_for_test() as instance:
+        speculative_execution_plan = create_execution_plan(
+            versioned_pipeline_ext_input_builtin_type,
+            run_config=run_config,
+            instance=instance,
+        )
 
-    versions = resolve_step_versions(
-        versioned_pipeline_ext_input_builtin_type, speculative_execution_plan, resolved_run_config
-    )
+        resolved_run_config = ResolvedRunConfig.build(
+            versioned_pipeline_ext_input_builtin_type, run_config=run_config
+        )
 
-    ext_input_version = join_and_hash(str(type_value))
-    input_version = join_and_hash(loader_version + ext_input_version)
+        versions = resolve_step_versions(
+            versioned_pipeline_ext_input_builtin_type,
+            speculative_execution_plan,
+            resolved_run_config,
+        )
 
-    solid1_def_version = versioned_solid_ext_input_builtin_type.version
-    solid1_config_version = resolve_config_version(None)
-    solid1_resources_version = join_and_hash()
-    solid1_version = join_and_hash(
-        solid1_def_version, solid1_config_version, solid1_resources_version
-    )
+        ext_input_version = join_and_hash(str(type_value))
+        input_version = join_and_hash(loader_version + ext_input_version)
 
-    step1_version = join_and_hash(input_version, solid1_version)
-    assert versions["versioned_solid_ext_input_builtin_type"] == step1_version
+        solid1_def_version = versioned_solid_ext_input_builtin_type.version
+        solid1_config_version = resolve_config_version(None)
+        solid1_resources_version = join_and_hash()
+        solid1_version = join_and_hash(
+            solid1_def_version, solid1_config_version, solid1_resources_version
+        )
 
-    output_version = join_and_hash(step1_version, "result")
-    hashed_input2 = output_version
+        step1_version = join_and_hash(input_version, solid1_version)
+        assert versions["versioned_solid_ext_input_builtin_type"] == step1_version
 
-    solid2_def_version = versioned_solid_takes_input.version
-    solid2_config_version = resolve_config_version(None)
-    solid2_resources_version = join_and_hash()
-    solid2_version = join_and_hash(
-        solid2_def_version, solid2_config_version, solid2_resources_version
-    )
+        output_version = join_and_hash(step1_version, "result")
+        hashed_input2 = output_version
 
-    step2_version = join_and_hash(hashed_input2, solid2_version)
-    assert versions["versioned_solid_takes_input"] == step2_version
+        solid2_def_version = versioned_solid_takes_input.version
+        solid2_config_version = resolve_config_version(None)
+        solid2_resources_version = join_and_hash()
+        solid2_version = join_and_hash(
+            solid2_def_version, solid2_config_version, solid2_resources_version
+        )
+
+        step2_version = join_and_hash(hashed_input2, solid2_version)
+        assert versions["versioned_solid_takes_input"] == step2_version
 
 
 @solid(
@@ -403,22 +362,27 @@ def versioned_pipeline_default_value():
 
 
 def test_resolve_step_versions_default_value():
-    speculative_execution_plan = create_execution_plan(versioned_pipeline_default_value)
-    resolved_run_config = ResolvedRunConfig.build(versioned_pipeline_default_value)
+    with instance_for_test() as instance:
+        speculative_execution_plan = create_execution_plan(
+            versioned_pipeline_default_value, instance=instance
+        )
+        resolved_run_config = ResolvedRunConfig.build(versioned_pipeline_default_value)
 
-    versions = resolve_step_versions(
-        versioned_pipeline_default_value, speculative_execution_plan, resolved_run_config
-    )
+        versions = resolve_step_versions(
+            versioned_pipeline_default_value, speculative_execution_plan, resolved_run_config
+        )
 
-    input_version = join_and_hash(repr("DEFAULTVAL"))
+        input_version = join_and_hash(repr("DEFAULTVAL"))
 
-    solid_def_version = versioned_solid_default_value.version
-    solid_config_version = resolve_config_version(None)
-    solid_resources_version = join_and_hash()
-    solid_version = join_and_hash(solid_def_version, solid_config_version, solid_resources_version)
+        solid_def_version = versioned_solid_default_value.version
+        solid_config_version = resolve_config_version(None)
+        solid_resources_version = join_and_hash()
+        solid_version = join_and_hash(
+            solid_def_version, solid_config_version, solid_resources_version
+        )
 
-    step_version = join_and_hash(input_version, solid_version)
-    assert versions["versioned_solid_default_value"] == step_version
+        step_version = join_and_hash(input_version, solid_version)
+        assert versions["versioned_solid_default_value"] == step_version
 
 
 @resource(config_schema={"input_str": Field(String)}, version="5")
@@ -520,108 +484,160 @@ def versioned_modes_pipeline():
 
 
 def test_step_versions_with_resources():
-    run_config = {"resources": {"basic_resource": {"config": {"input_str": "apple"}}}}
-    speculative_execution_plan = create_execution_plan(
-        versioned_modes_pipeline, run_config=run_config, mode="fakemode"
-    )
-    resolved_run_config = ResolvedRunConfig.build(
-        versioned_modes_pipeline, run_config=run_config, mode="fakemode"
-    )
+    with instance_for_test() as instance:
+        run_config = {"resources": {"basic_resource": {"config": {"input_str": "apple"}}}}
+        speculative_execution_plan = create_execution_plan(
+            versioned_modes_pipeline, run_config=run_config, mode="fakemode", instance=instance
+        )
+        resolved_run_config = ResolvedRunConfig.build(
+            versioned_modes_pipeline, run_config=run_config, mode="fakemode"
+        )
 
-    versions = resolve_step_versions(
-        versioned_modes_pipeline, speculative_execution_plan, resolved_run_config
-    )
+        versions = resolve_step_versions(
+            versioned_modes_pipeline, speculative_execution_plan, resolved_run_config
+        )
 
-    solid_def_version = fake_solid_resources_versioned.version
-    solid_config_version = resolve_config_version(None)
+        solid_def_version = fake_solid_resources_versioned.version
+        solid_config_version = resolve_config_version(None)
 
-    resolved_run_config = ResolvedRunConfig.build(
-        versioned_modes_pipeline, run_config, mode="fakemode"
-    )
+        resolved_run_config = ResolvedRunConfig.build(
+            versioned_modes_pipeline, run_config, mode="fakemode"
+        )
 
-    resource_versions_by_key = resolve_resource_versions(
-        resolved_run_config,
-        versioned_modes_pipeline,
-    )
-    solid_resources_version = join_and_hash(
-        *[
-            resource_versions_by_key[resource_key]
-            for resource_key in fake_solid_resources_versioned.required_resource_keys
-        ]
-    )
-    solid_version = join_and_hash(solid_def_version, solid_config_version, solid_resources_version)
+        resource_versions_by_key = resolve_resource_versions(
+            resolved_run_config,
+            versioned_modes_pipeline,
+        )
+        solid_resources_version = join_and_hash(
+            *[
+                resource_versions_by_key[resource_key]
+                for resource_key in fake_solid_resources_versioned.required_resource_keys
+            ]
+        )
+        solid_version = join_and_hash(
+            solid_def_version, solid_config_version, solid_resources_version
+        )
 
-    step_version = join_and_hash(solid_version)
+        step_version = join_and_hash(solid_version)
 
-    assert versions["fake_solid_resources_versioned"] == step_version
+        assert versions["fake_solid_resources_versioned"] == step_version
 
 
 def test_step_versions_separate_io_manager():
-    mgr = io_manager_factory(VersionedInMemoryIOManager())
+    with instance_for_test() as instance:
+        mgr = IOManagerDefinition.hardcoded_io_manager(VersionedInMemoryIOManager())
 
-    @solid(version="39", output_defs=[OutputDefinition(io_manager_key="fake")])
-    def solid_requires_io_manager():
-        return Output(5)
+        @solid(version="39", output_defs=[OutputDefinition(io_manager_key="fake")])
+        def solid_requires_io_manager():
+            return Output(5)
+
+        @pipeline(
+            mode_defs=[
+                ModeDefinition(
+                    name="fakemode",
+                    resource_defs={
+                        "fake": mgr,
+                    },
+                ),
+            ]
+        )
+        def io_mgr_pipeline():
+            solid_requires_io_manager()
+
+        speculative_execution_plan = create_execution_plan(
+            io_mgr_pipeline, run_config={}, mode="fakemode", instance=instance
+        )
+
+        resolved_run_config = ResolvedRunConfig.build(
+            io_mgr_pipeline, run_config={}, mode="fakemode"
+        )
+
+        versions = resolve_step_versions(
+            io_mgr_pipeline, speculative_execution_plan, resolved_run_config
+        )
+
+        solid_def_version = fake_solid_resources_versioned.version
+        solid_config_version = resolve_config_version(None)
+        solid_resources_version = join_and_hash(*[])
+        solid_version = join_and_hash(
+            solid_def_version, solid_config_version, solid_resources_version
+        )
+        step_version = join_and_hash(solid_version)
+        assert versions["solid_requires_io_manager"] == step_version
+
+
+def test_unmemoized_inner_solid():
+    @solid
+    def solid_no_version():
+        pass
+
+    @composite_solid
+    def wrap():
+        return solid_no_version()
 
     @pipeline(
         mode_defs=[
             ModeDefinition(
                 name="fakemode",
                 resource_defs={
-                    "fake": mgr,
+                    "fake": IOManagerDefinition.hardcoded_io_manager(VersionedInMemoryIOManager()),
                 },
             ),
-        ]
+        ],
+        tags={MEMOIZED_RUN_TAG: "true"},
     )
-    def io_mgr_pipeline():
-        solid_requires_io_manager()
-
-    speculative_execution_plan = create_execution_plan(
-        io_mgr_pipeline, run_config={}, mode="fakemode"
-    )
-
-    resolved_run_config = ResolvedRunConfig.build(io_mgr_pipeline, run_config={}, mode="fakemode")
-
-    versions = resolve_step_versions(
-        io_mgr_pipeline, speculative_execution_plan, resolved_run_config
-    )
-
-    solid_def_version = fake_solid_resources_versioned.version
-    solid_config_version = resolve_config_version(None)
-    solid_resources_version = join_and_hash(*[])
-    solid_version = join_and_hash(solid_def_version, solid_config_version, solid_resources_version)
-    step_version = join_and_hash(solid_version)
-    assert versions["solid_requires_io_manager"] == step_version
-
-
-def test_step_versions_composite_solid():
-    @solid(config_schema=Field(String, is_required=False))
-    def scalar_config_solid(context):
-        yield Output(context.solid_config)
-
-    @composite_solid(
-        config_schema={"override_str": Field(String)},
-        config_fn=lambda cfg: {"scalar_config_solid": {"config": cfg["override_str"]}},
-    )
-    def wrap():
-        return scalar_config_solid()
-
-    @pipeline
     def wrap_pipeline():
-        wrap.alias("do_stuff")()
+        wrap()
 
-    run_config = {
-        "solids": {"do_stuff": {"config": {"override_str": "override"}}},
-        "loggers": {"console": {"config": {"log_level": "ERROR"}}},
-    }
+    with instance_for_test() as instance:
+        with pytest.raises(
+            DagsterInvariantViolationError,
+            match="No version argument provided for solid 'solid_no_version' when using "
+            "memoization. Please provide a version argument to the '@solid' decorator when defining "
+            "your solid.",
+        ):
+            create_execution_plan(wrap_pipeline, instance=instance)
 
-    speculative_execution_plan = create_execution_plan(wrap_pipeline, run_config=run_config)
 
-    resolved_run_config = ResolvedRunConfig.build(wrap_pipeline, run_config=run_config)
+def test_memoized_inner_solid():
+    @solid(version="versioned")
+    def solid_versioned():
+        pass
 
-    versions = resolve_step_versions(wrap_pipeline, speculative_execution_plan, resolved_run_config)
+    @composite_solid
+    def wrap():
+        return solid_versioned()
 
-    assert versions["do_stuff.scalar_config_solid"] == None
+    mgr = VersionedInMemoryIOManager()
+
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                name="fakemode",
+                resource_defs={
+                    "io_manager": IOManagerDefinition.hardcoded_io_manager(mgr),
+                },
+            ),
+        ],
+        tags={MEMOIZED_RUN_TAG: "true"},
+    )
+    def wrap_pipeline():
+        wrap()
+
+    with instance_for_test() as instance:
+        unmemoized_plan = create_execution_plan(wrap_pipeline, instance=instance)
+        step_output_handle = StepOutputHandle("wrap.solid_versioned", "result")
+        assert unmemoized_plan.step_keys_to_execute == [step_output_handle.step_key]
+
+        # Affix value to expected version for step output.
+        step_output_version = unmemoized_plan.get_version_for_step_output_handle(step_output_handle)
+        mgr.values[
+            (step_output_handle.step_key, step_output_handle.output_name, step_output_version)
+        ] = 4
+        memoized_plan = unmemoized_plan.build_memoized_plan(
+            wrap_pipeline, ResolvedRunConfig.build(wrap_pipeline), instance=None
+        )
+        assert len(memoized_plan.step_keys_to_execute) == 0
 
 
 def test_configured_versions():
