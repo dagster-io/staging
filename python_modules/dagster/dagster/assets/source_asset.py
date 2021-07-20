@@ -1,6 +1,7 @@
-from typing import Any, NamedTuple, Optional, Tuple
+from typing import Any, NamedTuple, Optional
 
 
 class SourceAsset(NamedTuple):
-    path: Tuple[str]
+    name: str
+    namespace: Optional[str] = None
     metadata: Optional[Any] = None
