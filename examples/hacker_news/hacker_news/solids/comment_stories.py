@@ -1,30 +1,12 @@
-from dagster import InputDefinition, OutputDefinition, solid
+from dagster.assets import asset
 from pandas import DataFrame, Series
+from hacker_news.solids.upload_to_database import comments, stories
 
 
-@solid(
-    input_defs=[
-        InputDefinition(
-            "stories",
-            root_manager_key="warehouse_loader",
-            metadata={"table": "hackernews.stories", "columns": ["id"]},
-        ),
-        InputDefinition(
-            "comments",
-            root_manager_key="warehouse_loader",
-            metadata={
-                "table": "hackernews.comments",
-                "columns": ["id", "by", "parent"],
-            },
-        ),
-    ],
-    output_defs=[
-        OutputDefinition(
-            io_manager_key="warehouse_io_manager", metadata={"table": "hackernews.comment_stories"}
-        )
-    ],
-)
-def build_comment_stories(stories: DataFrame, comments: DataFrame) -> DataFrame:
+@asset(inputs={"stories": stories, "comments": comments}, namespace="hackernews")
+def comment_stories(
+    stories: DataFrame, comments: DataFrame  # pylint: disable=redefined-outer-name
+) -> DataFrame:
     """
     Traverses the comment tree to link each comment to its root story.
 
