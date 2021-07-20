@@ -1,6 +1,8 @@
-from typing import Any, NamedTuple, Optional, Tuple
+from typing import Any, NamedTuple, Optional
+
+from dagster.core.definitions.events import AssetKey
 
 
 class SourceAsset(NamedTuple):
-    path: Tuple[str]
+    key: AssetKey
     metadata: Optional[Any] = None

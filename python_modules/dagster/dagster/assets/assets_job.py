@@ -1,4 +1,4 @@
-from typing import AbstractSet, Any, Dict, List, Optional, Tuple, Union, cast
+from typing import AbstractSet, Any, Dict, List, Mapping, Optional, Tuple, Union, cast
 
 from dagster import (
     DependencyDefinition,
@@ -9,9 +9,11 @@ from dagster import (
     SolidDefinition,
     build_input_context,
     build_output_context,
+    check,
     root_input_manager,
 )
 from dagster.core.definitions.dependency import IDependencyDefinition, SolidInvocation
+from dagster.core.definitions.events import AssetKey
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.definitions.i_solid_definition import NodeDefinition
 from dagster.utils.merger import merge_dicts
@@ -27,10 +29,14 @@ def build_assets_job(
     description: Optional[str] = None,
 ) -> PipelineDefinition:
     """Builds a job that refreshes the given assets."""
-    source_paths = {source.path for source in source_assets or []}
+    check.str_param(name, "name")
+    check.list_param(assets, "assets", of_type=NodeDefinition)
+    check.opt_list_param(source_assets, "source_assets", of_type=SourceAsset)
+    check.opt_str_param(description, "description")
+    source_assets_by_key = {source.key: source for source in source_assets or {}}
 
-    solid_deps = build_solid_deps(assets, source_paths)
-    root_manager = build_root_manager(source_assets or [])
+    solid_deps = build_solid_deps(assets, source_assets_by_key.keys())
+    root_manager = build_root_manager(source_assets_by_key)
 
     return GraphDefinition(
         name=name,
@@ -55,10 +61,10 @@ def build_solid_deps(
             )
 
         output_def = solid.output_defs[0]
-        if output_def.metadata is None or "logical_asset" not in output_def.metadata:
-            raise ValueError(f"Output metadata of solid '{solid.name}' is missing 'logical_asset'")
+        logical_asset = get_asset_key(
+            output_def.metadata, f"Output metadata of solid '{solid.name}'"
+        )
 
-        logical_asset = output_def.metadata["logical_asset"]
         if logical_asset in solids_by_logical_asset:
             prev_solid = solids_by_logical_asset[logical_asset].name
             raise ValueError(
@@ -71,13 +77,11 @@ def build_solid_deps(
     for solid in assets:
         solid_deps[solid.name] = {}
         for input_def in solid.input_defs:
-            if input_def.metadata is None or "logical_asset" not in input_def.metadata:
-                raise ValueError(
-                    f"Metadata for input '{input_def.name}'' of solid '{solid.name}' is missing "
-                    "'logical_asset'"
-                )
+            logical_asset = get_asset_key(
+                input_def.metadata,
+                f"Metadata for input '{input_def.name}' of solid '{solid.name}'",
+            )
 
-            logical_asset = input_def.metadata["logical_asset"]
             if logical_asset in solids_by_logical_asset:
                 solid_deps[solid.name][input_def.name] = DependencyDefinition(
                     solids_by_logical_asset[logical_asset].name, "result"
@@ -92,18 +96,16 @@ def build_solid_deps(
     return solid_deps
 
 
-def build_root_manager(source_assets: List[SourceAsset]) -> RootInputManagerDefinition:
-    source_assets_by_path = {source_asset.path: source_asset for source_asset in source_assets}
-
+def build_root_manager(
+    source_assets_by_key: Mapping[AssetKey, SourceAsset]
+) -> RootInputManagerDefinition:
     @root_input_manager(required_resource_keys={"io_manager"})
     def _root_manager(input_context: InputContext) -> Any:
-        if input_context.metadata is None or "logical_asset" not in input_context.metadata:
-            raise ValueError("Metadata for input is missing 'logical_asset'")
-
-        source_asset = source_assets_by_path[input_context.metadata["logical_asset"]]
+        source_asset_path = get_asset_key(input_context.metadata, "Metadata for input")
+        source_asset = source_assets_by_key[source_asset_path]
 
         output_context = build_output_context(
-            name=source_asset.path[-1], step_key="none", metadata=source_asset.metadata
+            name=source_asset.key.path[-1], step_key="none", metadata=source_asset.metadata
         )
         input_context_with_upstream = build_input_context(
             name=input_context.name, upstream_output=output_context
@@ -112,3 +114,13 @@ def build_root_manager(source_assets: List[SourceAsset]) -> RootInputManagerDefi
         return cast(Any, input_context.resources).io_manager.load_input(input_context_with_upstream)
 
     return _root_manager
+
+
+def get_asset_key(metadata: Optional[Mapping[str, Any]], error_prefix: str) -> AssetKey:
+    if metadata is None:
+        raise ValueError(f"{error_prefix}' is None")
+
+    if "logical_asset_key" not in metadata:
+        raise ValueError(f"{error_prefix} is missing 'logical_asset_key'")
+
+    return metadata["logical_asset_key"]
