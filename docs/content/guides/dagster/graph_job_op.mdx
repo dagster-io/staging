@@ -410,6 +410,66 @@ do_it_all_schedule = ScheduleDefinition(
 )
 ```
 
+### Partition Schedules
+
+With the pipeline-centric set of APIs, you would declare a partitioned schedule by using one of the partitioned schedule decorators, like <PyObject object="daily_schedule"/>, <PyObject object="hourly_schedule"/> etc. The created schedule would target a specific pipeline via `pipeline_name`.
+
+Both the schedule and pipeline need to be provided to the repository in order to use the schedule.
+
+```python file=/guides/dagster/graph_job_op/pipeline_with_partition_schedule.py
+from dagster import daily_schedule, solid, pipeline, repository
+import datetime
+
+
+@solid(config_schema={"date": str})
+def my_solid():
+    ...
+
+
+@pipeline
+def my_pipeline():
+    my_solid()
+
+
+@daily_schedule(pipeline_name="my_pipeline", start_date=datetime.datetime(2020, 1, 1))
+def my_daily_schedule(date):
+    return {"solids": {"my_solid": {"config": {"start_date": date.strftime("%Y-%m-%d %H")}}}}
+
+
+@repository
+def my_repo():
+    return [my_pipeline, my_daily_schedule]
+```
+
+With the graph APIs, you specify the schedule as a set of partitions on which a job can run. The resulting schedule can be independently passed to a repository, and the underlying job will be inferred.
+
+```python file=/guides/dagster/graph_job_op/graph_with_partition_schedule.py
+from dagster import graph, daily_partitioned_config, schedule_from_partitions, op, repository
+
+
+@op(config_schema={"date": str})
+def my_op():
+    ...
+
+
+@graph
+def my_graph():
+    my_op()
+
+
+@daily_partitioned_config(start_date="2020-01-01")
+def my_daily_config(start, _end):
+    return {"solids": {"my_op": {"config": {"date": str(start)}}}}
+
+
+my_schedule = schedule_from_partitions(my_graph.to_job(config=my_daily_config))
+
+
+@repository
+def my_repo():
+    return [my_schedule]
+```
+
 ## InputDefinitions and OutputDefinitions
 
 With the solid API, you define inputs and outputs using the InputDefinition and OutputDefinition classes.
