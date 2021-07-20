@@ -1,4 +1,4 @@
-from dagster import DependencyDefinition, IOManager, io_manager
+from dagster import AssetKey, DependencyDefinition, IOManager, io_manager
 from dagster.assets import SourceAsset, asset, build_assets_job
 
 
@@ -17,23 +17,23 @@ def test_two_asset_pipeline():
     def asset1():
         return 1
 
-    @asset(inputs=[["asset1"]])
-    def asset2(arg1):
-        assert arg1 == 1
+    @asset
+    def asset2(asset1):
+        assert asset1 == 1
 
     job = build_assets_job("a", [asset1, asset2])
     assert job.graph.node_defs == [asset1, asset2]
     assert job.dependencies == {
         "asset1": {},
-        "asset2": {"arg1": DependencyDefinition("asset1", "result")},
+        "asset2": {"asset1": DependencyDefinition("asset1", "result")},
     }
     assert job.execute_in_process().success
 
 
 def test_source_asset():
-    @asset(inputs=[["source1"]])
-    def asset1(arg1):
-        assert arg1 == 5
+    @asset
+    def asset1(source1):
+        assert source1 == 5
         return 1
 
     class MyIOManager(IOManager):
@@ -50,7 +50,7 @@ def test_source_asset():
     job = build_assets_job(
         "a",
         [asset1],
-        source_assets=[SourceAsset(("source1",))],
+        source_assets=[SourceAsset(AssetKey("source1"))],
         resource_defs={"io_manager": my_io_manager},
     )
     assert job.graph.node_defs == [asset1]
