@@ -7,7 +7,6 @@ import {showCustomAlert} from '../app/CustomAlertProvider';
 import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from '../app/PythonErrorInfo';
 import {Timestamp} from '../app/time/Timestamp';
 import {ExecutionParams, PipelineRunStatus} from '../types/globalTypes';
-import {REPOSITORY_ORIGIN_FRAGMENT} from '../workspace/RepositoryInformation';
 
 import {DagsterTag} from './RunTag';
 import {StepSelection} from './StepSelection';
@@ -313,27 +312,4 @@ export const RUN_TIME_FRAGMENT = gql`
     }
   }
   ${PYTHON_ERROR_FRAGMENT}
-`;
-
-export const RUN_ACTION_MENU_FRAGMENT = gql`
-  fragment RunActionMenuFragment on PipelineRun {
-    id
-    runId
-    rootRunId
-    pipelineName
-    solidSelection
-    pipelineSnapshotId
-    mode
-    canTerminate
-    tags {
-      key
-      value
-    }
-    status
-    repositoryOrigin {
-      id
-      ...RepositoryOriginFragment
-    }
-  }
-  ${REPOSITORY_ORIGIN_FRAGMENT}
 `;
