@@ -433,6 +433,7 @@ def reexecute_pipeline(
     tags: Optional[Dict[str, Any]] = None,
     instance: DagsterInstance = None,
     raise_on_error: bool = True,
+    from_failure: bool = False,
 ) -> PipelineExecutionResult:
     """Reexecute an existing pipeline run.
 
@@ -465,6 +466,10 @@ def reexecute_pipeline(
             an ephemeral instance will be used, and no artifacts will be persisted from the run.
         raise_on_error (Optional[bool]): Whether or not to raise exceptions when they occur.
             Defaults to ``True``, since this is the most useful behavior in test.
+        from_failure (Optional[bool]): Whether or not to re-execute the pipeline from failure. It
+            can be used only when the parent pipeline run has failed. It cannot be used together with
+            ``step_selection`` as the Dagster machinery would compute the selection as the downstream
+            of the failure.
 
     Returns:
       :py:class:`PipelineExecutionResult`: The result of pipeline execution.
@@ -495,14 +500,15 @@ def reexecute_pipeline(
 
         execution_plan: Optional[ExecutionPlan] = None
         # resolve step selection DSL queries using parent execution information
-        if step_selection:
-            execution_plan = _resolve_reexecute_step_selection(
+        if step_selection or from_failure:
+            execution_plan = _create_execution_plan_from_reexecution_params(
                 execute_instance,
                 pipeline,
                 mode,
                 run_config,
                 parent_pipeline_run,
                 step_selection,
+                from_failure,
             )
 
         pipeline_run = execute_instance.create_run_for_pipeline(
@@ -534,6 +540,7 @@ def reexecute_pipeline_iterator(
     preset: Optional[str] = None,
     tags: Optional[Dict[str, Any]] = None,
     instance: DagsterInstance = None,
+    from_failure: bool = False,
 ) -> Iterator[DagsterEvent]:
     """Reexecute a pipeline iteratively.
 
@@ -568,6 +575,10 @@ def reexecute_pipeline_iterator(
             logs.
         instance (Optional[DagsterInstance]): The instance to execute against. If this is ``None``,
             an ephemeral instance will be used, and no artifacts will be persisted from the run.
+        from_failure (Optional[bool]): Whether or not to re-execute the pipeline from failure. It
+            can be used only when the parent pipeline run has failed. It cannot be used together with
+            ``step_selection`` as the Dagster machinery would compute the selection as the downstream
+            of the failure.
 
     Returns:
       Iterator[DagsterEvent]: The stream of events resulting from pipeline reexecution.
@@ -596,14 +607,15 @@ def reexecute_pipeline_iterator(
 
         execution_plan: Optional[ExecutionPlan] = None
         # resolve step selection DSL queries using parent execution information
-        if step_selection:
-            execution_plan = _resolve_reexecute_step_selection(
+        if step_selection or from_failure:
+            execution_plan = _create_execution_plan_from_reexecution_params(
                 execute_instance,
                 pipeline,
                 mode,
                 run_config,
                 parent_pipeline_run,
                 step_selection,
+                from_failure,
             )
 
         pipeline_run = execute_instance.create_run_for_pipeline(
@@ -953,14 +965,21 @@ def _check_execute_pipeline_args(
     )
 
 
-def _resolve_reexecute_step_selection(
+def _create_execution_plan_from_reexecution_params(
     instance: DagsterInstance,
     pipeline: IPipeline,
     mode: Optional[str],
     run_config: Optional[dict],
     parent_pipeline_run: PipelineRun,
-    step_selection: List[str],
+    step_selection: Optional[List[str]],
+    from_failure: Optional[bool],
 ) -> ExecutionPlan:
+    from dagster.core.execution.plan.resume_retry import get_retry_steps_from_execution_plan
+
+    check.invariant(
+        not (step_selection and from_failure),
+        "Cannot specify both step_selection and from_failure.",
+    )
     if parent_pipeline_run.solid_selection:
         pipeline = pipeline.subset_for_execution(parent_pipeline_run.solid_selection)
 
@@ -971,12 +990,21 @@ def _resolve_reexecute_step_selection(
         mode,
         known_state=KnownExecutionState.derive_from_logs(parent_logs),
     )
-    step_keys_to_execute = parse_step_selection(parent_plan.get_all_step_deps(), step_selection)
+
+    if step_selection:
+        step_keys_to_execute = list(
+            parse_step_selection(parent_plan.get_all_step_deps(), step_selection)
+        )
+    else:
+        step_keys_to_execute, _ = get_retry_steps_from_execution_plan(
+            instance, parent_plan, parent_pipeline_run.run_id
+        )
+
     execution_plan = create_execution_plan(
         pipeline,
         run_config,
         mode,
-        step_keys_to_execute=list(step_keys_to_execute),
+        step_keys_to_execute=step_keys_to_execute,
         known_state=KnownExecutionState.for_reexecution(parent_logs, step_keys_to_execute),
     )
     return execution_plan
