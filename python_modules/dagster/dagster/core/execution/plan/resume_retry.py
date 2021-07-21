@@ -1,9 +1,10 @@
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 from dagster import check
 from dagster.core.events import DagsterEventType
 from dagster.core.execution.plan.handle import StepHandle, UnresolvedStepHandle
+from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.plan.state import KnownExecutionState
 from dagster.core.execution.plan.step import ResolvedFromDynamicStepHandle
 from dagster.core.host_representation import ExternalExecutionPlan
@@ -29,14 +30,19 @@ def _in_tracking_dict(handle, tracking):
 
 
 def get_retry_steps_from_execution_plan(
-    instance, execution_plan, parent_run_id
+    instance: DagsterInstance,
+    execution_plan: Union[ExecutionPlan, ExternalExecutionPlan],
+    parent_run_id: Optional[str],
 ) -> Tuple[List[str], Optional[KnownExecutionState]]:
+    """Get retry steps from failure based on external execution plan."""
     check.inst_param(instance, "instance", DagsterInstance)
-    check.inst_param(execution_plan, "execution_plan", ExternalExecutionPlan)
+    check.param_invariant(
+        isinstance(execution_plan, (ExecutionPlan, ExternalExecutionPlan)), "execution_plan"
+    )
     check.opt_str_param(parent_run_id, "parent_run_id")
 
     if not parent_run_id:
-        return execution_plan.step_keys_in_plan, None
+        return execution_plan.step_keys_to_execute, None
 
     parent_run = instance.get_run_by_id(parent_run_id)
     parent_run_logs = instance.all_logs(parent_run_id)
@@ -75,8 +81,8 @@ def get_retry_steps_from_execution_plan(
 
     to_retry = defaultdict(set)
 
-    execution_deps = execution_plan.execution_deps()
-    for step_snap in execution_plan.topological_steps():
+    execution_deps = execution_plan.get_all_step_deps()
+    for step_snap in execution_plan.get_all_steps_in_topo_order():
         step_key = step_snap.key
         step_handle = StepHandle.parse_from_key(step_snap.key)
 

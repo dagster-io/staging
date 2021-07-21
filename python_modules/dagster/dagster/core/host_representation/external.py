@@ -1,5 +1,6 @@
 import warnings
 from collections import OrderedDict
+from typing import Dict, List, Set
 
 from dagster import check
 from dagster.core.definitions.run_request import JobType
@@ -7,6 +8,7 @@ from dagster.core.definitions.sensor import DEFAULT_SENSOR_DAEMON_INTERVAL
 from dagster.core.execution.plan.handle import ResolvedFromDynamicStepHandle, StepHandle
 from dagster.core.origin import PipelinePythonOrigin
 from dagster.core.snap import ExecutionPlanSnapshot
+from dagster.core.snap.execution_plan_snapshot import ExecutionStepSnap
 from dagster.core.utils import toposort
 from dagster.utils.schedules import schedule_execution_time_iterator
 
@@ -322,7 +324,7 @@ class ExternalExecutionPlan:
         self._topological_step_levels = None
 
     @property
-    def step_keys_in_plan(self):
+    def step_keys_to_execute(self):
         return list(self._step_keys_in_plan)
 
     def has_step(self, key):
@@ -346,7 +348,7 @@ class ExternalExecutionPlan:
     # ExecutionPlan. We should resolve this, probably eventually by using the
     # snapshots to support the existing ExecutionPlan methods.
     # https://github.com/dagster-io/dagster/issues/2462
-    def execution_deps(self):
+    def get_all_step_deps(self) -> Dict[str, Set[str]]:
         if self._deps is None:
             deps = OrderedDict()
 
@@ -366,19 +368,19 @@ class ExternalExecutionPlan:
 
         return self._deps
 
-    def topological_steps(self):
+    def get_all_steps_in_topo_order(self) -> List[ExecutionStepSnap]:
         if self._topological_steps is None:
             self._topological_steps = [
-                step for step_level in self.topological_step_levels() for step in step_level
+                step for step_level in self.get_all_steps_by_level() for step in step_level
             ]
 
         return self._topological_steps
 
-    def topological_step_levels(self):
+    def get_all_steps_by_level(self) -> List[List[ExecutionStepSnap]]:
         if self._topological_step_levels is None:
             self._topological_step_levels = [
                 [self._step_index[step_key] for step_key in sorted(step_key_level)]
-                for step_key_level in toposort(self.execution_deps())
+                for step_key_level in toposort(self.get_all_step_deps())
             ]
 
         return self._topological_step_levels

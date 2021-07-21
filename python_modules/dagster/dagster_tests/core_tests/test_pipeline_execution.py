@@ -29,6 +29,7 @@ from dagster.core.definitions import Node
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.definitions.graph import _create_adjacency_lists
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
+from dagster.core.execution.api import reexecute_pipeline_iterator
 from dagster.core.execution.results import SolidExecutionResult
 from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import instance_for_test, step_output_event_filter
@@ -763,6 +764,10 @@ def test_reexecution_fs_storage():
 
 
 def retry_pipeline():
+    @solid
+    def return_two():
+        return 2
+
     @solid(
         config_schema={
             "fail": Field(bool, is_required=False, default_value=False),
@@ -774,15 +779,14 @@ def retry_pipeline():
         return 1
 
     @solid
-    def add_one(num):
-        return num + 1
+    def adder(num1, num2):
+        return num1 + num2
 
-    return PipelineDefinition(
-        solid_defs=[return_one, add_one],
-        name="test",
-        dependencies={"add_one": {"num": DependencyDefinition("return_one")}},
-        mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})],
-    )
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
+    def _pipe():
+        adder(return_one(), return_two())
+
+    return _pipe
 
 
 def test_multiproc_reexecution_fs_storage_after_fail():
@@ -807,9 +811,9 @@ def test_multiproc_reexecution_fs_storage_after_fail():
         )
 
         assert reexecution_result.success
-        assert len(reexecution_result.solid_result_list) == 2
+        assert len(reexecution_result.solid_result_list) == 3
         assert reexecution_result.result_for_solid("return_one").output_value() == 1
-        assert reexecution_result.result_for_solid("add_one").output_value() == 2
+        assert reexecution_result.result_for_solid("adder").output_value() == 3
         reexecution_run = instance.get_run_by_id(reexecution_result.run_id)
         assert reexecution_run.parent_run_id == pipeline_result.run_id
         assert reexecution_run.root_run_id == pipeline_result.run_id
@@ -822,12 +826,60 @@ def test_multiproc_reexecution_fs_storage_after_fail():
         )
 
         assert grandchild_result.success
-        assert len(grandchild_result.solid_result_list) == 2
+        assert len(grandchild_result.solid_result_list) == 3
         assert grandchild_result.result_for_solid("return_one").output_value() == 1
-        assert grandchild_result.result_for_solid("add_one").output_value() == 2
+        assert grandchild_result.result_for_solid("adder").output_value() == 3
         grandchild_run = instance.get_run_by_id(grandchild_result.run_id)
         assert grandchild_run.parent_run_id == reexecution_result.run_id
         assert grandchild_run.root_run_id == pipeline_result.run_id
+
+
+def test_reexecution_from_failure():
+    with instance_for_test() as instance:
+        pipeline_result = execute_pipeline(
+            reconstructable(retry_pipeline),
+            run_config={
+                "solids": {"return_one": {"config": {"fail": True}}},
+            },
+            instance=instance,
+            raise_on_error=False,
+        )
+        assert not pipeline_result.success
+
+        reexecution_result = reexecute_pipeline(
+            reconstructable(retry_pipeline),
+            pipeline_result.run_id,
+            instance=instance,
+            from_failure=True,
+        )
+
+        assert reexecution_result.success
+        assert reexecution_result.result_for_solid("return_two").skipped
+        assert reexecution_result.result_for_solid("adder").output_value() == 3
+
+
+def test_reexecute_pipeline_iterator_from_failure():
+    with instance_for_test() as instance:
+        result = execute_pipeline(
+            reconstructable(retry_pipeline),
+            run_config={
+                "solids": {"return_one": {"config": {"fail": True}}},
+            },
+            instance=instance,
+            raise_on_error=False,
+        )
+        assert not result.success
+
+        output_event_iterator_full = step_output_event_filter(
+            reexecute_pipeline_iterator(
+                reconstructable(retry_pipeline),
+                parent_run_id=result.run_id,
+                instance=instance,
+                from_failure=True,
+            )
+        )
+        event_list = list(output_event_iterator_full)
+        assert "return_two" not in [evt.step_key for evt in event_list]
 
 
 def test_reexecution_fs_storage_with_solid_selection():
