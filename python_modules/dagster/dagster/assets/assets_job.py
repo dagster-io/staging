@@ -1,4 +1,4 @@
-from typing import AbstractSet, Any, Dict, List, Mapping, Optional, Tuple, Union, cast
+from typing import AbstractSet, Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
 
 from dagster import (
     DependencyDefinition,
@@ -26,20 +26,23 @@ def build_assets_job(
     source_assets: Optional[List[SourceAsset]] = None,
     resource_defs: Dict[str, ResourceDefinition] = None,
     description: Optional[str] = None,
+    nodes_after: Sequence[Tuple[NodeDefinition, Mapping[str, AssetKey]]] = None,
 ) -> PipelineDefinition:
     """Builds a job that refreshes the given assets."""
     check.str_param(name, "name")
     check.list_param(assets, "assets", of_type=NodeDefinition)
     check.opt_list_param(source_assets, "source_assets", of_type=SourceAsset)
     check.opt_str_param(description, "description")
+    check.opt_list_param(nodes_after, "nodes_after", of_type=tuple)
+
     source_assets_by_key = {source.key: source for source in source_assets or {}}
 
-    solid_deps = build_solid_deps(assets, source_assets_by_key.keys())
+    solid_deps = build_solid_deps(assets, source_assets_by_key.keys(), nodes_after)
     root_manager = build_root_manager(source_assets_by_key)
 
     return GraphDefinition(
         name=name,
-        node_defs=assets,
+        node_defs=assets + [node for node, _ in nodes_after or []],
         dependencies=solid_deps,
         description=description,
         input_mappings=None,
@@ -49,7 +52,9 @@ def build_assets_job(
 
 
 def build_solid_deps(
-    assets: List[NodeDefinition], source_paths: AbstractSet[Tuple[str]]
+    assets: List[NodeDefinition],
+    source_paths: AbstractSet[Tuple[str]],
+    nodes_after: Sequence[Tuple[NodeDefinition, Mapping[str, AssetKey]]],
 ) -> Dict[Union[str, SolidInvocation], Dict[str, IDependencyDefinition]]:
     solids_by_logical_asset: Dict[AssetKey, NodeDefinition] = {}
     for solid in assets:
@@ -91,6 +96,14 @@ def build_solid_deps(
                     "produced by any of the provided asset solids and is not one of the provided "
                     "sources"
                 )
+
+    for node_def, deps in nodes_after or []:
+        check.is_dict(deps, key_type=str, value_type=AssetKey)
+        solid_deps[node_def.name] = {}
+        for input_name, asset_key in deps.items():
+            solid_deps[node_def.name][input_name] = DependencyDefinition(
+                solids_by_logical_asset[asset_key].name, "result"
+            )
 
     return solid_deps
 
