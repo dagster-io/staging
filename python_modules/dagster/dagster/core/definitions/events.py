@@ -2,6 +2,7 @@ import re
 import warnings
 from collections import namedtuple
 from enum import Enum
+from typing import Any, Dict, NamedTuple, Optional, Sequence, Tuple, Union
 
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
@@ -28,7 +29,7 @@ def parse_asset_key_string(s):
 
 
 @whitelist_for_serdes
-class AssetKey(namedtuple("_AssetKey", "path")):
+class AssetKey(NamedTuple("_AssetKey", [("path", Tuple[str])])):
     """Object representing the structure of an asset key.  Takes in a sanitized string, list of
     strings, or tuple of strings.
 
@@ -62,11 +63,11 @@ class AssetKey(namedtuple("_AssetKey", "path")):
             represent the hierarchical structure of the asset_key.
     """
 
-    def __new__(cls, path=None):
+    def __new__(cls, path: Union[str, Sequence[str], Tuple[str, ...]] = None):
         if isinstance(path, str):
-            path = [path]
+            path = (path,)
         elif isinstance(path, list):
-            path = check.list_param(path, "path", of_type=str)
+            path = tuple(check.list_param(path, "path", of_type=str))
         else:
             path = check.tuple_param(path, "path", of_type=str)
 
@@ -79,14 +80,14 @@ class AssetKey(namedtuple("_AssetKey", "path")):
         return "AssetKey({})".format(self.path)
 
     def __hash__(self):
-        return hash(tuple(self.path))
+        return hash(self.path)
 
     def __eq__(self, other):
         if not isinstance(other, AssetKey):
             return False
         return self.to_string() == other.to_string()
 
-    def to_string(self, legacy=False):
+    def to_string(self, legacy: bool = False) -> str:
         if not self.path:
             return None
         if legacy:
@@ -94,7 +95,7 @@ class AssetKey(namedtuple("_AssetKey", "path")):
         return seven.json.dumps(self.path)
 
     @staticmethod
-    def from_db_string(asset_key_string):
+    def from_db_string(asset_key_string: str) -> "AssetKey":
         if not asset_key_string:
             return None
         if asset_key_string[0] == "[":
@@ -108,14 +109,14 @@ class AssetKey(namedtuple("_AssetKey", "path")):
         return AssetKey(path)
 
     @staticmethod
-    def get_db_prefix(path, legacy=False):
+    def get_db_prefix(path: Sequence[str], legacy: bool = False) -> str:
         check.list_param(path, "path", of_type=str)
         if legacy:
             return ASSET_KEY_STRUCTURED_DELIMITER.join(path)
         return seven.json.dumps(path)[:-2]  # strip trailing '"]' from json string
 
     @staticmethod
-    def from_graphql_input(asset_key):
+    def from_graphql_input(asset_key: Optional[Dict[str, Any]]) -> Optional["AssetKey"]:
         if asset_key and asset_key.get("path"):
             return AssetKey(asset_key.get("path"))
         return None
