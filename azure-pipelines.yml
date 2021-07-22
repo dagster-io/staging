@@ -1,3 +1,5 @@
+trigger:
+  branches: master
 parameters:
   - name: py3_versions
     type: object
