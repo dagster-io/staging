@@ -179,6 +179,7 @@ class ProcessGrpcServerRegistry(GrpcServerRegistry):
                     heartbeat=True,
                     heartbeat_timeout=self._heartbeat_ttl,
                     fixed_server_id=new_server_id,
+                    lazy_load_user_code=True,
                 )
                 self._all_processes.append(server_process)
             except Exception:  # pylint: disable=broad-except
