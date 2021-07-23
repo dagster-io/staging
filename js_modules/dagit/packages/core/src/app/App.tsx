@@ -10,7 +10,6 @@ import {LayoutContext} from './LayoutProvider';
 const InstanceRoot = React.lazy(() => import('../instance/InstanceRoot'));
 const SettingsRoot = React.lazy(() => import('../app/SettingsRoot'));
 const WorkspaceRoot = React.lazy(() => import('../workspace/WorkspaceRoot'));
-const SidRoot = React.lazy(() => import('./SidRoot'));
 
 const ContentRoot = React.memo(() => (
   <React.Suspense fallback={<div />}>
@@ -18,7 +17,6 @@ const ContentRoot = React.memo(() => (
       <Route path="/instance" component={InstanceRoot} />
       <Route path="/workspace" component={WorkspaceRoot} />
       <Route path="/settings" component={SettingsRoot} />
-      <Route path="/audit-log" component={SidRoot} />
       <Route path="*" component={FallthroughRoot} />
     </Switch>
   </React.Suspense>

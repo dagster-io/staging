@@ -23,6 +23,7 @@ export const LeftNav = () => {
     '/instance/config',
   ]);
   const workspaceMatch = useRouteMatch({path: '/workspace', exact: true});
+  const auditLogMatch = useRouteMatch({path: '/instance/audit-log', exact: true});
 
   return (
     <LeftNavContainer $open={nav.isOpen}>
@@ -80,6 +81,16 @@ export const LeftNav = () => {
           <Tab to="/workspace" className={!!workspaceMatch ? 'selected' : ''}>
             <Icon icon="cube" iconSize={16} />
             <TabLabel>Workspace</TabLabel>
+          </Tab>
+        </ShortcutHandler>
+        <ShortcutHandler
+          onShortcut={() => history.push('/instance/audit-log')}
+          shortcutLabel={`⌥5`}
+          shortcutFilter={(e) => e.code === 'Digit5' && e.altKey}
+        >
+          <Tab to="/audit-log" className={!!auditLogMatch ? 'selected' : ''}>
+            <Icon icon="history" iconSize={16} />
+            <TabLabel>Audit Log</TabLabel>
           </Tab>
         </ShortcutHandler>
       </Box>
