@@ -9,7 +9,7 @@ import pytest
 from .utils import BUILDKITE
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def docker_compose_cm(test_directory):
     @contextmanager
     def docker_compose(
@@ -39,10 +39,10 @@ def docker_compose_cm(test_directory):
     return docker_compose
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def docker_compose(docker_compose_cm):
-    with docker_compose_cm() as docker_compose:
-        yield docker_compose
+    with docker_compose_cm() as hostnames:
+        yield hostnames
 
 
 def docker_compose_up(docker_compose_yml, context):
