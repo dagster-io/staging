@@ -1,5 +1,15 @@
 import pytest
-from dagster import ConfigMapping, graph, logger, op, resource, solid, success_hook
+from dagster import (
+    ConfigMapping,
+    DagsterInvalidConfigError,
+    DagsterInvariantViolationError,
+    graph,
+    logger,
+    op,
+    resource,
+    solid,
+    success_hook,
+)
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.definitions.partition import (
     Partition,
@@ -304,3 +314,40 @@ def test_desc():
     desc = "job desc"
     job = empty.to_job(description=desc)
     assert job.description == desc
+
+
+def test_to_job_partial_config():
+    @op(config_schema={"foo": str})
+    def filled_by_job(context):
+        assert context.op_config["foo"] == "hello"
+
+    @op(config_schema={"bar": str})
+    def filled_by_execute(context):
+        assert context.op_config["bar"] == "hello"
+
+    @graph
+    def my_graph():
+        filled_by_job()
+        filled_by_execute()
+
+    with pytest.raises(
+        DagsterInvalidConfigError,
+        match='Missing required config entry "filled_by_execute" at the root.',
+    ):
+        my_graph.to_job(config={"solids": {"filled_by_job": {"config": {"foo": "hello"}}}})
+
+
+def test_to_job_incorrect_config_entry():
+    @op
+    def my_op():
+        pass
+
+    @graph
+    def my_graph():
+        my_op()
+
+    with pytest.raises(
+        DagsterInvariantViolationError,
+        match="Received unexpected config entry 'bad_field' at the root.",
+    ):
+        my_graph.to_job(config={"bad_field": "foo"})

@@ -20,7 +20,7 @@ from dagster.core.definitions.config import ConfigMapping
 from dagster.core.definitions.definition_config_schema import IDefinitionConfigSchema
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.resource import ResourceDefinition
-from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.core.storage.io_manager import io_manager
 from dagster.core.types.dagster_type import (
     DagsterType,
@@ -761,6 +761,16 @@ def _config_mapping_with_default_value(
                 config=field.config_type,
                 default_value=default_config[name],
                 description=field.description,
+            )
+        else:
+            updated_fields[name] = field
+
+    # Verify that there weren't any unexpected fields
+    for name in default_config.keys():
+        if name not in inner_schema.fields:
+            raise DagsterInvariantViolationError(
+                f"Received unexpected config entry '{name}' at the root. Expected config fields: "
+                f"{list(inner_schema.fields)}"
             )
 
     return ConfigMapping(

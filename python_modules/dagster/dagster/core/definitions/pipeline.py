@@ -2,6 +2,7 @@ from functools import update_wrapper
 from typing import TYPE_CHECKING, AbstractSet, Any, Dict, FrozenSet, List, Optional, Set, Union
 
 from dagster import check
+from dagster.core.definitions.config import ConfigMapping
 from dagster.core.definitions.policy import RetryPolicy
 from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.definitions.solid import NodeDefinition
@@ -565,7 +566,9 @@ class PipelineDefinition:
             executor_defs=[in_process_executor],
             resource_defs=_swap_default_io_man(base_mode.resource_defs),
             logger_defs=base_mode.loggers,
-            _config_mapping=base_mode.config_mapping,
+            _config_mapping=_in_mem_executor_config_mapping(base_mode.config_mapping)
+            if base_mode.config_mapping
+            else None,
             _partitioned_config=base_mode.partitioned_config,
         )
 
@@ -584,6 +587,14 @@ class PipelineDefinition:
             instance=instance,
             output_capturing_enabled=True,
         )
+
+
+def _in_mem_executor_config_mapping(config_mapping):
+    def _map_in_mem_config(x):
+        config = config_mapping.config_fn(x)
+        return {key: config_val for key, config_val in config.items() if not key == "execution"}
+
+    return ConfigMapping(config_fn=_map_in_mem_config, config_schema=config_mapping.config_schema)
 
 
 class PipelineSubsetDefinition(PipelineDefinition):
