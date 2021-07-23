@@ -8,6 +8,7 @@ from .config import StringSource
 
 
 class ComputeLogManagerType(str, Enum):
+    NOOP = "NoOpComputeLogManager"
     LOCAL = "LocalComputeLogManager"
     AZURE = "AzureBlobComputeLogManager"
     GCS = "GCSComputeLogManager"
