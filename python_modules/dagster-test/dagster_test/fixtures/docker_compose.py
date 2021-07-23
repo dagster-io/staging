@@ -1,4 +1,4 @@
-# pylint: disable=redefined-outer-name
+# pylint: disable=redefined-outer-name,unused-argument
 import json
 import os
 import subprocess
@@ -6,10 +6,10 @@ from contextlib import contextmanager
 
 import pytest
 
-from .utils import BUILDKITE
+from .utils import BUILDKITE, determine_scope
 
 
-@pytest.fixture
+@pytest.fixture(scope=determine_scope)
 def docker_compose_cm(test_directory):
     @contextmanager
     def docker_compose(
@@ -39,10 +39,10 @@ def docker_compose_cm(test_directory):
     return docker_compose
 
 
-@pytest.fixture
+@pytest.fixture(scope=determine_scope)
 def docker_compose(docker_compose_cm):
-    with docker_compose_cm() as docker_compose:
-        yield docker_compose
+    with docker_compose_cm() as hostnames:
+        yield hostnames
 
 
 def docker_compose_up(docker_compose_yml, context):
@@ -127,8 +127,13 @@ def buildkite_hostnames_cm(network):
 def default_docker_compose_yml(default_directory):
     if os.path.isfile("docker-compose.yml"):
         return os.path.join(os.getcwd(), "docker-compose.yml")
+    elif os.path.isfile("docker-compose.yaml"):
+        return os.path.join(os.getcwd(), "docker-compose.yaml")
     else:
-        return os.path.join(default_directory, "docker-compose.yml")
+        docker_compose = [
+            f for f in os.listdir(default_directory) if f.startswith("docker-compose")
+        ][0]
+        return os.path.join(default_directory, docker_compose)
 
 
 def network_name_from_yml(docker_compose_yml):

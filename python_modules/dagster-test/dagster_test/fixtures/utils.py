@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 import os
 
 import pytest
@@ -7,7 +8,13 @@ from urllib3.util.retry import Retry
 BUILDKITE = os.environ.get("BUILDKITE") is not None
 
 
-@pytest.fixture
+def determine_scope(fixture_name, config):
+    if config.getoption("--keep-containers-module", None):
+        return "module"
+    return "function"
+
+
+@pytest.fixture(scope=determine_scope)
 def retrying_requests():
     session = requests.Session()
     session.mount(
@@ -16,11 +23,11 @@ def retrying_requests():
     yield session
 
 
-@pytest.fixture
+@pytest.fixture(scope=determine_scope)
 def test_directory(request):
     yield os.path.dirname(request.fspath)
 
 
-@pytest.fixture
+@pytest.fixture(scope=determine_scope)
 def test_id(testrun_uid):
     yield testrun_uid
