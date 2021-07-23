@@ -120,6 +120,9 @@ class AssetKey(namedtuple("_AssetKey", "path")):
             return AssetKey(asset_key.get("path"))
         return None
 
+    def to_graphql_input(self):
+        return {"path": self.path} if self.path else None
+
 
 @whitelist_for_serdes
 class AssetLineageInfo(namedtuple("_AssetLineageInfo", "asset_key partitions")):

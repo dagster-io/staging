@@ -1,6 +1,7 @@
 from collections import namedtuple
 
 from dagster import check
+from dagster.serdes import whitelist_for_serdes
 
 
 class PipelineSelector(
@@ -45,6 +46,7 @@ class PipelineSelector(
         )
 
 
+@whitelist_for_serdes
 class RepositorySelector(namedtuple("_RepositorySelector", "location_name repository_name")):
     def __new__(cls, location_name, repository_name):
         return super(RepositorySelector, cls).__new__(
@@ -94,6 +96,7 @@ class ScheduleSelector(
         )
 
 
+@whitelist_for_serdes
 class SensorSelector(namedtuple("_SensorSelector", "location_name repository_name sensor_name")):
     def __new__(cls, location_name, repository_name, sensor_name):
         return super(SensorSelector, cls).__new__(
