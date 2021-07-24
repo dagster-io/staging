@@ -1,5 +1,16 @@
 from functools import update_wrapper
-from typing import TYPE_CHECKING, AbstractSet, Any, Dict, FrozenSet, List, Optional, Set, Union
+from typing import (
+    TYPE_CHECKING,
+    AbstractSet,
+    Any,
+    Callable,
+    Dict,
+    FrozenSet,
+    List,
+    Optional,
+    Set,
+    Union,
+)
 
 from dagster import check
 from dagster.core.definitions.policy import RetryPolicy
@@ -150,6 +161,7 @@ class PipelineDefinition:
         solid_retry_policy: Optional[RetryPolicy] = None,
         graph_def=None,
         _parent_pipeline_def=None,  # https://github.com/dagster-io/dagster/issues/2115
+        versioning_strategy: Optional[Union[str, Callable[[], str]]] = None,
     ):
         # If a graph is specificed directly use it
         if check.opt_inst_param(graph_def, "graph_def", GraphDefinition):
@@ -244,6 +256,13 @@ class PipelineDefinition:
         self._cached_run_config_schemas: Dict[str, "RunConfigSchema"] = {}
         self._cached_external_pipeline = None
 
+        if not callable(versioning_strategy):
+            self.versioning_strategy: Optional[Union[Callable[[], str], str]] = check.opt_str_param(
+                versioning_strategy, "versioning_strategy"
+            )
+        else:
+            self.versioning_strategy = versioning_strategy
+
     @property
     def name(self):
         return self._name
@@ -317,7 +336,7 @@ class PipelineDefinition:
             self.tags is not None
             and MEMOIZED_RUN_TAG in self.tags
             and self.tags.get(MEMOIZED_RUN_TAG) == "true"
-        )
+        ) or self.versioning_strategy is not None
 
     def has_mode_definition(self, mode: str) -> bool:
         check.str_param(mode, "mode")
@@ -584,6 +603,7 @@ class PipelineDefinition:
             mode_defs=[in_proc_mode],
             hook_defs=self.hook_defs,
             tags=self.tags,
+            versioning_strategy=self.versioning_strategy,
         )
 
         return core_execute_in_process(
