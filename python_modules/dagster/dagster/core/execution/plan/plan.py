@@ -564,7 +564,12 @@ class ExecutionPlan(
             ),
             known_state=check.opt_inst_param(known_state, "known_state", KnownExecutionState),
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
-            step_output_versions=check.opt_dict_param(step_output_versions, "step_output_versions", key_type=StepOutputHandle, value_type=str),
+            step_output_versions=check.opt_dict_param(
+                step_output_versions,
+                "step_output_versions",
+                key_type=StepOutputHandle,
+                value_type=str,
+            ),
         )
 
     @property
