@@ -3,6 +3,7 @@ from typing import (
     TYPE_CHECKING,
     AbstractSet,
     Any,
+    Callable,
     Dict,
     Iterable,
     Iterator,
@@ -366,6 +367,7 @@ class GraphDefinition(NodeDefinition):
         logger_defs: Optional[Dict[str, LoggerDefinition]] = None,
         executor_def: Optional["ExecutorDefinition"] = None,
         hooks: Optional[AbstractSet[HookDefinition]] = None,
+        versioning_strategy: Optional[Callable[["SolidDefinition"], str]] = None,
     ) -> "PipelineDefinition":
         """
         Make this graph in to an executable Job by providing remaining components required for execution.
@@ -464,6 +466,7 @@ class GraphDefinition(NodeDefinition):
             preset_defs=presets,
             tags=tags,
             hook_defs=hooks,
+            versioning_strategy=versioning_strategy,
         )
 
     def coerce_to_job(self):
