@@ -178,8 +178,9 @@ def test_memoization_no_code_version_for_solid():
 
         with pytest.raises(
             DagsterInvariantViolationError,
-            match="No version argument provided for solid 'solid_takes_input' when using memoization. "
-            "Please provide a version argument to the '@solid' decorator when defining your solid.",
+            match="Pipeline 'partially_versioned_pipeline' is using the custom memoization "
+            "strategy, but no version scheme has been provided for "
+            "<class 'dagster.core.definitions.solid.SolidDefinition'> 'solid_takes_input'.",
         ):
             create_execution_plan(partially_versioned_pipeline, instance=instance)
 
@@ -411,9 +412,9 @@ def test_unmemoized_inner_solid():
     with instance_for_test() as instance:
         with pytest.raises(
             DagsterInvariantViolationError,
-            match="No version argument provided for solid 'solid_no_version' when using "
-            "memoization. Please provide a version argument to the '@solid' decorator when defining "
-            "your solid.",
+            match="Pipeline 'wrap_pipeline' is using the custom memoization "
+            "strategy, but no version scheme has been provided for "
+            "<class 'dagster.core.definitions.solid.SolidDefinition'> 'solid_no_version'.",
         ):
             create_execution_plan(wrap_pipeline, instance=instance)
 
