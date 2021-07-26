@@ -98,7 +98,7 @@ def download_log_view(context):
         step_key = step_key.split("/")[-1]  # make sure we're not diving deep into
         out_name = f"{run_id}_{step_key}.{file_type}"
 
-        manager = context.instance.compute_log_manager
+        manager = context.create_request_context().instance.compute_log_manager
         try:
             io_type = ComputeIOType(file_type)
             result = manager.get_local_path(run_id, step_key, io_type)
@@ -123,7 +123,7 @@ def download_dump_view(context):
     context = check.inst_param(context, "context", IWorkspaceProcessContext)
 
     def view(run_id):
-        run = context.instance.get_run_by_id(run_id)
+        run = context.create_request_context().instance.get_run_by_id(run_id)
         debug_payload = DebugRunPayload.build(context.instance, run)
         check.invariant(run is not None)
         out_name = f"{run_id}.gzip"
@@ -180,6 +180,7 @@ def instantiate_app_with_views(
     target_dir=os.path.dirname(__file__),
     # If you are injecting middleware that registers permissions on its own, set register_permissions_middleware to False
     register_permissions_middleware=True,
+    include_notebook_view=False,
     graphql_middleware=None,
 ):
     app = Flask(
@@ -187,7 +188,7 @@ def instantiate_app_with_views(
         static_url_path=app_path_prefix,
         static_folder=os.path.join(target_dir, "./webapp/build"),
     )
-    subscription_server = DagsterSubscriptionServer(schema=schema)
+    subscription_server = DagsterSubscriptionServer(schema=schema, middleware=graphql_middleware)
 
     # Websocket routes
     sockets = Sockets(app)
@@ -229,7 +230,10 @@ def instantiate_app_with_views(
     # these routes are specifically for the Dagit UI and are not part of the graphql
     # API that we want other people to consume, so they're separate for now.
     # Also grabbing the magic global request args dict so that notebook_view is testable
-    bp.add_url_rule("/dagit/notebook", "notebook", lambda: notebook_view(request.args))
+
+    if include_notebook_view:
+        bp.add_url_rule("/dagit/notebook", "notebook", lambda: notebook_view(request.args))
+
     bp.add_url_rule("/dagit_info", "sanity_view", info_view)
 
     index_path = os.path.join(target_dir, "./webapp/build/index.html")
@@ -296,4 +300,6 @@ def create_app_from_workspace_process_context(
 
     schema = create_schema()
 
-    return instantiate_app_with_views(workspace_process_context, schema, path_prefix)
+    return instantiate_app_with_views(
+        workspace_process_context, schema, path_prefix, include_notebook_view=True
+    )
