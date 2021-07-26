@@ -1,11 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Callable, Dict, Generic, List, Optional, Type, TypeVar, Union, cast
+from collections import defaultdict
+from typing import Callable, Dict, Generic, List, Optional, Set, Type, TypeVar, Union, cast
 
 from dagster import check
+from dagster.core.definitions.events import AssetKey
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.utils import merge_dicts
 
+from .asset_graph import AssetDefinitionGraph, AssetDependencyDefinition, AssetNodeDefinition
 from .graph import GraphDefinition
+from .i_solid_definition import NodeDefinition
 from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .schedule import ScheduleDefinition
@@ -851,6 +855,63 @@ class RepositoryDefinition:
 
     def has_sensor_def(self, name):
         return self._repository_data.has_sensor(name)
+
+    @property
+    def asset_definition_graph(self) -> AssetDefinitionGraph:
+        """
+        Returns a representation of the logical asset graph defined by the ops in the jobs in the
+        repository.
+
+        Scrapes all of the jobs on the repo for ops that are logical assets, i.e. that have asset
+        metadata on their inputs and outputs.
+        """
+        from dagster.core.asset_defs.decorators import LOGICAL_ASSET_KEY
+
+        node_defs_by_asset_key: Dict[AssetKey, NodeDefinition] = {}
+        deps: Dict[AssetKey, List[AssetDependencyDefinition]] = defaultdict(list)
+
+        all_node_defs = (
+            node_def
+            for pipeline in self._repository_data.get_all_pipelines()
+            for node_def in pipeline.all_node_defs
+        )
+
+        for node_def in all_node_defs:
+            node_asset_keys: Set[AssetKey] = set()
+            for output_def in node_def.output_defs:
+                if output_def.metadata and output_def.metadata[LOGICAL_ASSET_KEY]:
+                    if isinstance(output_def.metadata[LOGICAL_ASSET_KEY], AssetKey):
+                        node_asset_keys.add(output_def.metadata[LOGICAL_ASSET_KEY])
+                        node_defs_by_asset_key[output_def.metadata[LOGICAL_ASSET_KEY]] = node_def
+                    else:
+                        check.failed(
+                            f"Output '{output_def.name}' of node '{node_def.name}' has "
+                            f"'{LOGICAL_ASSET_KEY}' metadata entry, but its type is not AssetKey"
+                        )
+
+            for input_def in node_def.input_defs:
+                if input_def.metadata and input_def.metadata[LOGICAL_ASSET_KEY]:
+                    if isinstance(input_def.metadata[LOGICAL_ASSET_KEY], AssetKey):
+                        for node_asset_key in node_asset_keys:
+                            deps[node_asset_key].append(
+                                AssetDependencyDefinition(
+                                    input_name=input_def.name,
+                                    upstream_asset_key=input_def.metadata[LOGICAL_ASSET_KEY],
+                                )
+                            )
+                    else:
+                        check.failed(
+                            f"Input '{input_def.name}' of node '{node_def.name}' has "
+                            "'logical_asset_key' metadata entry, but its type is not AssetKey"
+                        )
+
+        return AssetDefinitionGraph(
+            asset_defs=[
+                AssetNodeDefinition(asset_key, node_def)
+                for asset_key, node_def in node_defs_by_asset_key.items()
+            ],
+            dependencies=deps,
+        )
 
     # If definition comes from the @repository decorator, then the __call__ method will be
     # overwritten. Therefore, we want to maintain the call-ability of repository definitions.
