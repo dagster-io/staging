@@ -20,6 +20,9 @@ from dagster import (
     solid,
     weekly_schedule,
 )
+from dagster.core.asset_defs import asset, build_assets_job
+from dagster.core.definitions.asset_graph import AssetDependencyDefinition, AssetNodeDefinition
+from dagster.core.definitions.events import AssetKey
 from dagster.core.definitions.partition import (
     Partition,
     PartitionedConfig,
@@ -463,3 +466,89 @@ def test_bad_coerce():
             return {
                 "jobs": {"bar": bar},
             }
+
+
+def test_asset_definition_graph():
+    # pylint: disable=redefined-outer-name, unused-argument
+    @asset
+    def asset1():
+        pass
+
+    @asset
+    def asset2(asset1):
+        pass
+
+    @repository
+    def my_repo():
+        return [build_assets_job(name="a", assets=[asset1, asset2])]
+
+    assets_graph = my_repo.asset_definition_graph
+    assert assets_graph.asset_defs == [
+        AssetNodeDefinition(AssetKey("asset1"), asset1),
+        AssetNodeDefinition(AssetKey("asset2"), asset2),
+    ]
+    assert assets_graph.dependencies == {
+        AssetKey("asset2"): [AssetDependencyDefinition(AssetKey("asset1"), "asset1")],
+    }
+
+
+def test_asset_definition_graph_fork():
+    # pylint: disable=redefined-outer-name, unused-argument
+    @asset
+    def asset1():
+        pass
+
+    @asset
+    def asset2(asset1):
+        pass
+
+    @asset
+    def asset3(asset1):
+        pass
+
+    @repository
+    def my_repo():
+        return [build_assets_job(name="a", assets=[asset1, asset2, asset3])]
+
+    assets_graph = my_repo.asset_definition_graph
+    assert assets_graph.asset_defs == [
+        AssetNodeDefinition(AssetKey("asset1"), asset1),
+        AssetNodeDefinition(AssetKey("asset2"), asset2),
+        AssetNodeDefinition(AssetKey("asset3"), asset3),
+    ]
+    assert assets_graph.dependencies == {
+        AssetKey("asset2"): [AssetDependencyDefinition(AssetKey("asset1"), "asset1")],
+        AssetKey("asset3"): [AssetDependencyDefinition(AssetKey("asset1"), "asset1")],
+    }
+
+
+def test_asset_definition_graph_join():
+    # pylint: disable=redefined-outer-name, unused-argument
+    @asset
+    def asset1():
+        pass
+
+    @asset
+    def asset2():
+        pass
+
+    @asset
+    def asset3(asset1, asset2):
+        pass
+
+    @repository
+    def my_repo():
+        return [build_assets_job(name="a", assets=[asset1, asset2, asset3])]
+
+    assets_graph = my_repo.asset_definition_graph
+    assert assets_graph.asset_defs == [
+        AssetNodeDefinition(AssetKey("asset1"), asset1),
+        AssetNodeDefinition(AssetKey("asset2"), asset2),
+        AssetNodeDefinition(AssetKey("asset3"), asset3),
+    ]
+    assert assets_graph.dependencies == {
+        AssetKey("asset3"): [
+            AssetDependencyDefinition(AssetKey("asset1"), "asset1"),
+            AssetDependencyDefinition(AssetKey("asset2"), "asset2"),
+        ],
+    }
