@@ -20,6 +20,9 @@ from dagster import (
     solid,
     weekly_schedule,
 )
+from dagster.assets import asset, build_assets_job
+from dagster.core.definitions.asset_graph import AssetDefinition, AssetDependencyDefinition
+from dagster.core.definitions.events import AssetKey
 from dagster.core.definitions.partition import (
     Partition,
     PartitionedConfig,
@@ -463,3 +466,27 @@ def test_bad_coerce():
             return {
                 "jobs": {"bar": bar},
             }
+
+
+def test_get_asset_definition_graph():
+    # pylint: disable=redefined-outer-name, unused-argument
+    @asset
+    def asset1():
+        pass
+
+    @asset
+    def asset2(asset1):
+        pass
+
+    @repository
+    def my_repo():
+        return [build_assets_job(name="a", assets=[asset1, asset2])]
+
+    assets_graph = my_repo.get_asset_definition_graph()
+    assert assets_graph.asset_defs == [
+        AssetDefinition(AssetKey("asset1"), asset1),
+        AssetDefinition(AssetKey("asset2"), asset2),
+    ]
+    assert assets_graph.dependencies == {
+        AssetKey("asset2"): [AssetDependencyDefinition(AssetKey("asset1"), "asset1")],
+    }
