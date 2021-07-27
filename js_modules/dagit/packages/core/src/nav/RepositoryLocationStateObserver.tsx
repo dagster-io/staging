@@ -2,8 +2,8 @@ import {ApolloClient, gql} from '@apollo/client';
 import {Icon, Colors} from '@blueprintjs/core';
 import * as React from 'react';
 
-import {AppContext} from '../app/AppContext';
 import {DirectGraphQLSubscription} from '../app/DirectGraphQLSubscription';
+import {WebSocketContext} from '../app/WebSocketProvider';
 import {LocationStateChangeEventType} from '../types/globalTypes';
 import {ButtonLink} from '../ui/ButtonLink';
 import {Group} from '../ui/Group';
@@ -33,9 +33,7 @@ export const RepositoryLocationStateObserver = ({client}: StateObserverProps) =>
   const {locationEntries, refetch} = React.useContext(WorkspaceContext);
   const [updatedLocations, setUpdatedLocations] = React.useState<string[]>([]);
   const totalMessages = updatedLocations.length;
-
-  // todo dish: Get more WS info from context.
-  const {websocketURI} = React.useContext(AppContext);
+  const {connectionParams, websocketURI} = React.useContext(WebSocketContext);
 
   React.useEffect(() => {
     const onHandleMessages = (
@@ -70,12 +68,13 @@ export const RepositoryLocationStateObserver = ({client}: StateObserverProps) =>
       {},
       onHandleMessages,
       () => {}, // https://github.com/dagster-io/dagster/issues/2151
+      connectionParams,
     );
 
     return () => {
       subscriptionToken.close();
     };
-  }, [locationEntries, refetch, websocketURI]);
+  }, [connectionParams, locationEntries, refetch, websocketURI]);
 
   if (!totalMessages) {
     return null;

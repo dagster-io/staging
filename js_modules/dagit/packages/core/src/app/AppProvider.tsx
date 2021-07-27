@@ -4,21 +4,11 @@ import '@blueprintjs/select/lib/css/blueprint-select.css';
 import '@blueprintjs/table/lib/css/table.css';
 import '@blueprintjs/popover2/lib/css/blueprint-popover2.css';
 
-import {
-  split,
-  ApolloLink,
-  ApolloClient,
-  ApolloProvider,
-  HttpLink,
-  InMemoryCache,
-} from '@apollo/client';
-import {WebSocketLink} from '@apollo/client/link/ws';
-import {getMainDefinition} from '@apollo/client/utilities';
+import {ApolloLink, ApolloClient, ApolloProvider, HttpLink, InMemoryCache} from '@apollo/client';
 import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import {BrowserRouter} from 'react-router-dom';
 import {createGlobalStyle} from 'styled-components/macro';
-import {SubscriptionClient} from 'subscriptions-transport-ws';
 
 import {FontFamily} from '../ui/styles';
 import {WorkspaceProvider} from '../workspace/WorkspaceContext';
@@ -31,7 +21,7 @@ import {CustomTooltipProvider} from './CustomTooltipProvider';
 import {LayoutProvider} from './LayoutProvider';
 import {PermissionsFromJSON} from './Permissions';
 import {formatElapsedTime, patchCopyToRemoveZeroWidthUnderscores, debugLog} from './Util';
-import {WebsocketStatusProvider} from './WebsocketStatus';
+import {WebSocketProvider} from './WebSocketProvider';
 import {TimezoneProvider} from './time/TimezoneContext';
 
 // The solid sidebar and other UI elements insert zero-width spaces so solid names
@@ -93,13 +83,6 @@ export const AppProvider: React.FC<Props> = (props) => {
   const rootServerURI = `${origin}${basePath}`;
   const websocketURI = `${rootServerURI.replace(/^http/, 'ws')}/graphql`;
 
-  const websocketClient = React.useMemo(() => {
-    return new SubscriptionClient(websocketURI, {
-      reconnect: true,
-      connectionParams: {...headers},
-    });
-  }, [headers, websocketURI]);
-
   const apolloClient = React.useMemo(() => {
     const logLink = new ApolloLink((operation, forward) =>
       forward(operation).map((data) => {
@@ -115,37 +98,25 @@ export const AppProvider: React.FC<Props> = (props) => {
     });
 
     const httpLink = new HttpLink({uri: graphqlPath, headers});
-    const websocketLink = new WebSocketLink(websocketClient);
-
-    // subscriptions should use the websocket link; queries & mutations should use HTTP
-    const splitLink = split(
-      ({query}) => {
-        const definition = getMainDefinition(query);
-        return definition.kind === 'OperationDefinition' && definition.operation === 'subscription';
-      },
-      websocketLink,
-      httpLink,
-    );
 
     return new ApolloClient({
       cache: appCache,
-      link: ApolloLink.from([logLink, AppErrorLink(), timeStartLink, splitLink]),
+      link: ApolloLink.from([logLink, AppErrorLink(), timeStartLink, httpLink]),
     });
-  }, [appCache, graphqlPath, headers, websocketClient]);
+  }, [appCache, graphqlPath, headers]);
 
   const appContextValue = React.useMemo(
     () => ({
       basePath,
       permissions,
       rootServerURI,
-      websocketURI,
     }),
-    [basePath, permissions, rootServerURI, websocketURI],
+    [basePath, permissions, rootServerURI],
   );
 
   return (
     <AppContext.Provider value={appContextValue}>
-      <WebsocketStatusProvider websocket={websocketClient}>
+      <WebSocketProvider websocketURI={websocketURI} connectionParams={headers}>
         <GlobalStyle />
         <ApolloProvider client={apolloClient}>
           <BrowserRouter basename={basePath || ''}>
@@ -160,7 +131,7 @@ export const AppProvider: React.FC<Props> = (props) => {
             </TimezoneProvider>
           </BrowserRouter>
         </ApolloProvider>
-      </WebsocketStatusProvider>
+      </WebSocketProvider>
     </AppContext.Provider>
   );
 };
