@@ -33,6 +33,8 @@ if __name__ == "__main__":
         packages=find_packages(exclude=["test"]),
         include_package_data=True,
         install_requires=[
+            "azure-storage-blob~=12.3.0",
+            "azure-storage-file-datalake~=12.0.1",
             f"dagster{pin}",
             f"dagster-pyspark{pin}",
             "databricks_api",
