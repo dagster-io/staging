@@ -33,7 +33,6 @@ from .utils import delete_job
             "job_namespace": Field(
                 StringSource,
                 is_required=False,
-                default_value="default",
             )
         },
         {"retries": get_retries_config()},
@@ -93,7 +92,7 @@ def k8s_job_executor(init_context: InitExecutorContext) -> Executor:
     return StepDelegatingExecutor(
         K8sStepHandler(
             job_config=job_config,
-            job_namespace=exc_cfg.get("job_namespace"),
+            job_namespace=exc_cfg.get("job_namespace", run_launcher.job_namespace),
             load_incluster_config=run_launcher.load_incluster_config,
             kubeconfig_file=run_launcher.kubeconfig_file,
         )
