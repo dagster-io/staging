@@ -297,7 +297,6 @@ class DagsterK8sJobConfig(
             "image_pull_policy": Field(
                 StringSource,
                 is_required=False,
-                default_value="IfNotPresent",
                 description="Image pull policy to set on the launched task Job Pods. Defaults to "
                 '"IfNotPresent".',
             ),

@@ -142,6 +142,26 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         super().__init__()
 
     @property
+    def image_pull_policy(self):
+        return self._image_pull_policy
+
+    @property
+    def image_pull_secrets(self):
+        return self._image_pull_secrets
+
+    @property
+    def service_account_name(self):
+        return self._service_account_name
+
+    @property
+    def env_config_maps(self):
+        return self._env_config_maps
+
+    @property
+    def env_secrets(self):
+        return self._env_secrets
+
+    @property
     def _batch_api(self):
         return self._fixed_batch_api if self._fixed_batch_api else kubernetes.client.BatchV1Api()
 
