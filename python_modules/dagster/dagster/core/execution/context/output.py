@@ -162,11 +162,11 @@ class OutputContext:
     def step_context(self) -> Optional["StepExecutionContext"]:
         return self._step_context
 
-    def get_run_scoped_output_identifier(self) -> List[str]:
+    def get_output_identifier(self) -> List[str]:
         """Utility method to get a collection of identifiers that as a whole represent a unique
         step output.
 
-        The unique identifier collection consists of
+        If not using memoization, the unique identifier collection consists of
 
         - ``run_id``: the id of the run which generates the output.
             Note: This method also handles the re-execution memoization logic. If the step that
@@ -175,13 +175,17 @@ class OutputContext:
         - ``step_key``: the key for a compute step.
         - ``name``: the name of the output. (default: 'result').
 
+        If using memoization, the ``version`` corresponding to the step output is used in place of
+        the ``run_id``.
+
         Returns:
-            List[str, ...]: A list of identifiers, i.e. run id, step key, and output name
+            List[str, ...]: A list of identifiers, i.e. (run_id or version), step_key, and output_name
         """
         # if run_id is None and this is a re-execution, it means we failed to find its source run id
         check.invariant(
-            self.run_id is not None,
-            "Unable to find the run scoped output identifier: run_id is None on OutputContext.",
+            self.run_id is not None or self.version is not None,
+            "Unable to find the output identifier: run_id is None on OutputContext, and no version "
+            "was provided.",
         )
         check.invariant(
             self.step_key is not None,
@@ -191,14 +195,22 @@ class OutputContext:
             self.name is not None,
             "Unable to find the run scoped output identifier: name is None on OutputContext.",
         )
-        run_id = cast(str, self.run_id)
         step_key = cast(str, self.step_key)
         name = cast(str, self.name)
 
-        if self.mapping_key:
-            return [run_id, step_key, name, self.mapping_key]
+        if self.version is not None:
+            check.invariant(
+                self.mapping_key is None,
+                f"Mapping key and version both provided for output '{name}' of step '{step_key}'. "
+                "Dynamic mapping is not supported when using versioning.",
+            )
+            identifier = ["versioned_outputs", cast(str, self.version), step_key, name]
+        else:
+            identifier = [cast(str, self.run_id), step_key, name]
+            if self.mapping_key:
+                identifier.append(self.mapping_key)
 
-        return [run_id, step_key, name]
+        return identifier
 
 
 def get_output_context(
