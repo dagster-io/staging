@@ -120,7 +120,7 @@ def celery_k8s_job_executor(init_context):
         instance_config_map=run_launcher.instance_config_map,
         postgres_password_secret=run_launcher.postgres_password_secret,
         job_image=exc_cfg.get("job_image") or os.getenv("DAGSTER_CURRENT_IMAGE"),
-        image_pull_policy=exc_cfg.get("image_pull_policy"),
+        image_pull_policy=exc_cfg.get("image_pull_policy", "IfNotPresent"),
         image_pull_secrets=exc_cfg.get("image_pull_secrets"),
         service_account_name=exc_cfg.get("service_account_name"),
         env_config_maps=exc_cfg.get("env_config_maps"),
