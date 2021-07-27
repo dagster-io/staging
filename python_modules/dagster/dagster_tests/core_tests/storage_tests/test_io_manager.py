@@ -361,18 +361,18 @@ def test_multi_materialization():
             self.values = {}
 
         def handle_output(self, context, obj):
-            keys = tuple(context.get_run_scoped_output_identifier())
+            keys = tuple(context.get_output_identifier())
             self.values[keys] = obj
 
             yield AssetMaterialization(asset_key="yield_one")
             yield AssetMaterialization(asset_key="yield_two")
 
         def load_input(self, context):
-            keys = tuple(context.upstream_output.get_run_scoped_output_identifier())
+            keys = tuple(context.upstream_output.get_output_identifier())
             return self.values[keys]
 
         def has_asset(self, context):
-            keys = tuple(context.get_run_scoped_output_identifier())
+            keys = tuple(context.get_output_identifier())
             return keys in self.values
 
     @io_manager

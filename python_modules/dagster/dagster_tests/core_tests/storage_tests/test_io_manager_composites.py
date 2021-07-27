@@ -19,15 +19,13 @@ def named_io_manager(storage_dict, name):
     def my_io_manager(_):
         class MyIOManager(IOManager):
             def handle_output(self, context, obj):
-                storage_dict[tuple(context.get_run_scoped_output_identifier())] = {
+                storage_dict[tuple(context.get_output_identifier())] = {
                     "value": obj,
                     "output_manager_name": name,
                 }
 
             def load_input(self, context):
-                result = storage_dict[
-                    tuple(context.upstream_output.get_run_scoped_output_identifier())
-                ]
+                result = storage_dict[tuple(context.upstream_output.get_output_identifier())]
                 return {**result, "input_manager_name": name}
 
         return MyIOManager()
@@ -128,14 +126,12 @@ def test_io_manager_config_inside_composite():
     def inner_manager(_):
         class MyHardcodedIOManager(IOManager):
             def handle_output(self, context, obj):
-                keys = tuple(
-                    context.get_run_scoped_output_identifier() + [context.config["output_suffix"]]
-                )
+                keys = tuple(context.get_output_identifier() + [context.config["output_suffix"]])
                 stored_dict[keys] = obj
 
             def load_input(self, context):
                 keys = tuple(
-                    context.upstream_output.get_run_scoped_output_identifier()
+                    context.upstream_output.get_output_identifier()
                     + [context.upstream_output.config["output_suffix"]]
                 )
                 return stored_dict[keys]
