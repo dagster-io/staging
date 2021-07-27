@@ -76,10 +76,22 @@ class DagsterGrpcClient:
 
     @contextmanager
     def _channel(self):
+        options = [
+            ("grpc.max_receive_message_length", 10_485_760),  # 10 MB
+        ]
         with (
-            grpc.secure_channel(self._server_address, self._ssl_creds)
+            grpc.secure_channel(
+                self._server_address,
+                self._ssl_creds,
+                options=options,
+                compression=grpc.Compression.Gzip,
+            )
             if self._use_ssl
-            else grpc.insecure_channel(self._server_address)
+            else grpc.insecure_channel(
+                self._server_address,
+                options=options,
+                compression=grpc.Compression.Gzip,
+            )
         ) as channel:
             yield channel
 
