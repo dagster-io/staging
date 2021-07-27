@@ -2,6 +2,7 @@ import {ApolloClient, gql, useQuery} from '@apollo/client';
 import * as React from 'react';
 
 import {DirectGraphQLSubscription} from '../app/DirectGraphQLSubscription';
+import {WebSocketContext} from '../app/WebSocketProvider';
 import {useWebsocketAvailability} from '../app/useWebsocketAvailability';
 import {PipelineRunStatus} from '../types/globalTypes';
 import {TokenizingFieldValue} from '../ui/TokenizingField';
@@ -33,15 +34,14 @@ export interface LogsProviderLogs {
 }
 
 interface LogsProviderProps {
-  websocketURI: string;
   client: ApolloClient<any>;
   runId: string;
   children: (result: LogsProviderLogs) => React.ReactChild;
 }
 
 const LogsProviderWithSubscription = (props: LogsProviderProps) => {
-  // todo dish: Get WS info from context.
-  const {websocketURI, client, runId, children} = props;
+  const {client, runId, children} = props;
+  const {connectionParams, websocketURI} = React.useContext(WebSocketContext);
   const [nodes, setNodes] = React.useState<Nodes | null>(null);
 
   React.useEffect(() => {
@@ -134,12 +134,13 @@ const LogsProviderWithSubscription = (props: LogsProviderProps) => {
       {runId: runId, after: null},
       onHandleMessages,
       () => {}, // https://github.com/dagster-io/dagster/issues/2151
+      connectionParams,
     );
 
     return () => {
       subscription.close();
     };
-  }, [onHandleMessages, runId, websocketURI]);
+  }, [connectionParams, onHandleMessages, runId, websocketURI]);
 
   return (
     <>
@@ -211,7 +212,7 @@ const LogsProviderWithQuery = (props: LogsProviderWithQueryProps) => {
 };
 
 export const LogsProvider: React.FC<LogsProviderProps> = (props) => {
-  const {client, children, runId, websocketURI} = props;
+  const {client, children, runId} = props;
   const websocketAvailability = useWebsocketAvailability();
 
   if (websocketAvailability === 'attempting-to-connect') {
@@ -223,7 +224,7 @@ export const LogsProvider: React.FC<LogsProviderProps> = (props) => {
   }
 
   return (
-    <LogsProviderWithSubscription runId={runId} websocketURI={websocketURI} client={client}>
+    <LogsProviderWithSubscription runId={runId} client={client}>
       {children}
     </LogsProviderWithSubscription>
   );
