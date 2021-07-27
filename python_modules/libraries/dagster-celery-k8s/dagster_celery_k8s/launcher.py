@@ -195,7 +195,7 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
             instance_config_map=self.instance_config_map,
             postgres_password_secret=self.postgres_password_secret,
             job_image=check.str_param(job_image, "job_image"),
-            image_pull_policy=exc_config.get("image_pull_policy"),
+            image_pull_policy=exc_config.get("image_pull_policy", "IfNotPresent"),
             image_pull_secrets=exc_config.get("image_pull_secrets"),
             service_account_name=exc_config.get("service_account_name"),
             env_config_maps=exc_config.get("env_config_maps"),
