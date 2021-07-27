@@ -15,7 +15,7 @@ from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
 from dagster.utils import file_relative_path
 
-from ...core_tests.execution_tests.memoized_dev_loop_pipeline import asset_pipeline
+from ...execution_tests.memoized_dev_loop_pipeline import asset_pipeline
 
 
 class Capturing(list):
