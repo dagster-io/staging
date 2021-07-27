@@ -300,7 +300,7 @@ class Manager:
 
         # https://github.com/dagster-io/dagster/issues/2648*
         # dagstermill temporary file creation should use a more systematic and robust scheme*
-        out_file = os.path.join(self.marshal_dir, f"{self.solid_def.name}-output-{output_name}")
+        out_file = os.path.join(self.marshal_dir, f"{self.context.solid.name}-output-{output_name}")
 
         scrapbook.glue(output_name, write_value(dagster_type, value, out_file))
 
