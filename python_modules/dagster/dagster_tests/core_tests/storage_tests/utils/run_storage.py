@@ -4,11 +4,7 @@ from datetime import datetime
 import pendulum
 import pytest
 from dagster.core.definitions import PipelineDefinition
-from dagster.core.errors import (
-    DagsterRunAlreadyExists,
-    DagsterRunNotFoundError,
-    DagsterSnapshotDoesNotExist,
-)
+from dagster.core.errors import DagsterRunAlreadyExists, DagsterSnapshotDoesNotExist
 from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.execution.backfill import BulkActionStatus, PartitionBackfill
 from dagster.core.host_representation import (
@@ -900,8 +896,9 @@ class TestRunStorage:
         run = TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name="foo_pipeline")
         storage.add_run(run)
 
-        with pytest.raises(DagsterRunNotFoundError):
-            storage.get_run_group(make_new_run_id())
+        run_id = make_new_run_id()
+        with pytest.raises(Exception, match=f"Run {run_id} was not found in instance."):
+            storage.get_run_group(run_id)
 
     def test_fetch_run_groups(self, storage):
         assert storage
