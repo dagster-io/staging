@@ -115,7 +115,11 @@ def build_solid_deps(
 def build_root_manager(
     source_assets_by_key: Mapping[AssetKey, SourceAsset]
 ) -> RootInputManagerDefinition:
-    @root_input_manager(required_resource_keys={"io_manager"})
+    source_asset_io_manager_keys = {
+        source_asset.io_manager_key for source_asset in source_assets_by_key.values()
+    }
+
+    @root_input_manager(required_resource_keys=source_asset_io_manager_keys)
     def _root_manager(input_context: InputContext) -> Any:
         source_asset_path = get_asset_key(input_context.metadata, "Metadata for input")
         source_asset = source_assets_by_key[source_asset_path]
@@ -127,7 +131,8 @@ def build_root_manager(
             name=input_context.name, upstream_output=output_context
         )
 
-        return cast(Any, input_context.resources).io_manager.load_input(input_context_with_upstream)
+        io_manager = getattr(cast(Any, input_context.resources), source_asset.io_manager_key)
+        return io_manager.load_input(input_context_with_upstream)
 
     return _root_manager
 

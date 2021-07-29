@@ -8,3 +8,4 @@ class SourceAsset(NamedTuple):
 
     key: AssetKey
     metadata: Optional[Any] = None
+    io_manager_key: str = "io_manager"
