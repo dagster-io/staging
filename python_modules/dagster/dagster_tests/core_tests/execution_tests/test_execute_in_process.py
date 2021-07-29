@@ -1,4 +1,5 @@
 import re
+import tempfile
 
 import pytest
 from dagster import (
@@ -9,7 +10,10 @@ from dagster import (
     solid,
 )
 from dagster.core.definitions.decorators.graph import graph
+from dagster.core.definitions.version_strategy import VersionStrategy
 from dagster.core.execution.execute import execute_in_process
+from dagster.core.storage.memoizable_io_manager import versioned_filesystem_io_manager
+from dagster.core.test_utils import instance_for_test
 
 
 def get_solids():
@@ -165,3 +169,42 @@ def test_graph_with_required_resources():
 
     result = basic_graph.execute_in_process(resources={"a": basic_resource})
     assert result.output_values["result"] == "bar"
+
+
+def test_execute_in_process_retrieve_memoized_results():
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with instance_for_test(temp_dir=temp_dir) as instance:
+
+            class MyVersionStrategy(VersionStrategy):
+                def get_solid_version(self, _solid_def):
+                    return "foo"
+
+            recorder = []
+
+            @solid
+            def my_solid():
+                recorder.append("entered")
+                return 5
+
+            @graph
+            def my_graph():
+                my_solid()
+
+            my_job = my_graph.to_job(
+                version_strategy=MyVersionStrategy(),
+                resource_defs={"io_manager": versioned_filesystem_io_manager},
+            )
+
+            result = my_job.execute_in_process(instance=instance)
+            assert result.success
+            assert recorder == ["entered"]
+
+            result = my_job.execute_in_process(instance=instance)
+            assert result.success
+            result_for_solid = result.result_for_node("my_solid")
+            assert result_for_solid.output_values["result"] == 5
+
+            # Ensure that the solid has not been re-run, that we are retrieving memoized outputs
+            # only.
+            assert recorder == ["entered"]

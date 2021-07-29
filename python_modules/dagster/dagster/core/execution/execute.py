@@ -146,7 +146,16 @@ def core_execute_in_process(
     if isinstance(node, GraphDefinition) and node == ephemeral_pipeline.graph:
         event_list_for_top_lvl_node = event_list
         handle = None
-        return InProcessGraphResult(node, handle, event_list_for_top_lvl_node, recorder)
+        return InProcessGraphResult(
+            graph_def=node,
+            handle=handle,
+            all_events=event_list_for_top_lvl_node,
+            output_capture=recorder,
+            execution_plan=execution_plan,
+            pipeline_def=ephemeral_pipeline,
+            run_config=run_config,
+            instance=instance
+        )
     else:
         event_list_for_top_lvl_node = [
             event
@@ -156,8 +165,26 @@ def core_execute_in_process(
         handle = NodeHandle(node.name, None)
 
         if isinstance(node, SolidDefinition):
-            return InProcessSolidResult(node, handle, event_list_for_top_lvl_node, recorder)
+            return InProcessSolidResult(
+                node,
+                handle,
+                event_list_for_top_lvl_node,
+                recorder,
+                execution_plan,
+                pipeline_def,
+                run_config,
+                instance,
+            )
         elif isinstance(node, GraphDefinition):
-            return InProcessGraphResult(node, handle, event_list_for_top_lvl_node, recorder)
+            return InProcessGraphResult(
+                node,
+                handle,
+                event_list_for_top_lvl_node,
+                recorder,
+                execution_plan,
+                pipeline_def,
+                run_config,
+                instance,
+            )
 
     check.failed(f"Unexpected node type {node}")

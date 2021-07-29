@@ -1,11 +1,26 @@
 from abc import abstractproperty
 from typing import Any, Dict, List, Optional, cast
 
-from dagster import DagsterEvent, check
-from dagster.core.definitions import GraphDefinition, Node, NodeHandle, SolidDefinition
+from dagster import check
+from dagster.core.definitions import (
+    GraphDefinition,
+    Node,
+    NodeHandle,
+    PipelineDefinition,
+    SolidDefinition,
+)
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.events import DagsterEvent
+from dagster.core.execution.build_resources import build_resources
+from dagster.core.execution.context.input import InputContext
+from dagster.core.execution.context.output import get_output_context
+from dagster.core.execution.context_creation_pipeline import initialize_console_manager
 from dagster.core.execution.plan.outputs import StepOutputHandle
+from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.plan.step import StepKind
+from dagster.core.execution.resources_init import get_dependencies, resolve_resource_dependencies
+from dagster.core.instance import DagsterInstance
+from dagster.core.system_config.objects import ResolvedRunConfig
 
 
 def _filter_by_step_kind(event_list: List[DagsterEvent], kind: StepKind) -> List[DagsterEvent]:
@@ -76,20 +91,32 @@ class InProcessSolidResult(NodeExecutionResult):
         handle: NodeHandle,
         all_events: List[DagsterEvent],
         output_capture: Optional[Dict[StepOutputHandle, Any]],
+        execution_plan: ExecutionPlan,
+        pipeline_def: PipelineDefinition,
+        run_config: Dict[str, Any],
+        instance: DagsterInstance,
     ):
         self._solid_def = solid_def
         self._handle = handle
         self._event_list = all_events
         self._output_capture = output_capture
+        self._execution_plan = execution_plan
+        self._pipeline_def = pipeline_def
+        self._run_config = run_config
+        self._instance = instance
 
     @property
     def output_values(self) -> Dict[str, Any]:
         """
         The output values for the associated op/solid, keyed by output name.
         """
-        solid_handle_as_str = str(self.handle)
+        solid_handle_as_str = str(
+            self.handle
+        )  # Handle takes into account aliasing and composition structure.
+
         results: Dict[str, Any] = {}
-        if self._output_capture:
+
+        if self._output_capture is not None:
             for step_output_handle, value in self._output_capture.items():
                 if step_output_handle.step_key == solid_handle_as_str:
                     if step_output_handle.mapping_key:
@@ -103,6 +130,67 @@ class InProcessSolidResult(NodeExecutionResult):
                             ] = value
                     else:
                         results[step_output_handle.output_name] = value
+        elif self._pipeline_def.is_using_memoization:
+            resource_defs = self._pipeline_def.get_mode_definition().resource_defs
+            resource_deps = resolve_resource_dependencies(resource_defs)
+
+            resource_defs_to_init = {}
+
+            for output_def in self._solid_def.output_defs:
+                resource_keys_to_init = get_dependencies(output_def.io_manager_key, resource_deps)
+                for resource_key in resource_keys_to_init:
+                    resource_defs_to_init[resource_key] = resource_defs[resource_key]
+
+            resolved_run_config = ResolvedRunConfig.build(self._pipeline_def, self._run_config)
+            all_resources_config = resolved_run_config.to_dict().get("resources", {})
+            resource_config = {
+                resource_key: config_val
+                for resource_key, config_val in all_resources_config.items()
+                if resource_key in resource_defs_to_init
+            }
+
+            log_manager = initialize_console_manager(None)
+
+            with build_resources(
+                resources=resource_defs_to_init,
+                instance=self._instance,
+                resource_config=resource_config,
+                log_manager=log_manager,
+            ) as resources:
+                for output_def in self._solid_def.output_defs:
+                    io_manager_key = output_def.io_manager_key
+                    io_manager = getattr(resources, io_manager_key)
+                    step_output_handle = StepOutputHandle(
+                        step_key=solid_handle_as_str, output_name=output_def.name
+                    )
+                    version = self._execution_plan.get_version_for_step_output_handle(
+                        step_output_handle
+                    )
+
+                    output_context = get_output_context(
+                        execution_plan=self._execution_plan,
+                        pipeline_def=self._pipeline_def,
+                        resolved_run_config=resolved_run_config,
+                        step_output_handle=step_output_handle,
+                        run_id=None,
+                        log_manager=log_manager,
+                        step_context=None,
+                        resources=resources,
+                        version=version,
+                    )
+
+                    input_context = InputContext(
+                        pipeline_name=self._pipeline_def.name,
+                        solid_def=self._solid_def.name,
+                        upstream_output=output_context,
+                        resource_config=all_resources_config.get(io_manager_key),
+                        resources=resources,
+                        log_manager=log_manager,
+                    )
+
+                    obj = io_manager.load_input(input_context)
+
+                    results[output_def.name] = obj
 
         return results
 
@@ -122,11 +210,19 @@ class InProcessGraphResult(NodeExecutionResult):
         handle: Optional[NodeHandle],
         all_events: List[DagsterEvent],
         output_capture: Optional[Dict[StepOutputHandle, Any]],
+        execution_plan: ExecutionPlan,
+        pipeline_def: PipelineDefinition,
+        run_config: Dict[str, Any],
+        instance: DagsterInstance,
     ):
         self._graph_def = graph_def
         self._handle = handle
         self._event_list = all_events
         self._output_capture = output_capture
+        self._execution_plan = execution_plan
+        self._pipeline_def = pipeline_def
+        self._run_config = run_config
+        self._instance = instance
 
     def _result_for_handle(self, solid: Node, handle: NodeHandle) -> NodeExecutionResult:
         node_def = solid.definition
@@ -150,6 +246,10 @@ class InProcessGraphResult(NodeExecutionResult):
                 handle=handle_with_ancestor,
                 all_events=events_for_handle,
                 output_capture=outputs_for_handle,
+                execution_plan=self._execution_plan,
+                pipeline_def=self._pipeline_def,
+                run_config=self._run_config,
+                instance=self._instance,
             )
         elif isinstance(node_def, GraphDefinition):
             return InProcessGraphResult(
@@ -157,6 +257,10 @@ class InProcessGraphResult(NodeExecutionResult):
                 handle=handle_with_ancestor,
                 all_events=events_for_handle,
                 output_capture=outputs_for_handle,
+                execution_plan=self._execution_plan,
+                pipeline_def=self._pipeline_def,
+                run_config=self._run_config,
+                instance=self._instance,
             )
 
         check.failed("Unhandled node type {node_def}")
