@@ -1,11 +1,13 @@
 import json
+
 from dagster import AssetKey
+
 from ..schema.node import GrapheneNodes
+from ..schema.pipelines.pipeline import GrapheneAsset, GraphenePipeline
 from ..schema.schedules.schedules import GrapheneSchedule
 from ..schema.sensors import GrapheneSensor
-from ..schema.pipelines.pipeline import GrapheneAsset, GraphenePipeline
-from .utils import PipelineSelector, capture_error
 from .fetch_pipelines import get_external_pipeline_or_raise
+from .utils import PipelineSelector, capture_error
 
 
 def _resolve_node(graphene_info, params):
