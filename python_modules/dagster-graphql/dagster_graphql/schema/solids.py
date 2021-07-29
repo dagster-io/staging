@@ -53,6 +53,7 @@ class GrapheneOutputDefinition(graphene.ObjectType):
     description = graphene.String()
     is_dynamic = graphene.Boolean()
     type = graphene.NonNull(GrapheneDagsterType)
+    asset = graphene.Field("dagster_graphql.schema.pipelines.pipeline.GrapheneAsset")
 
     class Meta:
         name = "OutputDefinition"
@@ -81,6 +82,14 @@ class GrapheneOutputDefinition(graphene.ObjectType):
 
     def resolve_solid_definition(self, _graphene_info):
         return build_solid_definition(self._represented_pipeline, self._solid_def_snap.name)
+
+    def resolve_asset(self, _graphene_info):
+        if not self._output_def_snap.asset_key:
+            return None
+
+        from .pipelines.pipeline import GrapheneAsset
+
+        return GrapheneAsset(key=self._output_def_snap.asset_key)
 
 
 class GrapheneInput(graphene.ObjectType):

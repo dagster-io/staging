@@ -33,6 +33,7 @@ from ...implementation.fetch_schedules import (
     get_schedules_or_error,
 )
 from ...implementation.fetch_sensors import get_sensor_or_error, get_sensors_or_error
+from ...implementation.fetch_nodes import fetch_nodes
 from ...implementation.run_config_schema import resolve_run_config_schema_or_error
 from ...implementation.utils import pipeline_selector_from_graphql
 from ..backfill import GraphenePartitionBackfillOrError, GraphenePartitionBackfillsOrError
@@ -44,6 +45,7 @@ from ..external import (
 from ..inputs import (
     GrapheneAssetKeyInput,
     GrapheneInstigationSelector,
+    GrapheneNodeParam,
     GraphenePipelineRunsFilter,
     GraphenePipelineSelector,
     GrapheneRepositorySelector,
@@ -75,6 +77,7 @@ from ..util import non_null_list
 from .assets import GrapheneAssetOrError, GrapheneAssetsOrError
 from .execution_plan import GrapheneExecutionPlanOrError
 from .pipeline import GraphenePipelineOrError
+from ..node import GrapheneNodesOrError
 
 
 class GrapheneQuery(graphene.ObjectType):
@@ -90,6 +93,10 @@ class GrapheneQuery(graphene.ObjectType):
 
     pipelineOrError = graphene.Field(
         graphene.NonNull(GraphenePipelineOrError), params=graphene.NonNull(GraphenePipelineSelector)
+    )
+    nodesOrError = graphene.NonNull(
+        GrapheneNodesOrError,
+        params=non_null_list(GrapheneNodeParam),
     )
 
     pipelineSnapshotOrError = graphene.Field(
@@ -223,6 +230,9 @@ class GrapheneQuery(graphene.ObjectType):
             graphene_info,
             RepositorySelector.from_graphql_input(kwargs.get("repositorySelector")),
         )
+
+    def resolve_nodesOrError(self, graphene_info, **kwargs):
+        return fetch_nodes(graphene_info, kwargs.get("params"))
 
     def resolve_workspaceOrError(self, graphene_info):
         return fetch_workspace(graphene_info.context)

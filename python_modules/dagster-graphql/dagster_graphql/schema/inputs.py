@@ -219,6 +219,16 @@ class GrapheneInstigationSelector(graphene.InputObjectType):
     name = graphene.NonNull(graphene.String)
 
 
+class GrapheneNodeParam(graphene.InputObjectType):
+    class Meta:
+        name = "NodeParam"
+
+    nodeType = graphene.NonNull(graphene.String)
+    name = graphene.NonNull(graphene.String)
+    repositoryName = graphene.String()
+    repositoryLocationName = graphene.String()
+
+
 types = [
     GrapheneAssetKeyInput,
     GrapheneExecutionMetadata,
@@ -236,4 +246,5 @@ types = [
     GrapheneSensorSelector,
     GrapheneStepExecution,
     GrapheneStepOutputHandle,
+    GrapheneNodeParam,
 ]

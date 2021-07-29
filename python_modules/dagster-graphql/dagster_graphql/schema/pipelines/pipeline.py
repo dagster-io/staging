@@ -81,7 +81,7 @@ class GrapheneAssetMaterialization(graphene.ObjectType):
 
 
 class GrapheneAsset(graphene.ObjectType):
-    id = graphene.NonNull(graphene.String)
+    id = graphene.NonNull(graphene.ID)
     key = graphene.NonNull(GrapheneAssetKey)
     assetMaterializations = graphene.Field(
         non_null_list(GrapheneAssetMaterialization),
