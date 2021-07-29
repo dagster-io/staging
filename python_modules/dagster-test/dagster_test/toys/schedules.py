@@ -207,6 +207,19 @@ def get_toys_schedules():
         weekly_materialization_schedule,
         monthly_materialization_schedule,
         ScheduleDefinition(
+            name="log_asset_every_min",
+            cron_schedule="* * * * *",
+            pipeline_name="log_asset_pipeline",
+            run_config_fn=lambda _: {
+                "solids": {
+                    "read_materialization": {
+                        "config": {"asset_key": ["model"], "pipeline": "model_pipeline"}
+                    }
+                }
+            },
+            execution_timezone=_toys_tz_info(),
+        ),
+        ScheduleDefinition(
             name="many_events_every_min",
             cron_schedule="* * * * *",
             pipeline_name="many_events",

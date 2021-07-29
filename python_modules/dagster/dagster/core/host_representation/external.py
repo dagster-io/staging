@@ -1,5 +1,5 @@
 import warnings
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from dagster import check
 from dagster.core.definitions.run_request import JobType
@@ -497,6 +497,14 @@ class ExternalSensor:
         ):
             return self._external_sensor_data.min_interval
         return DEFAULT_SENSOR_DAEMON_INTERVAL
+
+    @property
+    def is_asset_sensor(self):
+        return bool(self._external_sensor_data.asset_keys)
+
+    @property
+    def asset_keys(self):
+        return self._external_sensor_data.asset_keys
 
     def get_external_origin(self):
         return self._handle.get_external_origin()

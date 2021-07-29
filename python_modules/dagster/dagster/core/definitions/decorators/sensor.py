@@ -115,7 +115,7 @@ def sensor(
 
 
 def asset_sensor(
-    asset_key: AssetKey,
+    asset_keys: AssetKey,
     pipeline_name: Optional[str] = None,
     name: Optional[str] = None,
     solid_selection: Optional[List[str]] = None,
@@ -126,10 +126,7 @@ def asset_sensor(
 ) -> Callable[
     [
         Callable[
-            [
-                "SensorEvaluationContext",
-                "EventLogEntry",
-            ],
+            ...,
             Union[Generator[Union[RunRequest, SkipReason], None, None], RunRequest, SkipReason],
         ]
     ],
@@ -177,8 +174,8 @@ def asset_sensor(
         check.callable_param(fn, "fn")
         sensor_name = name or fn.__name__
 
-        def _wrapped_fn(context, event):
-            result = fn(context, event)
+        def _wrapped_fn(context, *record_streams):
+            result = fn(context, *record_streams)
 
             if inspect.isgenerator(result):
                 for item in result:
@@ -197,7 +194,7 @@ def asset_sensor(
 
         return AssetSensorDefinition(
             name=sensor_name,
-            asset_key=asset_key,
+            asset_keys=asset_keys,
             pipeline_name=pipeline_name,
             asset_materialization_fn=_wrapped_fn,
             solid_selection=solid_selection,

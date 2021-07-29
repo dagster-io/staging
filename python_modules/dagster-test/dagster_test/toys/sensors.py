@@ -110,8 +110,11 @@ def get_toys_sensors():
             blocks=[{"type": "section", "text": {"type": "mrkdwn", "text": message}}],
         )
 
-    @asset_sensor(asset_key=AssetKey("model"), pipeline_name="log_asset_pipeline")
-    def toy_asset_sensor(context, asset_event):
+    @asset_sensor(asset_keys=[AssetKey("model")], pipeline_name="log_asset_pipeline")
+    def toy_asset_sensor(context, records):
+        event_record = records[0]
+        asset_event = event_record.event_log_entry
+        record_id = event_record.storage_id
         yield RunRequest(
             run_key=context.cursor,
             run_config={
@@ -122,10 +125,47 @@ def get_toys_sensors():
                 }
             },
         )
+        context.update_cursor(str(record_id))
+
+    @asset_sensor(asset_keys=[AssetKey("model")], pipeline_name="log_asset_pipeline")
+    def toy_asset_sensor_2(context, records):
+        event_record = records[0]
+        asset_event = event_record.event_log_entry
+        record_id = event_record.storage_id
+        yield RunRequest(
+            run_key=context.cursor,
+            run_config={
+                "solids": {
+                    "read_materialization": {
+                        "config": {"asset_key": ["model"], "pipeline": asset_event.pipeline_name}
+                    }
+                }
+            },
+        )
+        context.update_cursor(str(record_id))
+
+    @asset_sensor(asset_keys=[AssetKey(["model", "two"])], pipeline_name="log_asset_pipeline")
+    def toy_asset_sensor_3(context, records):
+        event_record = records[0]
+        asset_event = event_record.event_log_entry
+        record_id = event_record.storage_id
+        yield RunRequest(
+            run_key=context.cursor,
+            run_config={
+                "solids": {
+                    "read_materialization": {
+                        "config": {"asset_key": ["model"], "pipeline": asset_event.pipeline_name}
+                    }
+                }
+            },
+        )
+        context.update_cursor(str(record_id))
 
     return [
         toy_file_sensor,
         toy_asset_sensor,
+        toy_asset_sensor_2,
+        toy_asset_sensor_3,
         toy_s3_sensor,
         custom_slack_on_pipeline_failure,
     ]

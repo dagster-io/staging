@@ -59,6 +59,7 @@ class OutputDefinition:
         io_manager_key=None,
         metadata=None,
         asset_key=None,
+        asset_key_fn=None,
         asset_partitions=None,
         # make sure new parameters are updated in combine_with_inferred below
     ):
@@ -78,14 +79,25 @@ class OutputDefinition:
 
         if asset_key:
             experimental_arg_warning("asset_key", "OutputDefinition.__init__")
+        if asset_key_fn:
+            experimental_arg_warning("asset_key_fn", "OutputDefinition.__init__")
+
+        check.param_invariant(
+            not (asset_key and asset_key_fn),
+            "asset_key",
+            "Cannot specify both asset_key and asset_key_fn parameters",
+        )
 
         if callable(asset_key):
             self._asset_key_fn = asset_key
-        elif asset_key is not None:
-            asset_key = check.opt_inst_param(asset_key, "asset_key", AssetKey)
-            self._asset_key_fn = lambda _: asset_key
+            self._asset_key = None
+        elif asset_key:
+            check.inst_param(asset_key, "asset_key", AssetKey)
+            self._asset_key_fn = None
+            self._asset_key = asset_key
         else:
             self._asset_key_fn = None
+            self._asset_key = None
 
         if asset_partitions:
             experimental_arg_warning("asset_partitions", "OutputDefinition.__init__")
@@ -137,7 +149,11 @@ class OutputDefinition:
 
     @property
     def is_asset(self):
-        return self._asset_key_fn is not None
+        return bool(self._asset_key_fn or self._asset_key)
+
+    @property
+    def is_static_asset(self):
+        return bool(self._asset_key)
 
     def get_asset_key(self, context) -> Optional[AssetKey]:
         """Get the AssetKey associated with this OutputDefinition for the given
@@ -147,10 +163,13 @@ class OutputDefinition:
             context (OutputContext): The OutputContext that this OutputDefinition is being evaluated
             in
         """
-        if self._asset_key_fn is None:
-            return None
+        if self._asset_key:
+            return self._asset_key
 
-        return self._asset_key_fn(context)
+        if self._asset_key_fn:
+            return self._asset_key_fn(context)
+
+        return None
 
     def get_asset_partitions(self, context) -> Optional[Set[str]]:
         """Get the set of partitions associated with this OutputDefinition for the given
@@ -206,7 +225,8 @@ class OutputDefinition:
             is_required=self._is_required,
             io_manager_key=self._manager_key,
             metadata=self._metadata,
-            asset_key=self._asset_key_fn,
+            asset_key=self._asset_key,
+            asset_key_fn=self._asset_key_fn,
             asset_partitions=self._asset_partitions_fn,
         )
 

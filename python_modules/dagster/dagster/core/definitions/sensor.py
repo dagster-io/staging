@@ -2,7 +2,7 @@ import inspect
 from contextlib import ExitStack
 from typing import TYPE_CHECKING, Any, Callable, Generator, List, NamedTuple, Optional, Union, cast
 
-from dagster import check
+from dagster import check, seven
 from dagster.core.errors import DagsterInvalidInvocationError, DagsterInvariantViolationError
 from dagster.core.instance import DagsterInstance
 from dagster.core.instance.ref import InstanceRef
@@ -95,7 +95,7 @@ class SensorEvaluationContext:
         """The cursor value for this sensor, which was set in an earlier sensor evaluation."""
         return self._cursor
 
-    def update_cursor(self, cursor: Optional[str]) -> None:
+    def update_cursor(self, *parts) -> None:
         """Updates the cursor value for this sensor, which will be provided on the context for the
         next sensor evaluation.
 
@@ -105,7 +105,10 @@ class SensorEvaluationContext:
         Args:
             cursor (Optional[str]):
         """
-        self._cursor = check.opt_str_param(cursor, "cursor")
+        if len(part) == 1:
+            self._cursor = check.opt_str_param(parts[1], "cursor")
+        elif len(part) > 1:
+            self._cursor = seven.json.dumps(parts)
 
     @property
     def repository_name(self) -> Optional[str]:
@@ -428,48 +431,50 @@ class AssetSensorDefinition(SensorDefinition):
     def __init__(
         self,
         name: str,
-        asset_key: AssetKey,
         pipeline_name: Optional[str],
         asset_materialization_fn: Callable[
-            ["SensorExecutionContext", "EventLogEntry"],
+            ...,
             Union[Generator[Union[RunRequest, SkipReason], None, None], RunRequest, SkipReason],
         ],
+        asset_keys: List[AssetKey] = [],
+        record_limit: Optional[int] = None,
         solid_selection: Optional[List[str]] = None,
         mode: Optional[str] = None,
         minimum_interval_seconds: Optional[int] = None,
         description: Optional[str] = None,
         job: Optional[Union[GraphDefinition, PipelineDefinition]] = None,
     ):
-        self._asset_key = check.inst_param(asset_key, "asset_key", AssetKey)
-
+        self._asset_keys = check.list_param(asset_keys, "asset_keys", AssetKey)
         from dagster.core.events import DagsterEventType
         from dagster.core.storage.event_log.base import EventRecordsFilter
 
         def _wrap_asset_fn(materialization_fn):
             def _fn(context):
-                after_cursor = None
                 if context.cursor:
                     try:
-                        after_cursor = int(context.cursor)
+                        cursors = map(int, context.cursor.split(CURSOR_DELIMITER))
+                        if len(cursors) != len(self._asset_keys):
+                            cursors = [None] * len(self._asset_keys)
                     except ValueError:
-                        after_cursor = None
+                        cursors = [None] * len(self._asset_keys)
 
-                event_records = context.instance.get_event_records(
-                    EventRecordsFilter(
-                        event_type=DagsterEventType.ASSET_MATERIALIZATION,
-                        asset_key=self._asset_key,
-                        after_cursor=after_cursor,
-                    ),
-                    ascending=False,
-                    limit=1,
-                )
+                records = [
+                    context.instance.get_event_records(
+                        EventRecordsFilter(
+                            event_type=DagsterEventType.ASSET_MATERIALIZATION,
+                            asset_key=_asset_key,
+                            after_cursor=cursor[_idx],
+                            limit=record_limit,
+                        ),
+                        ascending=False,
+                    )
+                    for _asset_key, _idx in enumerate(self._asset_keys)
+                ]
 
-                if not event_records:
+                if not any(records):
                     return
 
-                event_record = event_records[0]
-                yield from materialization_fn(context, event_record.event_log_entry)
-                context.update_cursor(str(event_record.storage_id))
+                yield from materialization_fn(context, *records)
 
             return _fn
 
@@ -491,5 +496,5 @@ class AssetSensorDefinition(SensorDefinition):
         )
 
     @property
-    def asset_key(self):
-        return self._asset_key
+    def asset_keys(self):
+        return self._asset_keys
