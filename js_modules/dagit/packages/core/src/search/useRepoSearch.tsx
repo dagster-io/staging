@@ -49,39 +49,52 @@ const bootstrapDataToSearchResults = (data?: SearchBootstrapQuery) => {
               const jobs = pipeline.modes.map((mode) => ({
                 key: `${repoPath}-${pipeline.name}-${mode.name}`,
                 label: `${pipeline.name} : ${mode.name}`,
+                name: pipeline.name,
                 description: manyRepos ? `Job in ${repoPath}` : 'Job',
                 href: workspacePath(name, locationName, `/pipelines/${pipeline.name}:${mode.name}`),
                 type: SearchResultType.Pipeline,
+                repositoryName: name,
+                repositoryLocationName: locationName,
               }));
               return [...flat, ...jobs];
             }, [] as SearchResult[])
           : pipelines.map((pipeline) => ({
               key: `${repoPath}-${pipeline.name}`,
               label: pipeline.name,
+              name: pipeline.name,
               description: manyRepos ? `Pipeline in ${repoPath}` : 'Pipeline',
               href: workspacePath(name, locationName, `/pipelines/${pipeline.name}`),
               type: SearchResultType.Pipeline,
+              repositoryName: name,
+              repositoryLocationName: locationName,
             }));
 
         const allSchedules = schedules.map((schedule) => ({
           key: `${repoPath}-${schedule.name}`,
           label: schedule.name,
+          name: schedule.name,
           description: manyRepos ? `Schedule in ${repoPath}` : 'Schedule',
           href: workspacePath(name, locationName, `/schedules/${schedule.name}`),
           type: SearchResultType.Schedule,
+          repositoryName: name,
+          repositoryLocationName: locationName,
         }));
 
         const allSensors = sensors.map((sensor) => ({
           key: `${repoPath}-${sensor.name}`,
           label: sensor.name,
+          name: sensor.name,
           description: manyRepos ? `Sensor in ${repoPath}` : 'Sensor',
           href: workspacePath(name, locationName, `/sensors/${sensor.name}`),
           type: SearchResultType.Sensor,
+          repositoryName: name,
+          repositoryLocationName: locationName,
         }));
 
         const allPartitionSets = partitionSets.map((partitionSet) => ({
           key: `${repoPath}-${partitionSet.name}`,
           label: partitionSet.name,
+          name: partitionSet.name,
           description: manyRepos ? `Partition set in ${repoPath}` : 'Partition set',
           href: workspacePath(
             name,
@@ -89,6 +102,8 @@ const bootstrapDataToSearchResults = (data?: SearchBootstrapQuery) => {
             `/pipelines/${partitionSet.pipelineName}/partitions?partitionSet=${partitionSet.name}`,
           ),
           type: SearchResultType.PartitionSet,
+          repositoryName: name,
+          repositoryLocationName: locationName,
         }));
 
         return [...inner, ...allPipelines, ...allSchedules, ...allSensors, ...allPartitionSets];
@@ -111,6 +126,7 @@ const secondaryDataToSearchResults = (data?: SearchSecondaryQuery) => {
     return {
       key: path,
       label: path,
+      name: JSON.stringify(key.path),
       description: 'Asset',
       href: `/instance/assets/${key.path.join('/')}`,
       type: SearchResultType.Asset,

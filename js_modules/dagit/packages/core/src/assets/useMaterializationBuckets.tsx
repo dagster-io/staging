@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import {AssetQuery_assetOrError_Asset_assetMaterializations as Materialization} from './types/AssetQuery';
+import {AssetViewFragment_assetMaterializations as Materialization} from './types/AssetViewFragment';
 
 const NO_PARTITION_KEY = '__NO_PARTITION__';
 

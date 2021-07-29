@@ -4,6 +4,7 @@ type Query {
   repositoryOrError(repositorySelector: RepositorySelector!): RepositoryOrError!
   workspaceOrError: WorkspaceOrError!
   pipelineOrError(params: PipelineSelector!): PipelineOrError!
+  nodesOrError(params: [NodeParam!]!): GrapheneNodesOrError!
   pipelineSnapshotOrError(snapshotId: String, activePipelineSelector: PipelineSelector): PipelineSnapshotOrError!
   scheduler: SchedulerOrError!
   scheduleOrError(scheduleSelector: ScheduleSelector!): ScheduleOrError!
@@ -126,6 +127,7 @@ type OutputDefinition {
   description: String
   isDynamic: Boolean
   type: DagsterType!
+  asset: Asset
 }
 
 interface DagsterType {
@@ -150,278 +152,15 @@ interface ConfigType {
   isSelector: Boolean!
 }
 
-type ConfigTypeField {
-  name: String!
-  description: String
-  configType: ConfigType!
-  configTypeKey: String!
-  isRequired: Boolean!
-}
-
-type ResourceRequirement {
-  resourceKey: String!
-}
-
-type Input {
-  solid: Solid!
-  definition: InputDefinition!
-  dependsOn: [Output!]!
-  isDynamicCollect: Boolean!
-}
-
-type Output {
-  solid: Solid!
-  definition: OutputDefinition!
-  dependedBy: [Input!]!
-}
-
-interface IPipelineSnapshot {
-  name: String!
-  description: String
-  pipelineSnapshotId: String!
-  dagsterTypes: [DagsterType!]!
-  dagsterTypeOrError(dagsterTypeName: String!): DagsterTypeOrError!
-  solids: [Solid!]!
-  modes: [Mode!]!
-  solidHandles(parentHandleID: String): [SolidHandle!]!
-  solidHandle(handleID: String!): SolidHandle
-  tags: [PipelineTag!]!
-}
-
-union DagsterTypeOrError = RegularDagsterType | PipelineNotFoundError | DagsterTypeNotFoundError | PythonError
-
-type RegularDagsterType implements DagsterType {
-  key: String!
-  name: String
-  displayName: String!
-  description: String
-  isNullable: Boolean!
-  isList: Boolean!
-  isBuiltin: Boolean!
-  isNothing: Boolean!
-  inputSchemaType: ConfigType
-  outputSchemaType: ConfigType
-  innerTypes: [DagsterType!]!
-}
-
-type PipelineNotFoundError implements Error {
-  message: String!
-  pipelineName: String!
-  repositoryName: String!
-  repositoryLocationName: String!
-}
-
-interface Error {
-  message: String!
-}
-
-type DagsterTypeNotFoundError implements Error {
-  message: String!
-  dagsterTypeName: String!
-}
-
-type PythonError implements Error {
-  message: String!
-  className: String
-  stack: [String!]!
-  cause: PythonError
-}
-
-type Mode {
-  id: String!
-  name: String!
-  description: String
-  resources: [Resource!]!
-  loggers: [Logger!]!
-}
-
-type Resource {
-  name: String!
-  description: String
-  configField: ConfigTypeField
-}
-
-type Logger {
-  name: String!
-  description: String
-  configField: ConfigTypeField
-}
-
-type SolidHandle {
-  handleID: String!
-  solid: Solid!
-  parent: SolidHandle
-}
-
-type PipelineTag {
-  key: String!
-  value: String!
-}
-
-type PipelineRun {
+type Asset {
   id: ID!
-  runId: String!
-  pipelineSnapshotId: String
-  repositoryOrigin: RepositoryOrigin
-  status: PipelineRunStatus!
-  pipeline: PipelineReference!
-  pipelineName: String!
-  solidSelection: [String!]
-  stats: PipelineRunStatsOrError!
-  stepStats: [PipelineRunStepStats!]!
-  computeLogs(stepKey: String!): ComputeLogs!
-  executionPlan: ExecutionPlan
-  stepKeysToExecute: [String!]
-  runConfigYaml: String!
-  mode: String!
-  tags: [PipelineTag!]!
-  rootRunId: String
-  parentRunId: String
-  canTerminate: Boolean!
-  assets: [Asset!]!
-  events(after: Cursor): [PipelineRunEvent!]!
-}
-
-type RepositoryOrigin {
-  id: String!
-  repositoryLocationName: String!
-  repositoryName: String!
-  repositoryLocationMetadata: [RepositoryMetadata!]!
-}
-
-type RepositoryMetadata {
-  key: String!
-  value: String!
-}
-
-enum PipelineRunStatus {
-  QUEUED
-  NOT_STARTED
-  MANAGED
-  STARTING
-  STARTED
-  SUCCESS
-  FAILURE
-  CANCELING
-  CANCELED
-}
-
-interface PipelineReference {
-  name: String!
-  solidSelection: [String!]
-}
-
-union PipelineRunStatsOrError = PipelineRunStatsSnapshot | PythonError
-
-type PipelineRunStatsSnapshot {
-  id: String!
-  runId: String!
-  stepsSucceeded: Int!
-  stepsFailed: Int!
-  materializations: Int!
-  expectations: Int!
-  enqueuedTime: Float
-  launchTime: Float
-  startTime: Float
-  endTime: Float
-}
-
-type PipelineRunStepStats {
-  runId: String!
-  stepKey: String!
-  status: StepEventStatus
-  startTime: Float
-  endTime: Float
-  materializations: [Materialization!]!
-  expectationResults: [ExpectationResult!]!
-}
-
-enum StepEventStatus {
-  SKIPPED
-  SUCCESS
-  FAILURE
-}
-
-type Materialization implements DisplayableEvent {
-  label: String!
-  description: String
-  metadataEntries: [EventMetadataEntry!]!
-  assetKey: AssetKey
-}
-
-interface DisplayableEvent {
-  label: String!
-  description: String
-  metadataEntries: [EventMetadataEntry!]!
-}
-
-interface EventMetadataEntry {
-  label: String!
-  description: String
+  key: AssetKey!
+  assetMaterializations(partitions: [String], beforeTimestampMillis: String, limit: Int): [AssetMaterialization!]!
+  tags: [AssetTag!]!
 }
 
 type AssetKey {
   path: [String!]!
-}
-
-type ExpectationResult implements DisplayableEvent {
-  label: String!
-  description: String
-  metadataEntries: [EventMetadataEntry!]!
-  success: Boolean!
-}
-
-type ComputeLogs {
-  runId: String!
-  stepKey: String!
-  stdout: ComputeLogFile
-  stderr: ComputeLogFile
-}
-
-type ComputeLogFile {
-  path: String!
-  data: String
-  cursor: Int!
-  size: Int!
-  downloadUrl: String
-}
-
-type ExecutionPlan {
-  steps: [ExecutionStep!]!
-  artifactsPersisted: Boolean!
-}
-
-type ExecutionStep {
-  key: String!
-  inputs: [ExecutionStepInput!]!
-  outputs: [ExecutionStepOutput!]!
-  solidHandleID: String!
-  kind: StepKind!
-  metadata: [MetadataItemDefinition!]!
-}
-
-type ExecutionStepInput {
-  name: String!
-  type: DagsterType!
-  dependsOn: [ExecutionStep!]!
-}
-
-type ExecutionStepOutput {
-  name: String!
-  type: DagsterType!
-}
-
-enum StepKind {
-  COMPUTE
-  UNRESOLVED_MAPPED
-  UNRESOLVED_COLLECT
-}
-
-type Asset {
-  id: String!
-  key: AssetKey!
-  assetMaterializations(partitions: [String], beforeTimestampMillis: String, limit: Int): [AssetMaterialization!]!
-  tags: [AssetTag!]!
 }
 
 type AssetMaterialization {
@@ -498,6 +237,47 @@ interface StepEvent {
   solidHandleID: String
 }
 
+type Materialization implements DisplayableEvent {
+  label: String!
+  description: String
+  metadataEntries: [EventMetadataEntry!]!
+  assetKey: AssetKey
+}
+
+interface DisplayableEvent {
+  label: String!
+  description: String
+  metadataEntries: [EventMetadataEntry!]!
+}
+
+interface EventMetadataEntry {
+  label: String!
+  description: String
+}
+
+type PipelineRunStepStats {
+  runId: String!
+  stepKey: String!
+  status: StepEventStatus
+  startTime: Float
+  endTime: Float
+  materializations: [Materialization!]!
+  expectationResults: [ExpectationResult!]!
+}
+
+enum StepEventStatus {
+  SKIPPED
+  SUCCESS
+  FAILURE
+}
+
+type ExpectationResult implements DisplayableEvent {
+  label: String!
+  description: String
+  metadataEntries: [EventMetadataEntry!]!
+  success: Boolean!
+}
+
 type AssetLineageInfo {
   assetKey: AssetKey!
   partitions: [String!]!
@@ -505,12 +285,132 @@ type AssetLineageInfo {
 
 union PipelineRunOrError = PipelineRun | PipelineRunNotFoundError | PythonError
 
-type PipelineRunNotFoundError implements Error {
-  message: String!
+type PipelineRun {
+  id: ID!
   runId: String!
+  pipelineSnapshotId: String
+  repositoryOrigin: RepositoryOrigin
+  status: PipelineRunStatus!
+  pipeline: PipelineReference!
+  pipelineName: String!
+  solidSelection: [String!]
+  stats: PipelineRunStatsOrError!
+  stepStats: [PipelineRunStepStats!]!
+  computeLogs(stepKey: String!): ComputeLogs!
+  executionPlan: ExecutionPlan
+  stepKeysToExecute: [String!]
+  runConfigYaml: String!
+  mode: String!
+  tags: [PipelineTag!]!
+  rootRunId: String
+  parentRunId: String
+  canTerminate: Boolean!
+  assets: [Asset!]!
+  events(after: Cursor): [PipelineRunEvent!]!
 }
 
-type AssetTag {
+type RepositoryOrigin {
+  id: String!
+  repositoryLocationName: String!
+  repositoryName: String!
+  repositoryLocationMetadata: [RepositoryMetadata!]!
+}
+
+type RepositoryMetadata {
+  key: String!
+  value: String!
+}
+
+enum PipelineRunStatus {
+  QUEUED
+  NOT_STARTED
+  MANAGED
+  STARTING
+  STARTED
+  SUCCESS
+  FAILURE
+  CANCELING
+  CANCELED
+}
+
+interface PipelineReference {
+  name: String!
+  solidSelection: [String!]
+}
+
+union PipelineRunStatsOrError = PipelineRunStatsSnapshot | PythonError
+
+type PipelineRunStatsSnapshot {
+  id: String!
+  runId: String!
+  stepsSucceeded: Int!
+  stepsFailed: Int!
+  materializations: Int!
+  expectations: Int!
+  enqueuedTime: Float
+  launchTime: Float
+  startTime: Float
+  endTime: Float
+}
+
+type PythonError implements Error {
+  message: String!
+  className: String
+  stack: [String!]!
+  cause: PythonError
+}
+
+interface Error {
+  message: String!
+}
+
+type ComputeLogs {
+  runId: String!
+  stepKey: String!
+  stdout: ComputeLogFile
+  stderr: ComputeLogFile
+}
+
+type ComputeLogFile {
+  path: String!
+  data: String
+  cursor: Int!
+  size: Int!
+  downloadUrl: String
+}
+
+type ExecutionPlan {
+  steps: [ExecutionStep!]!
+  artifactsPersisted: Boolean!
+}
+
+type ExecutionStep {
+  key: String!
+  inputs: [ExecutionStepInput!]!
+  outputs: [ExecutionStepOutput!]!
+  solidHandleID: String!
+  kind: StepKind!
+  metadata: [MetadataItemDefinition!]!
+}
+
+type ExecutionStepInput {
+  name: String!
+  type: DagsterType!
+  dependsOn: [ExecutionStep!]!
+}
+
+type ExecutionStepOutput {
+  name: String!
+  type: DagsterType!
+}
+
+enum StepKind {
+  COMPUTE
+  UNRESOLVED_MAPPED
+  UNRESOLVED_COLLECT
+}
+
+type PipelineTag {
   key: String!
   value: String!
 }
@@ -881,6 +781,108 @@ type AlertSuccessEvent implements MessageEvent & PipelineEvent {
 
 scalar Cursor
 
+type PipelineRunNotFoundError implements Error {
+  message: String!
+  runId: String!
+}
+
+type AssetTag {
+  key: String!
+  value: String!
+}
+
+type ConfigTypeField {
+  name: String!
+  description: String
+  configType: ConfigType!
+  configTypeKey: String!
+  isRequired: Boolean!
+}
+
+type ResourceRequirement {
+  resourceKey: String!
+}
+
+type Input {
+  solid: Solid!
+  definition: InputDefinition!
+  dependsOn: [Output!]!
+  isDynamicCollect: Boolean!
+}
+
+type Output {
+  solid: Solid!
+  definition: OutputDefinition!
+  dependedBy: [Input!]!
+}
+
+interface IPipelineSnapshot {
+  name: String!
+  description: String
+  pipelineSnapshotId: String!
+  dagsterTypes: [DagsterType!]!
+  dagsterTypeOrError(dagsterTypeName: String!): DagsterTypeOrError!
+  solids: [Solid!]!
+  modes: [Mode!]!
+  solidHandles(parentHandleID: String): [SolidHandle!]!
+  solidHandle(handleID: String!): SolidHandle
+  tags: [PipelineTag!]!
+}
+
+union DagsterTypeOrError = RegularDagsterType | PipelineNotFoundError | DagsterTypeNotFoundError | PythonError
+
+type RegularDagsterType implements DagsterType {
+  key: String!
+  name: String
+  displayName: String!
+  description: String
+  isNullable: Boolean!
+  isList: Boolean!
+  isBuiltin: Boolean!
+  isNothing: Boolean!
+  inputSchemaType: ConfigType
+  outputSchemaType: ConfigType
+  innerTypes: [DagsterType!]!
+}
+
+type PipelineNotFoundError implements Error {
+  message: String!
+  pipelineName: String!
+  repositoryName: String!
+  repositoryLocationName: String!
+}
+
+type DagsterTypeNotFoundError implements Error {
+  message: String!
+  dagsterTypeName: String!
+}
+
+type Mode {
+  id: String!
+  name: String!
+  description: String
+  resources: [Resource!]!
+  loggers: [Logger!]!
+}
+
+type Resource {
+  name: String!
+  description: String
+  configField: ConfigTypeField
+}
+
+type Logger {
+  name: String!
+  description: String
+  configField: ConfigTypeField
+}
+
+type SolidHandle {
+  handleID: String!
+  solid: Solid!
+  parent: SolidHandle
+}
+
 type Schedule {
   id: ID!
   name: String!
@@ -1051,6 +1053,8 @@ type Sensor {
   minIntervalSeconds: Int!
   description: String
   nextTick: FutureInstigationTick
+  isAssetSensor: Boolean
+  assets: [Asset!]
 }
 
 type PipelinePreset {
@@ -1118,6 +1122,21 @@ input PipelineSelector {
   repositoryName: String!
   repositoryLocationName: String!
   solidSelection: [String!]
+}
+
+union GrapheneNodesOrError = Nodes | PythonError
+
+type Nodes {
+  nodes: [GrapheneNode!]!
+}
+
+union GrapheneNode = Asset | Pipeline | Sensor | Schedule
+
+input NodeParam {
+  nodeType: String!
+  name: String!
+  repositoryName: String
+  repositoryLocationName: String
 }
 
 union PipelineSnapshotOrError = PipelineNotFoundError | PipelineSnapshot | PipelineSnapshotNotFoundError | PythonError

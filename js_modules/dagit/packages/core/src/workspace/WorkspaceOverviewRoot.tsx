@@ -3,6 +3,7 @@ import * as React from 'react';
 import {Link} from 'react-router-dom';
 
 import {useFeatureFlags} from '../app/Flags';
+import {Box} from '../ui/Box';
 import {Group} from '../ui/Group';
 import {LoadingSpinner} from '../ui/Loading';
 import {Page} from '../ui/Page';
@@ -44,65 +45,77 @@ export const WorkspaceOverviewRoot = () => {
     }
 
     return (
-      <Table>
-        <thead>
-          <tr>
-            <th>Repository</th>
-            {flagPipelineModeTuples ? (
-              <>
-                <th>Jobs</th>
-                <th>Graphs</th>
-              </>
-            ) : (
-              <th>Pipelines</th>
-            )}
-            <th>{flagPipelineModeTuples ? 'Ops' : 'Solids'}</th>
-            <th>Schedules</th>
-            <th>Sensors</th>
-          </tr>
-        </thead>
-        <tbody>
-          {options.map((repository) => {
-            const {
-              repository: {name},
-              repositoryLocation: {name: location},
-            } = repository;
-            const repoString = buildRepoPath(name, location);
-            return (
-              <tr key={repoString}>
-                <td style={{width: '40%'}}>{repoString}</td>
-                {flagPipelineModeTuples ? (
-                  <>
+      <div>
+        <h3>Dependencies</h3>
+        <Box margin={{vertical: 24}}>
+          <Link to="workspace/dependencies">View asset / pipeline graph</Link>
+        </Box>
+
+        <h3>Repositories</h3>
+        <Table>
+          <thead>
+            <tr>
+              <th>Repository</th>
+              {flagPipelineModeTuples ? (
+                <>
+                  <th>Jobs</th>
+                  <th>Graphs</th>
+                </>
+              ) : (
+                <th>Pipelines</th>
+              )}
+              <th>{flagPipelineModeTuples ? 'Ops' : 'Solids'}</th>
+              <th>Schedules</th>
+              <th>Sensors</th>
+            </tr>
+          </thead>
+          <tbody>
+            {options.map((repository) => {
+              const {
+                repository: {name},
+                repositoryLocation: {name: location},
+              } = repository;
+              const repoString = buildRepoPath(name, location);
+              return (
+                <tr key={repoString}>
+                  <td style={{width: '40%'}}>{repoString}</td>
+                  {flagPipelineModeTuples ? (
+                    <>
+                      <td>
+                        <Link to={workspacePath(name, location, '/jobs')}>Jobs</Link>
+                      </td>
+                      <td>
+                        <Link to={workspacePath(name, location, '/graphs')}>Graphs</Link>
+                      </td>
+                    </>
+                  ) : (
                     <td>
-                      <Link to={workspacePath(name, location, '/jobs')}>Jobs</Link>
+                      <Link to={workspacePath(name, location, '/pipelines')}>Pipelines</Link>
                     </td>
-                    <td>
-                      <Link to={workspacePath(name, location, '/graphs')}>Graphs</Link>
-                    </td>
-                  </>
-                ) : (
+                  )}
                   <td>
-                    <Link to={workspacePath(name, location, '/pipelines')}>Pipelines</Link>
+                    <Link
+                      to={workspacePath(
+                        name,
+                        location,
+                        flagPipelineModeTuples ? '/ops' : '/solids',
+                      )}
+                    >
+                      {flagPipelineModeTuples ? 'Ops' : 'Solids'}
+                    </Link>
                   </td>
-                )}
-                <td>
-                  <Link
-                    to={workspacePath(name, location, flagPipelineModeTuples ? '/ops' : '/solids')}
-                  >
-                    {flagPipelineModeTuples ? 'Ops' : 'Solids'}
-                  </Link>
-                </td>
-                <td>
-                  <Link to={workspacePath(name, location, '/schedules')}>Schedules</Link>
-                </td>
-                <td>
-                  <Link to={workspacePath(name, location, '/sensors')}>Sensors</Link>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </Table>
+                  <td>
+                    <Link to={workspacePath(name, location, '/schedules')}>Schedules</Link>
+                  </td>
+                  <td>
+                    <Link to={workspacePath(name, location, '/sensors')}>Sensors</Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
+      </div>
     );
   };
 

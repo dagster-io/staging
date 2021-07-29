@@ -14,11 +14,11 @@ import {AssetMaterializationTable} from './AssetMaterializationTable';
 import {AssetValueGraph} from './AssetValueGraph';
 import {ASSET_QUERY} from './queries';
 import {AssetKey, AssetNumericHistoricalData} from './types';
+import {AssetQuery, AssetQueryVariables} from './types/AssetQuery';
 import {
-  AssetQuery,
-  AssetQueryVariables,
-  AssetQuery_assetOrError_Asset_assetMaterializations,
-} from './types/AssetQuery';
+  AssetViewFragment,
+  AssetViewFragment_assetMaterializations,
+} from './types/AssetViewFragment';
 import {HistoricalMaterialization, useMaterializationBuckets} from './useMaterializationBuckets';
 
 interface Props {
@@ -36,7 +36,8 @@ export const AssetMaterializations: React.FC<Props> = ({assetKey, asOf}) => {
     },
   });
 
-  const asset = data?.assetOrError.__typename === 'Asset' ? data?.assetOrError : null;
+  const asset: AssetViewFragment | null =
+    data?.assetOrError.__typename === 'Asset' ? data?.assetOrError : null;
   const assetMaterializations = asset?.assetMaterializations || [];
 
   const [activeTab = 'graphs', setActiveTab] = useQueryPersistedState<'graphs' | 'list'>({
@@ -179,8 +180,8 @@ const AssetMaterializationMatrixAndGraph: React.FC<{
  *
  * Assumes that the data is pre-sorted in ascending partition order if using xAxis = partition.
  */
-const extractNumericData = (
-  assetMaterializations: AssetQuery_assetOrError_Asset_assetMaterializations[],
+export const extractNumericData = (
+  assetMaterializations: AssetViewFragment_assetMaterializations[],
   xAxis: 'time' | 'partition',
 ) => {
   const series: AssetNumericHistoricalData = {};

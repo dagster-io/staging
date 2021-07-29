@@ -6,7 +6,7 @@ import styled from 'styled-components/macro';
 import {SolidNameOrPath} from '../solids/SolidNameOrPath';
 
 import {ParentSolidNode, SVGLabeledParentRect} from './ParentSolidNode';
-import {SVGViewport, DETAIL_ZOOM, SVGViewportInteractor} from './SVGViewport';
+import {SVGViewport, SVGViewportInteractor} from './SVGViewport';
 import {SolidLinks} from './SolidLinks';
 import {
   SolidNode,
@@ -19,6 +19,7 @@ import {PipelineGraphSolidFragment} from './types/PipelineGraphSolidFragment';
 
 const NoOp = () => {};
 
+const PIPELINE_GRAPH_ZOOM = 0.75;
 interface IPipelineGraphProps {
   pipelineName: string;
   backgroundColor: string;
@@ -237,7 +238,7 @@ export class PipelineGraph extends React.Component<IPipelineGraphProps> {
 
   focusOnSolid = (arg: SolidNameOrPath) => {
     this.resolveSolidPosition(arg, (cx, cy) => {
-      this.viewportEl.current!.smoothZoomToSVGCoords(cx, cy, DETAIL_ZOOM);
+      this.viewportEl.current!.smoothZoomToSVGCoords(cx, cy, PIPELINE_GRAPH_ZOOM);
     });
   };
 
@@ -348,6 +349,7 @@ export class PipelineGraph extends React.Component<IPipelineGraphProps> {
         graphHeight={layout.height}
         onKeyDown={this.onKeyDown}
         onDoubleClick={this.unfocusOutsideContainer}
+        maxZoom={PIPELINE_GRAPH_ZOOM}
       >
         {({scale}: any) => (
           <>
@@ -360,7 +362,7 @@ export class PipelineGraph extends React.Component<IPipelineGraphProps> {
               <PipelineGraphContents
                 {...this.props}
                 layout={layout}
-                minified={scale < DETAIL_ZOOM - 0.01}
+                minified={scale < PIPELINE_GRAPH_ZOOM - 0.01}
                 onDoubleClickSolid={onDoubleClickSolid || this.focusOnSolid}
               />
             </SVGContainer>

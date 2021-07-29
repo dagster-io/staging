@@ -3,6 +3,7 @@ import * as React from 'react';
 import {Redirect, Route, RouteComponentProps, Switch} from 'react-router-dom';
 
 import {useFeatureFlags} from '../app/Flags';
+import LooseDependenciesRoot from '../graph/LooseDependenciesRoot';
 import {PipelineRoot} from '../pipelines/PipelineRoot';
 import {ScheduleRoot} from '../schedules/ScheduleRoot';
 import {SensorRoot} from '../sensors/SensorRoot';
@@ -125,6 +126,7 @@ export const WorkspaceRoot = () => (
           <WorkspacePipelineRoot pipelinePath={props.match.params.pipelinePath} />
         )}
       />
+      <Route path="/workspace/dependencies" render={() => <LooseDependenciesRoot />} />
       <Route
         path="/workspace/:repoPath"
         render={(props: RouteComponentProps<{repoPath: string}>) => (

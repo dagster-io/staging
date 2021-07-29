@@ -8,14 +8,15 @@ import {useFeatureFlags} from '../app/Flags';
 
 import {SearchResult, SearchResultType} from './types';
 
-const iconForType = (type: SearchResultType, flagPipelineModeTuples: boolean): IconName => {
+const iconForType = (type: SearchResultType, _flagPipelineModeTuples: boolean): IconName => {
   switch (type) {
     case SearchResultType.Asset:
-      return 'th';
+      return 'box';
     case SearchResultType.PartitionSet:
       return 'time';
     case SearchResultType.Pipeline:
-      return flagPipelineModeTuples ? 'send-to-graph' : 'diagram-tree';
+      // return flagPipelineModeTuples ? 'send-to-graph' : 'diagram-tree';
+      return 'diagram-tree';
     case SearchResultType.Repository:
       return 'folder-open';
     case SearchResultType.Run:
@@ -80,17 +81,18 @@ interface Props {
   onClickResult: (result: Fuse.FuseResult<SearchResult>) => void;
   queryString: string;
   results: Fuse.FuseResult<SearchResult>[];
+  style?: React.CSSProperties;
 }
 
 export const SearchResults = (props: Props) => {
-  const {highlight, onClickResult, queryString, results} = props;
+  const {highlight, onClickResult, queryString, results, style} = props;
 
   if (!results.length && queryString) {
-    return <NoResults>No results</NoResults>;
+    return <NoResults style={style}>No results</NoResults>;
   }
 
   return (
-    <List hasResults={!!results.length}>
+    <List hasResults={!!results.length} style={style}>
       {results.map((result, ii) => (
         <SearchResultItem
           key={result.item.key}

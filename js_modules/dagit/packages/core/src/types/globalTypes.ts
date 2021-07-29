@@ -181,6 +181,13 @@ export interface LaunchBackfillParams {
   forceSynchronousSubmission?: boolean | null;
 }
 
+export interface NodeParam {
+  nodeType: string;
+  name: string;
+  repositoryName?: string | null;
+  repositoryLocationName?: string | null;
+}
+
 export interface PartitionSetSelector {
   partitionSetName: string;
   repositorySelector: RepositorySelector;

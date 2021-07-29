@@ -13,8 +13,11 @@ export enum SearchResultType {
 export type SearchResult = {
   key: string;
   label: string;
+  name: string;
   description: string;
   href: string;
   type: SearchResultType;
   tags?: string;
+  repositoryName?: string;
+  repositoryLocationName?: string;
 };
