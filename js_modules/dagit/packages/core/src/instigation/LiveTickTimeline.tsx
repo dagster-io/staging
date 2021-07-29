@@ -114,6 +114,38 @@ export const LiveTickTimeline: React.FC<{
       legend: {
         display: false,
       },
+      tooltip: {
+        displayColors: false,
+        callbacks: {
+          label: function (tooltipItem: TooltipItem<any>) {
+            if (!tooltipItem.datasetIndex) {
+              // this is the current time
+              return 'Current time';
+            }
+            if (tooltipItem.dataIndex === undefined) {
+              return '';
+            }
+            if (tooltipItem.dataIndex === ticks.length) {
+              // This is the future tick
+              return '';
+            }
+            const tick = ticks[tooltipItem.dataIndex];
+            if (tick.status === InstigationTickStatus.SKIPPED && tick.skipReason) {
+              return tick.skipReason;
+            }
+            if (tick.status === InstigationTickStatus.SUCCESS && tick.runIds.length) {
+              return tick.runIds;
+            }
+            if (tick.status === InstigationTickStatus.SUCCESS && tick.originRunIds) {
+              return tick.originRunIds;
+            }
+            if (tick.status === InstigationTickStatus.FAILURE && tick.error?.message) {
+              return tick.error.message;
+            }
+            return '';
+          },
+        },
+      },
     },
 
     onClick: (_event: MouseEvent, activeElements: any[]) => {
@@ -146,39 +178,6 @@ export const LiveTickTimeline: React.FC<{
         setPaused(false);
         onHoverTick(undefined);
       }
-    },
-
-    tooltips: {
-      displayColors: false,
-      callbacks: {
-        label: function (tooltipItem: TooltipItem<any>) {
-          if (!tooltipItem.datasetIndex) {
-            // this is the current time
-            return 'Current time';
-          }
-          if (tooltipItem.dataIndex === undefined) {
-            return '';
-          }
-          if (tooltipItem.dataIndex === ticks.length) {
-            // This is the future tick
-            return '';
-          }
-          const tick = ticks[tooltipItem.dataIndex];
-          if (tick.status === InstigationTickStatus.SKIPPED && tick.skipReason) {
-            return tick.skipReason;
-          }
-          if (tick.status === InstigationTickStatus.SUCCESS && tick.runIds.length) {
-            return tick.runIds;
-          }
-          if (tick.status === InstigationTickStatus.SUCCESS && tick.originRunIds) {
-            return tick.originRunIds;
-          }
-          if (tick.status === InstigationTickStatus.FAILURE && tick.error?.message) {
-            return tick.error.message;
-          }
-          return '';
-        },
-      },
     },
   };
 
