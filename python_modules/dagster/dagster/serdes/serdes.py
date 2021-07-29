@@ -18,7 +18,7 @@ import inspect
 from abc import ABC, abstractmethod
 from enum import Enum
 from inspect import Parameter, signature
-from typing import Any, Dict, NamedTuple, Optional, Set, Tuple, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, NamedTuple, Optional, Set, Tuple, Type, TypeVar, Union, cast
 
 from dagster import check, seven
 
@@ -135,6 +135,9 @@ class NamedTupleSerializer(Serializer):
         raise NotImplementedError()
 
 
+EMPTY_VALUES_TO_SKIP: Tuple[None, List[Any], Dict[Any, Any]] = (None, [], {})
+
+
 class DefaultNamedTupleSerializer(NamedTupleSerializer):
     @classmethod
     def skip_when_empty(cls) -> Set[str]:
@@ -167,7 +170,7 @@ class DefaultNamedTupleSerializer(NamedTupleSerializer):
         base_dict = {
             key: _pack_value(value, whitelist_map, f"{descent_path}.{key}")
             for key, value in value._asdict().items()
-            if (value is not None or key not in skip_when_empty_fields)
+            if (value not in EMPTY_VALUES_TO_SKIP or key not in skip_when_empty_fields)
         }
         base_dict["__class__"] = value.__class__.__name__
         return base_dict
