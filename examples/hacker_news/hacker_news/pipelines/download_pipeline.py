@@ -1,10 +1,15 @@
 import os
 
 from dagster import (
+    AssetKey,
+    Field,
     ModeDefinition,
+    OutputContext,
     PresetDefinition,
     ResourceDefinition,
+    StringSource,
     fs_io_manager,
+    io_manager,
     mem_io_manager,
     pipeline,
 )
@@ -25,6 +30,7 @@ from hacker_news.solids.download_items import (
 )
 from hacker_news.solids.id_range_for_time import dynamic_id_ranges_for_time, id_range_for_time
 from hacker_news.solids.upload_to_database import make_upload_to_database_solid
+from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 
 # the configuration we'll need to make our Snowflake-based IOManager work
 SNOWFLAKE_CONF = {
@@ -64,6 +70,19 @@ MODE_TEST = ModeDefinition(
 )
 
 
+@io_manager(config_schema={"base_dir": Field(StringSource, is_required=False)})
+def prha_io_manager(init_context):
+    base_dir = init_context.resource_config.get(
+        "base_dir", init_context.instance.storage_directory()
+    )
+    return PrhaFilesystemIOManager(base_dir=base_dir)
+
+
+class PrhaFilesystemIOManager(PickledObjectFilesystemIOManager):
+    def get_output_asset_key(self, context: OutputContext):
+        return AssetKey(["snowflake", *context.metadata["table"].split(".")])
+
+
 MODE_LOCAL = ModeDefinition(
     name="local_live_data",
     description=(
@@ -77,7 +96,7 @@ MODE_LOCAL = ModeDefinition(
         "parquet_io_manager": partitioned_parquet_io_manager.configured(
             {"base_path": get_system_temp_directory()}
         ),
-        "db_io_manager": fs_io_manager,
+        "db_io_manager": prha_io_manager,
         "pyspark": pyspark_resource,
         "hn_client": hn_api_subsample_client.configured({"sample_rate": 10}),
         "slack": ResourceDefinition.mock_resource(),

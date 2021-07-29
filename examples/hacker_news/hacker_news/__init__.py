@@ -1,1 +1,1 @@
-from .repo import hacker_news_repository
+from .repo import hn_download_repository, hn_recommendation_repository

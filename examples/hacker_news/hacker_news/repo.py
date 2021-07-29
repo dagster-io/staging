@@ -10,19 +10,15 @@ from .sensors.slack_on_pipeline_failure_sensor import make_pipeline_failure_sens
 
 
 @repository
-def hacker_news_repository():
-    pipelines = [
-        download_pipeline,
-        story_recommender,
+def hn_download_repository():
+    return [
         dbt_pipeline,
-    ]
-    schedules = [
+        download_pipeline,
         hourly_hn_download_schedule,
-    ]
-    sensors = [
-        make_pipeline_failure_sensor(base_url="my_dagit_url.com"),
-        story_recommender_on_hn_table_update,
         dbt_on_hn_download_finished,
     ]
 
-    return pipelines + schedules + sensors
+
+@repository
+def hn_recommendation_repository():
+    return [story_recommender, story_recommender_on_hn_table_update]
