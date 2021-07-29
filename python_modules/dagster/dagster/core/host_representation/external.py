@@ -1,5 +1,5 @@
 import warnings
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 
 from dagster import check
 from dagster.core.definitions.run_request import JobType

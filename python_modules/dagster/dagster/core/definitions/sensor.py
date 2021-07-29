@@ -6,6 +6,7 @@ from dagster import check, seven
 from dagster.core.errors import DagsterInvalidInvocationError, DagsterInvariantViolationError
 from dagster.core.instance import DagsterInstance
 from dagster.core.instance.ref import InstanceRef
+from dagster.core.storage.event_log import EventRecordsFilter
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import ensure_gen
 from dagster.utils.backcompat import experimental_arg_warning
@@ -105,9 +106,9 @@ class SensorEvaluationContext:
         Args:
             cursor (Optional[str]):
         """
-        if len(part) == 1:
+        if len(parts) == 1:
             self._cursor = check.opt_str_param(parts[1], "cursor")
-        elif len(part) > 1:
+        elif len(parts) > 1:
             self._cursor = seven.json.dumps(parts)
 
     @property
@@ -452,7 +453,10 @@ class AssetSensorDefinition(SensorDefinition):
             def _fn(context):
                 if context.cursor:
                     try:
-                        cursors = map(int, context.cursor.split(CURSOR_DELIMITER))
+                        if len(self._asset_keys) == 1:
+                            cursors = [int(context.cursor)]
+                        else:
+                            cursors = map(int, seven.json.loads(context.cursor))
                         if len(cursors) != len(self._asset_keys):
                             cursors = [None] * len(self._asset_keys)
                     except ValueError:
@@ -463,9 +467,9 @@ class AssetSensorDefinition(SensorDefinition):
                         EventRecordsFilter(
                             event_type=DagsterEventType.ASSET_MATERIALIZATION,
                             asset_key=_asset_key,
-                            after_cursor=cursor[_idx],
-                            limit=record_limit,
+                            after_cursor=cursors[_idx],
                         ),
+                        limit=record_limit,
                         ascending=False,
                     )
                     for _asset_key, _idx in enumerate(self._asset_keys)

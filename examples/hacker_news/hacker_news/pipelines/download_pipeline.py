@@ -13,6 +13,7 @@ from dagster import (
     mem_io_manager,
     pipeline,
 )
+from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 from dagster.seven.temp_dir import get_system_temp_directory
 from dagster_aws.s3 import s3_pickle_io_manager, s3_resource
 from dagster_pyspark import pyspark_resource
@@ -30,7 +31,6 @@ from hacker_news.solids.download_items import (
 )
 from hacker_news.solids.id_range_for_time import dynamic_id_ranges_for_time, id_range_for_time
 from hacker_news.solids.upload_to_database import make_upload_to_database_solid
-from dagster.core.storage.fs_io_manager import PickledObjectFilesystemIOManager
 
 # the configuration we'll need to make our Snowflake-based IOManager work
 SNOWFLAKE_CONF = {

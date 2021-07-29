@@ -1,5 +1,4 @@
-from dagster import AssetKey, EventRecordsFilter, RunRequest, sensor, asset_sensor
-
+from dagster import AssetKey, EventRecordsFilter, RunRequest, asset_sensor, sensor
 
 # @sensor(pipeline_name="story_recommender", mode="prod")
 # def story_recommender_on_hn_table_update(context):
