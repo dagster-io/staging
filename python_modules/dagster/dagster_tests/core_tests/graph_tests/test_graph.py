@@ -24,18 +24,23 @@ def get_ops():
     return emit_one, add
 
 
-def test_basic_graph():
+def test_aliased_graph():
     emit_one, add = get_ops()
 
     @graph
     def get_two():
-        return add(emit_one(), emit_one())
+        return add(emit_one(), emit_one.alias("emit_one_part_two")())
 
     assert isinstance(get_two, GraphDefinition)
 
     result = execute_in_process(get_two)
 
     assert result.success
+
+    result_for_non_aliased = result.result_for_node("emit_one")
+    assert result_for_non_aliased.output_values["result"] == 1
+    result_for_aliased = result.result_for_node("emit_one_part_two")
+    assert result_for_aliased.output_values["result"] == 1
 
     result = get_two.execute_in_process()
     assert result.success
