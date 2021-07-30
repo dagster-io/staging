@@ -129,11 +129,9 @@ def test_terminate_after_shutdown():
             with pytest.raises(DagsterLaunchFailedError):
                 instance.launch_run(doomed_to_fail_pipeline_run.run_id, workspace)
 
-            launcher = instance.run_launcher
-
             # Can terminate the run even after the shutdown event has been received
-            assert launcher.can_terminate(pipeline_run.run_id)
-            assert launcher.terminate(pipeline_run.run_id)
+            assert instance.can_terminate_run(pipeline_run.run_id)
+            assert instance.terminate_run(pipeline_run.run_id)
 
 
 def test_server_down():
@@ -177,8 +175,7 @@ def test_server_down():
 
                 poll_for_step_start(instance, pipeline_run.run_id)
 
-                launcher = instance.run_launcher
-                assert launcher.can_terminate(pipeline_run.run_id)
+                assert instance.can_terminate_run(pipeline_run.run_id)
 
                 original_run_tags = instance.get_run_by_id(pipeline_run.run_id).tags[GRPC_INFO_TAG]
 
@@ -192,7 +189,7 @@ def test_server_down():
                     },
                 )
 
-                assert not launcher.can_terminate(pipeline_run.run_id)
+                assert not instance.can_terminate_run(pipeline_run.run_id)
 
                 instance.add_run_tags(
                     pipeline_run.run_id,
@@ -201,6 +198,6 @@ def test_server_down():
                     },
                 )
 
-                assert launcher.terminate(pipeline_run.run_id)
+                assert instance.terminate_run(pipeline_run.run_id)
 
         server_process.wait()

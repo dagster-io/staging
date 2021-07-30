@@ -7,7 +7,6 @@ from dagster.config.validate import process_config
 from dagster.core.events import EngineEventData
 from dagster.core.execution.retries import RetryMode
 from dagster.core.launcher import LaunchRunContext, RunLauncher
-from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.storage.tags import DOCKER_IMAGE_TAG
 from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
 from dagster.utils import frozentags, merge_dicts
@@ -260,49 +259,28 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
             cls=self.__class__,
         )
 
-    # https://github.com/dagster-io/dagster/issues/2741
     def can_terminate(self, run_id):
+        check.str_param(run_id, "run_id")
+        # https://github.com/dagster-io/dagster/issues/2741
+        # State checking is done by the instance. We don't currently check via the k8s api
+        return True
+
+    def terminate(self, run_id):
         check.str_param(run_id, "run_id")
 
         pipeline_run = self._instance.get_run_by_id(run_id)
         if not pipeline_run:
             return False
 
-        if pipeline_run.status != PipelineRunStatus.STARTED:
-            return False
-
-        return True
-
-    def terminate(self, run_id):
-        check.str_param(run_id, "run_id")
-
-        run = self._instance.get_run_by_id(run_id)
-        if not run:
-            return False
-
-        can_terminate = self.can_terminate(run_id)
-        if not can_terminate:
-            self._instance.report_engine_event(
-                message="Unable to terminate pipeline: can_terminate returned {}.".format(
-                    can_terminate
-                ),
-                pipeline_run=run,
-                cls=self.__class__,
-            )
-            return False
-
         job_name = get_job_name_from_run_id(run_id)
-
         job_namespace = self.get_namespace_from_run_config(run_id)
-
-        self._instance.report_run_canceling(run)
 
         try:
             termination_result = delete_job(job_name=job_name, namespace=job_namespace)
             if termination_result:
                 self._instance.report_engine_event(
                     message="Pipeline was terminated successfully.",
-                    pipeline_run=run,
+                    pipeline_run=pipeline_run,
                     cls=self.__class__,
                 )
             else:
@@ -310,14 +288,14 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
                     message="Pipeline was not terminated successfully; delete_job returned {}".format(
                         termination_result
                     ),
-                    pipeline_run=run,
+                    pipeline_run=pipeline_run,
                     cls=self.__class__,
                 )
             return termination_result
         except Exception:  # pylint: disable=broad-except
             self._instance.report_engine_event(
                 message="Pipeline was not terminated successfully; encountered error in delete_job",
-                pipeline_run=run,
+                pipeline_run=pipeline_run,
                 engine_event_data=EngineEventData.engine_error(
                     serializable_error_info_from_exc_info(sys.exc_info())
                 ),

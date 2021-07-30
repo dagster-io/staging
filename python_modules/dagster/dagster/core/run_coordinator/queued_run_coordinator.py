@@ -105,7 +105,7 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
         if run.status == PipelineRunStatus.QUEUED:
             return True
         else:
-            return self._instance.run_launcher.can_terminate(run_id)
+            return self._instance.can_terminate_run(run_id)
 
     def cancel_run(self, run_id):
         run = self._instance.get_run_by_id(run_id)
@@ -121,4 +121,4 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
             self._instance.report_run_canceled(run)
             return True
         else:
-            return self._instance.run_launcher.terminate(run_id)
+            return self._instance.terminate_run(run_id)

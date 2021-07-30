@@ -345,9 +345,8 @@ def test_terminated_run(get_workspace, run_config):  # pylint: disable=redefined
 
             poll_for_step_start(instance, run_id)
 
-            launcher = instance.run_launcher
-            assert launcher.can_terminate(run_id)
-            assert launcher.terminate(run_id)
+            assert instance.can_terminate_run(run_id)
+            assert instance.terminate_run(run_id)
 
             terminated_pipeline_run = poll_for_finished_run(instance, run_id, timeout=30)
             terminated_pipeline_run = instance.get_run_by_id(run_id)

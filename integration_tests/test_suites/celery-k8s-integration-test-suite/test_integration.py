@@ -301,7 +301,7 @@ def _test_termination(dagster_instance, run_config):
         start_time = datetime.datetime.now()
         can_terminate = False
         while datetime.datetime.now() < start_time + timeout:
-            if dagster_instance.run_launcher.can_terminate(run_id=run.run_id):
+            if dagster_instance.can_terminate_run(run_id=run.run_id):
                 can_terminate = True
                 break
             time.sleep(5)
@@ -327,8 +327,8 @@ def _test_termination(dagster_instance, run_config):
         assert step_start_found
 
         # Terminate run
-        assert dagster_instance.run_launcher.can_terminate(run_id=run.run_id)
-        assert dagster_instance.run_launcher.terminate(run_id=run.run_id)
+        assert dagster_instance.can_terminate_run(run_id=run.run_id)
+        assert dagster_instance.terminate_run(run_id=run.run_id)
 
         # Check that pipeline run is marked as canceled
         pipeline_run_status_canceled = False
@@ -342,8 +342,8 @@ def _test_termination(dagster_instance, run_config):
         assert pipeline_run_status_canceled
 
         # Check that terminate cannot be called again
-        assert not dagster_instance.run_launcher.can_terminate(run_id=run.run_id)
-        assert not dagster_instance.run_launcher.terminate(run_id=run.run_id)
+        assert not dagster_instance.can_terminate_run(run_id=run.run_id)
+        assert not dagster_instance.terminate_run(run_id=run.run_id)
 
         # Check for step failure and resource tear down
         expected_events_found = False

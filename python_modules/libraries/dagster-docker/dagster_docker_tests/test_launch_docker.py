@@ -161,8 +161,8 @@ def test_terminate_launched_docker_run():
 
             poll_for_step_start(instance, run_id)
 
-            assert instance.run_launcher.can_terminate(run_id)
-            assert instance.run_launcher.terminate(run_id)
+            assert instance.can_terminate_run(run_id)
+            assert instance.terminate_run(run_id)
 
             terminated_pipeline_run = poll_for_finished_run(instance, run_id, timeout=30)
             terminated_pipeline_run = instance.get_run_by_id(run_id)

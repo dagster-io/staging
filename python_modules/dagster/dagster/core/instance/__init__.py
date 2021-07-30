@@ -1421,6 +1421,35 @@ records = instance.get_event_records(
 
         return run
 
+    def can_terminate_run(self, run_id: str):
+        check.str_param(run_id, "run_id")
+
+        pipeline_run = self.get_run_by_id(run_id)
+        if not pipeline_run:
+            return False
+        if pipeline_run.status != PipelineRunStatus.STARTED:
+            return False
+
+        return self._run_launcher.can_terminate_run(run_id)
+
+    def terminate_run(self, run_id: str):
+        check.str_param(run_id, "run_id")
+        pipeline_run = self.get_run_by_id(run_id)
+        can_terminate = self.can_terminate_run(run_id)
+        if not can_terminate:
+            self.report_engine_event(
+                message="Unable to terminate pipeline; can_terminate returned {}".format(
+                    can_terminate
+                ),
+                pipeline_run=pipeline_run,
+                cls=self.__class__,
+            )
+            return False
+
+        self.report_run_canceling(pipeline_run)
+
+        self._run_launcher.terminate_run(run_id)
+
     # Scheduler
 
     def reconcile_scheduler_state(self, external_repository):

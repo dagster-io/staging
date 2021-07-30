@@ -36,7 +36,7 @@ class DefaultRunCoordinator(RunCoordinator, ConfigurableClass):
         return run
 
     def can_cancel_run(self, run_id):
-        return self._instance.run_launcher.can_terminate(run_id)
+        return self._instance.can_terminate_run(run_id)
 
     def cancel_run(self, run_id):
-        return self._instance.run_launcher.terminate(run_id)
+        return self._instance.terminate_run(run_id)

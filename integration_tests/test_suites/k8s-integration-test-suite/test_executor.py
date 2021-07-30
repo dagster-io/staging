@@ -263,12 +263,12 @@ def test_k8s_run_launcher_terminate(
         timeout = datetime.timedelta(0, 30)
         start_time = datetime.datetime.now()
         while datetime.datetime.now() < start_time + timeout:
-            if dagster_instance_for_k8s_run_launcher.run_launcher.can_terminate(run_id=run.run_id):
+            if dagster_instance_for_k8s_run_launcher.can_terminate_run(run_id=run.run_id):
                 break
             time.sleep(5)
 
-        assert dagster_instance_for_k8s_run_launcher.run_launcher.can_terminate(run_id=run.run_id)
-        assert dagster_instance_for_k8s_run_launcher.run_launcher.terminate(run_id=run.run_id)
+        assert dagster_instance_for_k8s_run_launcher.can_terminate_run(run_id=run.run_id)
+        assert dagster_instance_for_k8s_run_launcher.terminate_run(run_id=run.run_id)
 
         start_time = datetime.datetime.now()
         pipeline_run = None
@@ -286,7 +286,7 @@ def test_k8s_run_launcher_terminate(
 
         assert pipeline_run.status == PipelineRunStatus.CANCELED
 
-        assert not dagster_instance_for_k8s_run_launcher.run_launcher.terminate(run_id=run.run_id)
+        assert not dagster_instance_for_k8s_run_launcher.terminate_run(run_id=run.run_id)
 
 
 @pytest.mark.integration

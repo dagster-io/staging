@@ -607,7 +607,7 @@ class TestRetryExecutionAsyncOnlyBehavior(
         while instance.get_run_stats(run_id).steps_succeeded < 1:
             sleep(0.1)
         # Terminate the current pipeline run at the second step
-        graphql_context.instance.run_launcher.terminate(run_id)
+        graphql_context.instance.terminate_run(run_id)
 
         records = instance.all_logs(run_id)
 
