@@ -165,7 +165,7 @@ class ScheduleDefinition:
         execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works
             with DagsterDaemonScheduler, and must be set when using that scheduler.
         description (Optional[str]): A human-readable description of the schedule.
-        target (Optional[GraphDefinition]): Experimental
+        job (Optional[Union[GraphDefinition, PipelineDefinition, str]]): Experimental
     """
 
     def __init__(
@@ -184,7 +184,7 @@ class ScheduleDefinition:
         execution_timezone: Optional[str] = None,
         execution_fn: Optional[Callable[[ScheduleEvaluationContext], Any]] = None,
         description: Optional[str] = None,
-        job: Optional[Union[GraphDefinition, PipelineDefinition]] = None,
+        job: Optional[Union[GraphDefinition, PipelineDefinition, str]] = None,
     ):
         self._cron_schedule = check.str_param(cron_schedule, "cron_schedule")
 
@@ -195,7 +195,12 @@ class ScheduleDefinition:
 
         if job is not None:
             experimental_arg_warning("job", "ScheduleDefinition.__init__")
-            self._target: Union[DirectTarget, RepoRelativeTarget] = DirectTarget(job)
+            if isinstance(job, str):
+                self._target: Union[DirectTarget, RepoRelativeTarget] = RepoRelativeTarget(
+                    pipeline_name=job, mode=DEFAULT_MODE_NAME, solid_selection=None
+                )
+            else:
+                self._target = DirectTarget(job)
         else:
             self._target = RepoRelativeTarget(
                 pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
@@ -209,7 +214,9 @@ class ScheduleDefinition:
             self._name = check_valid_name(name)
         elif pipeline_name:
             self._name = pipeline_name + "_schedule"
-        elif job:
+        elif job and isinstance(job, str):
+            self._name = job + "_schedule"
+        elif isinstance(job, (GraphDefinition, PipelineDefinition)):
             self._name = job.name + "_schedule"
 
         self._description = check.opt_str_param(description, "description")
