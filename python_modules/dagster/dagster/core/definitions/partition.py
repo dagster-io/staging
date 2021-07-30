@@ -423,7 +423,6 @@ class PartitionSetDefinition(Generic[T]):
         execution_timezone=None,
         description=None,
         decorated_fn=None,
-        job=None,
     ):
         """Create a ScheduleDefinition from a PartitionSetDefinition.
 
@@ -538,7 +537,6 @@ class PartitionSetDefinition(Generic[T]):
             execution_fn=_execution_fn,
             description=description,
             decorated_fn=decorated_fn,
-            job=job,
         )
 
 
@@ -561,7 +559,6 @@ class PartitionScheduleDefinition(ScheduleDefinition):
         execution_fn=None,
         description=None,
         decorated_fn=None,
-        job=None,
     ):
         super(PartitionScheduleDefinition, self).__init__(
             name=check_valid_name(name),
@@ -576,7 +573,6 @@ class PartitionScheduleDefinition(ScheduleDefinition):
             execution_timezone=execution_timezone,
             execution_fn=execution_fn,
             description=description,
-            job=job,
         )
         self._partition_set = check.inst_param(
             partition_set, "partition_set", PartitionSetDefinition
