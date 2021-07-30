@@ -91,7 +91,6 @@ def schedule_from_partitions(
         partition_selector=latest_window_partition_selector,
         execution_timezone=partitions_def.timezone,
         description=description,
-        job=job,
     )
 
     return schedule_def
