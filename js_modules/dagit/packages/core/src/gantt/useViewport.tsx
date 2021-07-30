@@ -34,6 +34,10 @@ export const useViewport = (
     }
     const onApplySize = (next: {width: number; height: number}) => {
       setSize({width: next.width, height: next.height});
+      if (!ref.current) {
+        return;
+      }
+
       if (!ref.current.__sized && next.width !== 0 && initialOffset) {
         const targetOffset = initialOffset(ref.current);
         ref.current.scrollTop = targetOffset.top;
@@ -96,17 +100,21 @@ export const useViewport = (
     targetOffset.top = Math.min(ref.current.scrollHeight - height, Math.max(0, targetOffset.top));
 
     const onDone = () => {
-      ref.current.scrollTop = targetOffset.top;
-      ref.current.scrollLeft = targetOffset.left;
-      setOffset(targetOffset);
+      if (ref.current) {
+        ref.current.scrollTop = targetOffset.top;
+        ref.current.scrollLeft = targetOffset.left;
+        setOffset(targetOffset);
+      }
       animation.current = null;
     };
     if (animated) {
       animation.current = animate(offset, targetOffset, {
         step: (v: any) => {
-          ref.current.scrollTop = v.top;
-          ref.current.scrollLeft = v.left;
-          setOffset({left: v.left, top: v.top});
+          if (ref.current) {
+            ref.current.scrollTop = v.top;
+            ref.current.scrollLeft = v.left;
+            setOffset({left: v.left, top: v.top});
+          }
         },
         done: onDone,
       });
