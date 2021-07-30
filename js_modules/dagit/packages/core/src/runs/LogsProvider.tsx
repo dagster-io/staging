@@ -1,8 +1,6 @@
-import {gql, useApolloClient, useQuery} from '@apollo/client';
+import {gql, useApolloClient, useQuery, useSubscription} from '@apollo/client';
 import * as React from 'react';
 
-import {DirectGraphQLSubscription} from '../app/DirectGraphQLSubscription';
-import {WebSocketContext} from '../app/WebSocketProvider';
 import {useWebsocketAvailability} from '../app/useWebsocketAvailability';
 import {PipelineRunStatus} from '../types/globalTypes';
 import {TokenizingFieldValue} from '../ui/TokenizingField';
@@ -33,20 +31,32 @@ export interface LogsProviderLogs {
   loading: boolean;
 }
 
-interface LogsProviderProps {
-  runId: string;
-  children: (result: LogsProviderLogs) => React.ReactChild;
-}
+const pipelineStatusFromMessages = (messages: RunPipelineRunEventFragment[]) => {
+  for (const message of messages) {
+    const {__typename} = message;
+    switch (__typename) {
+      case 'PipelineStartEvent':
+        return PipelineRunStatus.STARTED;
+      case 'PipelineEnqueuedEvent':
+        return PipelineRunStatus.QUEUED;
+      case 'PipelineStartingEvent':
+        return PipelineRunStatus.STARTING;
+      case 'PipelineCancelingEvent':
+        return PipelineRunStatus.CANCELING;
+      case 'PipelineCanceledEvent':
+        return PipelineRunStatus.CANCELED;
+      case 'PipelineSuccessEvent':
+        return PipelineRunStatus.SUCCESS;
+      case 'PipelineFailureEvent':
+        return PipelineRunStatus.FAILURE;
+    }
+  }
+  return null;
+};
 
-const LogsProviderWithSubscription = (props: LogsProviderProps) => {
-  const {runId, children} = props;
+const useLogsProviderWithSubscription = (runId: string) => {
   const client = useApolloClient();
-  const {connectionParams, websocketURI} = React.useContext(WebSocketContext);
-  const [nodes, setNodes] = React.useState<Nodes | null>(null);
-
-  React.useEffect(() => {
-    setNodes([]);
-  }, [runId]);
+  const [nodes, setNodes] = React.useState<Nodes>(() => []);
 
   const syncPipelineStatusToApolloCache = React.useCallback(
     (status: PipelineRunStatus) => {
@@ -78,75 +88,45 @@ const LogsProviderWithSubscription = (props: LogsProviderProps) => {
     [client, runId],
   );
 
-  const onHandleMessages = React.useCallback(
-    (messages: PipelineRunLogsSubscription[], isFirstResponse: boolean) => {
-      const toAppend: RunPipelineRunEventFragment[] = [];
+  React.useEffect(() => {
+    setNodes([]);
+  }, [runId]);
 
-      let nextPipelineStatus: PipelineRunStatus | null = null;
-      for (const msg of messages) {
-        if (msg.pipelineRunLogs.__typename === 'PipelineRunLogsSubscriptionFailure') {
-          break;
-        }
-
-        // append the nodes to our local array and give each of them a unique key
-        // so we can change the row indexes they're displayed at and still track their
-        // sizes, etc.
-        toAppend.push(...msg.pipelineRunLogs.messages);
-
-        // look for changes to the pipeline's overall run status and sync that to apollo
-        for (const {__typename} of msg.pipelineRunLogs.messages) {
-          if (__typename === 'PipelineStartEvent') {
-            nextPipelineStatus = PipelineRunStatus.STARTED;
-          } else if (__typename === 'PipelineEnqueuedEvent') {
-            nextPipelineStatus = PipelineRunStatus.QUEUED;
-          } else if (__typename === 'PipelineStartingEvent') {
-            nextPipelineStatus = PipelineRunStatus.STARTING;
-          } else if (__typename === 'PipelineCancelingEvent') {
-            nextPipelineStatus = PipelineRunStatus.CANCELING;
-          } else if (__typename === 'PipelineCanceledEvent') {
-            nextPipelineStatus = PipelineRunStatus.CANCELED;
-          } else if (__typename === 'PipelineSuccessEvent') {
-            nextPipelineStatus = PipelineRunStatus.SUCCESS;
-          } else if (__typename === 'PipelineFailureEvent') {
-            nextPipelineStatus = PipelineRunStatus.FAILURE;
-          }
-        }
+  useSubscription<PipelineRunLogsSubscription>(PIPELINE_RUN_LOGS_SUBSCRIPTION, {
+    fetchPolicy: 'no-cache',
+    variables: {runId: runId, after: null},
+    onSubscriptionData: ({subscriptionData}) => {
+      const logs = subscriptionData.data?.pipelineRunLogs;
+      if (!logs || logs.__typename === 'PipelineRunLogsSubscriptionFailure') {
+        return;
       }
 
+      const {messages} = logs;
+      const nextPipelineStatus = pipelineStatusFromMessages(messages);
       if (nextPipelineStatus) {
         syncPipelineStatusToApolloCache(nextPipelineStatus);
       }
 
-      setNodes((current) => {
-        // Note: if the socket says this is the first response, it may be becacuse the connection
-        // was dropped and re-opened, so we reset our local state to an empty array.
-        const existing = isFirstResponse ? [] : [...(current || [])];
-        return [...existing, ...toAppend].map((m, idx) => ({...m, clientsideKey: `csk${idx}`}));
-      });
+      setNodes((current) =>
+        [...current, ...messages].map((m, idx) => ({...m, clientsideKey: `csk${idx}`})),
+      );
     },
-    [syncPipelineStatusToApolloCache],
+  });
+
+  return React.useMemo(
+    () => (nodes !== null ? {allNodes: nodes, loading: false} : {allNodes: [], loading: true}),
+    [nodes],
   );
+};
 
-  React.useEffect(() => {
-    const subscription = new DirectGraphQLSubscription<PipelineRunLogsSubscription>(
-      websocketURI,
-      PIPELINE_RUN_LOGS_SUBSCRIPTION,
-      {runId: runId, after: null},
-      onHandleMessages,
-      () => {}, // https://github.com/dagster-io/dagster/issues/2151
-      connectionParams,
-    );
+interface LogsProviderProps {
+  runId: string;
+  children: (result: LogsProviderLogs) => React.ReactChild;
+}
 
-    return () => {
-      subscription.close();
-    };
-  }, [connectionParams, onHandleMessages, runId, websocketURI]);
-
-  return (
-    <>
-      {children(nodes !== null ? {allNodes: nodes, loading: false} : {allNodes: [], loading: true})}
-    </>
-  );
+const LogsProviderWithSubscription: React.FC<LogsProviderProps> = (props) => {
+  const state = useLogsProviderWithSubscription(props.runId);
+  return <>{props.children(state)}</>;
 };
 
 interface LogsProviderWithQueryProps {
