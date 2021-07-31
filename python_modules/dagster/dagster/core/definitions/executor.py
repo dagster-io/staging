@@ -230,6 +230,17 @@ def in_process_executor(init_context):
     )
 
 
+@executor(name="execute_in_process_executor")
+def execute_in_process_executor(_):
+    """Executor used by execute_in_process."""
+    from dagster.core.executor.in_process import InProcessExecutor
+
+    return InProcessExecutor(
+        retries=RetryMode.ENABLED,
+        marker_to_close=None,
+    )
+
+
 @executor(
     name="multiprocess",
     config_schema={
