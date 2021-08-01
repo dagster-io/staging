@@ -4,7 +4,11 @@ import time
 
 import pytest
 from dagster import check
+from dagster.core.instance import DagsterInstance, InstanceType
+from dagster.core.run_coordinator import DefaultRunCoordinator
+from dagster.core.storage.noop_compute_log_manager import NoOpComputeLogManager
 from dagster.core.storage.pipeline_run import PipelineRunStatus
+from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.tags import DOCKER_IMAGE_TAG
 from dagster.core.test_utils import create_run_for_test
 from dagster.utils import load_yaml_from_path, merge_dicts
@@ -14,6 +18,7 @@ from dagster_k8s.test import wait_for_job_and_get_raw_logs
 from dagster_k8s.utils import wait_for_job
 from dagster_k8s_test_infra.helm import TEST_AWS_CONFIGMAP_NAME
 from dagster_k8s_test_infra.integration_utils import image_pull_policy
+from dagster_postgres import PostgresEventLogStorage, PostgresRunStorage, PostgresScheduleStorage
 from dagster_test.test_project import (
     IS_BUILDKITE,
     ReOriginatedExternalPipelineForTest,
@@ -81,6 +86,66 @@ def test_k8s_executor_get_config_from_run_launcher(
         dagster_instance_for_k8s_run_launcher,
         helm_namespace_for_k8s_run_launcher,
     )
+
+
+@pytest.mark.integration
+def test_k8s_executor_combine_configs(
+    helm_postgres_url_for_k8s_run_launcher,
+    cluster_provider,
+    helm_namespace_for_k8s_run_launcher,
+    dagster_docker_image,
+):
+
+    run_launcher = K8sRunLauncher(
+        image_pull_secrets=[],
+        service_account_name="dagit-admin",
+        instance_config_map="dagster-instance",
+        postgres_password_secret="dagster-postgresql-secret",
+        dagster_home="/opt/dagster/dagster_home",
+        job_image=get_test_project_docker_image(),
+        load_incluster_config=False,
+        kubeconfig_file=cluster_provider.kubeconfig_file,
+        image_pull_policy=image_pull_policy(),
+        job_namespace=helm_namespace_for_k8s_run_launcher,
+        env_config_maps=["dagster-pipeline-env"],
+        env_secrets=[],
+    )
+
+    tempdir = DagsterInstance.temp_storage()
+
+    with DagsterInstance(
+        instance_type=InstanceType.EPHEMERAL,
+        local_artifact_storage=LocalArtifactStorage(tempdir),
+        run_storage=PostgresRunStorage(helm_postgres_url_for_k8s_run_launcher),
+        event_storage=PostgresEventLogStorage(helm_postgres_url_for_k8s_run_launcher),
+        schedule_storage=PostgresScheduleStorage(helm_postgres_url_for_k8s_run_launcher),
+        compute_log_manager=NoOpComputeLogManager(),
+        run_coordinator=DefaultRunCoordinator(),
+        run_launcher=run_launcher,
+    ) as instance:
+        # Verify that if you do not specify executor config it is delegated by the run launcher
+        run_config = merge_dicts(
+            load_yaml_from_path(os.path.join(get_test_project_environments_path(), "env.yaml")),
+            load_yaml_from_path(os.path.join(get_test_project_environments_path(), "env_s3.yaml")),
+            {
+                "execution": {
+                    "k8s": {
+                        "config": {
+                            "image_pull_secrets": [{"name": "element-dev-key"}],
+                            "job_image": dagster_docker_image,
+                            "env_config_maps": ["test-env-configmap"]
+                            + ([TEST_AWS_CONFIGMAP_NAME] if not IS_BUILDKITE else []),
+                            "env_secrets": ["test-env-secret"],
+                        }
+                    }
+                },
+            },
+        )
+        _launch_executor_run(
+            run_config,
+            instance,
+            helm_namespace_for_k8s_run_launcher,
+        )
 
 
 def _launch_executor_run(
