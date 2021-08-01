@@ -279,7 +279,7 @@ const DefaultContent: React.FunctionComponent<{
 const FailureContent: React.FunctionComponent<{
   message?: string;
   eventType: string;
-  error?: PythonErrorFragment;
+  error?: PythonErrorFragment | null;
   errorSource?: ErrorSource | null;
   metadataEntries?: MetadataEntryFragment[];
 }> = ({message, error, errorSource, eventType, metadataEntries}) => {
