@@ -74,7 +74,7 @@ class StepFailureData(
     NamedTuple(
         "_StepFailureData",
         [
-            ("error", SerializableErrorInfo),
+            ("error", Optional[SerializableErrorInfo]),
             ("user_failure_data", Optional[UserFailureData]),
             ("error_source", ErrorSource),
         ],
