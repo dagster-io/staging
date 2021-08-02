@@ -159,6 +159,12 @@ def from_dagster_event_record(event_record, pipeline_name):
     check.param_invariant(event_record.is_dagster_event, "event_record")
     check.str_param(pipeline_name, "pipeline_name")
 
+    import random
+
+    if random.randint(1, 10) == 2:
+        print("HAAAAYO")
+        raise Exception("HAAAAAYO")
+
     dagster_event = event_record.dagster_event
     basic_params = construct_basic_params(event_record)
     if dagster_event.event_type == DagsterEventType.STEP_START:
