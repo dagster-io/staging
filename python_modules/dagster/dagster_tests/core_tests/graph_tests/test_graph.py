@@ -8,7 +8,7 @@ from dagster.core.definitions.partition import (
     PartitionedConfig,
     StaticPartitionsDefinition,
 )
-from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.errors import DagsterInvalidConfigError, DagsterInvalidDefinitionError
 from dagster.core.execution.execute import execute_in_process
 
 
@@ -375,3 +375,28 @@ def test_to_job_default_config_field_aliasing():
 
     result = my_job.execute_in_process({"ops": {"add_one": {"inputs": {"x": {"value": 1}}}}})
     assert result.success
+
+
+def test_to_job_incomplete_default_config():
+    @op(config_schema={"foo": str})
+    def my_op(_):
+        pass
+
+    @graph
+    def my_graph():
+        my_op()
+
+    invalid_configs = [
+        {},  # Not providing required config nested into the op config schema.
+        {
+            "ops": {"my_op": {"config": {"foo": "bar"}}, "not_my_op": {"config": {"foo": "bar"}}}
+        },  # Providing extraneous config for an op that doesn't exist.
+        {
+            "ops": {"my_op": {"config": {"foo": "bar"}}},
+            "solids": {"my_op": {"config": {"foo": "bar"}}},
+        },  # Providing the same config with multiple aliases.
+    ]
+    # Ensure that errors nested into the config tree are caught
+    for invalid_config in invalid_configs:
+        with pytest.raises(DagsterInvalidConfigError):
+            my_graph.to_job(config=invalid_config)
