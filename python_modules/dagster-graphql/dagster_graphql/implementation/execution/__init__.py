@@ -1,3 +1,5 @@
+import sys
+
 from dagster import check
 from dagster.core.storage.compute_log_manager import ComputeIOType
 from dagster.core.storage.pipeline_run import PipelineRunStatus
@@ -111,13 +113,32 @@ def delete_pipeline_run(graphene_info, run_id):
     return GrapheneDeletePipelineRunSuccess(run_id)
 
 
+def _events_response(events, run):
+    from ..events import from_event_record
+    from ...schema.pipelines.pipeline import GraphenePipelineRun
+    from ...schema.pipelines.subscription import (
+        GraphenePipelineRunLogsSubscriptionFailure,
+        GraphenePipelineRunLogsSubscriptionSuccess,
+    )
+
+    try:
+        messages = [from_event_record(event, run.pipeline_name) for event in events]
+        return GraphenePipelineRunLogsSubscriptionSuccess(
+            run=GraphenePipelineRun(run),
+            messages=messages,
+        )
+    except:  # pylint: disable=bare-except
+        return GraphenePipelineRunLogsSubscriptionFailure(
+            message=f"Error while parsing events: {serializable_error_info_from_exc_info(sys.exc_info()).to_string()}"
+        )
+
+
 def get_pipeline_run_observable(graphene_info, run_id, after=None):
     from ...schema.pipelines.pipeline import GraphenePipelineRun
     from ...schema.pipelines.subscription import (
         GraphenePipelineRunLogsSubscriptionFailure,
         GraphenePipelineRunLogsSubscriptionSuccess,
     )
-    from ..events import from_event_record
 
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.str_param(run_id, "run_id")
@@ -139,12 +160,7 @@ def get_pipeline_run_observable(graphene_info, run_id, after=None):
     # pylint: disable=E1101
     return Observable.create(
         PipelineRunObservableSubscribe(instance, run_id, after_cursor=after)
-    ).map(
-        lambda events: GraphenePipelineRunLogsSubscriptionSuccess(
-            run=GraphenePipelineRun(run),
-            messages=[from_event_record(event, run.pipeline_name) for event in events],
-        )
-    )
+    ).map(lambda events: _events_response(events, run))
 
 
 def get_compute_log_observable(graphene_info, run_id, step_key, io_type, cursor=None):
