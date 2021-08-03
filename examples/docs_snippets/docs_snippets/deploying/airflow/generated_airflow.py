@@ -16,11 +16,10 @@ from dagster_airflow.factory import make_airflow_dag
 # #
 ################################################################################
 ENVIRONMENT = """
-intermediate_storage:
-  filesystem:
+resources:
+  io_manager:
     config:
-      base_dir: /tmp/dagster-airflow/hello_cereal_pipeline
-
+      base_dir: /tmp/my_base_dir/
 """
 
 
@@ -41,7 +40,7 @@ DEFAULT_ARGS = {
 dag, tasks = make_airflow_dag(
     # NOTE: you must ensure that docs_snippets.intro_tutorial.airflow is
     # installed or available on sys.path, otherwise, this import will fail.
-    module_name="docs_snippets.intro_tutorial.airflow",
+    module_name="docs_snippets.deploying.airflow.pipeline",
     pipeline_name="hello_cereal_pipeline",
     run_config=yaml.safe_load(ENVIRONMENT),
     dag_kwargs={"default_args": DEFAULT_ARGS, "max_active_runs": 1},
