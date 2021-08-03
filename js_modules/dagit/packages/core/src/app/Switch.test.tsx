@@ -3,7 +3,7 @@ import * as React from 'react';
 
 import {TestProvider} from '../testing/TestProvider';
 
-import {PermissionSet, PERMISSIONS_ALLOW_ALL, usePermissions} from './Permissions';
+import {PermissionSet, usePermissions} from './Permissions';
 import {Switch} from './Switch';
 import {RenderConfig, RouteConfig} from './types';
 
@@ -210,10 +210,8 @@ describe('Switch', () => {
         initialEntries: ['/gated/check'],
       };
 
-      const permissions = PERMISSIONS_ALLOW_ALL;
-
       render(
-        <TestProvider appContextProps={{permissions}} routerProps={routerProps}>
+        <TestProvider routerProps={routerProps}>
           <Test routes={routes} />
         </TestProvider>,
       );
@@ -228,10 +226,11 @@ describe('Switch', () => {
         initialEntries: ['/gated/check'],
       };
 
-      const permissions = {...PERMISSIONS_ALLOW_ALL, reload_repository_location: false};
-
       render(
-        <TestProvider appContextProps={{permissions}} routerProps={routerProps}>
+        <TestProvider
+          permissionOverrides={{canReloadRepositoryLocation: false}}
+          routerProps={routerProps}
+        >
           <Test routes={routes} />
         </TestProvider>,
       );
