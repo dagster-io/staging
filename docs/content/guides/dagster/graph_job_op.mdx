@@ -526,3 +526,57 @@ from dagster import In, Out, op
 def do_something(arg1: str) -> Tuple[int, int]:
     return int(arg1), int(arg1) + 1
 ```
+
+## Composite Solids
+
+With the pipeline APIs, if you want multiple layers of composition, you define a composite solid.
+
+```python file=/guides/dagster/graph_job_op/composite_solid.py
+@solid
+def do_something():
+    pass
+
+@solid
+def do_something_else():
+    pass
+
+@composite_solid
+def do_two_things():
+    do_something()
+    do_something_else()
+
+@solid
+def do_yet_more():
+    pass
+
+@pipeline
+def do_it_all():
+    do_two_things()
+    do_yet_more()
+```
+
+With the graph APIs, you can just use graphs at both layers:
+
+```python  file=/guides/dagster/graph_job_op/nested_graphs.py
+@op
+def do_something():
+    pass
+
+@op
+def do_something_else():
+    pass
+
+@graph
+def do_two_things():
+    do_something()
+    do_something_else()
+
+@op
+def do_yet_more():
+    pass
+
+@graph
+def do_it_all():
+    do_two_things()
+    do_yet_more()
+```
