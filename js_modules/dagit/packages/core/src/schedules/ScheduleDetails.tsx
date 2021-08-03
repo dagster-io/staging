@@ -155,7 +155,7 @@ export const ScheduleDetails: React.FC<{
           {
             key: 'Partition Set',
             value: partitionSet ? (
-              <SchedulePartitionStatus schedule={schedule} repoAddress={repoAddress} />
+              <SchedulePartitionStatus scheduleName={schedule.name} repoAddress={repoAddress} />
             ) : (
               'None'
             ),
