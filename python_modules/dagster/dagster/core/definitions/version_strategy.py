@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -19,9 +19,11 @@ class VersionStrategy(ABC):
     up-to-date version will run.
     """
 
-    @abstractmethod
     def get_solid_version(self, solid_def: "SolidDefinition") -> str:
-        pass
+        return self.get_op_version(solid_def)
+
+    def get_op_version(self, op_def: "SolidDefinition") -> str:
+        raise NotImplementedError()
 
     def get_resource_version(
         self, resource_def: "ResourceDefinition"  # pylint: disable=unused-argument
