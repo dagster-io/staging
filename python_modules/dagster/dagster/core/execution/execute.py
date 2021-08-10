@@ -53,6 +53,7 @@ def execute_in_process(
     input_values: Optional[Dict[str, Any]] = None,
     instance: Optional[DagsterInstance] = None,
     output_capturing_enabled: bool = True,
+    tags: Optional[Dict[str, str]] = None,
 ) -> NodeExecutionResult:
     node = check.inst_param(node, "node", NodeDefinition)
     loggers = check.opt_dict_param(loggers, "logger", key_type=str, value_type=LoggerDefinition)
@@ -100,6 +101,7 @@ def execute_in_process(
         run_config=run_config,
         instance=instance,
         output_capturing_enabled=output_capturing_enabled,
+        tags=tags,
     )
 
 
@@ -109,12 +111,15 @@ def core_execute_in_process(
     ephemeral_pipeline: PipelineDefinition,
     instance: Optional[DagsterInstance],
     output_capturing_enabled: bool,
+    tags: Optional[Dict[str, str]],
 ):
     pipeline_def = ephemeral_pipeline
     mode_def = pipeline_def.get_mode_definition()
     pipeline = InMemoryPipeline(pipeline_def)
 
-    execution_plan = create_execution_plan(pipeline, run_config=run_config, mode=mode_def.name)
+    execution_plan = create_execution_plan(
+        pipeline, run_config=run_config, mode=mode_def.name, tags=tags
+    )
 
     recorder: Dict[StepOutputHandle, Any] = {}
 
@@ -123,6 +128,7 @@ def core_execute_in_process(
             pipeline_def=pipeline_def,
             run_config=run_config,
             mode=mode_def.name,
+            tags=tags,
         )
 
         _execute_run_iterable = ExecuteRunWithPlanIterable(

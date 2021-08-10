@@ -126,7 +126,7 @@ def resolve_step_versions(pipeline_def, execution_plan, resolved_run_config):
                     resource_def_version = resource_def.version
                 else:
                     resource_def_version = pipeline_def.version_strategy.get_resource_version(
-                        resource_def
+                        resource_key, resource_def
                     )
 
                 if resource_def_version is not None:

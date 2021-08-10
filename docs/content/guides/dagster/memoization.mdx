@@ -6,168 +6,129 @@ title: Versioning and Memoization | Dagster
 
 <CodeReferenceLink filePath="examples/memoized_development" />
 
-This example is intended to describe how to use Dagster's versioning and memoization features. As of release `0.10.0`, Dagster has functionality for tagging a solid or resource with the _version_ argument of the decorator (ie `@solid(version="a")`, `@resource(version="b")`). This version argument is meant to be a representation of the state of the code contained by the wrapper.
+This guide describes how to use Dagster's memoization and versioning features.
 
-Dagster can use versions to determine whether or not it is necessary to re-execute a particular step. Given versions of the code from each solid in a pipeline, the system can infer whether an upcoming execution of a step will differ from previous executions by tagging solid outputs with a version. This allows for the outputs of previous runs to be re-used. We call this process **memoized execution**.
-
-The following example will walk through adding versions to a pipeline, and then performing memoized execution. Please note that versioning and memoization are experimental features, and are not yet intended for production use.
-
-## Overview
-
-Consider adding version information to the following pipeline.
-
-```python file=../../memoized_development/memoized_development/repo.py startafter=start_mypipeline endbefore=end_mypipeline
-from dagster import ModeDefinition, pipeline, repository
-from dagster.core.storage.memoizable_io_manager import versioned_filesystem_io_manager
-from dagster.core.storage.tags import MEMOIZED_RUN_TAG
-from memoized_development.solids.dog import emit_dog
-from memoized_development.solids.sentence import emit_sentence
-from memoized_development.solids.tree import emit_tree
-
-
-@pipeline(
-    mode_defs=[
-        ModeDefinition("memoized", resource_defs={"io_manager": versioned_filesystem_io_manager}),
-    ],
-    tags={MEMOIZED_RUN_TAG: "true"},
-)
-def my_pipeline():
-    return emit_sentence(emit_dog(), emit_tree())
-```
-
-In order to enable memoization for this pipeline, we have tagged the pipeline with `MEMOIZED_RUN_TAG: "true"`, which indicates to the system that we should compute version information for outputs, and only run steps that have not been memoized. We also use <PyObject module="dagster.core.storage.memoizable_io_manager" object="versioned_filesystem_io_manager" /> as our `io_manager`, which is a <PyObject module="dagster.core.storage.memoizable_io_manager" object="MemoizableIOManager" />. It is required to use a `MemoizableIOManager` as the `io_manager`, so that versioning information can be retrieved from previous runs.
-
-To enable memoization features on this pipeline, we will need to tag each solid (`emit_sentence`, `emit_dog`, and `emit_tree`) with a version.
+When memoization is enabled, Dagster will retrieve outputs from storage if they already have been computed, instead of recomputing them. Versions allow users to express to Dagster whether outputs have changed and thus require re-computation.
 
 ## Computing Versions
 
-In order to catch code changes individually from each solid, we will have each solid live in its own file, and have the version of each solid be a hash of the corresponding file.
+A <PyObject object="VersionStrategy"/> can be implemented to compute versions from solids and resources. The <PyObject object="VersioningStrategy" method="get_op_version"/> method ingests a solid definition, and returns a string representing the version of that solid. Dagster expects `get_op_version` to produce a valid alphanumeric string for every `op` in a job - otherwise an error will be thrown.
 
-Here is the code to hash a file in Python. Note that this code is not provided by Dagster, and is instead part of the example code:
-
-```python file=../../memoized_development/memoized_development/solids/solid_utils.py
+```python file=/guides/dagster/memoization/memoization.py startafter=start_op_strategy endbefore=end_op_strategy
+from dagster import VersionStrategy
+import inspect
 import hashlib
 
 
-def get_hash_for_file(path):
-    h = hashlib.new("md5")
-    with open(path, "rb") as f:
-        data = f.read()
-    h.update(data)
-    digest = h.hexdigest()
-    return digest
+class OpSourceHashStrategy(VersionStrategy):
+    def get_op_version(self, op_def):
+        # Track changes in the op's source code
+        code_as_str = inspect.getsource(op_def.compute_fn.decorated_fn)
+
+        return hashlib.sha1(code_as_str.encode("utf-8")).hexdigest()
 ```
 
-And here is the definition of each solid, using file-hashing to compute the version:
+In the above example, we ingest an op, retrieve the source code as a string from the decorated function, and then return a string-based hash of that source code. Note that `OpSourceHashStrategy` only takes into account the source code of the decorated function, and changes to functions called by the op will not be tracked. This approach can be extended freely to track additional information that might be pertinent to the computation changing.
 
-```python file=../../memoized_development/memoized_development/solids/dog.py
-from dagster import solid
-from memoized_development.solids.solid_utils import get_hash_for_file
+Providing a <PyObject object="VersionStrategy"/> to a job enables memoization on that job. Consider the following graph:
+
+```python file=/guides/dagster/memoization/memoization.py startafter=start_memoized_graph endbefore=end_memoized_graph
+from dagster import graph, op
 
 
-@solid(version=get_hash_for_file(__file__), config_schema={"dog_breed": str})
-def emit_dog(context):
-    breed = context.solid_config["dog_breed"]
-    return breed
+@op
+def emit_five():
+    return 5
+
+
+@op
+def add_number(x):
+    return x + 1
+
+
+@graph
+def emit_number():
+    add_number(emit_five())
 ```
 
-```python file=../../memoized_development/memoized_development/solids/tree.py
-from dagster import solid
-from memoized_development.solids.solid_utils import get_hash_for_file
+When constructing a job out of this graph, populate the `version_strategy` parameter.
 
-
-@solid(version=get_hash_for_file(__file__), config_schema={"tree_species": str})
-def emit_tree(context):
-    species = context.solid_config["tree_species"]
-    return "tree", species
+```python file=/guides/dagster/memoization/memoization.py startafter=start_memoized_job endbefore=end_memoized_job
+emit_number_job = emit_number.to_job(version_strategy=OpSourceHashStrategy())
 ```
 
-```python file=../../memoized_development/memoized_development/solids/sentence.py
-from dagster import InputDefinition, solid
-from memoized_development.solids.solid_utils import get_hash_for_file
+## Changes that memoization tracks
+
+Dagster's memoization functionality automatically tracks changes to op config, resource config, input values, and changes in the output of `get_op_version` for a given op. That is, if any of these values change from one pipeline run to the next, the outputs affected by these changes will be recomputed.
+
+### Tracking changes to resources
+
+While it isn't required to use memoization, resources can optionally be tagged with a version. To opt-in to this behavior, implement the <PyObject object="VersioningStrategy" method="get_resource_version"/> method.
+
+When an op requires a resource, and that resource has a version, then the outputs of that op will be re-computed when the resource version changes. Consider the following graph:
+
+```python file=/guides/dagster/memoization/memoization.py startafter=start_graph_reqs_resources endbefore=end_graph_reqs_resources
+from dagster import graph, op
 
 
-@solid(
-    version=get_hash_for_file(__file__),
-    input_defs=[InputDefinition("dog_breed"), InputDefinition("tree_species")],
-)
-def emit_sentence(dog_breed, tree_species):
-    return f"{dog_breed} is a breed of dog, while {tree_species} is a species of tree."
+@op(required_resource_keys={"foo", "bar"})
+def foobar_op():
+    pass
+
+
+@graph
+def foobar_graph():
+    foobar_op()
 ```
 
-Notice that the `emit_dog` and `emit_tree` solids require config. In order to execute `my_pipeline`, we will provide the required config for these solids:
+Let's say we want to tag a version to the resource `foo`, but not `bar`. We can implement a version strategy like so:
 
-```yaml file=../../memoized_development/config/california_config.yaml
-solids:
-  emit_dog:
-    config:
-      dog_breed: poodle
-  emit_tree:
-    config:
-      tree_species: douglas_fir
-resources:
-  io_manager:
-    config:
-      base_dir: "./results"
+```python file=/guides/dagster/memoization/memoization.py startafter=start_version_strategy_resources endbefore=end_version_strategy_resources
+from dagster import VersionStrategy
+
+
+class OpAndResourcesSourceHashStrategy(VersionStrategy):
+    def _get_source_hash(self, fn):
+        code_as_str = inspect.getsource(fn)
+        return hashlib.sha1(code_as_str.encode("utf-8")).hexdigest()
+
+    def get_op_version(self, op_def):
+        # Track changes in the op's source code
+        return self._get_source_hash(op_def.compute_fn.decorated_fn)
+
+    def get_resource_version(self, resource_key, resource_def):
+        if resource_key == "foo":
+            return self._get_source_hash(resource_def.resource_fn)
+        else:
+            return None
 ```
 
-Before executing, we can use the [`list_versions`](/\_apidocs/cli#dagster-pipeline-list_versions) CLI to check which outputs have been memoized in their current state, and which will need to be re-executed:
+Notice here how we only provide a version if the resource key `foo` is passed in. Then, Dagster take into account changes to `foo` when deciding whether to recompute the outputs of `foobar_op`, but not `bar`.
 
-```bash
-dagster pipeline list_versions \
-  -m memoized_development.repo \
-  -c ./config/california_config.yaml \
-  --mode memoized
+## Using Root Input Managers with Memoization
+
+Root input managers are compatible with memoization functionality, but by default, the system does not track code their code changes. Users can opt in to to tracking changes from the `get_resource_version` function (since root input managers are resources).
+
+## Using Custom IO Managers with Memoization
+
+When using memoization, all IO managers used in the job must subclass
+
+<PyObject object="MemoizableIOManager" />. In addition to `handle_output` and
+`load_input`, Memoizable IO Managers implement `has_output`, which returns
+`True` or `False` based upon the existence of the output specified by the
+context. For an example implementation of a MemoizableIOManager , see the
+fs_io_manager.
+
+## Disabling Memoization
+
+Memoization can be toggled off using the tag <PyObject object="MEMOIZED_RUN_TAG" />, which can be provided to a run.
+
+```python file=/guides/dagster/memoization/memoization.py startafter=start_disable_memoization endbefore=end_disable_memoization
+from dagster import MEMOIZED_RUN_TAG
+
+disabled_result = emit_number_job.execute_in_process(tags={MEMOIZED_RUN_TAG: "false"})
 ```
 
-This results in the following output:
+## Backcompat with Pipeline/Solid APIs
 
-    | Step Output          | Version                                  | Status of Output   |
-    |----------------------|------------------------------------------|--------------------|
-    | emit_dog.result      | 93815493adaeae4d55fdfa820891e0d40fb95f46 | to-be-recomputed   |
-    | emit_tree.result     | 94d4620ffec745ef895719204424c16406646b99 | to-be-recomputed   |
-    | emit_sentence.result | d367447b011cc2dcee083d5d9509477da746958b | to-be-recomputed   |
-
-This matches expectation, as we have not run the pipeline at this point. Use the [`execute`](/\_apidocs/cli#dagster-pipeline-execute) CLI to execute the pipeline. **Note that memoized execution is not yet supported from Dagit.**
-
-```bash
-dagster pipeline execute \
-  -m memoized_development.repo \
-  -c ./config/california_config.yaml \
-  --mode memoized
-```
-
-Let's see what happens if we change the config which we use to execute:
-
-```yaml file=../../memoized_development/config/maryland_config.yaml
-solids:
-  emit_dog:
-    config:
-      dog_breed: poodle
-  emit_tree:
-    config:
-      tree_species: red_maple
-resources:
-  io_manager:
-    config:
-      base_dir: "./results"
-```
-
-Notice that only the config to the `emit_tree` solid has changed. Therefore, the state of the output of `emit_tree` has changed, and we would expect the version to change. Note however that since the `emit_sentence` solid uses the result of `emit_tree` as input, the version of the output of `emit_sentence` should also change. We can verify this by again using the [`list_versions`](/\_apidocs/cli#dagster-pipeline-list_versions) CLI.
-
-```bash
-dagster pipeline execute \
-  -m memoized_development.repo \
-  -c ./config/maryland_config.yaml \
-  --mode memoized
-```
-
-This results in the following output:
-
-    | Step Output          | Version                                  | Status of Output   |
-    |----------------------|------------------------------------------|--------------------|
-    | emit_dog.result      | 93815493adaeae4d55fdfa820891e0d40fb95f46 | stored             |
-    | emit_tree.result     | 94d4620ffec745ef895719204424c16406646b99 | to-be-recomputed   |
-    | emit_sentence.result | d367447b011cc2dcee083d5d9509477da746958b | to-be-recomputed   |
-
-As we expect, the versions of outputs for `emit_tree` and `emit_sentence` have changed, indicating that if we run the pipeline again with the given config, these two outputs will be reconstructed. Note additionally that the result of the `emit_dog` solid is marked as stored, and its version has not changed, because the state of its inputs has remained the same. If we execute the pipeline again with the new config, we expect that the output of `emit_dog` will be retrieved from the previous run, and that only the `emit_tree` and `emit_sentence` solids will run.
+If using the `@pipeline` or `@solid` APIs, a version strategy can instead be provided to the pipeline decorator.

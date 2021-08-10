@@ -555,6 +555,7 @@ class PipelineDefinition:
         self,
         run_config: Optional[Dict[str, Any]] = None,
         instance: Optional["DagsterInstance"] = None,
+        tags: Optional[Dict[str, str]] = None,
     ) -> "InProcessGraphResult":
         """
         (Experimental) Execute the "Job" (single mode pipeline) in-process, gathering results in-memory.
@@ -609,6 +610,7 @@ class PipelineDefinition:
             run_config=run_config,
             instance=instance,
             output_capturing_enabled=True,
+            tags=tags,
         )
 
 

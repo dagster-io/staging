@@ -101,10 +101,10 @@ def test_memoization_with_default_strategy():
         my_op()
 
     class MyVersionStrategy(VersionStrategy):
-        def get_solid_version(self, solid_def):
+        def get_solid_version(self, _solid_def):
             return "foo"
 
-        def get_resource_version(self, resource_def):
+        def get_resource_version(self, _resource_key, _resource_def):
             return "foo"
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -193,7 +193,7 @@ def test_version_strategy_root_input_manager():
         def get_solid_version(self, _):
             return "foo"
 
-        def get_resource_version(self, _):
+        def get_resource_version(self, _resource_key, _resource_def):
             return "foo"
 
     @root_input_manager
@@ -228,7 +228,7 @@ def test_dynamic_memoization_error():
         def get_solid_version(self, _):
             return "foo"
 
-        def get_resource_version(self, _):
+        def get_resource_version(self, _resource_key, _resource_def):
             return "foo"
 
     @op(out=DynamicOut())

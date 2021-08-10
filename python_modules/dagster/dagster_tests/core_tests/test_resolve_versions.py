@@ -732,15 +732,15 @@ class BadSolidStrategy(VersionStrategy):
     def get_solid_version(self, solid_def):
         return bad_str
 
-    def get_resource_version(self, resource_def):
+    def get_resource_version(self, _resource_key, _resource_def):
         return "foo"
 
 
 class BadResourceStrategy(VersionStrategy):
-    def get_solid_version(self, solid_def):
+    def get_solid_version(self, _solid_def):
         return "foo"
 
-    def get_resource_version(self, resource_def):
+    def get_resource_version(self, _resource_key, _resource_def):
         return bad_str
 
 

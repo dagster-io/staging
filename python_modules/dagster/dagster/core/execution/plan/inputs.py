@@ -176,7 +176,7 @@ class FromRootInputManager(
 
         if pipeline_def.version_strategy is not None:
             root_manager_def_version = pipeline_def.version_strategy.get_resource_version(
-                root_manager_def
+                root_manager_key, root_manager_def
             )
         else:
             root_manager_def_version = root_manager_def.version
