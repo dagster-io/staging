@@ -70,6 +70,7 @@ def test_s3_storage(
     dagster_airflow_docker_operator_pipeline, dagster_docker_image
 ):  # pylint: disable=redefined-outer-name
     pipeline_name = "demo_pipeline"
+
     environments_path = get_test_project_environments_path()
     results = dagster_airflow_docker_operator_pipeline(
         pipeline_name=pipeline_name,
@@ -79,7 +80,7 @@ def test_s3_storage(
         ),
         environment_yaml=[
             os.path.join(environments_path, "env.yaml"),
-            os.path.join(environments_path, "env_s3.yaml"),
+            os.path.join(environments_path, "env_s3_intermediate_storage.yaml"),
         ],
         image=dagster_docker_image,
     )
