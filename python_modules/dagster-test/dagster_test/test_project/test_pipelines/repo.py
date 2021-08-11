@@ -20,6 +20,7 @@ from dagster import (
     OutputDefinition,
     RetryRequested,
     String,
+    VersionStrategy,
     default_executors,
     file_relative_path,
     lambda_solid,
@@ -527,8 +528,27 @@ def define_demo_execution_repo():
                 "hanging_pipeline": hanging_pipeline,
                 "hard_failer": define_hard_failer,
                 "demo_k8s_executor_pipeline": define_demo_k8s_executor_pipeline,
+                "memoization_pipeline": memoization_pipeline,
             },
             "schedules": define_schedules(),
         }
 
     return demo_execution_repo
+
+
+@solid
+def foo_solid():
+    return "foo"
+
+
+class BasicVersionStrategy(VersionStrategy):
+    def get_solid_version(self, solid_def):
+        return "foo"
+
+
+@pipeline(
+    mode_defs=k8s_mode_defs(),
+    version_strategy=BasicVersionStrategy(),
+)
+def memoization_pipeline():
+    foo_solid()
