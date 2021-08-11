@@ -122,6 +122,7 @@ def query_on_dask_worker(
     step_keys,
     mode,
     instance_ref,
+    known_state,
 ):  # pylint: disable=unused-argument
     """Note that we need to pass "dependencies" to ensure Dask sequences futures during task
     scheduling, even though we do not use this argument within the function.
@@ -137,6 +138,7 @@ def query_on_dask_worker(
             run_config=run_config,
             step_keys_to_execute=step_keys,
             mode=mode,
+            known_state=known_state,
         )
 
         return execute_plan(
@@ -261,6 +263,7 @@ class DaskExecutor(Executor):
                         [step.key],
                         pipeline_context.pipeline_run.mode,
                         instance.get_ref(),
+                        execution_plan.known_state,
                         key=dask_task_name,
                         resources=get_dask_resource_requirements(step.tags),
                     )
