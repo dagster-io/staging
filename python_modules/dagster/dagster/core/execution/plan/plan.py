@@ -62,7 +62,7 @@ from .inputs import (
     UnresolvedMappedStepInput,
 )
 from .outputs import StepOutput, StepOutputHandle, UnresolvedStepOutputHandle
-from .state import KnownExecutionState
+from .state import KnownExecutionState, StepOutputVersionData
 from .step import (
     ExecutionStep,
     IExecutionStep,
@@ -180,6 +180,8 @@ class _PlanBuilder:
             self.known_state,
         )
 
+        step_output_versions = self.known_state.step_output_versions if self.known_state else []
+
         plan = ExecutionPlan(
             step_dict,
             executable_map,
@@ -202,10 +204,15 @@ class _PlanBuilder:
 
         # Expects that if step_keys_to_execute was set, that the `plan` variable will have the
         # reflected step_keys_to_execute
-        if pipeline_def.is_using_memoization(self._tags):
+        if pipeline_def.is_using_memoization(self._tags) and len(step_output_versions) == 0:
             if self.step_keys_to_execute is not None:
                 raise DagsterInvariantViolationError(
                     "Cannot use both memoization and re-execution at this time."
+                )
+            if self._instance is None:
+                raise DagsterInvariantViolationError(
+                    "Attempted to build memoized execution plan without providing a "
+                    "DagsterInstance to create_execution_plan."
                 )
             plan = plan.build_memoized_plan(pipeline_def, self.resolved_run_config, self._instance)
 
@@ -534,7 +541,6 @@ class ExecutionPlan(
             ("step_handles_to_execute", List[StepHandleUnion]),
             ("known_state", KnownExecutionState),
             ("artifacts_persisted", bool),
-            ("step_output_versions", Dict[StepOutputHandle, str]),
         ],
     )
 ):
@@ -546,7 +552,6 @@ class ExecutionPlan(
         step_handles_to_execute,
         known_state=None,
         artifacts_persisted=False,
-        step_output_versions=None,
     ):
         return super(ExecutionPlan, cls).__new__(
             cls,
@@ -569,17 +574,17 @@ class ExecutionPlan(
             ),
             known_state=check.opt_inst_param(known_state, "known_state", KnownExecutionState),
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
-            step_output_versions=check.opt_dict_param(
-                step_output_versions,
-                "step_output_versions",
-                key_type=StepOutputHandle,
-                value_type=str,
-            ),
         )
 
     @property
     def steps(self) -> List[IExecutionStep]:
         return list(self.step_dict.values())
+
+    @property
+    def step_output_versions(self) -> Dict[StepOutputHandle, str]:
+        return StepOutputVersionData.get_version_dict_from_list(
+            self.known_state.step_output_versions if self.known_state else []
+        )
 
     @property
     def step_keys_to_execute(self) -> List[str]:
@@ -673,6 +678,9 @@ class ExecutionPlan(
         step_output_versions=None,
     ) -> "ExecutionPlan":
         check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+        step_output_versions = check.opt_dict_param(
+            step_output_versions, "step_output_versions", key_type=StepOutputHandle, value_type=str
+        )
         step_handles_to_execute = [StepHandle.parse_from_key(key) for key in step_keys_to_execute]
 
         bad_keys = []
@@ -692,12 +700,28 @@ class ExecutionPlan(
             self.known_state,
         )
 
+        # If step output versions were provided when constructing the subset plan, add them to the
+        # known state.
+        if len(step_output_versions) > 0:
+
+            known_state = KnownExecutionState(
+                previous_retry_attempts=self.known_state.previous_retry_attempts
+                if self.known_state
+                else {},
+                dynamic_mappings=self.known_state.dynamic_mappings if self.known_state else {},
+                step_output_versions=StepOutputVersionData.get_version_list_from_dict(
+                    step_output_versions
+                ),
+            )
+        else:
+            known_state = self.known_state
+
         return ExecutionPlan(
             self.step_dict,
             executable_map,
             resolvable_map,
             step_handles_to_execute,
-            self.known_state,
+            known_state,
             _compute_artifacts_persisted(
                 self.step_dict,
                 step_handles_to_execute,
@@ -705,7 +729,6 @@ class ExecutionPlan(
                 resolved_run_config,
                 executable_map,
             ),
-            step_output_versions=step_output_versions,
         )
 
     def get_version_for_step_output_handle(
@@ -717,7 +740,7 @@ class ExecutionPlan(
         self,
         pipeline_def: PipelineDefinition,
         resolved_run_config: ResolvedRunConfig,
-        instance: Optional[DagsterInstance],
+        instance: DagsterInstance,
     ) -> "ExecutionPlan":
         """
         Returns:
@@ -727,9 +750,6 @@ class ExecutionPlan(
         from ...storage.memoizable_io_manager import MemoizableIOManager
         from ..resources_init import get_dependencies, resolve_resource_dependencies
 
-        instance = check.opt_inst_param(
-            instance, "instance", DagsterInstance, default=DagsterInstance.get()
-        )
         mode = resolved_run_config.mode
         mode_def = pipeline_def.get_mode_definition(mode)
 
@@ -821,6 +841,7 @@ class ExecutionPlan(
             retry_mode,
             self.known_state.get_retry_state() if self.known_state else RetryState(),
             sort_key_fn,
+            self.known_state.step_output_versions if self.known_state else [],
         )
 
     def step_handle_for_single_step_plans(
@@ -974,11 +995,6 @@ class ExecutionPlan(
             execution_plan_snapshot.initial_known_state,
         )
 
-        step_output_versions: Dict[StepOutputHandle, str] = {}
-        for step_output_version_data in execution_plan_snapshot.step_output_versions:
-            step_output_handle = step_output_version_data.step_output_handle
-            step_output_versions[step_output_handle] = step_output_version_data.version
-
         return ExecutionPlan(
             step_dict,
             executable_map,
@@ -986,7 +1002,6 @@ class ExecutionPlan(
             step_handles_to_execute,
             execution_plan_snapshot.initial_known_state,
             execution_plan_snapshot.artifacts_persisted,
-            step_output_versions,
         )
 
 

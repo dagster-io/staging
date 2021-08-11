@@ -20,6 +20,7 @@ from dagster import (
     OutputDefinition,
     RetryRequested,
     String,
+    VersionStrategy,
     default_executors,
     file_relative_path,
     lambda_solid,
@@ -32,21 +33,27 @@ from dagster.core.definitions.decorators import daily_schedule, schedule
 from dagster.core.test_utils import nesting_composite_pipeline
 from dagster.utils import merge_dicts, segfault
 from dagster.utils.yaml_utils import merge_yamls
-from dagster_aws.s3 import s3_plus_default_intermediate_storage_defs, s3_resource
+from dagster_aws.s3 import (
+    s3_pickle_io_manager,
+    s3_plus_default_intermediate_storage_defs,
+    s3_resource,
+)
 from dagster_gcp.gcs.resources import gcs_resource
 from dagster_gcp.gcs.system_storage import gcs_plus_default_intermediate_storage_defs
 
 IS_BUILDKITE = bool(os.getenv("BUILDKITE"))
 
 
-def celery_mode_defs(resources=None):
+def celery_mode_defs(resources=None, name="default"):
     from dagster_celery import celery_executor
     from dagster_celery_k8s import celery_k8s_job_executor
 
+    resources = resources if resources else {"s3": s3_resource}
+    resources = merge_dicts(resources, {"io_manager": s3_pickle_io_manager})
     return [
         ModeDefinition(
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs=resources if resources else {"s3": s3_resource},
+            name=name,
+            resource_defs=resources,
             executor_defs=default_executors + [celery_executor, celery_k8s_job_executor],
         )
     ]
@@ -55,11 +62,13 @@ def celery_mode_defs(resources=None):
 def k8s_mode_defs(resources=None, name="default"):
     from dagster_k8s.executor import k8s_job_executor
 
+    resources = resources if resources else {"s3": s3_resource}
+    resources = merge_dicts(resources, {"io_manager": s3_pickle_io_manager})
+
     return [
         ModeDefinition(
             name=name,
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-            resource_defs=resources if resources else {"s3": s3_resource},
+            resource_defs=resources,
             executor_defs=default_executors + [k8s_job_executor],
         )
     ]
@@ -127,8 +136,7 @@ def define_docker_celery_pipeline():
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-                resource_defs={"s3": s3_resource},
+                resource_defs={"io_manager": s3_pickle_io_manager, "s3": s3_resource},
                 executor_defs=default_executors + [celery_docker_executor],
             )
         ]
@@ -505,6 +513,25 @@ def define_demo_k8s_executor_pipeline():
     return demo_k8s_executor_pipeline
 
 
+def define_memoization_pipeline():
+    @solid
+    def foo_solid():
+        return "foo"
+
+    class BasicVersionStrategy(VersionStrategy):
+        def get_solid_version(self, solid_def):
+            return "foo"
+
+    @pipeline(
+        mode_defs=k8s_mode_defs(name="k8s") + celery_mode_defs(name="celery"),
+        version_strategy=BasicVersionStrategy(),
+    )
+    def memoization_pipeline():
+        foo_solid()
+
+    return memoization_pipeline
+
+
 def define_demo_execution_repo():
     @repository
     def demo_execution_repo():
@@ -527,6 +554,7 @@ def define_demo_execution_repo():
                 "hanging_pipeline": hanging_pipeline,
                 "hard_failer": define_hard_failer,
                 "demo_k8s_executor_pipeline": define_demo_k8s_executor_pipeline,
+                "memoization_pipeline": define_memoization_pipeline,
             },
             "schedules": define_schedules(),
         }
