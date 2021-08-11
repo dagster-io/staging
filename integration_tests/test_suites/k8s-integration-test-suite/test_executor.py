@@ -3,11 +3,21 @@ import os
 import time
 
 import pytest
-from dagster import check
+from dagster import (
+    ModeDefinition,
+    VersionStrategy,
+    check,
+    execute_pipeline,
+    fs_io_manager,
+    pipeline,
+    reconstructable,
+    solid,
+)
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.storage.tags import DOCKER_IMAGE_TAG
 from dagster.core.test_utils import create_run_for_test
 from dagster.utils import load_yaml_from_path, merge_dicts
+from dagster_k8s import k8s_job_executor
 from dagster_k8s.client import DagsterKubernetesClient
 from dagster_k8s.job import get_k8s_job_name
 from dagster_k8s.launcher import K8sRunLauncher
@@ -428,3 +438,41 @@ def test_k8s_executor_resource_requirements(
 
         updated_run = dagster_instance_for_k8s_run_launcher.get_run_by_id(run.run_id)
         assert updated_run.tags[DOCKER_IMAGE_TAG] == get_test_project_docker_image()
+
+
+class BasicVersionStrategy(VersionStrategy):
+    def get_solid_version(self, solid_def):
+        return "foo"
+
+
+@solid
+def foo_solid():
+    return "foo"
+
+
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            resource_defs={"io_manager": fs_io_manager}, executor_defs=[k8s_job_executor]
+        )
+    ],
+    version_strategy=BasicVersionStrategy(),
+)
+def foo_pipeline():
+    foo_solid()
+
+
+@pytest.mark.integration
+def test_memoization_k8s_executor(dagster_instance_for_k8s_run_launcher):
+    result = execute_pipeline(
+        reconstructable(foo_pipeline), instance=dagster_instance_for_k8s_run_launcher
+    )
+    assert result.success
+    assert result.output_for_solid("foo_solid") == "foo"
+
+    result = execute_pipeline(
+        reconstructable(foo_pipeline),
+        instance=dagster_instance_for_k8s_run_launcher,
+    )
+    assert result.success
+    assert len(result.step_event_list) == 0
