@@ -20,6 +20,7 @@ from dagster import (
     OutputDefinition,
     RetryRequested,
     String,
+    VersionStrategy,
     default_executors,
     file_relative_path,
     lambda_solid,
@@ -32,7 +33,11 @@ from dagster.core.definitions.decorators import daily_schedule, schedule
 from dagster.core.test_utils import nesting_composite_pipeline
 from dagster.utils import merge_dicts, segfault
 from dagster.utils.yaml_utils import merge_yamls
-from dagster_aws.s3 import s3_plus_default_intermediate_storage_defs, s3_resource
+from dagster_aws.s3 import (
+    s3_pickle_io_manager,
+    s3_plus_default_intermediate_storage_defs,
+    s3_resource,
+)
 from dagster_gcp.gcs.resources import gcs_resource
 from dagster_gcp.gcs.system_storage import gcs_plus_default_intermediate_storage_defs
 
@@ -58,7 +63,7 @@ def k8s_mode_defs(resources=None, name="default"):
     return [
         ModeDefinition(
             name=name,
-            intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
+            intermediate_storage_defs=s3_pickle_io_manager,
             resource_defs=resources if resources else {"s3": s3_resource},
             executor_defs=default_executors + [k8s_job_executor],
         )
@@ -527,8 +532,27 @@ def define_demo_execution_repo():
                 "hanging_pipeline": hanging_pipeline,
                 "hard_failer": define_hard_failer,
                 "demo_k8s_executor_pipeline": define_demo_k8s_executor_pipeline,
+                "memoization_pipeline": memoization_pipeline,
             },
             "schedules": define_schedules(),
         }
 
     return demo_execution_repo
+
+
+@solid
+def foo_solid():
+    return "foo"
+
+
+class BasicVersionStrategy(VersionStrategy):
+    def get_solid_version(self, solid_def):
+        return "foo"
+
+
+@pipeline(
+    mode_defs=k8s_mode_defs(),
+    version_strategy=BasicVersionStrategy(),
+)
+def memoization_pipeline():
+    foo_solid()
