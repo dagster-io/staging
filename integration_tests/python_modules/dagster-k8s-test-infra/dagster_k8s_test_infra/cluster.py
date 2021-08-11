@@ -12,6 +12,7 @@ import pytest
 from dagster import check
 from dagster.cli.debug import export_run
 from dagster.core.instance import DagsterInstance, InstanceType
+from dagster.core.instance.ref import InstanceRef
 from dagster.core.run_coordinator import DefaultRunCoordinator, QueuedRunCoordinator
 from dagster.core.scheduler import DagsterDaemonScheduler
 from dagster.core.storage.noop_compute_log_manager import NoOpComputeLogManager
@@ -305,8 +306,10 @@ def dagster_instance_for_k8s_run_launcher(
 ):  # pylint: disable=redefined-outer-name
     tempdir = DagsterInstance.temp_storage()
 
+    instance_ref = InstanceRef.from_dir(tempdir)
+
     with DagsterInstance(
-        instance_type=InstanceType.EPHEMERAL,
+        instance_type=InstanceType.PERSISTENT,
         local_artifact_storage=LocalArtifactStorage(tempdir),
         run_storage=PostgresRunStorage(helm_postgres_url_for_k8s_run_launcher),
         event_storage=PostgresEventLogStorage(helm_postgres_url_for_k8s_run_launcher),
@@ -314,6 +317,7 @@ def dagster_instance_for_k8s_run_launcher(
         compute_log_manager=NoOpComputeLogManager(),
         run_coordinator=DefaultRunCoordinator(),
         run_launcher=run_launcher,
+        ref=instance_ref,
     ) as instance:
         yield instance
 
