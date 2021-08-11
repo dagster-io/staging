@@ -188,6 +188,7 @@ class BaseWorkspaceRequestContext(IWorkspace):
             mode=mode,
             step_keys_to_execute=step_keys_to_execute,
             known_state=known_state,
+            instance_ref=self.instance.get_ref(),
         )
 
     def get_external_partition_config(

@@ -41,6 +41,7 @@ from dagster.core.host_representation.origin import (
     RepositoryLocationOrigin,
 )
 from dagster.core.instance import DagsterInstance
+from dagster.core.instance.ref import InstanceRef
 from dagster.core.origin import RepositoryPythonOrigin
 from dagster.core.snap.execution_plan_snapshot import snapshot_from_execution_plan
 from dagster.grpc.impl import (
@@ -122,6 +123,7 @@ class RepositoryLocation(AbstractContextManager):
         mode: str,
         step_keys_to_execute: Optional[List[str]],
         known_state: Optional[KnownExecutionState],
+        instance_ref: Optional[InstanceRef] = None,
     ) -> ExternalExecutionPlan:
         pass
 
@@ -307,12 +309,16 @@ class InProcessRepositoryLocation(RepositoryLocation):
         mode: str,
         step_keys_to_execute: Optional[List[str]],
         known_state: Optional[KnownExecutionState],
+        instance_ref: Optional[InstanceRef] = None,
     ) -> ExternalExecutionPlan:
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
         check.dict_param(run_config, "run_config")
         check.str_param(mode, "mode")
         check.opt_nullable_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
         check.opt_inst_param(known_state, "known_state", KnownExecutionState)
+        check.opt_inst_param(instance_ref, "instance_ref", InstanceRef)
+
+        instance = DagsterInstance.from_ref(instance_ref) if instance_ref else None
 
         return ExternalExecutionPlan(
             execution_plan_snapshot=snapshot_from_execution_plan(
@@ -326,6 +332,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
                     mode=mode,
                     step_keys_to_execute=step_keys_to_execute,
                     known_state=known_state,
+                    instance=instance,
                 ),
                 external_pipeline.identifying_pipeline_snapshot_id,
             ),
@@ -600,12 +607,14 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         mode: str,
         step_keys_to_execute: Optional[List[str]],
         known_state: Optional[KnownExecutionState],
+        instance_ref: Optional[InstanceRef] = None,
     ) -> ExternalExecutionPlan:
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
         check.dict_param(run_config, "run_config")
         check.str_param(mode, "mode")
         check.opt_nullable_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
         check.opt_inst_param(known_state, "known_state", KnownExecutionState)
+        check.opt_inst_param(instance_ref, "instance_ref", InstanceRef)
 
         execution_plan_snapshot_or_error = sync_get_external_execution_plan_grpc(
             api_client=self.client,
@@ -616,6 +625,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             solid_selection=external_pipeline.solid_selection,
             step_keys_to_execute=step_keys_to_execute,
             known_state=known_state,
+            instance_ref=instance_ref,
         )
 
         return ExternalExecutionPlan(
