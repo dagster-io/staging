@@ -705,6 +705,7 @@ def create_execution_plan(
     known_state: KnownExecutionState = None,
     instance: Optional[DagsterInstance] = None,
     tags: Optional[Dict[str, str]] = None,
+    step_output_versions: Optional[Dict[StepOutputHandle, str]] = None,
 ) -> ExecutionPlan:
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
@@ -724,6 +725,7 @@ def create_execution_plan(
         known_state=known_state,
         instance=instance,
         tags=tags,
+        step_output_versions=step_output_versions,
     )
 
 

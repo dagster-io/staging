@@ -100,6 +100,7 @@ class _PlanBuilder:
         known_state,
         instance: Optional[DagsterInstance],
         tags: Dict[str, str],
+        step_output_versions: Optional[Dict[StepOutputHandle, str]],
     ):
         self.pipeline = check.inst_param(pipeline, "pipeline", IPipeline)
         self.resolved_run_config = check.inst_param(
@@ -120,6 +121,7 @@ class _PlanBuilder:
         self._instance = instance
         self._seen_handles: Set[StepHandleUnion] = set()
         self._tags = check.dict_param(tags, "tags", key_type=str, value_type=str)
+        self.step_output_versions = step_output_versions
 
     @property
     def pipeline_name(self) -> str:
@@ -193,11 +195,15 @@ class _PlanBuilder:
                 self.resolved_run_config,
                 executable_map,
             ),
+            step_output_versions=self.step_output_versions,
         )
 
         if self.step_keys_to_execute is not None:
             plan = plan.build_subset_plan(
-                self.step_keys_to_execute, pipeline_def, self.resolved_run_config
+                self.step_keys_to_execute,
+                pipeline_def,
+                self.resolved_run_config,
+                self.step_output_versions,
             )
 
         # Expects that if step_keys_to_execute was set, that the `plan` variable will have the
@@ -849,6 +855,7 @@ class ExecutionPlan(
         known_state=None,
         instance=None,
         tags=None,
+        step_output_versions=None,
     ) -> "ExecutionPlan":
         """Here we build a new ExecutionPlan from a pipeline definition and the resolved run config.
 
@@ -871,6 +878,7 @@ class ExecutionPlan(
             known_state=known_state,
             instance=instance,
             tags=tags,
+            step_output_versions=step_output_versions,
         )
 
         # Finally, we build and return the execution plan

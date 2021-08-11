@@ -11,6 +11,7 @@ from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import RetryMode
 from dagster.core.executor.base import Executor
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.seven import multiprocessing
 from dagster.utils import start_termination_thread
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -38,6 +39,7 @@ class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
         recon_pipeline,
         retry_mode,
         known_state,
+        step_output_versions,
     ):
         self.run_config = run_config
         self.pipeline_run = pipeline_run
@@ -47,6 +49,7 @@ class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
         self.recon_pipeline = recon_pipeline
         self.retry_mode = retry_mode
         self.known_state = known_state
+        self.step_output_versions = step_output_versions
 
     def execute(self):
         pipeline = self.recon_pipeline
@@ -58,6 +61,10 @@ class MultiprocessExecutorChildProcessCommand(ChildProcessCommand):
                 mode=self.pipeline_run.mode,
                 step_keys_to_execute=[self.step_key],
                 known_state=self.known_state,
+                step_output_versions=self.step_output_versions,
+                # The orchestration process has already determined that we need to execute this
+                # step, so re-computing memoization information is redundant.
+                tags={MEMOIZED_RUN_TAG: "false"},
             )
 
             yield instance.report_engine_event(
@@ -256,6 +263,7 @@ class MultiprocessExecutor(Executor):
             recon_pipeline=pipeline,
             retry_mode=self.retries,
             known_state=known_state,
+            step_output_versions=step_context.execution_plan.step_output_versions,
         )
 
         yield DagsterEvent.engine_event(
