@@ -306,7 +306,7 @@ def dagster_instance_for_k8s_run_launcher(
     tempdir = DagsterInstance.temp_storage()
 
     with DagsterInstance(
-        instance_type=InstanceType.EPHEMERAL,
+        instance_type=InstanceType.PERSISTENT,
         local_artifact_storage=LocalArtifactStorage(tempdir),
         run_storage=PostgresRunStorage(helm_postgres_url_for_k8s_run_launcher),
         event_storage=PostgresEventLogStorage(helm_postgres_url_for_k8s_run_launcher),

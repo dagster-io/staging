@@ -502,3 +502,64 @@ def test_execute_on_celery_k8s_with_hard_failure(  # pylint: disable=redefined-o
                         break
             time.sleep(5)
         assert step_failure_found
+
+
+def test_memoization_on_celery_k8s(  # pylint: disable=redefined-outer-name
+    dagster_docker_image, dagster_instance, helm_namespace
+):
+    run_config = merge_dicts(
+        merge_yamls(
+            [
+                os.path.join(get_test_project_environments_path(), "env.yaml"),
+                os.path.join(get_test_project_environments_path(), "env_s3.yaml"),
+            ]
+        ),
+        get_celery_engine_config(
+            dagster_docker_image=dagster_docker_image, job_namespace=helm_namespace
+        ),
+    )
+
+    pipeline_name = "memoization_pipeline"
+    with get_test_project_workspace_and_external_pipeline(dagster_instance, pipeline_name) as (
+        workspace,
+        external_pipeline,
+    ):
+        reoriginated_pipeline = ReOriginatedExternalPipelineForTest(external_pipeline)
+
+        run = create_run_for_test(
+            dagster_instance,
+            pipeline_name=pipeline_name,
+            run_config=run_config,
+            mode="celery",
+            external_pipeline_origin=reoriginated_pipeline.get_external_origin(),
+            pipeline_code_origin=reoriginated_pipeline.get_python_origin(),
+        )
+
+        dagster_instance.launch_run(run.run_id, workspace)
+
+        result = wait_for_job_and_get_raw_logs(
+            job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace
+        )
+
+        assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+        run = create_run_for_test(
+            dagster_instance,
+            pipeline_name=pipeline_name,
+            run_config=run_config,
+            mode="celery",
+            external_pipeline_origin=reoriginated_pipeline.get_external_origin(),
+            pipeline_code_origin=reoriginated_pipeline.get_python_origin(),
+        )
+
+        dagster_instance.launch_run(run.run_id, workspace)
+
+        assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
+
+        step_events = [
+            event_log.dagster_event
+            for event_log in dagster_instance.all_logs(run.run_id)
+            if event_log.dagster_event.is_step_event
+        ]
+
+        assert len(step_events) == 0
