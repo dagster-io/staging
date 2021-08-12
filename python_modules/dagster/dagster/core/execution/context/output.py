@@ -2,20 +2,18 @@ import warnings
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
 
 from dagster import check
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvariantViolationError, DagsterMissingIOContextAttrError
 from dagster.core.execution.plan.utils import build_resources_for_manager
 
 if TYPE_CHECKING:
     from dagster.core.execution.context.system import StepExecutionContext
-    from dagster.core.definitions.resource import Resources
     from dagster.core.types.dagster_type import DagsterType
-    from dagster.core.definitions import SolidDefinition, PipelineDefinition, ModeDefinition
+    from dagster.core.definitions import PipelineDefinition, SolidDefinition
     from dagster.core.log_manager import DagsterLogManager
     from dagster.core.system_config.objects import ResolvedRunConfig
+    from dagster.core.definitions.resource import Resources
     from dagster.core.execution.plan.plan import ExecutionPlan
     from dagster.core.execution.plan.outputs import StepOutputHandle
-    from dagster.core.log_manager import DagsterLogManager
-    from dagster.core.definitions.resource import ScopedResourcesBuilder
 
 RUN_ID_PLACEHOLDER = "__EPHEMERAL_RUN_ID"
 
@@ -102,19 +100,43 @@ class OutputContext:
             self._resources_cm.__exit__(None, None, None)  # pylint: disable=no-member
 
     @property
-    def step_key(self) -> Optional[str]:
+    def step_key(self) -> str:
+        if self._step_key is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access step_key, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._step_key
 
     @property
-    def name(self) -> Optional[str]:
+    def name(self) -> str:
+        if self._name is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access name, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._name
 
     @property
-    def pipeline_name(self) -> Optional[str]:
+    def pipeline_name(self) -> str:
+        if self._pipeline_name is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access pipeline_name, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._pipeline_name
 
     @property
-    def run_id(self) -> Optional[str]:
+    def run_id(self) -> str:
+        if self._run_id is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access run_id, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._run_id
 
     @property
@@ -126,19 +148,37 @@ class OutputContext:
         return self._mapping_key
 
     @property
-    def config(self) -> Optional[Any]:
+    def config(self) -> Any:
         return self._config
 
     @property
-    def solid_def(self) -> Optional["SolidDefinition"]:
+    def solid_def(self) -> "SolidDefinition":
+        if self._solid_def is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access solid_def, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._solid_def
 
     @property
-    def dagster_type(self) -> Optional["DagsterType"]:
+    def dagster_type(self) -> "DagsterType":
+        if self._dagster_type is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access dagster_type, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._dagster_type
 
     @property
-    def log(self) -> Optional["DagsterLogManager"]:
+    def log(self) -> "DagsterLogManager":
+        if self._log is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access log, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._log
 
     @property
@@ -150,7 +190,13 @@ class OutputContext:
         return self._resource_config
 
     @property
-    def resources(self) -> Optional["Resources"]:
+    def resources(self) -> Any:
+        if self._resources is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access resources, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         if self._resources_cm and self._resources_contain_cm and not self._cm_scope_entered:
             raise DagsterInvariantViolationError(
                 "At least one provided resource is a generator, but attempting to access "
@@ -160,7 +206,13 @@ class OutputContext:
         return self._resources
 
     @property
-    def step_context(self) -> Optional["StepExecutionContext"]:
+    def step_context(self) -> "StepExecutionContext":
+        if self._step_context is None:
+            raise DagsterMissingIOContextAttrError(
+                "Attempting to access step_context, "
+                "but it was not provided when constructing the OutputContext"
+            )
+
         return self._step_context
 
     def get_run_scoped_output_identifier(self) -> List[str]:
@@ -225,22 +277,9 @@ class OutputContext:
         Returns:
             List[str, ...]: A list of identifiers, i.e. (run_id or version), step_key, and output_name
         """
-        run_id = self.run_id
         version = self.version
         step_key = self.step_key
         name = self.name
-        if run_id is None and version is None:
-            check.failed(
-                "Unable to find the output identifier: run_id is None on OutputContext, and no "
-                "version was provided."
-            )
-        if step_key is None:
-            check.failed(
-                "Unable to find the output identifier: step_key is None on " "OutputContext."
-            )
-        if name is None:
-            check.failed("Unable to find the output identifier: name is None on OutputContext.")
-
         if version is not None:
             check.invariant(
                 self.mapping_key is None,
@@ -249,13 +288,7 @@ class OutputContext:
             )
             identifier = ["versioned_outputs", version, step_key, name]
         else:
-            # if run_id is None and this is a re-execution, it means we failed to find its source run id
-            if run_id is None:
-                check.failed(
-                    check.failed(
-                        "Unable to find the output identifier: run_id is None on OutputContext."
-                    )
-                )
+            run_id = self.run_id
             identifier = [run_id, step_key, name]
             if self.mapping_key:
                 identifier.append(self.mapping_key)

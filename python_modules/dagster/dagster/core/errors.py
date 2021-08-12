@@ -546,3 +546,10 @@ class DagsterHomeNotSetError(DagsterError):
     The user has tried to use a command that requires an instance or invoke DagsterInstance.get()
     without setting DAGSTER_HOME env var.
     """
+
+
+class DagsterMissingIOContextAttrError(DagsterError):
+    """
+    The user has tried to access a property on an InputContext or OutputContext that was not
+    provided when constructing it.
+    """
