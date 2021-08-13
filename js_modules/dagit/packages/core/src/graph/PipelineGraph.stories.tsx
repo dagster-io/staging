@@ -148,6 +148,7 @@ export const Tagged = () => {
   const [focusSolids, setFocusSolids] = React.useState<string[]>([]);
   const solids = buildBasicDAG();
 
+  // TODO yuhan here
   ['ipynb', 'sql', 'verylongtypename', 'story'].forEach((kind, idx) =>
     solids[idx].definition.metadata.push({
       key: 'kind',

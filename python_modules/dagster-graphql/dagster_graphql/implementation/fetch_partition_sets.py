@@ -147,6 +147,18 @@ def get_partitions(
     )
 
 
+# def get_notebook(graphene_info, repository_handle, notebook_path):
+#     from ..schema.partition_sets import GrapheneNotebookData
+
+#     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
+#     check.str_param(notebook_path, "notebook_path")
+#     result = graphene_info.context.get_external_partition_names(repository_handle, notebook_path)
+
+#     # partition_names = _apply_cursor_limit_reverse(result.partition_names, cursor, limit, reverse)
+
+#     return GrapheneNotebookData(data=result)
+
+
 def _apply_cursor_limit_reverse(items, cursor, limit, reverse):
     start = 0
     end = len(items)

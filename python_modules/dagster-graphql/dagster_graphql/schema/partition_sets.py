@@ -40,6 +40,13 @@ class GraphenePartitionRunConfig(graphene.ObjectType):
         name = "PartitionRunConfig"
 
 
+class GrapheneNotebookData(graphene.ObjectType):
+    data = graphene.NonNull(graphene.String)
+
+    class Meta:
+        name = "NotebookData"
+
+
 class GraphenePartitionRunConfigOrError(graphene.Union):
     class Meta:
         types = (GraphenePartitionRunConfig, GraphenePythonError)

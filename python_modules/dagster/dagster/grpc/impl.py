@@ -3,6 +3,7 @@
 import os
 import sys
 
+import nbformat
 import pendulum
 from dagster import check
 from dagster.core.definitions import ScheduleEvaluationContext
@@ -24,6 +25,7 @@ from dagster.core.events import EngineEventData
 from dagster.core.execution.api import create_execution_plan, execute_run_iterator
 from dagster.core.host_representation import external_pipeline_data_from_def
 from dagster.core.host_representation.external_data import (
+    ExternalNotebookData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionExecutionParamData,
@@ -46,6 +48,7 @@ from dagster.serdes.ipc import IPCErrorMessage
 from dagster.utils import start_termination_thread
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.interrupts import capture_interrupts
+from nbconvert.exporters.html import HTMLExporter
 
 from .types import ExecuteExternalPipelineArgs
 
@@ -307,6 +310,25 @@ def get_partition_names(recon_repo, partition_set_name):
         return ExternalPartitionExecutionErrorData(
             serializable_error_info_from_exc_info(sys.exc_info())
         )
+
+
+def get_notebook_data(recon_repo, notebook_path):
+    check.str_param(notebook_path, "notebook_path")
+
+    with open(os.path.abspath(notebook_path)) as f:
+        read_data = f.read()
+        # return read_data
+        notebook = nbformat.reads(read_data, as_version=4)
+        html_exporter = HTMLExporter()
+        html_exporter.template_file = "basic"
+        (body, resources) = html_exporter.from_notebook_node(notebook)
+    # import ipdb
+
+    # ipdb.set_trace()
+    return ExternalNotebookData(
+        notebook_path=notebook_path, body=body, css=resources["inlining"]["css"][0]
+    )
+    # "<style>" + resources["inlining"]["css"][0] + "</style>" + body, 200
 
 
 def get_partition_tags(recon_repo, partition_set_name, partition_name):

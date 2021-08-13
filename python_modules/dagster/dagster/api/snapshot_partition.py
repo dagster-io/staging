@@ -1,6 +1,7 @@
 from dagster import check
 from dagster.core.errors import DagsterUserCodeProcessError
 from dagster.core.host_representation.external_data import (
+    ExternalNotebookData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
@@ -8,7 +9,12 @@ from dagster.core.host_representation.external_data import (
     ExternalPartitionTagsData,
 )
 from dagster.core.host_representation.handle import RepositoryHandle
-from dagster.grpc.types import PartitionArgs, PartitionNamesArgs, PartitionSetExecutionParamArgs
+from dagster.grpc.types import (
+    NotebookDataArgs,
+    PartitionArgs,
+    PartitionNamesArgs,
+    PartitionSetExecutionParamArgs,
+)
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
 
 
@@ -32,6 +38,29 @@ def sync_get_external_partition_names_grpc(api_client, repository_handle, partit
     )
     if isinstance(result, ExternalPartitionExecutionErrorData):
         raise DagsterUserCodeProcessError.from_error_info(result.error)
+
+    return result
+
+
+def sync_get_external_notebook_data_grpc(api_client, repository_handle, notebook_path):
+    from dagster.grpc.client import DagsterGrpcClient
+
+    check.inst_param(api_client, "api_client", DagsterGrpcClient)
+    check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
+    check.str_param(notebook_path, "notebook_path")
+    repository_origin = repository_handle.get_external_origin()
+
+    result = check.inst(
+        deserialize_json_to_dagster_namedtuple(
+            api_client.external_notebook_data(
+                notebook_data_args=NotebookDataArgs(
+                    repository_origin=repository_origin,
+                    notebook_path=notebook_path,
+                ),
+            )
+        ),
+        ExternalNotebookData,
+    )
 
     return result
 

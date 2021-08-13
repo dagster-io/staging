@@ -10,6 +10,7 @@ from dagster.api.get_server_id import sync_get_server_id
 from dagster.api.list_repositories import sync_list_repositories_grpc
 from dagster.api.snapshot_execution_plan import sync_get_external_execution_plan_grpc
 from dagster.api.snapshot_partition import (
+    sync_get_external_notebook_data_grpc,
     sync_get_external_partition_config_grpc,
     sync_get_external_partition_names_grpc,
     sync_get_external_partition_set_execution_param_data_grpc,
@@ -67,6 +68,7 @@ if TYPE_CHECKING:
         ExternalPartitionSetExecutionParamData,
         ExternalPartitionTagsData,
         ExternalScheduleExecutionErrorData,
+        ExternalNotebookData,
     )
     from dagster.core.definitions.schedule import ScheduleExecutionData
     from dagster.core.definitions.sensor import SensorExecutionData
@@ -671,6 +673,16 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         return sync_get_external_partition_names_grpc(
             self.client, repository_handle, partition_set_name
         )
+
+    def get_external_notebook_data(
+        self, repository_handle: RepositoryHandle, notebook_path: str
+    ) -> "ExternalNotebookData":
+
+        check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
+        check.str_param(notebook_path, "notebook_path")
+        # return (repository_name, repository_location_name, notebook_path)
+
+        return sync_get_external_notebook_data_grpc(self.client, repository_handle, notebook_path)
 
     def get_external_schedule_execution_data(
         self,

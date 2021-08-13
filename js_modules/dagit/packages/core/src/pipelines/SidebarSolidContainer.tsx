@@ -49,6 +49,7 @@ export const SidebarSolidContainer: React.FC<SidebarSolidContainerProps> = ({
           console.error('Could not load pipeline solids');
           return <span>Could not load pipeline solids.</span>;
         }
+        console.log(111, repoAddress);
         return (
           <>
             <SidebarSolidInvocation
@@ -67,6 +68,7 @@ export const SidebarSolidContainer: React.FC<SidebarSolidContainerProps> = ({
               definition={pipelineOrError!.solidHandle!.solid.definition}
               getInvocations={getInvocations}
               onClickInvocation={({handleID}) => onClickSolid({path: handleID.split('.')})}
+              repoAddress={repoAddress}
             />
           </>
         );

@@ -219,6 +219,19 @@ class BaseWorkspaceRequestContext(IWorkspace):
             repository_handle.repository_location.name
         ).get_external_partition_names(repository_handle, partition_set_name)
 
+    def get_external_notebook_data(
+        self, repository_name, repository_location_name, notebook_path: str
+    ):
+        # check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
+        check.str_param(notebook_path, "notebook_path")
+
+        # return f"{repository_name}, {repository_location_name}, {notebook_path}"
+        repository_location = self.get_repository_location(repository_location_name)
+        repository_handle = RepositoryHandle(
+            repository_name=repository_name, repository_location=repository_location
+        )
+        return repository_location.get_external_notebook_data(repository_handle, notebook_path)
+
     def get_external_partition_set_execution_param_data(
         self,
         repository_handle: RepositoryHandle,

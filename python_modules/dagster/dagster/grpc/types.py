@@ -200,6 +200,18 @@ class PartitionNamesArgs(namedtuple("_PartitionNamesArgs", "repository_origin pa
 
 
 @whitelist_for_serdes
+class NotebookDataArgs(namedtuple("_NotebookDataArgs", "repository_origin notebook_path")):
+    def __new__(cls, repository_origin, notebook_path):
+        return super(NotebookDataArgs, cls).__new__(
+            cls,
+            repository_origin=check.inst_param(
+                repository_origin, "repository_origin", ExternalRepositoryOrigin
+            ),
+            notebook_path=check.str_param(notebook_path, "notebook_path"),
+        )
+
+
+@whitelist_for_serdes
 class PartitionSetExecutionParamArgs(
     namedtuple(
         "_PartitionSetExecutionParamArgs",
